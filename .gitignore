@@ -7,3 +7,4 @@ dist/
 *.smd
 *.zip
 .DS_Store
+!docs/**/*.md

@@ -137,6 +137,8 @@ npm run build    # type-check and build to dist/
 
 The app is a static site (Vite + React + TypeScript), so it deploys to Vercel as-is: import the repo and keep the detected Vite settings (build `npm run build`, output `dist`).
 
+How the Rosters tool reads and writes the games (formats, checksums, import rules, tests): [docs/rosters.md](docs/rosters.md).
+
 Roster engine tests need your own ROMs (`.md`, `.bin`, `.gen` or `.zip`):
 
 ```sh
