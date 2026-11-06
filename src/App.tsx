@@ -1,0 +1,421 @@
+import { useCallback, useMemo, useState } from 'react';
+import { BwTeam, parseBw95 } from './core/bw95';
+import { CfTeam, parseCf97 } from './core/cf97';
+import { buildRom, defaultSlot, isSwapFile, SlotConfig, swapFile, validateSlot } from './core/build';
+import { MAX_LEN } from './core/defaults';
+import { renderSprites } from './core/render';
+import { describeUnknown, OpenedRom, openRom } from './core/romfile';
+import { buildGenericCelebration, CelebBlob, defaultCelebration, PREVIEW_FRAME } from './core/celebration';
+import { SpriteCanvas, Swatch, UniformEditor } from './components';
+
+interface BwState {
+  rom: OpenedRom;
+  teams: BwTeam[];
+}
+interface CfState {
+  rom: OpenedRom;
+  teams: CfTeam[];
+}
+type Note = { kind: 'error' | 'ok'; text: string } | null;
+
+const EMPTY: (SlotConfig | null)[] = Array(36).fill(null);
+
+function download(name: string, data: BlobPart, type: string) {
+  const url = URL.createObjectURL(new Blob([data], { type }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function outName(rom: OpenedRom): string {
+  const r = rom.known?.rebalanced;
+  const base = r
+    ? `Bill Walsh College Football 95 Rebalanced v1.0 [${r === 'fixed' ? 'Fixed' : 'No'} Fatigue]`
+    : 'Bill Walsh College Football 95 (USA)';
+  return `${base} [Team Swap].md`;
+}
+
+export default function App() {
+  const [bw, setBw] = useState<BwState | null>(null);
+  const [cf, setCf] = useState<CfState | null>(null);
+  const [slots, setSlots] = useState<(SlotConfig | null)[]>(EMPTY);
+  const [open, setOpen] = useState<number | null>(null);
+  const [romNote, setRomNote] = useState<Note>(null);
+  const [note, setNote] = useState<Note>(null);
+  const [dragging, setDragging] = useState(false);
+
+  const onFiles = useCallback(async (files: FileList | File[]) => {
+    setRomNote(null);
+    for (const f of Array.from(files)) {
+      try {
+        const r = await openRom(f.name, new Uint8Array(await f.arrayBuffer()));
+        if (r.known?.kind === 'bw95') {
+          setBw({ rom: r, teams: parseBw95(r.data) });
+          setSlots(EMPTY);
+          setOpen(null);
+        } else if (r.known?.kind === 'cf97') {
+          setCf({ rom: r, teams: parseCf97(r.data) });
+          setSlots(EMPTY);
+          setOpen(null);
+        } else {
+          setRomNote({ kind: 'error', text: `${f.name}: ${describeUnknown(r)}` });
+        }
+      } catch (e) {
+        setRomNote({ kind: 'error', text: `${f.name}: ${(e as Error).message}` });
+      }
+    }
+  }, []);
+
+  const ready = !!bw && !!cf;
+  const celeb = useMemo(() => (bw ? buildGenericCelebration(bw.rom.data) : null), [bw]);
+  const swapped = slots.filter(Boolean) as SlotConfig[];
+  const problems = useMemo(
+    () => swapped.flatMap((s) => validateSlot(s).map((p) => `${bw?.teams[s.slot].school} → ${s.school || '(no name)'}: ${p}`)),
+    [swapped, bw],
+  );
+
+  const setSlot = (i: number, s: SlotConfig | null) => setSlots((prev) => prev.map((p, k) => (k === i ? s : p)));
+
+  const doBuild = () => {
+    if (!bw || !cf) return;
+    try {
+      const res = buildRom(bw.rom.data, bw.teams, cf.teams, swapped);
+      download(outName(bw.rom), res.rom as Uint8Array<ArrayBuffer>, 'application/octet-stream');
+      setNote({ kind: 'ok', text: `Built a ROM with ${swapped.length} team${swapped.length === 1 ? '' : 's'} swapped.` });
+    } catch (e) {
+      setNote({ kind: 'error', text: (e as Error).message });
+    }
+  };
+
+  const saveSwaps = () => {
+    download('bw95-team-swap.json', JSON.stringify(swapFile(swapped), null, 2), 'application/json');
+  };
+
+  const loadSwaps = async (f: File) => {
+    if (!bw || !cf) return;
+    try {
+      const sf: unknown = JSON.parse(await f.text());
+      if (!isSwapFile(sf)) throw new Error('This is not a team swap file.');
+      const next: (SlotConfig | null)[] = Array(36).fill(null);
+      for (const s of sf.swaps) {
+        const t = cf.teams.find((c) => c.index === s.cf97);
+        if (!t || t.school !== s.cf97School) throw new Error(`The swap file uses a CF97 team (${s.cf97School}) this ROM doesn't have.`);
+        if (!(s.slot >= 0 && s.slot < 36) || s.home?.length !== 16 || s.away?.length !== 16) throw new Error('The swap file is damaged.');
+        next[s.slot] = { ...s, celebration: s.celebration?.length === 3 ? s.celebration : defaultCelebration(s.home) };
+      }
+      setSlots(next);
+      setNote({ kind: 'ok', text: `Loaded ${sf.swaps.length} swap${sf.swaps.length === 1 ? '' : 's'} from ${f.name}.` });
+    } catch (e) {
+      setNote({ kind: 'error', text: (e as Error).message });
+    }
+  };
+
+  return (
+    <div
+      className={`page${dragging ? ' dragging' : ''}`}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={(e) => e.currentTarget === e.target && setDragging(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragging(false);
+        onFiles(e.dataTransfer.files);
+      }}
+    >
+      <header className="masthead">
+        <h1>
+          <span className="mast-1">Genesis</span>
+          <span className="mast-2">College Football</span>
+          <span className="mast-3">Toolkit</span>
+        </h1>
+        <p className="lede">
+          Modding tools for EA's college football games on the Sega Genesis. Everything runs in your browser, and your
+          ROMs never leave your computer.
+        </p>
+      </header>
+
+      <section className="tool-head" aria-label="Team Swap">
+        <h2>Team Swap</h2>
+        <p>
+          Replace any of Bill Walsh College Football '95's 36 teams with teams from College Football USA 97: logo,
+          helmet, wordmark, names and uniform colors. Schedules, rosters and saves stay as they are.
+        </p>
+      </section>
+
+      <section className="roms" aria-label="ROM files">
+        <RomCard
+          title="Bill Walsh College Football '95"
+          hint="The original USA ROM, or a Rebalanced v1.0 ROM. .md, .bin, .gen or .zip."
+          rom={bw?.rom}
+          onFiles={onFiles}
+        />
+        <RomCard
+          title="College Football USA 97"
+          hint="The USA ROM. The new teams' art and colors come from here."
+          rom={cf?.rom}
+          onFiles={onFiles}
+        />
+        {romNote && (
+          <p className={`note ${romNote.kind}`} role="alert">
+            {romNote.text}
+          </p>
+        )}
+      </section>
+
+      {ready ? (
+        <section className="board" aria-label="Teams">
+          <div className="board-head">
+            <h2>Teams</h2>
+            <p>Pick a CF97 team for each slot you want to change. Open a row to edit its names and colors.</p>
+          </div>
+          <ol className="rows">
+            {bw.teams.map((t) => (
+              <TeamRow
+                key={t.index}
+                bw={t}
+                cfTeams={cf.teams}
+                celeb={celeb}
+                slot={slots[t.index]}
+                open={open === t.index}
+                onToggle={() => setOpen(open === t.index ? null : t.index)}
+                onChange={(s) => setSlot(t.index, s)}
+              />
+            ))}
+          </ol>
+          <aside className="limits">
+            <h3>What stays the same</h3>
+            <ul>
+              <li>Rosters, schedules, rankings and battery saves keep the original team's slot.</li>
+              <li>The Walsh Report keeps the original team's scouting text, with the names changed.</li>
+              <li>
+                After a season-ending win, a swapped team gets a GO TEAM! card stunt in its colors instead of the original
+                team's celebration.
+              </li>
+            </ul>
+          </aside>
+        </section>
+      ) : (
+        <section className="waiting">
+          <p>Load both ROMs to see the teams. You can drop the files anywhere on this page.</p>
+        </section>
+      )}
+
+      {ready && (
+        <footer className="dock">
+          <p className="dock-count" aria-live="polite">
+            {swapped.length ? `${swapped.length} of 36 teams swapped` : 'No teams swapped yet'}
+          </p>
+          {note && (
+            <p className={`note ${note.kind}`} role={note.kind === 'error' ? 'alert' : 'status'}>
+              {note.text}
+            </p>
+          )}
+          {problems.length > 0 && (
+            <p className="note error" role="alert">
+              {problems[0]}
+              {problems.length > 1 ? ` (and ${problems.length - 1} more)` : ''}
+            </p>
+          )}
+          <div className="dock-actions">
+            <label className="btn">
+              Load swap file
+              <input
+                type="file"
+                accept=".json,application/json"
+                hidden
+                onChange={(e) => e.target.files?.[0] && loadSwaps(e.target.files[0]).then(() => (e.target.value = ''))}
+              />
+            </label>
+            <button className="btn" onClick={saveSwaps} disabled={!swapped.length}>
+              Save swap file
+            </button>
+            <button className="btn btn-go" onClick={doBuild} disabled={!swapped.length || problems.length > 0}>
+              Download ROM
+            </button>
+          </div>
+        </footer>
+      )}
+    </div>
+  );
+}
+
+function RomCard({ title, hint, rom, onFiles }: { title: string; hint: string; rom?: OpenedRom; onFiles: (f: FileList) => void }) {
+  return (
+    <label className={`rom${rom ? ' rom-ok' : ''}`}>
+      <span className="rom-title">{title}</span>
+      {rom ? (
+        <span className="rom-status">
+          {rom.known!.label}
+          <small>{rom.name}</small>
+        </span>
+      ) : (
+        <span className="rom-status rom-empty">
+          <span className="rom-choose">Choose file</span>
+          <small>{hint}</small>
+        </span>
+      )}
+      <input
+        type="file"
+        accept=".md,.bin,.gen,.zip"
+        hidden
+        onChange={(e) => {
+          if (e.target.files) onFiles(e.target.files);
+          e.target.value = '';
+        }}
+      />
+    </label>
+  );
+}
+
+function TeamRow({
+  bw,
+  cfTeams,
+  celeb,
+  slot,
+  open,
+  onToggle,
+  onChange,
+}: {
+  bw: BwTeam;
+  cfTeams: CfTeam[];
+  celeb: CelebBlob | null;
+  slot: SlotConfig | null;
+  open: boolean;
+  onToggle: () => void;
+  onChange: (s: SlotConfig | null) => void;
+}) {
+  const cf = slot ? cfTeams.find((c) => c.index === slot.cf97)! : null;
+  const pics = useMemo(() => {
+    if (cf) {
+      return {
+        logo: renderSprites(cf.tiles, cf.logoPalette, [cf.logo]),
+        helmet: renderSprites(cf.tiles, cf.logoPalette, [cf.helmet]),
+        word: renderSprites(cf.tiles, cf.logoPalette, [cf.wordmark]),
+      };
+    }
+    const pal = bw.mascot.palette!;
+    return {
+      logo: renderSprites(bw.mascot.tiles, pal, [bw.mascot.groups[1]]),
+      helmet: renderSprites(bw.helmet.tiles, pal, [bw.helmet.groups[0]]),
+      word: renderSprites(bw.mascot.tiles, pal, [bw.mascot.groups[2]]),
+    };
+  }, [cf, bw]);
+  const errs = slot ? validateSlot(slot) : [];
+  const cheer = slot?.celebration ?? (slot ? defaultCelebration(slot.home) : null);
+  const cheerPic = useMemo(() => {
+    if (!celeb || !cheer) return null;
+    const pal = celeb.palette.slice();
+    [9, 10, 13].forEach((idx, k) => (pal[idx] = cheer[k]));
+    const tiles = celeb.bytes.subarray(celeb.tiles, celeb.tiles + 32 * celeb.ntiles);
+    return renderSprites(tiles, pal, [celeb.groups[PREVIEW_FRAME]]);
+  }, [celeb, cheer?.join()]);
+  const setCheer = (k: number, c: number) => {
+    const n = (cheer ?? [0, 0, 0]).slice();
+    n[k] = c;
+    onChange({ ...slot!, celebration: n });
+  };
+  const id = `slot-${bw.index}`;
+
+  const text = (k: 'school' | 'city' | 'nickname', label: string) => (
+    <label className="text-field">
+      <span>
+        {label} <small>{slot![k].length}/{MAX_LEN[k]}</small>
+      </span>
+      <input
+        value={slot![k]}
+        maxLength={MAX_LEN[k]}
+        onChange={(e) => onChange({ ...slot!, [k]: e.target.value })}
+        aria-invalid={validateSlot(slot!).some((p) => p.startsWith(k))}
+      />
+    </label>
+  );
+
+  return (
+    <li className={`row${slot ? ' row-swapped' : ''}${open ? ' row-open' : ''}`}>
+      <div className="row-main">
+        <span className="row-from">
+          <span className="row-orig">{bw.school}</span>
+          {slot && <span className="row-was">was {bw.nickname}</span>}
+        </span>
+        <span className="row-art" aria-hidden={!slot}>
+          <SpriteCanvas pic={pics.logo} scale={1} label={`${slot ? slot.school : bw.school} logo`} />
+          <SpriteCanvas pic={pics.helmet} scale={1} label={`${slot ? slot.school : bw.school} helmet`} />
+          <SpriteCanvas pic={pics.word} scale={1} label={`${slot ? slot.school : bw.school} wordmark`} />
+        </span>
+        <label className="row-pick">
+          <span className="sr-only">Replacement for {bw.school}</span>
+          <select
+            value={slot ? slot.cf97 : ''}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === '') return onChange(null);
+              onChange(defaultSlot(bw, cfTeams.find((c) => c.index === +v)!));
+            }}
+          >
+            <option value="">Keep {bw.school}</option>
+            {cfTeams.map((c) => (
+              <option key={c.index} value={c.index}>
+                {c.school} {c.nickname}
+              </option>
+            ))}
+          </select>
+        </label>
+        {slot ? (
+          <button className="row-toggle" onClick={onToggle} aria-expanded={open} aria-controls={id}>
+            {open ? 'Close' : errs.length ? 'Fix names' : 'Edit'}
+          </button>
+        ) : (
+          <span className="row-toggle-spacer" />
+        )}
+      </div>
+      {slot && open && (
+        <div className="row-edit" id={id}>
+          <div className="names">
+            {text('school', 'School')}
+            {text('city', 'City')}
+            {text('nickname', 'Nickname')}
+            <p className="hint">The city appears in Bill Walsh's welcome. CF97 stores the stadium ({cf!.stadium}), so the city is filled in for you.</p>
+          </div>
+          <UniformEditor title="Home" u={slot.home} onChange={(home) => onChange({ ...slot, home })} />
+          <UniformEditor title="Away" u={slot.away} onChange={(away) => onChange({ ...slot, away })} />
+          <div className="extras">
+            <div className="field-row">
+              <span>End zones</span>
+              <Swatch color={slot.endZone} label="End zone color" onPick={(endZone) => onChange({ ...slot, endZone })} />
+            </div>
+            <p className="hint">Used when this team is at home.</p>
+            {cheer && (
+              <div className="cheer">
+                <span className="cheer-title">Season-end card stunt</span>
+                <div className="cheer-stage">
+                  <SpriteCanvas pic={cheerPic} scale={1.5} label="GO TEAM! card stunt preview" />
+                </div>
+                <div className="field-row">
+                  <span>Cards</span>
+                  <Swatch color={cheer[0]} label="Card stunt cards" onPick={(c) => setCheer(0, c)} />
+                </div>
+                <div className="field-row">
+                  <span>Skirts and pom-poms</span>
+                  <Swatch color={cheer[1]} label="Card stunt skirts and pom-poms" onPick={(c) => setCheer(1, c)} />
+                </div>
+                <div className="field-row">
+                  <span>Tops</span>
+                  <Swatch color={cheer[2]} label="Card stunt tops" onPick={(c) => setCheer(2, c)} />
+                </div>
+              </div>
+            )}
+            <button className="btn btn-quiet" onClick={() => onChange(defaultSlot(bw, cf!))}>
+              Reset to CF97 defaults
+            </button>
+          </div>
+        </div>
+      )}
+    </li>
+  );
+}

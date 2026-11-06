@@ -1,0 +1,9 @@
+node_modules/
+dist/
+*.md
+!README.md
+*.bin
+*.gen
+*.smd
+*.zip
+.DS_Store
