@@ -498,7 +498,7 @@ function SheetHelp() {
           3-4 teams). Slots nobody fills keep their player.
         </li>
         <li>
-          Team names can be the school ("Texas"), school and nickname, or the names CFB-Walsh.exe used. Hands comes
+          Team names can be the school ("Texas") or school and nickname. Hands comes
           from Catching; QB Range from Throw Power; kicker Range and Accuracy from Kick Power and Kick Accuracy.
         </li>
         <li>
