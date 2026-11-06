@@ -2,6 +2,17 @@
 
 Read this before changing anything. More than one person or Claude session may be working on this repo at the same time, and `main` deploys straight to the live site, https://genesis-cfb-toolkit.vercel.app. These rules keep work from colliding and keep the site working.
 
+## One working copy per session
+
+- Two sessions must never share a working copy: when one switches branches, the other's files change underneath it.
+- Claude sessions work in their own clone in their own workspace (a cloud session clones the repo into its container) and push their branch to GitHub.
+- The owner's clone on his Mac (`Bill-Walsh-95-Modding/Genesis-CFB-Toolkit`) is his. Don't edit, commit or switch branches there unless he asks.
+- If a session does need to work on the Mac, it uses its own git worktree next to the owner's clone, never the clone itself:
+  ```sh
+  git fetch origin
+  git worktree add -b feature/rosters-tab ../Genesis-CFB-Toolkit-rosters origin/main
+  ```
+
 ## Branches and pull requests
 
 - Never commit to `main` directly. Start every feature or fix on its own branch from an up-to-date `main`:
