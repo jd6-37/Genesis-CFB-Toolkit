@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BwTeam, parseBw95 } from './core/bw95';
 import { CfTeam, parseCf97 } from './core/cf97';
 import { buildRom, defaultSlot, isSwapFile, SlotConfig, swapFile, validateSlot } from './core/build';
@@ -7,6 +7,7 @@ import { renderSprites } from './core/render';
 import { describeUnknown, OpenedRom, openRom } from './core/romfile';
 import { buildGenericCelebration, CelebBlob, defaultCelebration, PREVIEW_FRAME } from './core/celebration';
 import { SpriteCanvas, Swatch, UniformEditor } from './components';
+import { RosterTool, type TeamSwapSource } from './tools/rosters/RosterTool';
 
 interface BwState {
   rom: OpenedRom;
@@ -19,6 +20,13 @@ interface CfState {
 type Note = { kind: 'error' | 'ok'; text: string } | null;
 
 const EMPTY: (SlotConfig | null)[] = Array(36).fill(null);
+
+type Tab = 'swap' | 'rosters';
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'swap', label: 'Team Swap' },
+  { id: 'rosters', label: 'Rosters' },
+];
+const tabFromHash = (): Tab => (window.location.hash === '#rosters' ? 'rosters' : 'swap');
 
 function download(name: string, data: BlobPart, type: string) {
   const url = URL.createObjectURL(new Blob([data], { type }));
@@ -47,6 +55,21 @@ export default function App() {
   const [romNote, setRomNote] = useState<Note>(null);
   const [note, setNote] = useState<Note>(null);
   const [dragging, setDragging] = useState(false);
+  const [tab, setTab] = useState<Tab>(tabFromHash);
+  const rosterDrop = useRef<((files: FileList | File[]) => void) | null>(null);
+  const registerRosterDrop = useCallback((fn: ((files: FileList | File[]) => void) | null) => {
+    rosterDrop.current = fn;
+  }, []);
+
+  useEffect(() => {
+    const onHash = () => setTab(tabFromHash());
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+  const pickTab = (t: Tab) => {
+    setTab(t);
+    window.history.replaceState(null, '', t === 'rosters' ? '#rosters' : window.location.pathname + window.location.search);
+  };
 
   const onFiles = useCallback(async (files: FileList | File[]) => {
     setRomNote(null);
@@ -91,6 +114,14 @@ export default function App() {
     }
   };
 
+  const teamSwap: TeamSwapSource | null =
+    bw && cf && swapped.length && !problems.length
+      ? {
+          count: swapped.length,
+          build: () => ({ name: outName(bw.rom), data: buildRom(bw.rom.data, bw.teams, cf.teams, swapped).rom }),
+        }
+      : null;
+
   const saveSwaps = () => {
     download('bw95-team-swap.json', JSON.stringify(swapFile(swapped), null, 2), 'application/json');
   };
@@ -125,7 +156,8 @@ export default function App() {
       onDrop={(e) => {
         e.preventDefault();
         setDragging(false);
-        onFiles(e.dataTransfer.files);
+        if (tab === 'rosters') rosterDrop.current?.(e.dataTransfer.files);
+        else onFiles(e.dataTransfer.files);
       }}
     >
       <header className="masthead">
@@ -140,11 +172,40 @@ export default function App() {
         </p>
       </header>
 
+      <nav className="tabs" role="tablist" aria-label="Tools">
+        {TABS.map((t, i) => (
+          <button
+            key={t.id}
+            id={`tab-${t.id}`}
+            role="tab"
+            aria-selected={tab === t.id}
+            aria-controls={`panel-${t.id}`}
+            tabIndex={tab === t.id ? 0 : -1}
+            className={`tab${tab === t.id ? ' tab-on' : ''}`}
+            onClick={() => pickTab(t.id)}
+            onKeyDown={(e) => {
+              if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+              const next = TABS[(i + (e.key === 'ArrowRight' ? 1 : TABS.length - 1)) % TABS.length].id;
+              pickTab(next);
+              document.getElementById(`tab-${next}`)?.focus();
+            }}
+          >
+            {t.label}
+          </button>
+        ))}
+      </nav>
+
+      <div id="panel-rosters" role="tabpanel" aria-labelledby="tab-rosters" hidden={tab !== 'rosters'}>
+        <RosterTool teamSwap={teamSwap} registerDrop={registerRosterDrop} />
+      </div>
+
+      <div id="panel-swap" role="tabpanel" aria-labelledby="tab-swap" hidden={tab !== 'swap'}>
       <section className="tool-head" aria-label="Team Swap">
         <h2>Team Swap</h2>
         <p>
           Replace any of Bill Walsh College Football '95's 36 teams with teams from College Football USA 97: logo,
-          helmet, wordmark, names and uniform colors. Schedules, rosters and saves stay as they are.
+          helmet, wordmark, names and uniform colors. Schedules, rosters and saves stay as they are (edit rosters in
+          the Rosters tab).
         </p>
       </section>
 
@@ -191,7 +252,10 @@ export default function App() {
           <aside className="limits">
             <h3>What stays the same</h3>
             <ul>
-              <li>Rosters, schedules, rankings and battery saves keep the original team's slot.</li>
+              <li>
+                Rosters, schedules, rankings and battery saves keep the original team's slot. To change the players, use
+                the Rosters tab (it can open the swapped ROM directly).
+              </li>
               <li>The Walsh Report keeps the original team's scouting text, with the names changed.</li>
               <li>
                 After a season-ending win, a swapped team gets a GO TEAM! card stunt in its colors instead of the original
@@ -241,6 +305,7 @@ export default function App() {
           </div>
         </footer>
       )}
+      </div>
     </div>
   );
 }
