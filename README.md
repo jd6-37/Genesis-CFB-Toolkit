@@ -83,7 +83,7 @@ One row per player, all teams in one sheet, as `.csv` (comma, semicolon or tab) 
 
 | Column | Used for |
 |---|---|
-| Team | School ("Texas"), school and nickname ("Texas Longhorns"), or the names CFB-Walsh.exe used |
+| Team | School ("Texas") or school and nickname ("Texas Longhorns") |
 | Position | QB, HB, FB, LT, LG, C, RG, RT, WR, TE, K, P, LE, DT, RE, LOLB, MLB, ROLB, CB, SS, FS (RB and ILB also work) |
 | Overall Rating | Who starts: the best players of a position fill its slots first |
 | Jersey Number | 0-99 |
