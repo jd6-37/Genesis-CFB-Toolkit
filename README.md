@@ -7,7 +7,9 @@ Everything runs in your browser. Your ROMs are opened on your own computer and a
 ## Tools
 
 - **[Team Swap](#team-swap):** swap College Football USA 97 teams into Bill Walsh College Football '95.
-- **Roster editor:** planned, for Bill Walsh '95, CF96 and CF97.
+- **[Rosters](#rosters):** edit the players of Bill Walsh '95, CF96 or CF97, team by team or from a spreadsheet (CSV or Excel).
+
+Each tool has its own tab. `#rosters` at the end of the address opens the Rosters tab directly.
 
 ## Team Swap
 
@@ -26,7 +28,7 @@ Pick any of BW95's 36 teams, choose a CF97 team to replace it with, adjust the n
 ### What stays the same
 
 - Schedules, rankings, conferences and battery saves: the new team plays in the old team's slot.
-- Rosters (a CSV roster editor is planned).
+- Rosters (edit them in the [Rosters](#rosters) tab, which can open the swapped ROM directly).
 - The Walsh Report keeps the original team's scouting text, with the names changed.
 - Teams you don't swap keep their own celebrations.
 
@@ -69,6 +71,62 @@ Files can be `.md`, `.bin` or `.gen`, or a `.zip` containing one. The Rebalanced
 
 Not tested in a real game: a full season through the bowls with swapped teams (the celebration was only forced at the title screen), and real hardware.
 
+## Rosters
+
+Load a Bill Walsh College Football '95, College Football USA 96 or College Football USA 97 ROM, pick a team, and change its players' jersey numbers and ratings, or import a spreadsheet for many teams at once. Then download the ROM. Original and modified ROMs both work (Rebalanced, Team Swap output, an earlier roster edit, a ROM saved by CFB-Walsh.exe). **Use the Team Swap result** opens the ROM you set up in the Team Swap tab, so swaps and roster edits end up in one file.
+
+Players in these games have no names, only numbers. Each rating is a step from 0 to 15, which the game's roster screen shows as 0, 6, 13 … 93, 100; weight goes in 16 lb steps from 140 to 380. The editor shows the same numbers as the game.
+
+### Spreadsheet import
+
+One row per player, all teams in one sheet, as `.csv` (comma, semicolon or tab) or `.xlsx` (first worksheet).
+
+| Column | Used for |
+|---|---|
+| Team | School ("Texas") or school and nickname ("Texas Longhorns") |
+| Position | QB, HB, FB, LT, LG, C, RG, RT, WR, TE, K, P, LE, DT, RE, LOLB, MLB, ROLB, CB, SS, FS (RB and ILB also work) |
+| Overall Rating | Who starts: the best players of a position fill its slots first |
+| Jersey Number | 0-99 |
+| Weight | In lb |
+| Speed, Quickness, Awareness, Power, Blocking, Tackling | 0-99 |
+| Catching | Hands |
+| Throw Power | QB range |
+| Kick Power, Kick Accuracy | Kicker and punter range and accuracy |
+| Name, or First Name and Last Name | Optional, shown in the import report |
+
+- A 0-99 value goes to the step at or below it (88 → 86, the step the game shows as 86). Weights the same way (245 lb → 236).
+- Slots: BW95 has 32 players per team (QB, HB1-2, FB, five linemen, SE, FL, WR1-2, TE1-2, K, P, 4-3 or 3-4 front, PLB, four CBs, SS, FS, FS2). The four best WRs fill SE, FL, WR1 and WR2. On 3-4 teams the best DT is the NT and the MLBs fill LILB and RILB. The PLB is the best outside linebacker left over. CF96/97 have 45 players per team (two QBs, three HBs, backups at most positions).
+- Slots nobody fills keep their current player, and empty cells keep the current value.
+- The report lists teams, positions and columns it didn't use, and who went to which slot.
+
+### CSV export
+
+**Export team CSV** and **Export all teams CSV** write the same columns plus **Slot** (QB, HB1, LDE …), with the values the game shows. Edit the file and import it again: rows with a Slot go to that exact slot, so an unchanged export imports back without changing a byte.
+
+### How it works
+
+- **Rosters:** each team's roster is in its team block (BW95 table `0x0028DC`, CF96/97 table `0x002CEA`): 32 players × 4 bytes in BW95, 45 × 5 bytes in CF96/97. Byte 0 is the jersey number (BCD), then six 4-bit ratings; the order depends on the position (for example QB: weight, quickness, speed, awareness, range, power). The fifth CF byte is kept as it is.
+- **3-4 teams (BW95):** a bitfield at `0x061068` (bit clear = 3-4) picks the roster screen's labels. The editor and the import read it from the ROM.
+- **Checksums:** all three games check a sum of the ROM at boot against a stored value (BW95 `0x1E6430`, CF96 `0x1B5F00`, CF97 `0x1EF580`); with a wrong value, CF97 stays on a black screen. The download recomputes it and the Genesis header checksum. ROMs where that check was turned off (as CFB-Walsh.exe does) get it turned back on.
+
+### Compared with CFB-Walsh.exe
+
+The import follows the rules of CFB-Walsh.exe ("Genesis College Football Editor v2.0"), with these fixes:
+
+- Checksums are recomputed instead of the boot check being turned off.
+- Washington (BW95) is a 3-4 team in the game; the exe treated it as 4-3.
+- CF97 Virginia Tech's roster is read from the right place (the exe's address for it was 100 bytes off).
+- CF96/97 RDT and DT2 stay where they are (the exe swapped them every time it saved).
+- Teams are found through the game's team table, so swapped teams work.
+- The leftover slots (PLB; CF96/97 T2, G2, DE2, LB2) get the best remaining player by Overall Rating.
+
+### Testing
+
+- Export → import of every team leaves all three ROMs byte-identical.
+- Imports checked on BW95's roster screen in an emulator: numbers, ratings and weights show as expected, on a 4-3 team, a 3-4 team (NT, LILB, RILB) and a team-swapped Tulane. Unfilled slots keep their players.
+- Edited CF96 and CF97 ROMs boot (with a wrong checksum CF97 stays on a black screen).
+- ROMs downloaded from the app are byte-identical to the same edits made with the code in Node; a Team Swap result with roster edits differs from the plain swap only in the edited players and the checksums.
+
 ## Development
 
 ```sh
@@ -78,6 +136,14 @@ npm run build    # type-check and build to dist/
 ```
 
 The app is a static site (Vite + React + TypeScript), so it deploys to Vercel as-is: import the repo and keep the detected Vite settings (build `npm run build`, output `dist`).
+
+How the Rosters tool reads and writes the games (formats, checksums, import rules, tests): [docs/rosters.md](docs/rosters.md).
+
+Roster engine tests need your own ROMs (`.md`, `.bin`, `.gen` or `.zip`):
+
+```sh
+npm run test:rosters -- BW95.md CF96.md CF97.md
+```
 
 The 68000 helpers are in `asm/`; `asm/build.sh` reassembles them into `src/core/helpers68k.ts` (needs `binutils-m68k-linux-gnu`).
 

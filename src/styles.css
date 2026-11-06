@@ -67,6 +67,24 @@ button, input, select { font: inherit; color: inherit; }
 .tool-head h2 { font-family: var(--display); font-style: italic; font-weight: 800; font-size: 44px; margin: 0; }
 .tool-head p { max-width: 62ch; margin: 6px 0 0; color: var(--chalk-dim); }
 
+/* Tool tabs */
+.tabs { display: flex; gap: 32px; margin: 0 0 32px; border-bottom: 1px solid var(--line); }
+.tab {
+  padding: 4px 0 10px;
+  margin-bottom: -1px;
+  background: none;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  font-family: var(--display);
+  font-style: italic;
+  font-weight: 800;
+  font-size: 30px;
+  color: var(--chalk-dim);
+  cursor: pointer;
+}
+.tab:hover { color: var(--chalk); }
+.tab-on, .tab-on:hover { color: var(--menu); border-bottom-color: var(--menu); }
+
 /* ROM files */
 .roms {
   display: grid;
@@ -267,4 +285,6 @@ button, input, select { font: inherit; color: inherit; }
   .row-toggle, .row-toggle-spacer { grid-area: toggle; }
   .row-edit { grid-template-columns: 1fr; }
   .picker { right: auto; left: 0; }
+  .tabs { gap: 24px; }
+  .tab { font-size: 26px; }
 }

@@ -1,0 +1,107 @@
+/* Rosters tool. Uses the app's tokens from src/styles.css (--night, --deep, --menu, --line …). */
+.ros-roms { grid-template-columns: 1fr 1fr; }
+.ros-from-swap { display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+.ros-from-swap .btn-quiet { font-size: 15px; padding: 8px 14px; }
+
+.ros-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+  padding: 12px 14px;
+  background: var(--night);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.ros-team { display: flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 700; font-size: 22px; }
+.ros-team select {
+  min-width: 16rem;
+  max-width: 70vw;
+  padding: 8px 10px;
+  background: var(--deep);
+  border: 1px solid rgba(246, 216, 74, 0.45);
+  border-radius: 4px;
+  color: var(--menu);
+  font: 600 16px/1.3 var(--body);
+}
+.ros-chip { padding: 2px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 14px; color: var(--chalk-dim); }
+.ros-actions { margin-left: auto; display: flex; flex-wrap: wrap; gap: 10px; }
+.ros-actions .btn { padding: 8px 14px; }
+.ros-status { display: flex; flex-wrap: wrap; gap: 6px 20px; min-height: 22px; margin: 10px 2px 12px; font-size: 14px; }
+.ros-link {
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--menu);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.ros .note { margin: 0 0 12px; }
+
+.ros-report {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: var(--deep);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--menu);
+  border-radius: 6px;
+  font-size: 15px;
+}
+.ros-report-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.ros-report-head .ros-link { margin-left: auto; }
+.ros-warn { margin: 6px 0 0; color: var(--error); }
+.ros-report details { margin-top: 8px; }
+.ros-report summary { cursor: pointer; color: var(--chalk-dim); }
+.ros-teams { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
+.ros-dim { color: var(--chalk-dim); }
+.ros-fills { display: flex; flex-wrap: wrap; gap: 2px 14px; margin-top: 2px; font-size: 14px; color: var(--chalk-dim); }
+.ros-fills b { color: var(--chalk); font-weight: 600; }
+
+.ros-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 540px), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.ros-sec { padding: 10px 12px 12px; background: var(--night); border: 1px solid var(--line); border-radius: 6px; }
+.ros-sec h3 { margin: 0 0 4px; font-family: var(--display); font-weight: 700; font-size: 22px; }
+.ros-scroll { overflow-x: auto; }
+.ros table { width: 100%; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; }
+.ros th {
+  padding: 2px 3px 4px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--chalk-dim);
+  white-space: nowrap;
+}
+.ros td { padding: 2px 3px; border-top: 1px solid var(--line); }
+.ros td.ros-pos { width: 3.6rem; font-family: var(--display); font-weight: 700; font-size: 17px; color: var(--menu); white-space: nowrap; }
+.ros td select, .ros-num {
+  width: 100%;
+  min-width: 3.7rem;
+  padding: 3px 2px;
+  background: var(--deep);
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: var(--chalk);
+}
+.ros td select option { background: var(--deep); color: var(--chalk); }
+.ros-num { width: 2.9rem; min-width: 2.9rem; text-align: center; }
+.ros td.chg select, .ros td.chg .ros-num { border-color: var(--menu); background: rgba(246, 216, 74, 0.16); }
+/* weak and strong ratings stand out a little (weight is left alone) */
+.ros select[data-step='0'], .ros select[data-step='1'], .ros select[data-step='2'], .ros select[data-step='3'] { color: #8f8bc4; }
+.ros select[data-step='12'], .ros select[data-step='13'], .ros select[data-step='14'], .ros select[data-step='15'] { color: #ffffff; font-weight: 600; }
+.ros-scale { max-width: 90ch; margin-top: 12px; }
+.ros-help { margin-top: 32px; }
+.ros-help li { margin-bottom: 6px; }
+.ros-help b { color: var(--chalk); font-weight: 600; }
+
+@media (max-width: 900px) {
+  .ros-roms { grid-template-columns: 1fr; }
+  .ros-actions { margin-left: 0; }
+}
