@@ -1,7 +1,4 @@
 /* Rosters tool. Uses the app's tokens from src/styles.css (--night, --deep, --menu, --line …). */
-.ros-roms { grid-template-columns: 1fr 1fr; }
-.ros-from-swap { display: flex; flex-direction: column; justify-content: center; gap: 8px; }
-.ros-from-swap .btn-quiet { font-size: 15px; padding: 8px 14px; }
 
 .ros-bar {
   display: flex;

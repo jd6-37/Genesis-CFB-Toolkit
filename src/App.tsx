@@ -7,8 +7,9 @@ import { renderSprites } from './core/render';
 import { describeUnknown, OpenedRom, openRom } from './core/romfile';
 import { buildGenericCelebration, CelebBlob, defaultCelebration, PREVIEW_FRAME } from './core/celebration';
 import { SpriteCanvas, Swatch, UniformEditor } from './components';
-import { RosterTool, type TeamSwapSource } from './tools/rosters/RosterTool';
+import { RosterTool } from './tools/rosters/RosterTool';
 import { SeasonTool } from './tools/season/SeasonTool';
+import { useWorkRom, type TeamSwapSource } from './tools/shared/WorkRom';
 
 interface BwState {
   rom: OpenedRom;
@@ -59,10 +60,7 @@ export default function App() {
   const [note, setNote] = useState<Note>(null);
   const [dragging, setDragging] = useState(false);
   const [tab, setTab] = useState<Tab>(tabFromHash);
-  const rosterDrop = useRef<((files: FileList | File[]) => void) | null>(null);
-  const registerRosterDrop = useCallback((fn: ((files: FileList | File[]) => void) | null) => {
-    rosterDrop.current = fn;
-  }, []);
+  const work = useWorkRom(); // the ROM the Season and Rosters tabs edit together
   const seasonDrop = useRef<((files: FileList | File[]) => void) | null>(null);
   const registerSeasonDrop = useCallback((fn: ((files: FileList | File[]) => void) | null) => {
     seasonDrop.current = fn;
@@ -168,7 +166,7 @@ export default function App() {
       onDrop={(e) => {
         e.preventDefault();
         setDragging(false);
-        if (tab === 'rosters') rosterDrop.current?.(e.dataTransfer.files);
+        if (tab === 'rosters') void work.loadFiles(e.dataTransfer.files);
         else if (tab === 'season') seasonDrop.current?.(e.dataTransfer.files);
         else onFiles(e.dataTransfer.files);
       }}
@@ -209,11 +207,11 @@ export default function App() {
       </nav>
 
       <div id="panel-season" role="tabpanel" aria-labelledby="tab-season" hidden={tab !== 'season'}>
-        <SeasonTool teamSwap={teamSwap} registerDrop={registerSeasonDrop} />
+        <SeasonTool api={work} teamSwap={teamSwap} registerDrop={registerSeasonDrop} />
       </div>
 
       <div id="panel-rosters" role="tabpanel" aria-labelledby="tab-rosters" hidden={tab !== 'rosters'}>
-        <RosterTool teamSwap={teamSwap} registerDrop={registerRosterDrop} />
+        <RosterTool api={work} teamSwap={teamSwap} />
       </div>
 
       <div id="panel-swap" role="tabpanel" aria-labelledby="tab-swap" hidden={tab !== 'swap'}>
