@@ -9,9 +9,11 @@ import {
   findEaChecksum, fixChecksums, getRating, jerseyByte, jerseyNumber, openRosterRom, readPlayer, setRating,
   teamLayout, teamName, writePlayer, type Player, type RosterRom,
 } from '../../core/rosterRom';
-import { importSheet, type ImportReport } from '../../core/rosterImport';
+import { detectImport, importSheet, type ImportReport } from '../../core/rosterImport';
+import { applyCfb27, convertCfb27, type Cfb27Plan } from '../../core/rosterCfb27';
+import { hasOlPatch, installOlPatch, olPatchState, restoreOlPatch, shownWeightOffset } from '../../core/rosterOlPatch';
 import { exportRostersCsv } from '../../core/rosterExport';
-import { readSheet } from '../../core/rosterSheet';
+import { readSheet, type Sheet } from '../../core/rosterSheet';
 import { openRom } from '../../core/romfile';
 import './rosters.css';
 
@@ -153,8 +155,8 @@ export function RosterTool({
             <span className="rom-status rom-empty">
               <span className="rom-choose">Choose file</span>
               <small>
-                Bill Walsh College Football '95, College Football USA 96 or 97. Original or modified (Rebalanced, Team
-                Swap, an earlier roster edit). .md, .bin, .gen or .zip.
+                Bill Walsh College Football '95, College Football USA 96 or 97. Original or modified (Elevated, formerly
+                Rebalanced; Team Swap; an earlier roster edit). .md, .bin, .gen or .zip.
               </small>
             </span>
           )}
@@ -224,8 +226,10 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
   const { rom, baseline } = loaded;
   const [team, setTeam] = useState(0);
   const [rev, setRev] = useState(0);
-  const [report, setReport] = useState<(ImportReport & { file: string }) | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [report, setReport] = useState<(ImportReport & { file: string; olOffer: boolean }) | null>(null);
+  const [plan, setPlan] = useState<{ plan: Cfb27Plan; file: string } | null>(null);
+  const [converted, setConverted] = useState<ConvertedReport | null>(null);
+  const [error, setError] = useState<string | string[] | null>(null);
   const sheetRef = useRef<HTMLInputElement>(null);
   const bump = () => {
     setRev((r) => r + 1);
@@ -246,21 +250,79 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
       const o = rom.teams[i].rosterOffset;
       rom.data.set(baseline.subarray(o, o + recLen), o);
     }
+    // Back to the loaded rosters everywhere: take the OL weight tweak out again if this session added it.
+    const anyLeft = rom.teams.some((x) => {
+      for (let k = x.rosterOffset; k < x.rosterOffset + recLen; k++) if (rom.data[k] !== baseline[k]) return true;
+      return false;
+    });
+    if (!anyLeft && rom.game === 'bw95' && olPatchState(baseline) !== 'installed') restoreOlPatch(rom.data, baseline);
     setReport(null);
+    setConverted(null);
     bump();
   };
 
-  const onImport = async (f: File) => {
+  const clearPanels = () => {
     setError(null);
+    setReport(null);
+    setPlan(null);
+    setConverted(null);
+  };
+
+  const onImport = async (f: File) => {
+    clearPanels();
+    let sheet: Sheet;
     try {
-      const sheet = await readSheet(f.name, new Uint8Array(await f.arrayBuffer()));
+      sheet = await readSheet(f.name, new Uint8Array(await f.arrayBuffer()));
+    } catch (e) {
+      return setError(`${f.name}: ${(e as Error).message}`);
+    }
+    const kind = detectImport(rom, sheet);
+    if (kind.path === 'refused') return setError([`${f.name} doesn't fit this ROM:`, ...kind.problems]);
+    if (kind.path === 'cfb27') {
+      try {
+        setPlan({ plan: convertCfb27(rom, sheet), file: f.name });
+      } catch (e) {
+        setError(`${f.name}: ${(e as Error).message}`);
+      }
+      return;
+    }
+    try {
       const rep = importSheet(rom, sheet);
-      setReport({ ...rep, file: f.name });
+      // A CSV converted from CFB 27 elsewhere (it carries EA player IDs) goes in slot by slot; offer the OL tweak.
+      const olOffer = kind.path === 'slots' && rom.game === 'bw95' && !hasOlPatch(rom) && rep.teams.length > 0 &&
+        sheet.headers.some((h) => h.toLowerCase().replace(/[^a-z]/g, '') === 'eaplayerid');
+      setReport({ ...rep, file: f.name, olOffer });
       if (rep.teams.length && !rep.teams.some((x) => x.team === team)) setTeam(rep.teams[0].team);
       bump();
     } catch (e) {
-      setReport(null);
       setError(`${f.name}: ${(e as Error).message}`);
+    }
+  };
+
+  const applyPlan = (teams: number[], tweak: boolean) => {
+    if (!plan) return;
+    const slots = applyCfb27(rom, plan.plan, teams);
+    let tweakNote: string | null = null;
+    if (tweak && rom.game === 'bw95') {
+      try {
+        tweakNote = installOlPatch(rom.data) === 'installed' ? 'installed' : 'already';
+      } catch (e) {
+        tweakNote = (e as Error).message;
+      }
+    }
+    setConverted({ plan: plan.plan, file: plan.file, teams, slots, tweak: tweakNote });
+    setPlan(null);
+    if (teams.length && !teams.includes(team)) setTeam(teams[0]);
+    bump();
+  };
+
+  const addTweak = () => {
+    try {
+      installOlPatch(rom.data);
+      setReport((r) => (r ? { ...r, olOffer: false } : r));
+      bump();
+    } catch (e) {
+      setError((e as Error).message);
     }
   };
 
@@ -280,7 +342,12 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
             ))}
           </select>
         </label>
-        {rom.game === 'bw95' && <span className="ros-chip">{t.threeFour ? '3-4 defense' : '4-3 defense'}</span>}
+        {rom.game === 'bw95' && !rom.elevated && <span className="ros-chip">{t.threeFour ? '3-4 defense' : '4-3 defense'}</span>}
+        {hasOlPatch(rom) && (
+          <span className="ros-chip" title="The roster screen shows offensive linemen 25 lb heavier (display only). Weights here match the screen.">
+            OL weights +25 lb
+          </span>
+        )}
         <div className="ros-actions">
           <button className="btn" onClick={() => sheetRef.current?.click()}>
             Import spreadsheet
@@ -320,11 +387,24 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
       </div>
 
       {error && (
-        <p className="note error" role="alert">
-          {error}
-        </p>
+        <div className="note error" role="alert">
+          {Array.isArray(error) ? (
+            <>
+              <p>{error[0]}</p>
+              <ul>
+                {error.slice(1).map((x) => (
+                  <li key={x}>{x}</li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <p>{error}</p>
+          )}
+        </div>
       )}
-      {report && <ImportSummary report={report} onPick={setTeam} onClose={() => setReport(null)} />}
+      {plan && <Cfb27Preview rom={rom} plan={plan.plan} file={plan.file} onApply={applyPlan} onCancel={() => setPlan(null)} />}
+      {converted && <Cfb27Summary rom={rom} report={converted} onPick={setTeam} onClose={() => setConverted(null)} />}
+      {report && <ImportSummary report={report} onPick={setTeam} onClose={() => setReport(null)} onTweak={addTweak} />}
 
       <div className="ros-grid" key={`${team}-${rev}`}>
         {GROUP_ORDER.map((g) => {
@@ -339,9 +419,15 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
                       <tr>
                         <th>Pos</th>
                         <th>No.</th>
-                        {GROUP_COLUMNS[g].map((a) => (
-                          <th key={a}>{ATTR_SHORT[a]}</th>
-                        ))}
+                        {GROUP_COLUMNS[g].map((a) =>
+                          g === 'KP' && a === 'Quickness' ? (
+                            <th key={a} title="QUICK on the game's roster screen. The game's kicks use it as kick distance.">
+                              Quick <span className="ros-th-note">kick distance</span>
+                            </th>
+                          ) : (
+                            <th key={a}>{ATTR_SHORT[a]}</th>
+                          ),
+                        )}
                       </tr>
                     </thead>
                     <tbody>
@@ -358,8 +444,9 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
       </div>
       <p className="hint ros-scale">
         Values are what the game's roster screen shows: each rating has 16 steps (0, 6, 13 … 93, 100), weight goes in
-        16 lb steps (140 … 380). A spreadsheet value goes to the step at or below it (88 → 86, 245 lb → 236). Players
-        have no names in these games, only numbers.
+        16 lb steps (140 … 380{hasOlPatch(rom) ? '; offensive linemen 165 … 405, see "OL weights +25 lb"' : ''}). A
+        spreadsheet value goes to the step at or below it (88 → 86, 245 lb → 236). Players have no names in these
+        games, only numbers.
       </p>
       <SheetHelp />
     </section>
@@ -399,18 +486,19 @@ function PlayerRow({ rom, team, def, base, onEdit }: { rom: RosterRom; team: num
       {GROUP_COLUMNS[def.group].map((a) => {
         const v = getRating(p, def, a)!;
         const weight = a === 'Weight';
+        const plus = weight ? shownWeightOffset(rom, def) : 0;
         return (
           <td key={a} className={v !== getRating(base, def, a) ? 'chg' : ''}>
             <select
               value={v}
               aria-label={`${def.label} ${a}`}
               data-step={weight ? undefined : v}
-              title={weight ? `Import ${weightRangeLabel(v)} lb` : `Import ${ratingRangeLabel(v)}`}
+              title={weight ? `Import ${weightRangeLabel(v, plus)} lb` : `Import ${ratingRangeLabel(v)}`}
               onChange={(e) => save((pl) => setRating(pl, def, a, Number(e.target.value)))}
             >
               {STEPS.map((s) => (
                 <option key={s} value={s}>
-                  {weight ? nibbleToWeight(s) : nibbleToRating(s)}
+                  {weight ? nibbleToWeight(s) + plus : nibbleToRating(s)}
                 </option>
               ))}
             </select>
@@ -421,9 +509,17 @@ function PlayerRow({ rom, team, def, base, onEdit }: { rom: RosterRom; team: num
   );
 }
 
-function ImportSummary({ report, onPick, onClose }: { report: ImportReport & { file: string }; onPick: (t: number) => void; onClose: () => void }) {
+function ImportSummary({
+  report, onPick, onClose, onTweak,
+}: {
+  report: ImportReport & { file: string; olOffer: boolean };
+  onPick: (t: number) => void;
+  onClose: () => void;
+  onTweak: () => void;
+}) {
   const placed = report.teams.reduce((n, t) => n + t.filled.length, 0);
   const list = (items: string[]) => items.join(', ');
+  const bySlot = report.teams.some((t) => t.mode === 'slots');
   return (
     <div className="ros-report" role="status">
       <div className="ros-report-head">
@@ -437,6 +533,20 @@ function ImportSummary({ report, onPick, onClose }: { report: ImportReport & { f
           Close
         </button>
       </div>
+      <p className="ros-dim ros-path">
+        {bySlot
+          ? 'Imported slot by slot (the sheet has a Slot column that fits this ROM).'
+          : 'Imported by position: the best players by Overall Rating filled each position\'s slots.'}
+      </p>
+      {report.olOffer && (
+        <p className="ros-offer">
+          This looks like CFB 27 rosters. The roster screen can show offensive linemen 25 lb heavier, closer to today's
+          weights (display only).{' '}
+          <button className="btn btn-quiet" onClick={onTweak}>
+            Show OL weights +25 lb
+          </button>
+        </p>
+      )}
       {report.unknownTeams.length > 0 && (
         <p className="ros-warn">Teams not in this ROM, skipped: {list(report.unknownTeams.map((u) => `${u.name} (${u.rows})`))}</p>
       )}
@@ -481,30 +591,196 @@ function ImportSummary({ report, onPick, onClose }: { report: ImportReport & { f
   );
 }
 
+interface ConvertedReport {
+  plan: Cfb27Plan;
+  file: string;
+  /** Teams written (indexes). */
+  teams: number[];
+  slots: number;
+  /** 'installed', 'already', an error message, or null when not asked for. */
+  tweak: string | null;
+}
+
+/** CFB 27 data was found: shows what the conversion would do and which teams to write. */
+function Cfb27Preview({
+  rom, plan, file, onApply, onCancel,
+}: {
+  rom: RosterRom;
+  plan: Cfb27Plan;
+  file: string;
+  onApply: (teams: number[], tweak: boolean) => void;
+  onCancel: () => void;
+}) {
+  const [pick, setPick] = useState<Set<number>>(() => new Set(plan.teams.map((t) => t.team)));
+  const [tweak, setTweak] = useState(rom.game === 'bw95' && olPatchState(rom.data) !== 'unknown');
+  const toggle = (i: number) => setPick((s) => {
+    const n = new Set(s);
+    if (n.has(i)) n.delete(i); else n.add(i);
+    return n;
+  });
+  const n = plan.teams.length;
+  return (
+    <div className="ros-report ros-convert" role="region" aria-label="CFB 27 conversion">
+      <div className="ros-report-head">
+        <strong>{file}</strong>
+        <span>
+          CFB 27 ratings: {n === 0 ? 'no school in the file matches a team in this ROM.' : `${n} of this ROM's ${rom.teams.length} teams found.`}
+        </span>
+        <button className="ros-link" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+      {n > 0 && (
+        <>
+          <p className="ros-dim ros-path">
+            Each team gets its own CFB 27 players. Ratings are ranked among the players in this file and keep the original
+            game's spread for each position, so the game plays the same. Teams you leave out keep their rosters.
+          </p>
+          <fieldset className="ros-pick">
+            <legend>
+              Teams to write{' '}
+              <button type="button" className="ros-link" onClick={() => setPick(new Set(plan.teams.map((t) => t.team)))}>
+                all
+              </button>{' '}
+              <button type="button" className="ros-link" onClick={() => setPick(new Set())}>
+                none
+              </button>
+            </legend>
+            {[...plan.teams].sort((a, b) => rom.teams[a.team].school.localeCompare(rom.teams[b.team].school)).map((t) => (
+              <label key={t.team}>
+                <input type="checkbox" checked={pick.has(t.team)} onChange={() => toggle(t.team)} />
+                {rom.teams[t.team].school}
+                {t.unfilled.length > 0 && <span className="ros-dim"> ({t.fills.length} of {t.fills.length + t.unfilled.length})</span>}
+              </label>
+            ))}
+          </fieldset>
+          {rom.game === 'bw95' && (
+            <label className="ros-tweak">
+              <input type="checkbox" checked={tweak} disabled={olPatchState(rom.data) === 'unknown'} onChange={(e) => setTweak(e.target.checked)} />
+              Show offensive linemen 25 lb heavier on the roster screen (display only). Today's linemen are heavier than
+              the original game's, and the conversion keeps the original weights so the line play stays the same.
+            </label>
+          )}
+          <div className="ros-convert-actions">
+            <button className="btn btn-go" disabled={pick.size === 0} onClick={() => onApply([...pick].sort((a, b) => a - b), tweak)}>
+              Convert {pick.size} team{pick.size === 1 ? '' : 's'}
+            </button>
+          </div>
+        </>
+      )}
+      {plan.unknownPositions.length > 0 && (
+        <p className="ros-warn">
+          Positions the conversion doesn't know, skipped: {plan.unknownPositions.map((u) => `${u.position} (${u.rows})`).join(', ')}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** What the conversion wrote. */
+function Cfb27Summary({ rom, report, onPick, onClose }: { rom: RosterRom; report: ConvertedReport; onPick: (t: number) => void; onClose: () => void }) {
+  const { plan } = report;
+  const done = plan.teams.filter((t) => report.teams.includes(t.team));
+  const skipped = plan.teams.filter((t) => !report.teams.includes(t.team));
+  const fallbacks = done.flatMap((t) => t.fills.filter((f) => f.how === 'fallback').map((f) => ({ t, f })));
+  const partial = done.filter((t) => t.unfilled.length);
+  const names = (ids: number[]) => ids.map((i) => rom.teams[i].school).join(', ');
+  return (
+    <div className="ros-report" role="status">
+      <div className="ros-report-head">
+        <strong>{report.file}</strong>
+        <span>
+          Converted from CFB 27: {done.length} team{done.length === 1 ? '' : 's'}, {report.slots} players.
+        </span>
+        <button className="ros-link" onClick={onClose}>
+          Close
+        </button>
+      </div>
+      <p className="ros-dim ros-path">
+        Ratings follow the original game's spread for each position (ranked among the {plan.teams.length} team
+        {plan.teams.length === 1 ? '' : 's'} in the file). Jersey numbers are the real ones.
+        {report.tweak === 'installed' && ' The roster screen now shows offensive linemen 25 lb heavier.'}
+        {report.tweak === 'already' && ' The roster screen already showed offensive linemen 25 lb heavier.'}
+      </p>
+      {report.tweak && report.tweak !== 'installed' && report.tweak !== 'already' && <p className="ros-warn">{report.tweak}</p>}
+      {plan.unmatchedRomTeams.length > 0 && (
+        <p className="ros-dim">Not in the file, rosters kept: {names(plan.unmatchedRomTeams)}</p>
+      )}
+      {skipped.length > 0 && <p className="ros-dim">Left out by you, rosters kept: {names(skipped.map((t) => t.team))}</p>}
+      {partial.length > 0 && (
+        <p className="ros-dim">
+          Slots with no CFB 27 player, kept as they were: {partial.map((t) => `${rom.teams[t.team].school} ${t.unfilled.join(' ')}`).join('; ')}
+        </p>
+      )}
+      {plan.blankCells > 0 && <p className="ros-warn">{plan.blankCells} empty or non-numeric rating cells counted as 0.</p>}
+      {fallbacks.length > 0 && (
+        <details>
+          <summary>
+            Filled from another position: {fallbacks.length} slot{fallbacks.length === 1 ? '' : 's'}
+          </summary>
+          <div className="ros-fills ros-fallbacks">
+            {fallbacks.map(({ t, f }) => (
+              <span key={`${t.team}-${f.slot}`}>
+                {rom.teams[t.team].school} <b>{f.label}</b> ← {f.player.pos} {f.player.name}
+              </span>
+            ))}
+          </div>
+        </details>
+      )}
+      <details>
+        <summary>Who went where</summary>
+        <ul className="ros-teams">
+          {done.map((t) => (
+            <li key={t.team}>
+              <button className="ros-link" onClick={() => onPick(t.team)}>
+                {t.teamName}
+              </button>
+              {normalize(t.sheetTeam) !== normalize(rom.teams[t.team].school) && <span className="ros-dim"> (file: {t.sheetTeam})</span>}
+              <div className="ros-fills">
+                {t.fills.map((f) => (
+                  <span key={f.slot}>
+                    <b>{f.label}</b> #{f.player.jersey} {f.player.name}
+                  </span>
+                ))}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </details>
+    </div>
+  );
+}
+
+const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+
 function SheetHelp() {
   return (
     <aside className="limits ros-help">
       <h3>Spreadsheet import</h3>
+      <p>The tool looks at the file and picks one of three ways to read it. The report after the import says which.</p>
       <ul>
         <li>
-          One row per player, all teams in one sheet (.csv or .xlsx). Columns: <b>Team</b>, <b>Position</b>,{' '}
-          <b>Overall Rating</b>, Jersey Number, Weight (lb), Speed, Quickness, Awareness, Power, Catching, Blocking,
-          Tackling, Throw Power, Kick Power, Kick Accuracy. Ratings are 0-99. A Name (or First Name and Last Name)
-          column shows up in the import report.
+          <b>A CSV exported here</b> (it has a <b>Slot</b> column): every row goes to the exact slot it names. Edit an
+          export and import it again. The slots have to fit this ROM's defense (4-3, 3-4 or Elevated); a file made for a
+          different one is refused, with the teams it doesn't fit. Teams the ROM doesn't have are skipped.
         </li>
         <li>
-          Positions: QB, HB, FB, LT, LG, C, RG, RT, WR, TE, K, P, LE, DT, RE, LOLB, MLB, ROLB, CB, SS, FS. The best
-          players by Overall Rating fill each position's slots (four WRs for SE, FL, WR1, WR2; the best DT is the NT on
-          3-4 teams). Slots nobody fills keep their player.
+          <b>CFB 27 ratings</b> (one row per player, with the column names of EA's ratings site: Team, Name, Position,
+          Overall, Jersey Number, Weight, EA Player ID, Speed, Acceleration, Agility, Strength, Awareness, …): converted
+          for Bill Walsh '95. Each team gets its own players and real jersey numbers, and every rating keeps the original
+          game's spread for its position, so the game plays the same. Any number of schools works; teams that aren't in
+          the file keep their rosters. You choose which teams to write before anything changes.
         </li>
         <li>
-          Team names can be the school ("Texas") or school and nickname. Hands comes
-          from Catching; QB Range from Throw Power; kicker Range and Accuracy from Kick Power and Kick Accuracy.
+          <b>Any other sheet</b>: one row per player, columns <b>Team</b>, <b>Position</b>, <b>Overall Rating</b>,
+          Jersey Number, Weight (lb), Speed, Quickness, Awareness, Power, Catching, Blocking, Tackling, Throw Power, Kick
+          Power, Kick Accuracy, ratings 0-99. Positions: QB, HB, FB, LT, LG, C, RG, RT, WR, TE, K, P, LE, DT, RE, LOLB,
+          MLB, ROLB, CB, SS, FS. The best players by Overall Rating fill each position's slots (four WRs for SE, FL, WR1,
+          WR2; the best DT is the NT on 3-4 teams). Slots nobody fills keep their player. Hands comes from Catching; QB
+          Range from Throw Power; kicker Range and Accuracy from Kick Power and Kick Accuracy. A Name (or First Name and
+          Last Name) column shows up in the report.
         </li>
-        <li>
-          The CSV export has the same columns plus <b>Slot</b>. Edit it and import it again: rows with a Slot go to that
-          exact slot.
-        </li>
+        <li>Team names can be the school ("Texas") or school and nickname.</li>
       </ul>
     </aside>
   );

@@ -5,13 +5,18 @@ import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { strict as assert } from 'node:assert';
 import {
-  openRosterRom, readPlayer, teamLayout, fixChecksums, eaChecksumOk, findEaChecksum, jerseyNumber,
+  openRosterRom, readPlayer, teamLayout, fixChecksums, eaChecksumOk, findEaChecksum, jerseyNumber, getRating,
 } from '../src/core/rosterRom';
 import { exportRostersCsv } from '../src/core/rosterExport';
-import { importSheet, teamMatcher } from '../src/core/rosterImport';
+import { detectImport, importSheet, teamMatcher } from '../src/core/rosterImport';
 import { parseCsv, readSheet, toCsv } from '../src/core/rosterSheet';
-import { ratingToNibble, weightToNibble, type Game } from '../src/core/rosterLayouts';
+import { BW95_LABELS_43, GROUP_ATTRS, nibbleToWeight, ratingToNibble, weightToNibble, type Game } from '../src/core/rosterLayouts';
 import { openRom } from '../src/core/romfile';
+import { applyCfb27, bw95Role, CFB27_COLUMNS, convertCfb27 } from '../src/core/rosterCfb27';
+import { installOlPatch, OL_PATCH, olPatchState, restoreOlPatch } from '../src/core/rosterOlPatch';
+import { stockDistributionsJson } from './stockdists';
+import STOCK from '../src/core/rosterStockDists.json';
+import { createHash } from 'node:crypto';
 
 const paths = process.argv.slice(2);
 if (paths.length !== 3) {
@@ -155,6 +160,230 @@ for (const g of ['bw95', 'cf96', 'cf97'] as const) {
   assert.deepEqual(sheet.headers, csv.headers);
   assert.deepEqual(sheet.rows, csv.rows);
   ok(`XLSX = CSV (${sheet.rows.length} rows)`);
+}
+
+// 7. Stock rating distributions: the committed table comes from the stock ROMs.
+{
+  const sha = (d: Uint8Array) => createHash('sha1').update(d).digest('hex');
+  const stock = (['bw95', 'cf96', 'cf97'] as Game[]).every((g) => sha(raw[g]) === STOCK.games[g].romSha1);
+  if (stock) {
+    const fresh = stockDistributionsJson((['bw95', 'cf96', 'cf97'] as Game[]).map((g) => raw[g]));
+    assert.equal(fresh, readFileSync(new URL('../src/core/rosterStockDists.json', import.meta.url), 'utf8'));
+    ok('stock distribution table = the stock ROMs');
+  } else {
+    console.log('skip - stock distribution table (these are not the three stock ROMs)');
+  }
+}
+
+// 8. CFB 27 conversion on made-up players.
+// A league for all 36 BW95 schools, every rating random. Pitt is written "Pittsburgh" and California "Cal"
+// (CFB 27's names). Odd-numbered teams have no FB, Air Force has no K, Army has no LOLB.
+let seed = 27;
+const rnd = (lo: number, hi: number) => {
+  seed = (seed + 0x6d2b79f5) | 0;
+  let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+  x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
+  return lo + Math.floor((((x ^ (x >>> 14)) >>> 0) / 4294967296) * (hi - lo + 1));
+};
+const CFB_HEAD = [...CFB27_COLUMNS, 'Height (in)'];
+function cfbLeague(teams: { name: string; positions: string[] }[]): string {
+  let id = 1000;
+  const rows: (string | number)[][] = [];
+  for (const t of teams) {
+    for (const pos of t.positions) {
+      rows.push(CFB_HEAD.map((h) => {
+        if (h === 'Team') return t.name;
+        if (h === 'Name') return `${pos} ${id}`;
+        if (h === 'Position') return pos;
+        if (h === 'EA Player ID') return id++;
+        if (h === 'Overall') return rnd(60, 95);
+        if (h === 'Jersey Number') return rnd(0, 99);
+        if (h === 'Weight') return rnd(170, 340);
+        if (h === 'Height (in)') return 74;
+        return rnd(40, 99);
+      }));
+    }
+  }
+  return toCsv(CFB_HEAD, rows);
+}
+const FULL = ['QB', 'QB', 'HB', 'HB', 'HB', 'FB', 'WR', 'WR', 'WR', 'WR', 'WR', 'TE', 'TE', 'TE', 'LT', 'LG', 'C', 'RG', 'RT', 'RT',
+  'K', 'P', 'LE', 'RE', 'RE', 'DT', 'DT', 'DT', 'LOLB', 'MLB', 'MLB', 'MLB', 'ROLB', 'ROLB', 'CB', 'CB', 'CB', 'CB', 'CB', 'FS', 'FS', 'SS'];
+{
+  const rom = openRosterRom(load('bw95'));
+  const league = rom.teams.map((t, i) => {
+    let positions = [...FULL];
+    if (i % 2) positions = positions.filter((p) => p !== 'FB');
+    if (t.school === 'Air Force') positions = positions.filter((p) => p !== 'K');
+    if (t.school === 'Army') positions = positions.filter((p) => p !== 'LOLB');
+    return { name: t.school === 'Pitt' ? 'Pittsburgh' : t.school === 'California' ? 'Cal' : t.school, positions };
+  });
+  league.push({ name: 'Atlantis', positions: ['QB', 'HB'] }); // not in the ROM
+  const sheet = parseCsv(cfbLeague(league));
+  assert.equal(detectImport(rom, sheet).path, 'cfb27');
+  const plan = convertCfb27(rom, sheet);
+  assert.equal(plan.teams.length, 36);
+  assert.deepEqual(plan.unmatchedRomTeams, []);
+  assert.equal(plan.otherSheetTeams, 1);
+  assert.ok(plan.teams.every((t) => t.unfilled.length === 0));
+  const byName = (s: string) => plan.teams.find((t) => rom.teams[t.team].school === s)!;
+  assert.equal(byName('Pitt').sheetTeam, 'Pittsburgh');
+  assert.equal(byName('California').sheetTeam, 'Cal');
+  ok('CFB 27: sheet detected, 36 teams matched (Cal, Pittsburgh), Atlantis skipped');
+
+  assert.equal(applyCfb27(rom, plan), 36 * 32);
+  // Every role × rating has exactly the stock distribution (N = M for every role).
+  const counts: Record<string, Record<string, number[]>> = {};
+  for (const t of rom.teams) for (const def of teamLayout(rom, t.index)) {
+    const p = readPlayer(rom, t.index, def.slot);
+    for (const a of GROUP_ATTRS[def.group]) ((counts[bw95Role(def.slot, t.threeFour, false)] ??= {})[a] ??= Array(16).fill(0))[getRating(p, def, a)!]++;
+  }
+  for (const [role, ref] of Object.entries(STOCK.games.bw95.roles)) {
+    for (const [a, c] of Object.entries(ref.ratings)) assert.deepEqual(counts[role][a], c, `${role} ${a}`);
+  }
+  ok('CFB 27: every role × rating keeps the stock distribution exactly');
+
+  // Fallbacks: FB from the best blocking back (HB/TE), the punter kicks for Air Force, Army's LOLB from ROLB/MLB.
+  const fill = (s: string, label: string) => byName(s).fills.find((f) => f.label === label)!;
+  for (const t of plan.teams.filter((x) => x.team % 2)) {
+    const f = t.fills.find((x) => x.slot === 3)!;
+    assert.equal(f.how, 'fallback');
+    const backs = sheet.rows.filter((r) => r[0] === t.sheetTeam && (r[2] === 'HB' || r[2] === 'TE'));
+    const fb = (r: string[]) => ['Lead Block', 'Run Block', 'Strength', 'Trucking'].reduce((s, c) => s + Number(r[CFB_HEAD.indexOf(c)]), 0);
+    const used = new Set(t.fills.filter((x) => x.slot !== 3).map((x) => x.player.id));
+    const best = backs.filter((r) => !used.has(Number(r[6]))).sort((a, b) => fb(b) - fb(a))[0];
+    assert.equal(f.player.id, Number(best[6]), `${t.teamName} FB`);
+  }
+  assert.equal(fill('Air Force', 'K').player, fill('Air Force', 'P').player);
+  assert.equal(fill('Air Force', 'K').how, 'fallback');
+  assert.ok(['ROLB', 'MLB'].includes(fill('Army', 'LOLB').player.pos) && fill('Army', 'LOLB').how === 'fallback');
+  ok('CFB 27: fallbacks (FB from HB/TE by blocking, shared K/P, LOLB)');
+
+  // Deterministic: the same sheet gives the same bytes.
+  const again = openRosterRom(load('bw95'));
+  applyCfb27(again, convertCfb27(again, sheet));
+  assert.ok(again.data.every((b, i) => b === rom.data[i]));
+  ok('CFB 27: same sheet, same bytes');
+}
+{
+  // Ties: two QBs with the same ratings. Higher Overall gets the higher steps; same Overall, lower EA Player ID.
+  const rom = openRosterRom(load('bw95'));
+  const sheetFor = (ovrA: number, ovrB: number) => {
+    const base = parseCsv(cfbLeague([{ name: 'Texas', positions: ['QB'] }, { name: 'Ohio State', positions: ['QB'] }]));
+    const [a, b] = base.rows;
+    for (let i = 7; i < CFB27_COLUMNS.length; i++) b[i] = a[i];
+    b[CFB27_COLUMNS.indexOf('Weight')] = a[CFB27_COLUMNS.indexOf('Weight')];
+    a[CFB27_COLUMNS.indexOf('Overall')] = String(ovrA);
+    b[CFB27_COLUMNS.indexOf('Overall')] = String(ovrB);
+    return base;
+  };
+  const qb = (plan: ReturnType<typeof convertCfb27>, s: string) => plan.teams.find((t) => rom.teams[t.team].school === s)!.fills[0].steps;
+  const higher = (x: Record<string, number | undefined>, y: Record<string, number | undefined>) =>
+    GROUP_ATTRS.QB.every((a) => x[a]! >= y[a]!) && GROUP_ATTRS.QB.some((a) => x[a]! > y[a]!);
+  let plan = convertCfb27(rom, sheetFor(80, 90));
+  assert.ok(higher(qb(plan, 'Ohio State'), qb(plan, 'Texas')));
+  plan = convertCfb27(rom, sheetFor(85, 85)); // Texas has the lower EA Player ID
+  assert.ok(higher(qb(plan, 'Texas'), qb(plan, 'Ohio State')));
+  ok('CFB 27: ties go by Overall, then EA Player ID');
+}
+{
+  // A few schools, one of them incomplete: converts what it can, the rest keeps its players.
+  const rom = openRosterRom(load('bw95'));
+  const before = openRosterRom(load('bw95'));
+  const sheet = parseCsv(cfbLeague([{ name: 'Cal', positions: FULL }, { name: 'Navy', positions: ['QB', 'HB', 'WR'] }]));
+  const plan = convertCfb27(rom, sheet);
+  assert.equal(plan.teams.length, 2);
+  assert.equal(plan.unmatchedRomTeams.length, 34);
+  const navy = plan.teams.find((t) => rom.teams[t.team].school === 'Navy')!;
+  assert.deepEqual(navy.fills.map((f) => f.label), ['QB', 'HB1', 'SE']);
+  assert.ok(['HB2', 'FL', 'LT', 'K'].every((s) => navy.unfilled.includes(s)));
+  applyCfb27(rom, plan, [navy.team]);
+  const lt = teamLayout(rom, navy.team).find((d) => d.label === 'LT')!.slot;
+  assert.deepEqual(readPlayer(rom, navy.team, lt), readPlayer(before, navy.team, lt));
+  const cal = plan.teams.find((t) => rom.teams[t.team].school === 'California')!.team;
+  assert.deepEqual(readPlayer(rom, cal, 0), readPlayer(before, cal, 0)); // not picked
+  ok('CFB 27: partial file, incomplete team, only the picked teams written');
+}
+{
+  // A CFB 27 sheet with a column missing is recognized and the column named.
+  const rom = openRosterRom(load('bw95'));
+  const full = parseCsv(cfbLeague([{ name: 'Texas', positions: FULL }]));
+  const cut = full.headers.indexOf('Pursuit');
+  const sheet = { headers: full.headers.filter((_, i) => i !== cut), rows: full.rows.map((r) => r.filter((_, i) => i !== cut)) };
+  assert.equal(detectImport(rom, sheet).path, 'cfb27');
+  assert.throws(() => convertCfb27(rom, sheet), /missing: Pursuit\./);
+  ok('CFB 27: missing column named');
+}
+
+// 9. Import paths and defensive layouts (stock 4-3/3-4 vs Elevated).
+{
+  const elevate = (d: Uint8Array) => {
+    const at = d.subarray(BW95_LABELS_43.start, BW95_LABELS_43.end);
+    const i = String.fromCharCode(...at).indexOf('DLT');
+    at.set([0x44, 0x54, 0x31], i); // "DT1": enough for the layout check
+    return d;
+  };
+  const stock = openRosterRom(load('bw95'));
+  const elevated = openRosterRom(elevate(load('bw95')));
+  assert.ok(!stock.elevated && elevated.elevated);
+  assert.deepEqual(teamLayout(elevated, 0).filter((d) => d.group === 'DL' || d.group === 'LB').map((d) => d.label),
+    ['LDE', 'DT1', 'DT2', 'RDE', 'LOLB', 'MLB1', 'ROLB', 'MLB2']);
+  const stockCsv = parseCsv(exportRostersCsv(stock));
+  const elevatedCsv = parseCsv(exportRostersCsv(elevated));
+  assert.equal(detectImport(stock, stockCsv).path, 'slots');
+  assert.equal(detectImport(elevated, elevatedCsv).path, 'slots');
+  const refused = detectImport(elevated, stockCsv);
+  assert.equal(refused.path, 'refused');
+  assert.match(refused.path === 'refused' ? refused.problems.join(' ') : '', /^13 teams use the Elevated .* NT, LILB, RILB\. Teams: Air Force, Army, Clemson/);
+  assert.equal(detectImport(stock, elevatedCsv).path, 'refused');
+  assert.throws(() => importSheet(stock, elevatedCsv), /doesn't fit this ROM/);
+  // Elevated ROMs take the stock 4-3 labels for the same slots (LDT = DT1, MLB = MLB1, RDT = DT2, PLB = MLB2).
+  const fourThree = { headers: stockCsv.headers, rows: stockCsv.rows.filter((r) => !rom3_4(r[0])) };
+  function rom3_4(team: string) { return stock.teams.some((t) => t.threeFour && `${t.school} ${t.nickname}` === team); }
+  assert.equal(detectImport(elevated, fourThree).path, 'slots');
+  // Round trip on an Elevated ROM.
+  const copy = openRosterRom(elevate(load('bw95')));
+  importSheet(copy, elevatedCsv);
+  assert.ok(copy.data.every((b, i) => b === elevated.data[i]));
+  // Duplicate slots and teams the ROM doesn't have.
+  const dup = { headers: stockCsv.headers, rows: [stockCsv.rows[0], stockCsv.rows[0], ['Atlantis Tritons', ...stockCsv.rows[1].slice(1)]] };
+  const d = detectImport(stock, dup);
+  assert.ok(d.path === 'refused' && /QB appears 2 times \(rows 2, 3\)/.test(d.problems.join(' ')));
+  const unknown = { headers: stockCsv.headers, rows: [stockCsv.rows[0], ['Atlantis Tritons', ...stockCsv.rows[1].slice(1)]] };
+  assert.equal(detectImport(stock, unknown).path, 'slots');
+  assert.deepEqual(importSheet(openRosterRom(load('bw95')), unknown).unknownTeams, [{ name: 'Atlantis Tritons', rows: 1 }]);
+  // Sheets without a Slot column and without CFB 27 columns use the ranked import.
+  assert.equal(detectImport(stock, parseCsv(readFileSync(fixture('sample.csv'), 'utf8'))).path, 'ranked');
+  ok('import paths: slots, refused (other layout, duplicates), ranked; Elevated layout and labels');
+}
+
+// 10. OL weight display tweak.
+{
+  const orig = load('bw95');
+  const d = new Uint8Array(orig);
+  assert.equal(olPatchState(d), 'absent');
+  assert.equal(installOlPatch(d), 'installed');
+  assert.equal(olPatchState(d), 'installed');
+  assert.equal(installOlPatch(d), 'already');
+  // Shown weights: OL rows + 25 lb in the export; the import takes it off again.
+  const rom = openRosterRom(d);
+  const csv = parseCsv(exportRostersCsv(rom));
+  const lt = teamLayout(rom, 0).find((x) => x.label === 'LT')!;
+  const row = csv.rows.find((r) => r[0] === `${rom.teams[0].school} ${rom.teams[0].nickname}` && r[1] === 'LT')!;
+  assert.equal(Number(row[4]), nibbleToWeight(getRating(readPlayer(rom, 0, lt.slot), lt, 'Weight')!) + OL_PATCH.pounds);
+  const back = openRosterRom(new Uint8Array(d));
+  importSheet(back, csv);
+  assert.ok(back.data.every((b, i) => b === d[i]));
+  restoreOlPatch(d, orig);
+  assert.ok(d.every((b, i) => b === orig[i]));
+  // Refuses to overwrite something else.
+  const busy = new Uint8Array(orig);
+  busy[OL_PATCH.hook + 7] = 0;
+  assert.throws(() => installOlPatch(busy), /already uses 0x1EFF20-0x1EFF3D/);
+  const other = new Uint8Array(orig);
+  other[OL_PATCH.site] = 0x4e;
+  assert.equal(olPatchState(other), 'unknown');
+  assert.throws(() => installOlPatch(other), /not the original/);
+  ok('OL weight tweak: install, idempotent, export/import +25, restore, refuses busy space');
 }
 
 console.log(`\n${passed} passed`);

@@ -1,7 +1,7 @@
 // Reading and writing team rosters in BW95, CF96 and CF97 ROMs, plus the checksums.
 import { rl as u32, rw as u16, wl as w32 } from './bytes';
 import {
-  BW95_DEFENSE_BITS, GAMES, GROUP_ATTRS, rosterLayout,
+  BW95_DEFENSE_BITS, BW95_LABELS_43, GAMES, GROUP_ATTRS, rosterLayout,
   type Attr, type Game, type GameInfo, type SlotDef,
 } from './rosterLayouts';
 
@@ -20,7 +20,7 @@ export interface RosterTeam {
   other: string;
   nickname: string;
   rosterOffset: number;
-  /** BW95 only: the roster screen labels this team as 3-4 (NT, LILB, RILB). */
+  /** BW95 only: the roster screen labels this team as 3-4 (NT, LILB, RILB). Never on Elevated ROMs. */
   threeFour: boolean;
 }
 
@@ -29,6 +29,14 @@ export interface RosterRom {
   info: GameInfo;
   data: Uint8Array;
   teams: RosterTeam[];
+  /** BW95 only: Bill Walsh '95 Elevated's defensive layout (DT1/DT2, MLB1/MLB2 for every team). */
+  elevated: boolean;
+}
+
+/** BW95: the roster screen's 4-3 labels read DT1 (Elevated, v1.1.0-beta.7 and later) instead of DLT. */
+export function hasElevatedLayout(data: Uint8Array): boolean {
+  const labels = String.fromCharCode(...data.subarray(BW95_LABELS_43.start, BW95_LABELS_43.end));
+  return labels.includes('DT1');
 }
 
 const hexBytes = (b: Uint8Array) => Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('').toUpperCase();
@@ -73,16 +81,17 @@ export function openRosterRom(input: Uint8Array): RosterRom {
     } catch {
       throw new Error(`Team ${i}: names not readable — is this a modified ROM with a different layout?`);
     }
-    const threeFour = game === 'bw95'
-      ? ((data[BW95_DEFENSE_BITS + (i >> 3)] >> (i & 7)) & 1) === 0
-      : false;
-    teams.push({ index: i, school: names[0], other: names[1], nickname: names[2], rosterOffset, threeFour });
+    teams.push({ index: i, school: names[0], other: names[1], nickname: names[2], rosterOffset, threeFour: false });
   }
-  return { game, info, data, teams };
+  const elevated = game === 'bw95' && hasElevatedLayout(data);
+  if (game === 'bw95' && !elevated) {
+    for (const t of teams) t.threeFour = ((data[BW95_DEFENSE_BITS + (t.index >> 3)] >> (t.index & 7)) & 1) === 0;
+  }
+  return { game, info, data, teams, elevated };
 }
 
 export const teamLayout = (rom: RosterRom, team: number): SlotDef[] =>
-  rosterLayout(rom.game, rom.teams[team].threeFour);
+  rosterLayout(rom.game, rom.teams[team].threeFour, rom.elevated);
 
 export function readPlayer(rom: RosterRom, team: number, slot: number): Player {
   const o = rom.teams[team].rosterOffset + slot * rom.info.stride;

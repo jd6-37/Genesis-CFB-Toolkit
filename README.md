@@ -2,12 +2,12 @@
 
 Browser-based modding tools for EA's college football games on the Sega Genesis: Bill Walsh College Football '95, College Football USA 96 and College Football USA 97.
 
-Everything runs in your browser. Your ROMs are opened on your own computer and are never uploaded anywhere. The app contains no ROM data or artwork; you bring your own ROMs.
+Everything runs in your browser. Your ROMs are opened on your own computer and are never uploaded anywhere. The app contains no ROM data or artwork, apart from a table of how many players the original games have at each rating step (used to convert CFB 27 ratings); you bring your own ROMs.
 
 ## Tools
 
 - **[Team Swap](#team-swap):** swap College Football USA 97 teams into Bill Walsh College Football '95.
-- **[Rosters](#rosters):** edit the players of Bill Walsh '95, CF96 or CF97, team by team or from a spreadsheet (CSV or Excel).
+- **[Rosters](#rosters):** edit the players of Bill Walsh '95, CF96 or CF97, team by team or from a spreadsheet (CSV or Excel), or bring in real College Football 27 rosters.
 
 Each tool has its own tab. `#rosters` at the end of the address opens the Rosters tab directly.
 
@@ -59,7 +59,7 @@ Other Bill Walsh '95 ROMs with a mod work too, such as Elevated v1.1 (checked wi
   - `0x1F0300` helmet tile base on the setup screen, so helmets of up to 36 tiles fit (the stock layout leaves 32).
   - `0x1F0320` celebration colors: when the generic card stunt plays, palette entries 9, 10 and 13 are replaced with the winning team's colors.
 - **Walsh Report:** the swapped teams' paragraphs get the new names, and the text block stays where it is: if it gets longer, some two-space sentence gaps become one space; if it gets shorter, the leftover bytes after the last paragraph are filled with spaces. Only if very long names still don't fit is the block moved to `0x1F8000` (its only reference is the pointer at `0x078FC0`).
-- **ROM space:** the swap uses about 4.4 KB of unused ROM (`0x1EEF00`-`0x1EFF17` and `0x1F0000`-`0x1F043B`), and checks that it's unused before writing.
+- **ROM space:** the swap uses about 4.4 KB of unused ROM (`0x1EEF00`-`0x1EFF17` and `0x1F0000`-`0x1F043B`), and checks that it's unused before writing. The Rosters tool's OL weight tweak uses `0x1EFF20`-`0x1EFF3D` (see [Rosters](#how-it-works-1)).
 - **Celebration:** one "GO TEAM!" card stunt at `0x1EEF00`, built from your BW95 ROM: Pitt's "GO PITT!" card stunt with four cards re-lettered, using letters copied from Pitt's and Texas A&M's cards. Swapped teams' entries in the celebration table (`0x034A68`) point to it.
 - **Checksums:** EA's boot check (the sum at `0x1E6430`) and the Genesis header checksum are recomputed.
 
@@ -76,13 +76,33 @@ Not tested in a real game: a full season through the bowls with swapped teams (t
 
 ## Rosters
 
-Load a Bill Walsh College Football '95, College Football USA 96 or College Football USA 97 ROM, pick a team, and change its players' jersey numbers and ratings, or import a spreadsheet for many teams at once. Then download the ROM. Original and modified ROMs both work (Rebalanced, Team Swap output, an earlier roster edit, a ROM saved by CFB-Walsh.exe). **Use the Team Swap result** opens the ROM you set up in the Team Swap tab, so swaps and roster edits end up in one file.
+Load a Bill Walsh College Football '95, College Football USA 96 or College Football USA 97 ROM, pick a team, and change its players' jersey numbers and ratings, or import a spreadsheet for many teams at once. Then download the ROM. Original and modified ROMs both work (Bill Walsh '95 Elevated, formerly Rebalanced; Team Swap output; an earlier roster edit; a ROM saved by CFB-Walsh.exe). **Use the Team Swap result** opens the ROM you set up in the Team Swap tab, so swaps and roster edits end up in one file.
 
-Players in these games have no names, only numbers. Each rating is a step from 0 to 15, which the game's roster screen shows as 0, 6, 13 … 93, 100; weight goes in 16 lb steps from 140 to 380. The editor shows the same numbers as the game.
+Players in these games have no names, only numbers. Each rating is a step from 0 to 15, which the game's roster screen shows as 0, 6, 13 … 93, 100; weight goes in 16 lb steps from 140 to 380. The editor shows the same numbers as the game. A kicker's or punter's Quick is his kick distance in the game, so the editor labels it that way.
 
-### Spreadsheet import
+### Importing a file
 
-One row per player, all teams in one sheet, as `.csv` (comma, semicolon or tab) or `.xlsx` (first worksheet).
+**Import spreadsheet** takes a `.csv` (comma, semicolon or tab) or `.xlsx` (first worksheet) and works out what kind of file it is. The report afterwards says which way it was read.
+
+| File | How it's read |
+|---|---|
+| A CSV exported here (it has a **Slot** column) | Every row goes to the slot it names. The slots have to fit the ROM's defense (4-3, 3-4 or Elevated); a file made for a different one is refused, with the teams it doesn't fit. |
+| CFB 27 ratings | Converted (see [CFB 27 rosters](#cfb-27-rosters)). Bill Walsh '95 for now. |
+| Any other sheet | By position and Overall Rating, as below. |
+
+### CFB 27 rosters
+
+Bring in real rosters from EA Sports College Football 27: a CSV with one row per player and the column names of EA's ratings site (ea.com/games/ea-sports-college-football/ratings): Team, Name, Position, Overall, Jersey Number, Weight, EA Player ID, Speed, Acceleration, Agility, Strength, Awareness, Play Recognition, Catching, Carrying, Throw Power, Throw Accuracy Short, Mid and Deep, Break Tackle, Trucking, Run Block, Pass Block, Run Block Power, Pass Block Power, Power Moves, Block Shedding, Tackle, Hit Power, Pursuit, Kick Power, Kick Accuracy, Lead Block. Other columns are fine and ignored. The app doesn't come with the data.
+
+- **Each team gets its own players.** The best CFB 27 players at each position fill the team's slots, with their real jersey numbers. If a school has nobody for a slot, a player from a nearby position fills it (most schools have no fullback, so the best blocking back or tight end plays FB; Air Force's punter also kicks).
+- **The game plays the same.** CFB 27 decides who is better than whom; the original game decides how many players get each rating. For every position and rating, the players are ranked and given the original game's own ratings in that order, so a team of elite linebackers gets elite linebackers, while the league as a whole keeps the original spread (as many 100-speed corners as before, and so on).
+- **Any number of schools.** The file can have one school or all of them; teams that aren't in it keep their rosters, and you pick which of the found teams to write before anything changes. Ratings are ranked among the players in the file. School names: the ROM's, plus CFB 27's Cal and Pittsburgh. A team-swapped slot takes its new school.
+- **Linemen's weight.** Today's offensive linemen are about 25 lb heavier than the original game's, but weight matters in line play, so the conversion keeps the original weights. By default it also makes the roster screen show offensive linemen 25 lb heavier (display only; the game plays the same). The editor and the CSV export show the same numbers as the screen.
+- Works with the original ROM, Elevated (its DT1/DT2, MLB1/MLB2 defense) and Team Swap results. CF96 and CF97 are planned.
+
+### Spreadsheets by position
+
+For sheets without a Slot column that aren't CFB 27 data: one row per player, all teams in one sheet.
 
 | Column | Used for |
 |---|---|
@@ -98,18 +118,20 @@ One row per player, all teams in one sheet, as `.csv` (comma, semicolon or tab) 
 | Name, or First Name and Last Name | Optional, shown in the import report |
 
 - A 0-99 value goes to the step at or below it (88 → 86, the step the game shows as 86). Weights the same way (245 lb → 236).
-- Slots: BW95 has 32 players per team (QB, HB1-2, FB, five linemen, SE, FL, WR1-2, TE1-2, K, P, 4-3 or 3-4 front, PLB, four CBs, SS, FS, FS2). The four best WRs fill SE, FL, WR1 and WR2. On 3-4 teams the best DT is the NT and the MLBs fill LILB and RILB. The PLB is the best outside linebacker left over. CF96/97 have 45 players per team (two QBs, three HBs, backups at most positions).
+- Slots: BW95 has 32 players per team (QB, HB1-2, FB, five linemen, SE, FL, WR1-2, TE1-2, K, P, 4-3 or 3-4 front, PLB, four CBs, SS, FS, FS2). The four best WRs fill SE, FL, WR1 and WR2. On 3-4 teams the best DT is the NT and the MLBs fill LILB and RILB. The PLB is the best outside linebacker left over. On Elevated ROMs every team has DT1, DT2, MLB1 and MLB2, filled by the best DTs and MLBs. CF96/97 have 45 players per team (two QBs, three HBs, backups at most positions).
 - Slots nobody fills keep their current player, and empty cells keep the current value.
 - The report lists teams, positions and columns it didn't use, and who went to which slot.
 
 ### CSV export
 
-**Export team CSV** and **Export all teams CSV** write the same columns plus **Slot** (QB, HB1, LDE …), with the values the game shows. Edit the file and import it again: rows with a Slot go to that exact slot, so an unchanged export imports back without changing a byte.
+**Export team CSV** and **Export all teams CSV** write the same columns plus **Slot** (QB, HB1, LDE …), with the values the game shows. Edit the file and import it again: rows with a Slot go to that exact slot, so an unchanged export imports back without changing a byte. Teams the ROM doesn't have are skipped.
 
 ### How it works
 
 - **Rosters:** each team's roster is in its team block (BW95 table `0x0028DC`, CF96/97 table `0x002CEA`): 32 players × 4 bytes in BW95, 45 × 5 bytes in CF96/97. Byte 0 is the jersey number (BCD), then six 4-bit ratings; the order depends on the position (for example QB: weight, quickness, speed, awareness, range, power). The fifth CF byte is kept as it is.
-- **3-4 teams (BW95):** a bitfield at `0x061068` (bit clear = 3-4) picks the roster screen's labels. The editor and the import read it from the ROM.
+- **3-4 teams (BW95):** a bitfield at `0x061068` (bit clear = 3-4) picks the roster screen's labels. The editor and the import read it from the ROM. Elevated ROMs are recognized by their relabeled 4-3 list (`0x62E6E`: DT1 instead of DLT) and use one layout for every team.
+- **CFB 27 conversion:** a table of the original games' rating distributions (per position and rating, how many players have each step; `src/core/rosterStockDists.json`) is built in. Each converted rating is the original game's step at the player's rank within his position. Details and the reasons behind each mapping: [docs/rosters.md](docs/rosters.md#cfb-27-conversion).
+- **OL weight tweak (BW95):** `0x06B03C` jumps to 30 bytes at `0x1EFF20`-`0x1EFF3D` that add 25 lb to the shown weight of rows LT-RT on the Team Rosters screen. The space is checked to be unused first.
 - **Checksums:** all three games check a sum of the ROM at boot against a stored value (BW95 `0x1E6430`, CF96 `0x1B5F00`, CF97 `0x1EF580`); with a wrong value, CF97 stays on a black screen. The download recomputes it and the Genesis header checksum. ROMs where that check was turned off (as CFB-Walsh.exe does) get it turned back on.
 
 ### Compared with CFB-Walsh.exe
@@ -125,7 +147,8 @@ The import follows the rules of CFB-Walsh.exe ("Genesis College Football Editor 
 
 ### Testing
 
-- Export → import of every team leaves all three ROMs byte-identical.
+- Export → import of every team leaves all three ROMs byte-identical, also with the OL weight tweak.
+- CFB 27: EA's Week 9 ratings converted into the original ROM, Elevated beta.7 and its Tulane build give exactly the original game's spread for every position and rating, and the same bytes as the reference conversion the method was worked out with. In the emulator, Florida State's roster screen shows the real jersey numbers and, with the tweak, OL weights of 309-357 lb. Files made for another defense are refused; a file with a missing column says which.
 - Imports checked on BW95's roster screen in an emulator: numbers, ratings and weights show as expected, on a 4-3 team, a 3-4 team (NT, LILB, RILB) and a team-swapped Tulane. Unfilled slots keep their players.
 - Edited CF96 and CF97 ROMs boot (with a wrong checksum CF97 stays on a black screen).
 - ROMs downloaded from the app are byte-identical to the same edits made with the code in Node; a Team Swap result with roster edits differs from the plain swap only in the edited players and the checksums.
@@ -146,6 +169,13 @@ Roster engine tests need your own ROMs (`.md`, `.bin`, `.gen` or `.zip`):
 
 ```sh
 npm run test:rosters -- BW95.md CF96.md CF97.md
+```
+
+The CFB 27 conversion also runs from the command line, and the stock rating table can be rebuilt from the three original ROMs:
+
+```sh
+npx tsx cli/cfb27.ts "Bill Walsh College Football 95 (USA).md" cfb27-ratings.csv rosters.md [--no-ol-tweak] [--teams "Texas,Ohio State"]
+npx tsx cli/stockdists.ts src/core/rosterStockDists.json BW95.md CF96.md CF97.md
 ```
 
 The 68000 helpers are in `asm/`; `asm/build.sh` reassembles them into `src/core/helpers68k.ts` (needs `binutils-m68k-linux-gnu`).

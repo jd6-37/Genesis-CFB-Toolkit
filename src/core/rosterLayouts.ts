@@ -101,21 +101,34 @@ export const GAMES: Record<Game, GameInfo> = {
 
 /** BW95: one bit per team, clear = 3-4 defense (read by the roster screen at 0x06B0FA). */
 export const BW95_DEFENSE_BITS = 0x061068;
+/**
+ * BW95: the roster screen's 4-3 label list (0x62E6E-0x62F15). Stock reads "… DLT … MLB … DRT … PLB";
+ * Bill Walsh '95 Elevated (from v1.1.0-beta.7) relabels it "DT1 … MLB1 … DT2 … MLB2" and uses that one
+ * layout for every team (all 3-4 bits set).
+ */
+export const BW95_LABELS_43 = { start: 0x062e6e, end: 0x062f16 };
 
 const s = (slot: number, label: string, group: Group, pool: string | string[], leftover = false): SlotDef =>
   ({ slot, label, group, pool: Array.isArray(pool) ? pool : [pool], leftover });
 
-/** Slots in editor order (the exe's grid order). */
-export function rosterLayout(game: Game, threeFour = false): SlotDef[] {
+/**
+ * Slots in editor order (the exe's grid order). BW95 has three defensive layouts: stock 4-3, stock
+ * 3-4 (per team, from the defense bits) and Elevated (one layout for every team: DT1/DT2, MLB1/MLB2).
+ */
+export function rosterLayout(game: Game, threeFour = false, elevated = false): SlotDef[] {
   if (game === 'bw95') {
-    const dl = threeFour
-      ? [s(16, 'LDE', 'DL', 'LE'), s(17, 'NT', 'DL', 'DT'), s(18, 'RDE', 'DL', 'RE')]
-      : [s(16, 'LDE', 'DL', 'LE'), s(17, 'LDT', 'DL', 'DT'), s(21, 'RDT', 'DL', 'DT'), s(18, 'RDE', 'DL', 'RE')];
-    const lb = threeFour
-      ? [s(19, 'LOLB', 'LB', 'LOLB'), s(20, 'LILB', 'LB', 'MLB'), s(21, 'RILB', 'LB', 'MLB'),
-         s(22, 'ROLB', 'LB', 'ROLB'), s(23, 'PLB', 'LB', ['LOLB', 'ROLB'], true)]
-      : [s(19, 'LOLB', 'LB', 'LOLB'), s(20, 'MLB', 'LB', 'MLB'), s(22, 'ROLB', 'LB', 'ROLB'),
-         s(23, 'PLB', 'LB', ['LOLB', 'ROLB'], true)];
+    const dl = elevated
+      ? [s(16, 'LDE', 'DL', 'LE'), s(17, 'DT1', 'DL', 'DT'), s(21, 'DT2', 'DL', 'DT'), s(18, 'RDE', 'DL', 'RE')]
+      : threeFour
+        ? [s(16, 'LDE', 'DL', 'LE'), s(17, 'NT', 'DL', 'DT'), s(18, 'RDE', 'DL', 'RE')]
+        : [s(16, 'LDE', 'DL', 'LE'), s(17, 'LDT', 'DL', 'DT'), s(21, 'RDT', 'DL', 'DT'), s(18, 'RDE', 'DL', 'RE')];
+    const lb = elevated
+      ? [s(19, 'LOLB', 'LB', 'LOLB'), s(20, 'MLB1', 'LB', 'MLB'), s(22, 'ROLB', 'LB', 'ROLB'), s(23, 'MLB2', 'LB', 'MLB')]
+      : threeFour
+        ? [s(19, 'LOLB', 'LB', 'LOLB'), s(20, 'LILB', 'LB', 'MLB'), s(21, 'RILB', 'LB', 'MLB'),
+           s(22, 'ROLB', 'LB', 'ROLB'), s(23, 'PLB', 'LB', ['LOLB', 'ROLB'], true)]
+        : [s(19, 'LOLB', 'LB', 'LOLB'), s(20, 'MLB', 'LB', 'MLB'), s(22, 'ROLB', 'LB', 'ROLB'),
+           s(23, 'PLB', 'LB', ['LOLB', 'ROLB'], true)];
     return [
       s(0, 'QB', 'QB', 'QB'),
       s(1, 'HB1', 'RB', 'HB'), s(2, 'HB2', 'RB', 'HB'), s(3, 'FB', 'RB', 'FB'),
@@ -177,7 +190,8 @@ export function ratingRangeLabel(n: number): string {
   const lo = RATING_LOW[n];
   return n === 15 ? `${lo}+` : `${lo}-${RATING_LOW[n + 1] - 1}`;
 }
-export function weightRangeLabel(n: number): string {
-  if (n === 0) return '0-155';
-  return n === 15 ? '380+' : `${WEIGHT_LOW[n]}-${WEIGHT_LOW[n + 1] - 1}`;
+/** Import range of a weight step; `plus` shifts it (BW95's OL weight display tweak adds 25 lb). */
+export function weightRangeLabel(n: number, plus = 0): string {
+  if (n === 0) return `0-${155 + plus}`;
+  return n === 15 ? `${380 + plus}+` : `${WEIGHT_LOW[n] + plus}-${WEIGHT_LOW[n + 1] - 1 + plus}`;
 }

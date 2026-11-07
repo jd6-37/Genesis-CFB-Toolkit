@@ -97,7 +97,29 @@
 .ros select[data-step='0'], .ros select[data-step='1'], .ros select[data-step='2'], .ros select[data-step='3'] { color: #8f8bc4; }
 .ros select[data-step='12'], .ros select[data-step='13'], .ros select[data-step='14'], .ros select[data-step='15'] { color: #ffffff; font-weight: 600; }
 .ros-scale { max-width: 90ch; margin-top: 12px; }
+.ros-th-note { display: block; font-size: 10px; font-weight: 500; letter-spacing: 0.02em; text-transform: none; }
+.ros .note ul { margin: 6px 0 0; padding-left: 20px; }
+.ros .note p { margin: 0; }
+.ros-path { margin: 6px 0 0; max-width: 90ch; }
+.ros-offer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 10px 0 0; }
+.ros-offer .btn { padding: 6px 12px; font-size: 15px; }
+.ros-pick {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+  gap: 4px 16px;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.ros-pick legend { padding: 0 6px; color: var(--chalk-dim); }
+.ros-pick label, .ros-tweak { display: flex; align-items: baseline; gap: 8px; cursor: pointer; }
+.ros-pick input, .ros-tweak input { accent-color: var(--menu); }
+.ros-tweak { margin: 12px 0 0; max-width: 90ch; }
+.ros-convert-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
+.ros-fallbacks { margin-top: 6px; }
 .ros-help { margin-top: 32px; }
+.ros-help p { margin: 4px 0 8px; color: var(--chalk-dim); }
 .ros-help li { margin-bottom: 6px; }
 .ros-help b { color: var(--chalk); font-weight: 600; }
 
