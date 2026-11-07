@@ -1,5 +1,6 @@
 // Node CLI: build a swapped ROM from ROM files and a swap file, or with --default pairs.
 //   tsx cli/build.ts --bw BW95.md --cf CF97.zip --out out.md (--swaps swaps.json | --pair 25=Tulane ...)
+//   [--style Pitt=Option,3-4 ...]  (a swapped slot's CPU offense and defense style)
 import { readFileSync, writeFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { parseBw95 } from '../src/core/bw95';
@@ -7,6 +8,7 @@ import { parseCf97 } from '../src/core/cf97';
 import { buildRom, defaultSlot, isSwapFile, SlotConfig, swapFile } from '../src/core/build';
 import { openRom } from '../src/core/romfile';
 import { crc32, sha1Hex } from '../src/core/bytes';
+import { DEFENSE, OFFENSE, parseStyle } from '../src/core/styles';
 
 const args = process.argv.slice(2);
 const opt = (k: string) => {
@@ -14,6 +16,7 @@ const opt = (k: string) => {
   return i >= 0 ? args[i + 1] : undefined;
 };
 const pairs = args.flatMap((a, i) => (args[i - 1] === '--pair' ? [a] : []));
+const styles = args.flatMap((a, i) => (args[i - 1] === '--style' ? [a] : []));
 
 async function main() {
   const bwFile = await openRom(basename(opt('--bw')!), new Uint8Array(readFileSync(opt('--bw')!)));
@@ -34,6 +37,15 @@ async function main() {
     const c = cf.find((t) => t.school === school || String(t.index) === school);
     if (s < 0 || !c) throw new Error(`bad pair ${p}`);
     swaps.push(defaultSlot(bw[s], c));
+  }
+  for (const p of styles) {
+    const [slot, both] = p.split('=');
+    const s = /^\d+$/.test(slot) ? +slot : bw.findIndex((t) => t.school === slot);
+    const sc = swaps.find((x) => x.slot === s);
+    if (!sc || !both) throw new Error(`--style ${p}: no swap for that slot`);
+    const [offense, defense] = both.split(',');
+    if (offense) sc.offense = OFFENSE[parseStyle('offense', offense)];
+    if (defense) sc.defense = DEFENSE[parseStyle('defense', defense)];
   }
   const res = buildRom(bwFile.data, bw, cf, swaps);
   writeFileSync(opt('--out')!, res.rom);

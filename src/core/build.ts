@@ -10,6 +10,7 @@ import { CELEBRATION, END_ZONE, HELMET_BASE, MENU_ORDER } from './helpers68k';
 import { buildGenericCelebration, CELEB_ADDR, CELEB_TABLE, defaultCelebration } from './celebration';
 import { bbox, packTiles, Sprite, writeGroups } from './sprites';
 import { rewriteWalsh } from './walsh';
+import { parseStyle, readStyle, styleProblems, writeStyle } from './styles';
 
 export interface SlotConfig {
   slot: number; // BW95 team index 0-35
@@ -22,6 +23,8 @@ export interface SlotConfig {
   away: number[];
   endZone: number; // used as-is for this team's home end zones
   celebration?: number[]; // [cards, skirts and pom-poms, tops] for the GO TEAM! card stunt
+  offense?: string; // CPU offense style name (src/core/styles.ts OFFENSE); none = keep the slot's
+  defense?: string; // CPU defense style name (DEFENSE); none = keep the slot's
 }
 
 export interface SwapFile {
@@ -314,6 +317,18 @@ export function buildRom(base: Uint8Array, bwTeams: BwTeam[], cfTeams: CfTeam[],
     blocks[sc.slot] = writeBlock(rom, bwTeams[sc.slot], cf, sc);
     finalNames[sc.slot] = sc.school;
     endZones[sc.slot] = sc.endZone || 0;
+  }
+  const styled = swaps.filter((sc) => sc.offense !== undefined || sc.defense !== undefined);
+  if (styled.length) {
+    const p = styleProblems(rom);
+    if (p.length) throw new Error(`Team styles can't be changed in this ROM: ${p.join('; ')}.`);
+    for (const sc of styled) {
+      const now = readStyle(rom, sc.slot);
+      writeStyle(rom, sc.slot, {
+        offense: sc.offense === undefined ? now.offense : parseStyle('offense', sc.offense),
+        defense: sc.defense === undefined ? now.defense : parseStyle('defense', sc.defense),
+      });
+    }
   }
   const order = menuOrder(finalNames, used);
   installHelpers(rom, order, endZones);
