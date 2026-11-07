@@ -15,7 +15,7 @@ Developer notes for the Rosters tool. The user-facing docs are in the [README](.
 | `src/core/rosterOlPatch.ts` | BW95 OL weight display tweak |
 | `src/core/rosterExport.ts` | Rosters → CSV |
 | `src/core/rosterNames.ts` | The team names CFB-Walsh.exe used, so sheets made for it still match |
-| `src/tools/rosters/RosterTool.tsx`, `rosters.css` | The tab: ROM card, team grid, import report, help, dock |
+| `src/tools/rosters/RosterTool.tsx`, `rosters.css` | The tab: team grid, import report, help, dock. The ROM card and the working ROM it edits are shared with the Season tab (`src/tools/shared/WorkRom.tsx`, `src/core/workRom.ts`; see [docs/season.md](season.md#the-shared-working-rom)): `openRosterRom(data, true)` works on those bytes in place, and change marks and undo compare with the bytes as loaded. |
 | `cli/rostertest.ts`, `cli/fixtures/` | Engine tests (`npm run test:rosters -- BW95 CF96 CF97`; paths may be zips). The fixtures and the generated CFB 27 sheets are made-up players. |
 | `cli/cfb27.ts` | The CFB 27 conversion from the command line (`npx tsx cli/cfb27.ts ROM CFB27.csv OUT.md [--no-ol-tweak] [--teams "A,B"]`) |
 | `cli/stockdists.ts` | Rebuilds `rosterStockDists.json` from the three stock ROMs |

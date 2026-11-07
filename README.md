@@ -12,6 +12,8 @@ Everything runs in your browser. Your ROMs are opened on your own computer and a
 
 Each tool has its own tab. `#season` or `#rosters` at the end of the address opens that tab directly.
 
+**Season and Rosters edit the same ROM.** Load a ROM in either tab, or take the Team Swap result, then switch between the two as often as you like. **Download ROM** in either tab saves everything, named after the ROM with `[Season]` and/or `[Rosters]` added. Team Swap always starts from an unswapped ROM; if you change the swap and take its result again while you have season or roster changes, the app asks: **Keep my season and roster edits** puts every team's roster and the conferences and schedules into the new ROM, by slot (a swapped team gets the edits made for its slot), or **Start fresh**. The same question comes up when you open another ROM file of the same game.
+
 ## Team Swap
 
 Pick any of BW95's 36 teams, choose a CF97 team to replace it with, adjust the names and uniform colors, and download the new ROM. The new teams' art comes from your CF97 ROM.
@@ -77,7 +79,7 @@ Not tested in a real game: a full season through the bowls with swapped teams (t
 
 ## Season
 
-Rename Bill Walsh '95's four conferences, choose which teams play in each, and set schedules. It works on the original ROM, Elevated, a Team Swap result or a ROM it saved earlier, so you can keep editing the same ROM. **Use the Team Swap result** opens the ROM you set up in the Team Swap tab.
+Rename Bill Walsh '95's four conferences, choose which teams play in each, and set schedules. It works on the original ROM, Elevated, a Team Swap result or a ROM it saved earlier, and edits the same ROM as the Rosters tab. **Use the Team Swap result** opens the ROM you set up in the Team Swap tab.
 
 ### How the game schedules a season
 
@@ -110,14 +112,14 @@ Bill Walsh '95 has no fixed schedules. When you start a New Season, it deals eac
 ### Testing
 
 - In an emulator (Genesis Plus GX), a New Season with Weeks set to 16 for four test ROMs: four locked teams, all 36 locked, all but one locked, and random schedules with moved conferences (9, 10, 6 and 11 teams). The game's list of games matched the app's schedule for every locked team in every week, every "any team" week got a random team of that conference, and every random team was dealt into its own conference's places. The rankings screen shows the new conference names. The same checks passed on Elevated v1.1.0-beta.11 and on a Team Swap result.
-- 9 Node tests: an unchanged setup writes back byte-identical (original, Rebalanced v1.0 and Elevated beta.11), 4,000 random edits stay valid and survive writing and reading back, unlocking every team restores the original code and frees the table, Team Swap works before or after, and the Rosters OL hook sits next to the table.
-- ROMs downloaded from the app are byte-identical to the same edits made with the code in Node, and a saved season file loaded into a fresh ROM gives the same download.
+- 10 Node tests: an unchanged setup writes back byte-identical (original, Rebalanced v1.0 and Elevated beta.11), 4,000 random edits stay valid and survive writing and reading back, unlocking every team restores the original code and frees the table, Team Swap works before or after, the Rosters OL hook sits next to the table, and edits carried to a new Team Swap result land by slot.
+- ROMs downloaded from the app are byte-identical to the same edits made with the code in Node, and a saved season file loaded into a fresh ROM gives the same download. A Team Swap result with locked schedules (Season tab) and a CFB 27 conversion (Rosters tab), downloaded from either tab, equals the swap → season → conversion done with the command-line tools; after changing the swap and keeping the edits, the download equals the new swap with the edits carried over.
 
 Not tested: playing through a season with an edited schedule (the emulator used has no battery save, so a season can't get past "Saving Season Games"), bowls with other conference sizes (checked in the code only), and real hardware.
 
 ## Rosters
 
-Load a Bill Walsh College Football '95, College Football USA 96 or College Football USA 97 ROM, pick a team, and change its players' jersey numbers and ratings, or import a spreadsheet for many teams at once. Then download the ROM. Original and modified ROMs both work (Bill Walsh '95 Elevated, formerly Rebalanced; Team Swap output; an earlier roster edit; a ROM saved by CFB-Walsh.exe). **Use the Team Swap result** opens the ROM you set up in the Team Swap tab, so swaps and roster edits end up in one file.
+Load a Bill Walsh College Football '95, College Football USA 96 or College Football USA 97 ROM, pick a team, and change its players' jersey numbers and ratings, or import a spreadsheet for many teams at once. Then download the ROM. Original and modified ROMs both work (Bill Walsh '95 Elevated, formerly Rebalanced; Team Swap output; an earlier roster edit; a ROM saved by CFB-Walsh.exe). **Use the Team Swap result** opens the ROM you set up in the Team Swap tab, so swaps, season and roster edits end up in one file (the Season tab edits the same ROM).
 
 Players in these games have no names, only numbers. Each rating is a step from 0 to 15, which the game's roster screen shows as 0, 6, 13 … 93, 100; weight goes in 16 lb steps from 140 to 380. The editor shows the same numbers as the game. A kicker's or punter's Quick is his kick distance in the game, so the editor labels it that way.
 

@@ -1,25 +1,16 @@
 // Season tool: rename Bill Walsh '95's four conferences, move teams between them, and lock in
 // schedules. Teams that aren't locked keep the game's random schedules.
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { openRom } from '../../core/romfile';
-import { fixChecksums, openRosterRom } from '../../core/rosterRom';
 import {
   CONFERENCES, NAME_LEN, WEEKS, conferenceGames, isLocked, lockAll, lockTeam, readSeason, seasonFile, seasonFromFile,
   seasonProblems, setConference, setGame, setHome, setName, slotOf, teamGames, unlockAll, unlockTeam, writeSeason,
   type EditResult, type Opponent, type Season,
 } from '../../core/season';
-import type { TeamSwapSource } from '../rosters/RosterTool';
+import { openRosterRom } from '../../core/rosterRom';
+import { WorkRomCard, type TeamSwapSource, type WorkApi } from '../shared/WorkRom';
 import './season.css';
 
 type Note = { kind: 'error' | 'ok'; text: string } | null;
-
-interface Loaded {
-  name: string;
-  label: string;
-  data: Uint8Array;
-  teams: string[];
-  initial: Season;
-}
 
 /** Weeks the game plays unless Game Setup's Weeks row is changed. */
 const DEFAULT_WEEKS = 12;
@@ -35,79 +26,73 @@ function download(name: string, data: BlobPart, type: string) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-const stem = (name: string) => name.replace(/\.(md|bin|gen|zip)$/i, '').replace(/\s*\[Season\]$/i, '');
+const stem = (name: string) => name.replace(/\.(md|bin|gen|zip)$/i, '').replace(/(\s*\[(Season|Rosters)\])+$/i, '');
 const safeName = (s: string) => s.replace(/[^A-Za-z0-9 &'.()[\]-]+/g, ' ').replace(/\s+/g, ' ').trim();
-
-function open(name: string, bytes: Uint8Array, label?: string): Loaded {
-  const rom = openRosterRom(bytes);
-  if (rom.game !== 'bw95') throw new Error("The Season tab works on Bill Walsh College Football '95 ROMs.");
-  const initial = readSeason(rom.data);
-  return { name, label: label ?? "Bill Walsh College Football '95", data: rom.data, teams: rom.teams.map((t) => t.school), initial };
-}
 
 const oppValue = (o: Opponent) => ('team' in o ? `t${o.team}` : `c${o.conf}`);
 const parseOpp = (v: string): Opponent => (v[0] === 't' ? { team: +v.slice(1) } : { conf: +v.slice(1) });
 
 export function SeasonTool({
+  api,
   teamSwap,
   registerDrop,
 }: {
+  api: WorkApi;
   teamSwap: TeamSwapSource | null;
   registerDrop: (fn: ((files: FileList | File[]) => void) | null) => void;
 }) {
-  const [loaded, setLoaded] = useState<Loaded | null>(null);
+  const { work } = api;
   const [season, setSeason] = useState<Season | null>(null);
-  const [romNote, setRomNote] = useState<Note>(null);
+  const [teams, setTeams] = useState<string[]>([]);
+  const [romProblem, setRomProblem] = useState<string | null>(null);
   const [note, setNote] = useState<Note>(null);
 
-  const take = (l: Loaded) => {
-    setLoaded(l);
-    setSeason(l.initial);
-    setNote(null);
-  };
-
-  const loadFiles = async (files: FileList | File[]) => {
-    const f = Array.from(files)[0];
-    if (!f) return;
-    setRomNote(null);
-    try {
-      if (/\.json$/i.test(f.name)) {
-        await loadSeasonFile(f);
-        return;
-      }
-      const r = await openRom(f.name, new Uint8Array(await f.arrayBuffer()));
-      take(open(r.name, r.data, r.known?.label));
-    } catch (e) {
-      setRomNote({ kind: 'error', text: `${f.name}: ${(e as Error).message}` });
-    }
-  };
-  const loadRef = useRef(loadFiles);
-  loadRef.current = loadFiles;
+  // A new working ROM: read its season (Bill Walsh '95 only).
   useEffect(() => {
-    registerDrop((files) => loadRef.current(files));
-    return () => registerDrop(null);
-  }, [registerDrop]);
-
-  const takeTeamSwap = () => {
-    if (!teamSwap) return;
-    setRomNote(null);
+    setNote(null);
+    setSeason(null);
+    setRomProblem(null);
+    if (!work) return;
+    if (work.game !== 'bw95') {
+      setRomProblem("The Season tab works on Bill Walsh College Football '95 ROMs; this one is for the Rosters tab only.");
+      return;
+    }
     try {
-      const { name, data } = teamSwap.build();
-      take(open(name, data, `Team Swap result (${teamSwap.count} team${teamSwap.count === 1 ? '' : 's'} swapped)`));
+      setTeams(openRosterRom(work.data).teams.map((t) => t.school));
+      setSeason(readSeason(work.data));
     } catch (e) {
-      setRomNote({ kind: 'error', text: (e as Error).message });
+      setRomProblem((e as Error).message);
+    }
+  }, [work]);
+
+  /** Every change goes straight into the working ROM, so the Rosters tab and the download see it. */
+  const change = (s: Season) => {
+    setSeason(s);
+    setNote(null);
+    if (!work) return;
+    const problems = seasonProblems(s);
+    if (problems.length) {
+      api.setBlocker(problems[0]);
+      return;
+    }
+    try {
+      writeSeason(work.data, s);
+      api.setBlocker(null);
+      api.edited();
+    } catch (e) {
+      api.setBlocker((e as Error).message);
     }
   };
 
   const loadSeasonFile = async (f: File) => {
-    if (!loaded) {
-      setRomNote({ kind: 'error', text: 'Load a ROM first, then the season file.' });
+    if (!work || !season) {
+      setNote({ kind: 'error', text: "Load a Bill Walsh '95 ROM first, then the season file." });
       return;
     }
     try {
-      const { season: s, teams } = seasonFromFile(JSON.parse(await f.text()));
-      setSeason(s);
-      const differ = teams.length === loaded.teams.length ? teams.filter((t, i) => t !== loaded.teams[i]).length : 0;
+      const { season: s, teams: saved } = seasonFromFile(JSON.parse(await f.text()));
+      change(s);
+      const differ = saved.length === teams.length ? saved.filter((t, i) => t !== teams[i]).length : 0;
       setNote({
         kind: 'ok',
         text: `Loaded ${f.name}.` + (differ ? ` It was saved with ${differ} different team${differ === 1 ? '' : 's'}; they take the same places.` : ''),
@@ -117,35 +102,24 @@ export function SeasonTool({
     }
   };
 
-  const changed = !!loaded && !!season && JSON.stringify(season) !== JSON.stringify(loaded.initial);
-  const problems = season ? seasonProblems(season) : [];
-
-  const doDownload = () => {
-    if (!loaded || !season) return;
-    try {
-      const out = new Uint8Array(loaded.data);
-      const res = writeSeason(out, season);
-      fixChecksums(out, 'bw95');
-      const name = `${safeName(stem(loaded.name))} [Season].md`;
-      download(name, out as Uint8Array<ArrayBuffer>, 'application/octet-stream');
-      setNote({
-        kind: 'ok',
-        text:
-          `Saved ${name} with ${res.locked ? `${res.locked} locked team${res.locked === 1 ? '' : 's'}` : 'random schedules'}.` +
-          ' Start a New Season in the game to use it.' +
-          (res.walshSkipped.length ? ` The Walsh Report still says "${res.walshSkipped.join('", "')}" (the new name is too long to fit there).` : ''),
-      });
-    } catch (e) {
-      setNote({ kind: 'error', text: (e as Error).message });
-    }
+  const dropRef = useRef<(files: FileList | File[]) => void>(() => {});
+  dropRef.current = (files) => {
+    const f = Array.from(files)[0];
+    if (f && /\.json$/i.test(f.name)) void loadSeasonFile(f);
+    else void api.loadFiles(files);
   };
+  useEffect(() => {
+    registerDrop((files) => dropRef.current(files));
+    return () => registerDrop(null);
+  }, [registerDrop]);
 
   const saveFile = () => {
-    if (!loaded || !season) return;
-    download(`${safeName(stem(loaded.name))} season.json`, JSON.stringify(seasonFile(season, loaded.teams), null, 1), 'application/json');
+    if (!work || !season) return;
+    download(`${safeName(stem(work.name))} season.json`, JSON.stringify(seasonFile(season, teams), null, 1), 'application/json');
   };
 
   const lockedCount = season ? season.slotTeam.filter((t) => t !== null).length : 0;
+  const problem = season ? seasonProblems(season)[0] : undefined;
 
   return (
     <>
@@ -157,74 +131,34 @@ export function SeasonTool({
         </p>
       </section>
 
-      <section className="roms sea-roms" aria-label="ROM file">
-        <label className={`rom${loaded ? ' rom-ok' : ''}`}>
-          <span className="rom-title">ROM</span>
-          {loaded ? (
-            <span className="rom-status">
-              {loaded.label}
-              <small>{loaded.name} · choose another file to switch</small>
-            </span>
-          ) : (
-            <span className="rom-status rom-empty">
-              <span className="rom-choose">Choose file</span>
-              <small>Bill Walsh College Football '95: original, Elevated, a Team Swap result or an earlier edit. .md, .bin, .gen or .zip.</small>
-            </span>
-          )}
-          <input
-            type="file"
-            accept=".md,.bin,.gen,.zip"
-            hidden
-            onChange={(e) => {
-              if (e.target.files) void loadFiles(e.target.files);
-              e.target.value = '';
-            }}
-          />
-        </label>
-        {teamSwap && (
-          <div className="sea-from-swap">
-            <button className="btn btn-quiet" onClick={takeTeamSwap}>
-              Use the Team Swap result ({teamSwap.count} team{teamSwap.count === 1 ? '' : 's'} swapped)
-            </button>
-            <p className="hint">Builds the ROM from the Team Swap tab and opens it here, so swaps and the season end up in one file.</p>
-          </div>
-        )}
-        {romNote && (
-          <p className={`note ${romNote.kind}`} role="alert">
-            {romNote.text}
-          </p>
-        )}
-      </section>
+      <WorkRomCard
+        api={api}
+        teamSwap={teamSwap}
+        hint="Bill Walsh College Football '95: original, Elevated, a Team Swap result or an earlier edit. .md, .bin, .gen or .zip."
+      />
 
-      {loaded && season ? (
-        <SeasonEditor
-          key={`${loaded.name}-${loaded.label}`}
-          teams={loaded.teams}
-          season={season}
-          onChange={(s) => {
-            setSeason(s);
-            setNote(null);
-          }}
-        />
+      {work && season ? (
+        <SeasonEditor key={work.id} teams={teams} season={season} onChange={change} />
       ) : (
         <section className="waiting">
-          <p>Load a ROM to see its conferences and schedules. You can drop the file anywhere on this page.</p>
+          <p>{romProblem ?? 'Load a ROM to see its conferences and schedules. You can drop the file anywhere on this page.'}</p>
         </section>
       )}
 
-      {loaded && season && (
+      {work && season && (
         <footer className="dock">
           <p className="dock-count" aria-live="polite">
             {lockedCount ? `${lockedCount} team${lockedCount === 1 ? '' : 's'} locked` : 'All schedules random'}
+            {api.edits.rosters && <small className="dock-also">+ roster changes</small>}
           </p>
           {note && (
             <p className={`note ${note.kind}`} role={note.kind === 'error' ? 'alert' : 'status'}>
               {note.text}
             </p>
           )}
-          {problems.length > 0 && (
+          {problem && (
             <p className="note error" role="alert">
-              {problems[0]}
+              {problem}
             </p>
           )}
           <div className="dock-actions">
@@ -244,7 +178,11 @@ export function SeasonTool({
             <button className="btn" onClick={saveFile}>
               Save season file
             </button>
-            <button className="btn btn-go" onClick={doDownload} disabled={!changed || problems.length > 0}>
+            <button
+              className="btn btn-go"
+              onClick={() => setNote(api.save())}
+              disabled={(!api.edits.any && !work.checkOff) || !!problem}
+            >
               Download ROM
             </button>
           </div>
