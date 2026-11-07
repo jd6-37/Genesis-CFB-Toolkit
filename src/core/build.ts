@@ -243,17 +243,60 @@ export interface BuildResult {
   walsh: 'unchanged' | 'in place' | 'moved';
 }
 
-/** The swap writes into unused ROM space; refuse inputs where something else already lives there. */
-function assertFree(rom: Uint8Array, start: number, end: number): void {
-  for (let a = start; a < end; a++) {
-    if (rom[a] !== 0xff) throw new Error(`This ROM already uses 0x${start.toString(16)}-0x${end.toString(16)}, which the swap needs`);
+/** The code the swap patches, with the original bytes it must find there. A modded ROM can only
+ *  take a swap if these are untouched (the patches jump back into the code around them). */
+export const PATCH_SITES: [number, string][] = [
+  [0x06acb2, 'd078e1b26a0000047023b07c0024660000044240'], // $E1B2 team stepper
+  [0x06b462, 'd06a00726a0000047023b07c0024660000044240'], // season Team Rosters stepper
+  [0x076f44, '3028001861009566'], // end zone color
+  [0x078222, '064400ae2078e1b4d0e8000a'], // setup screen helmet base, home
+  [0x07828a, '064400ae2078e2ead0e8000a'], // setup screen helmet base, visitor
+  [0x07832e, 'd0426a0000047023b07c00236f0000044240'], // setup screen stepper, home
+  [0x078366, 'd0426a0000047023b07c00236f0000044240'], // setup screen stepper, visitor
+  [0x078fbe, '43f90005b2e0'], // lea $5B2E0 (Walsh Report text)
+  [0x079f00, '700743f8d94622d851c8fffc'], // celebration palette copy
+];
+
+/** The unused ROM space the swap writes to (end exclusive). */
+export function swapAreas(): [number, number][] {
+  return [
+    ...[MENU_ORDER, END_ZONE, HELMET_BASE, CELEBRATION].map((h): [number, number] => [h.addr, h.addr + h.code.length]),
+    [CELEB_ADDR, CELEB_ADDR + 4120],
+  ];
+}
+
+const hex = (n: number) => '0x' + n.toString(16).toUpperCase().padStart(6, '0');
+
+/** Why this BW95 ROM can't take a swap: patched code or used ROM space. Empty if it can. */
+export function swapProblems(rom: Uint8Array): string[] {
+  const out: string[] = [];
+  for (const [at, want] of PATCH_SITES) {
+    const have = Array.from(rom.subarray(at, at + want.length / 2), (b) => b.toString(16).padStart(2, '0')).join('');
+    if (have !== want) out.push(`the code at ${hex(at)} has been changed`);
   }
+  for (const [start, end] of swapAreas()) {
+    if (rom.subarray(start, end).some((b) => b !== 0xff)) out.push(`${hex(start)}-${hex(end - 1)} is already in use`);
+  }
+  return out;
+}
+
+/** One message for swapProblems; null if there are none. */
+export function swapProblemText(rom: Uint8Array): string | null {
+  const p = swapProblems(rom);
+  if (!p.length) return null;
+  if (rom.subarray(MENU_ORDER.addr, MENU_ORDER.addr + MENU_ORDER.code.length).some((b) => b !== 0xff)) {
+    return (
+      "This ROM already has swapped teams, so Team Swap can't run on it again. " +
+      'Start from the ROM before the swap (a saved swap file brings your choices back).'
+    );
+  }
+  return `This ROM can't take a team swap: ${p.join('; ')}.`;
 }
 
 export function buildRom(base: Uint8Array, bwTeams: BwTeam[], cfTeams: CfTeam[], swaps: SlotConfig[]): BuildResult {
   const rom = base.slice();
-  for (const h of [MENU_ORDER, END_ZONE, HELMET_BASE, CELEBRATION]) assertFree(rom, h.addr, h.addr + h.code.length);
-  assertFree(rom, CELEB_ADDR, CELEB_ADDR + 4120);
+  const problem = swapProblemText(rom);
+  if (problem) throw new Error(problem);
   const cfByIndex = new Map(cfTeams.map((t) => [t.index, t]));
   const used = new Set<number>();
   const blocks: Record<number, BlockInfo> = {};

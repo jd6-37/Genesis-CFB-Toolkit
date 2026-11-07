@@ -1,4 +1,5 @@
-// Opening ROM files: plain .md/.bin/.gen, or a .zip holding one. Identifies ROMs by SHA-1.
+// Opening ROM files: plain .md/.bin/.gen, or a .zip holding one. Identifies ROMs by SHA-1, and
+// modded BW95 ROMs (Elevated betas, earlier edits, …) by their header.
 
 import { rl, rw, sha1Hex } from './bytes';
 
@@ -8,6 +9,9 @@ export interface KnownRom {
   kind: RomKind;
   label: string;
   rebalanced?: 'fixed' | 'none';
+  /** A BW95 ROM recognized only by its header: a mod or an edit of the original. Team Swap checks
+   *  that the code and ROM space it needs are still untouched (`swapProblems` in build.ts). */
+  modded?: boolean;
 }
 
 export const KNOWN: Record<string, KnownRom> = {
@@ -26,6 +30,23 @@ export const KNOWN: Record<string, KnownRom> = {
 };
 
 const ROM_EXT = /\.(md|bin|gen)$/i;
+
+const BW95_TITLE = "Bill Walsh College Football '95";
+
+/** The overseas name in the Genesis header (0x150-0x17F), with runs of spaces collapsed. */
+export function headerTitle(d: Uint8Array): string {
+  return d.length < 0x180 ? '' : String.fromCharCode(...d.subarray(0x150, 0x180)).replace(/\s+/g, ' ').trim();
+}
+
+/** A known file by SHA-1, else any 2 MB ROM with BW95's header counts as a modded BW95 ROM. */
+export function identifyRom(data: Uint8Array, sha1: string): KnownRom | undefined {
+  const known = KNOWN[sha1];
+  if (known) return known;
+  if (data.length === 0x200000 && headerTitle(data) === BW95_TITLE) {
+    return { kind: 'bw95', label: "Bill Walsh College Football '95 (modded)", modded: true };
+  }
+  return undefined;
+}
 
 async function inflateRaw(data: Uint8Array): Promise<Uint8Array> {
   const ds = new DecompressionStream('deflate-raw');
@@ -78,16 +99,17 @@ export async function openRom(fileName: string, bytes: Uint8Array): Promise<Open
   let data = bytes;
   if (rl(bytes, 0) === 0x504b0304) ({ name, data } = await unzipRom(bytes));
   const sha1 = await sha1Hex(data);
-  return { name, data, sha1, known: KNOWN[sha1] };
+  return { name, data, sha1, known: identifyRom(data, sha1) };
 }
 
 /** A short hint for ROMs that aren't recognized. */
 export function describeUnknown(r: OpenedRom): string {
   if (r.data.length % 0x4000 === 512) return 'This looks like an .smd (interleaved) dump. Convert it to .md/.bin first.';
-  const title = String.fromCharCode(...r.data.subarray(0x150, 0x180)).replace(/\s+/g, ' ').trim();
+  const title = headerTitle(r.data);
   const sum = r.data.length > 0x190 ? rw(r.data, 0x18e).toString(16).toUpperCase() : '';
   return (
     `Not a ROM this app can use (header "${title}", ${r.data.length.toLocaleString()} bytes, checksum ${sum}, SHA-1 ${r.sha1}). ` +
-    "It needs Bill Walsh College Football 95 (USA) or a Rebalanced v1.0 ROM, and College Football USA 97 (USA)."
+    "It needs a Bill Walsh College Football 95 ROM (the original USA ROM, or one with a mod such as Elevated), " +
+    'and College Football USA 97 (USA).'
   );
 }
