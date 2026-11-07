@@ -6,33 +6,28 @@ import {
   type Attr, type SlotDef,
 } from '../../core/rosterLayouts';
 import {
-  findEaChecksum, fixChecksums, getRating, jerseyByte, jerseyNumber, openRosterRom, readPlayer, setRating,
-  teamLayout, teamName, writePlayer, type Player, type RosterRom,
+  getRating, jerseyByte, jerseyNumber, openRosterRom, readPlayer, setRating, teamLayout, teamName, writePlayer,
+  type Player, type RosterRom,
 } from '../../core/rosterRom';
 import { detectImport, importSheet, type ImportReport } from '../../core/rosterImport';
 import { applyCfb27, convertCfb27, type Cfb27Plan } from '../../core/rosterCfb27';
 import { hasOlPatch, installOlPatch, olPatchState, restoreOlPatch, shownWeightOffset } from '../../core/rosterOlPatch';
 import { exportRostersCsv } from '../../core/rosterExport';
 import { readSheet, type Sheet } from '../../core/rosterSheet';
-import { openRom } from '../../core/romfile';
+import { WorkRomCard, type TeamSwapSource, type WorkApi } from '../shared/WorkRom';
 import './rosters.css';
+
+export type { TeamSwapSource };
 
 type Note = { kind: 'error' | 'ok'; text: string } | null;
 
 interface Loaded {
+  /** The shared working ROM's bytes, edited in place (the Season tab edits the same bytes). */
   rom: RosterRom;
   /** Bytes as loaded: change marks and "revert" compare against these. */
   baseline: Uint8Array;
   /** File name the ROM came from (the ROM inside a zip). */
   name: string;
-  label: string;
-  /** CFB-Walsh.exe turned the boot checksum check off in this ROM. */
-  checkOff: boolean;
-}
-
-export interface TeamSwapSource {
-  count: number;
-  build: () => { name: string; data: Uint8Array };
 }
 
 const STEPS = Array.from({ length: 16 }, (_, i) => i);
@@ -55,60 +50,15 @@ function download(name: string, data: BlobPart, type: string) {
 const stem = (name: string) => name.replace(/\.(md|bin|gen|zip)$/i, '').replace(/\s*\[Rosters\]$/i, '');
 const safeName = (s: string) => s.replace(/[^A-Za-z0-9 &'.()[\]-]+/g, ' ').replace(/\s+/g, ' ').trim();
 
-function open(name: string, data: Uint8Array, label?: string): Loaded {
-  const rom = openRosterRom(data);
-  const c = findEaChecksum(rom.data, rom.game);
-  return {
-    rom,
-    baseline: new Uint8Array(data),
-    name,
-    label: label ?? GAMES[rom.game].title,
-    checkOff: !!c && rom.data[c.bneAt] === 0x4e && rom.data[c.bneAt + 1] === 0x71,
-  };
-}
-
-export function RosterTool({
-  teamSwap,
-  registerDrop,
-}: {
-  teamSwap: TeamSwapSource | null;
-  registerDrop: (fn: ((files: FileList | File[]) => void) | null) => void;
-}) {
-  const [loaded, setLoaded] = useState<Loaded | null>(null);
-  const [romNote, setRomNote] = useState<Note>(null);
+export function RosterTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapSource | null }) {
+  const { work, rev } = api;
   const [note, setNote] = useState<Note>(null);
-  const [rev, setRev] = useState(0);
 
-  const loadFiles = async (files: FileList | File[]) => {
-    const f = Array.from(files)[0];
-    if (!f) return;
-    setRomNote(null);
-    setNote(null);
-    try {
-      const r = await openRom(f.name, new Uint8Array(await f.arrayBuffer()));
-      setLoaded(open(r.name, r.data, r.known?.label));
-    } catch (e) {
-      setRomNote({ kind: 'error', text: `${f.name}: ${(e as Error).message}` });
-    }
-  };
-  const loadRef = useRef(loadFiles);
-  loadRef.current = loadFiles;
-  useEffect(() => {
-    registerDrop((files) => loadRef.current(files));
-    return () => registerDrop(null);
-  }, [registerDrop]);
-
-  const takeTeamSwap = () => {
-    if (!teamSwap) return;
-    setRomNote(null);
-    setNote(null);
-    try {
-      const { name, data } = teamSwap.build();
-      setLoaded(open(name, data, `Team Swap result (${teamSwap.count} team${teamSwap.count === 1 ? '' : 's'} swapped)`));
-    } catch (e) {
-      setRomNote({ kind: 'error', text: (e as Error).message });
-    }
-  };
+  const loaded = useMemo<Loaded | null>(
+    () => (work ? { rom: openRosterRom(work.data, true), baseline: work.base, name: work.name } : null),
+    [work],
+  );
+  useEffect(() => setNote(null), [work]);
 
   const changed = useMemo(() => {
     if (!loaded) return [];
@@ -118,20 +68,8 @@ export function RosterTool({
       for (let k = t.rosterOffset; k < t.rosterOffset + len; k++) if (rom.data[k] !== baseline[k]) return true;
       return false;
     }).map((t) => t.index);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, rev]);
-
-  const doDownload = () => {
-    if (!loaded) return;
-    const out = new Uint8Array(loaded.rom.data);
-    const res = fixChecksums(out, loaded.rom.game);
-    const name = `${safeName(stem(loaded.name))} [Rosters].md`;
-    download(name, out as Uint8Array<ArrayBuffer>, 'application/octet-stream');
-    setNote({
-      kind: 'ok',
-      text: `Saved ${name} with ${changed.length} team${changed.length === 1 ? '' : 's'} changed.` +
-        (res.restoredCheck ? ' The boot checksum check is back on, with a correct checksum.' : ''),
-    });
-  };
 
   return (
     <>
@@ -143,56 +81,14 @@ export function RosterTool({
         </p>
       </section>
 
-      <section className="roms ros-roms" aria-label="ROM file">
-        <label className={`rom${loaded ? ' rom-ok' : ''}`}>
-          <span className="rom-title">ROM</span>
-          {loaded ? (
-            <span className="rom-status">
-              {loaded.label}
-              <small>{loaded.name} · {loaded.rom.teams.length} teams · choose another file to switch</small>
-            </span>
-          ) : (
-            <span className="rom-status rom-empty">
-              <span className="rom-choose">Choose file</span>
-              <small>
-                Bill Walsh College Football '95, College Football USA 96 or 97. Original or modified (Elevated, formerly
-                Rebalanced; Team Swap; an earlier roster edit). .md, .bin, .gen or .zip.
-              </small>
-            </span>
-          )}
-          <input
-            type="file"
-            accept=".md,.bin,.gen,.zip"
-            hidden
-            onChange={(e) => {
-              if (e.target.files) void loadFiles(e.target.files);
-              e.target.value = '';
-            }}
-          />
-        </label>
-        {teamSwap && (
-          <div className="ros-from-swap">
-            <button className="btn btn-quiet" onClick={takeTeamSwap}>
-              Use the Team Swap result ({teamSwap.count} team{teamSwap.count === 1 ? '' : 's'} swapped)
-            </button>
-            <p className="hint">Builds the ROM from the Team Swap tab and opens it here, so swaps and roster edits end up in one file.</p>
-          </div>
-        )}
-        {romNote && (
-          <p className={`note ${romNote.kind}`} role="alert">
-            {romNote.text}
-          </p>
-        )}
-        {loaded?.checkOff && (
-          <p className="note ok">
-            This ROM's boot checksum check was turned off (CFB-Walsh.exe does that). The download turns it back on with a
-            correct checksum.
-          </p>
-        )}
-      </section>
+      <WorkRomCard
+        api={api}
+        teamSwap={teamSwap}
+        hint="Bill Walsh College Football '95, College Football USA 96 or 97. Original or modified (Elevated, formerly Rebalanced; Team Swap; an earlier edit). .md, .bin, .gen or .zip."
+      />
 
       {loaded ? (
-        <RosterEditor key={`${loaded.name}-${loaded.label}`} loaded={loaded} changed={changed} onChange={() => setRev((r) => r + 1)} />
+        <RosterEditor key={work!.id} loaded={loaded} changed={changed} onChange={api.edited} />
       ) : (
         <section className="waiting">
           <p>Load a ROM to see its teams. You can drop the file anywhere on this page.</p>
@@ -205,6 +101,7 @@ export function RosterTool({
         <footer className="dock">
           <p className="dock-count" aria-live="polite">
             {changed.length ? `${changed.length} team${changed.length === 1 ? '' : 's'} changed` : 'No roster changes yet'}
+            {api.edits.season && <small className="dock-also">+ season changes</small>}
           </p>
           {note && (
             <p className={`note ${note.kind}`} role={note.kind === 'error' ? 'alert' : 'status'}>
@@ -212,7 +109,7 @@ export function RosterTool({
             </p>
           )}
           <div className="dock-actions">
-            <button className="btn btn-go" onClick={doDownload} disabled={!changed.length && !loaded.checkOff}>
+            <button className="btn btn-go" onClick={() => setNote(api.save())} disabled={!api.edits.any && !work?.checkOff}>
               Download ROM
             </button>
           </div>

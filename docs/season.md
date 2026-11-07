@@ -8,6 +8,7 @@ How the Season tab reads and writes Bill Walsh College Football '95's conference
 |---|---|
 | `src/core/season.ts` | Reading, the edit operations, writing, checks, the season file |
 | `src/tools/season/SeasonTool.tsx`, `season.css` | The tab |
+| `src/tools/shared/WorkRom.tsx`, `src/core/workRom.ts` | The working ROM shared with the Rosters tab (below) |
 | `cli/season.ts` | Applies a JSON spec to a ROM; prints the locked teams' schedules (used for the emulator checks) |
 | `cli/seasontest.ts` | Tests (`npm run test:season -- BW95 CF97 [more BW95 ROMs]`) |
 
@@ -82,6 +83,12 @@ A locked team's entry is {its place, 1}; every other team gets its conference's 
 - **Move a team:** a locked team keeps its place; a random team moves one random place from its old conference to the new one. Each conference keeps at least 2 teams.
 - Every operation keeps each week a full set of games and each conference's random places equal to its random teams.
 
+## The shared working ROM
+
+Season and Rosters edit one buffer in place (`useWorkRom` in `src/tools/shared/WorkRom.tsx`). The Season tab writes its whole setup into it after every valid edit (`writeSeason` is cheap); Rosters writes roster records and the OL tweak. The two never touch the same bytes. Either tab's Download fixes the checksums on a copy and names the file after the ROM, with `[Season]` and/or `[Rosters]` for whatever changed since loading (`editsSince`, `workFileName` in `src/core/workRom.ts`). While a conference has no name, the Season tab blocks downloads from both tabs.
+
+When another ROM comes in (a file or the Team Swap result) and the working ROM has changes, the card asks. **Keep my season and roster edits** runs `carryEdits(old, new)`: every team's roster record by slot, the OL tweak if the old ROM had it, and `writeSeason(new, readSeason(old))`. Team Swap keeps rosters and conferences per slot, so this matches what the swap does with the original's data. Only offered for the same game.
+
 ## Season file
 
 ```json
@@ -92,7 +99,7 @@ A locked team's entry is {its place, 1}; every other team gets its conference's 
 
 ## Tests
 
-`npm run test:season -- BW95 CF97 [more BW95 ROMs]` (9 tests): the stock setup; unchanged writes byte-identical (also on extra ROMs); set games, home/away and "any team" with a round trip; moving teams, renaming, the 2-team minimum, name rules and the Walsh mention; lock all and unlock all (code and table restored); 4,000 random edits with write/read round trips; season files; refusing foreign code or data; Team Swap before or after and the Rosters OL hook next to the table.
+`npm run test:season -- BW95 CF97 [more BW95 ROMs]` (10 tests): the stock setup; unchanged writes byte-identical (also on extra ROMs); set games, home/away and "any team" with a round trip; moving teams, renaming, the 2-team minimum, name rules and the Walsh mention; lock all and unlock all (code and table restored); 4,000 random edits with write/read round trips; season files; refusing foreign code or data; Team Swap before or after and the Rosters OL hook next to the table; the working ROM (edits per tool, download names, carrying edits to a new Team Swap result by slot).
 
 Emulator checks (stable-retro, Genesis Plus GX; `cli/season.ts` writes the expected schedule): New Season with Weeks 16, then the game list at `$CCAE` was compared with the app's schedule. The place → team deal was recovered from the template and checked against each team's range in the ROM. Four ROMs passed: four locked teams, all 36 locked, all but one locked, and random with moved conferences. The same checks passed on Elevated v1.1.0-beta.11 and on a beta.11 Team Swap result. The rankings screen showed the new names.
 

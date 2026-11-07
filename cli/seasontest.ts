@@ -9,7 +9,8 @@ import { eaChecksumOk, fixChecksums, openRosterRom } from '../src/core/rosterRom
 import { parseBw95 } from '../src/core/bw95';
 import { parseCf97 } from '../src/core/cf97';
 import { buildRom, defaultSlot, swapProblems } from '../src/core/build';
-import { installOlPatch } from '../src/core/rosterOlPatch';
+import { installOlPatch, olPatchState } from '../src/core/rosterOlPatch';
+import { canCarry, carryEdits, editsSince, workFileName } from '../src/core/workRom';
 import {
   CONFERENCES, LOCK_TABLE_SIZE, SEASON_AREAS, SLOTS, WEEKS, dealMode, isLocked, lockAll, lockTeam, readSeason,
   seasonFile, seasonFromFile, seasonProblems, setConference, setGame, setHome, setName, slotOf, teamGames, unlockAll,
@@ -229,6 +230,45 @@ ok(`unchanged setup writes back byte-identical (${1 + extra.length} ROM${extra.l
   installOlPatch(ol);
   roundTrip(ol, lockAll(readSeason(ol)));
   ok('Team Swap before or after; Rosters OL hook next to the lock table');
+}
+
+// 10. The shared working ROM: what changed, the download name, and carrying edits to another ROM.
+{
+  const cfTeams = parseCf97(cf);
+  const swap = (pairs: [string, string][]) => {
+    const teams = parseBw95(bw);
+    return buildRom(bw, teams, cfTeams, pairs.map(([slot, school]) => defaultSlot(teams[T(slot)], cfTeams.find((c) => c.school === school)!))).rom;
+  };
+  const one = swap([['Pitt', 'Tulane']]);
+  const work = new Uint8Array(one);
+  assert.deepEqual(editsSince(one, work, 'bw95'), { season: false, rosters: false, any: false });
+  writeSeason(work, setGame(lockTeam(readSeason(work), T('Pitt')), T('Pitt'), 0, { team: T('Alabama') }, names).season);
+  assert.deepEqual(editsSince(one, work, 'bw95'), { season: true, rosters: false, any: true });
+  const rom = openRosterRom(work, true);
+  work[rom.teams[T('Texas')].rosterOffset + 1] ^= 0x11; // a roster edit
+  installOlPatch(work);
+  assert.deepEqual(editsSince(one, work, 'bw95'), { season: true, rosters: true, any: true });
+  assert.equal(workFileName('X [Team Swap] [Season] [Rosters].md', { season: true, rosters: true }), 'X [Team Swap] [Season] [Rosters].md');
+  assert.equal(workFileName('X [Rosters].md', { season: true, rosters: false }), 'X [Season].md');
+  // A new swap (two teams) with the edits kept: same season and rosters by slot, the tweak too.
+  const two = swap([['Pitt', 'Tulane'], ['Wisconsin', 'Idaho']]);
+  const kept = new Uint8Array(two);
+  const res = carryEdits(work, kept);
+  assert.deepEqual(res, { rosters: 36, olTweak: true, season: true, skipped: [] });
+  sameSeason(readSeason(kept), readSeason(work));
+  const a = openRosterRom(work), b2 = openRosterRom(kept);
+  for (let t = 0; t < 36; t++) {
+    const o1 = a.teams[t].rosterOffset, o2 = b2.teams[t].rosterOffset;
+    assert.deepEqual(kept.subarray(o2, o2 + 128), work.subarray(o1, o1 + 128), `roster of slot ${t}`);
+  }
+  assert.equal(olPatchState(kept), 'installed');
+  assert.equal(openRosterRom(kept).teams[T('Wisconsin')].school, 'Idaho');
+  // Only the edits move: the new swap's own bytes are untouched elsewhere.
+  const ed = editsSince(two, kept, 'bw95');
+  assert.ok(ed.season && ed.rosters);
+  assert.ok(!canCarry(bw, cf));
+  assert.throws(() => carryEdits(bw, new Uint8Array(cf)), /same game/);
+  ok('working ROM: edits detected per tool, download names, edits carried to a new Team Swap result by slot');
 }
 
 console.log(`\n${passed} passed`);
