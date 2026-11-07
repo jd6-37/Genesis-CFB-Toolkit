@@ -85,9 +85,9 @@ A locked team's entry is {its place, 1}; every other team gets its conference's 
 
 ## The shared working ROM
 
-Season and Rosters edit one buffer in place (`useWorkRom` in `src/tools/shared/WorkRom.tsx`). The Season tab writes its whole setup into it after every valid edit (`writeSeason` is cheap); Rosters writes roster records and the OL tweak. The two never touch the same bytes. Either tab's Download fixes the checksums on a copy and names the file after the ROM, with `[Season]` and/or `[Rosters]` for whatever changed since loading (`editsSince`, `workFileName` in `src/core/workRom.ts`). While a conference has no name, the Season tab blocks downloads from both tabs.
+Season, Styles and Rosters edit one buffer in place (`useWorkRom` in `src/tools/shared/WorkRom.tsx`). The Season tab writes its whole setup into it after every valid edit (`writeSeason` is cheap); Styles writes the team set table and the 3-4 roster flags ([docs/styles.md](styles.md)); Rosters writes roster records and the OL tweak. They never touch the same bytes. Each tab's Download fixes the checksums on a copy and names the file after the ROM, with `[Season]`, `[Styles]` and/or `[Rosters]` for whatever changed since loading (`editsSince`, `workFileName` in `src/core/workRom.ts`). While a conference has no name, the Season tab blocks downloads from every tab.
 
-When another ROM comes in (a file or the Team Swap result) and the working ROM has changes, the card asks. **Keep my season and roster edits** runs `carryEdits(old, new)`: every team's roster record by slot, the OL tweak if the old ROM had it, and `writeSeason(new, readSeason(old))`. Team Swap keeps rosters and conferences per slot, so this matches what the swap does with the original's data. Only offered for the same game.
+When another ROM comes in (a file or the Team Swap result) and the working ROM has changes, the card asks. **Keep my edits** runs `carryEdits(old, new, oldBase)`: every team's roster record by slot, the OL tweak if the old ROM had it, `writeSeason(new, readSeason(old))`, and the style of every team whose style changed since the old ROM was loaded (Team Swap can set styles itself, so unchanged ones keep the new ROM's). Team Swap keeps rosters and conferences per slot, so this matches what the swap does with the original's data. Only offered for the same game.
 
 ## Season file
 
