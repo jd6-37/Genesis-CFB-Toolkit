@@ -149,6 +149,7 @@ export function SeasonTool({
         <footer className="dock">
           <p className="dock-count" aria-live="polite">
             {lockedCount ? `${lockedCount} team${lockedCount === 1 ? '' : 's'} locked` : 'All schedules random'}
+            {api.edits.styles && <small className="dock-also">+ style changes</small>}
             {api.edits.rosters && <small className="dock-also">+ roster changes</small>}
           </p>
           {note && (
