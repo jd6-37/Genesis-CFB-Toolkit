@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BwTeam, parseBw95 } from './core/bw95';
 import { CfTeam, parseCf97 } from './core/cf97';
-import { buildRom, defaultSlot, isSwapFile, SlotConfig, swapFile, validateSlot } from './core/build';
+import { buildRom, defaultSlot, isSwapFile, SlotConfig, swapFile, swapProblemText, validateSlot } from './core/build';
 import { MAX_LEN } from './core/defaults';
 import { renderSprites } from './core/render';
 import { describeUnknown, OpenedRom, openRom } from './core/romfile';
@@ -40,6 +40,7 @@ function download(name: string, data: BlobPart, type: string) {
 }
 
 function outName(rom: OpenedRom): string {
+  if (rom.known?.modded) return `${rom.name.replace(/\.(md|bin|gen)$/i, '')} [Team Swap].md`;
   const r = rom.known?.rebalanced;
   const base = r
     ? `Bill Walsh College Football 95 Rebalanced v1.0 [${r === 'fixed' ? 'Fixed' : 'No'} Fatigue]`
@@ -77,6 +78,11 @@ export default function App() {
       try {
         const r = await openRom(f.name, new Uint8Array(await f.arrayBuffer()));
         if (r.known?.kind === 'bw95') {
+          const problem = swapProblemText(r.data);
+          if (problem) {
+            setRomNote({ kind: 'error', text: `${f.name}: ${problem}` });
+            continue;
+          }
           setBw({ rom: r, teams: parseBw95(r.data) });
           setSlots(EMPTY);
           setOpen(null);
@@ -212,7 +218,7 @@ export default function App() {
       <section className="roms" aria-label="ROM files">
         <RomCard
           title="Bill Walsh College Football '95"
-          hint="The original USA ROM, or a Rebalanced v1.0 ROM. .md, .bin, .gen or .zip."
+          hint="The original USA ROM, or one with a mod such as Elevated. .md, .bin, .gen or .zip."
           rom={bw?.rom}
           onFiles={onFiles}
         />

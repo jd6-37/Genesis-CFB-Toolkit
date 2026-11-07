@@ -43,6 +43,8 @@ Pick any of BW95's 36 teams, choose a CF97 team to replace it with, adjust the n
 
 Files can be `.md`, `.bin` or `.gen`, or a `.zip` containing one. The Rebalanced ROMs come from the [Bill Walsh College Football '95 Rebalanced](https://github.com/jd6-37/Bill-Walsh-College-Football-95-Rebalanced) patches; the swap keeps all of their changes.
 
+Other Bill Walsh '95 ROMs with a mod work too, such as Elevated v1.1 (checked with v1.1.0-beta.11): when you load one, the app checks that the code the swap patches is unchanged and the ROM space it uses is empty, and says what's in the way if not. The swap keeps all of the mod's changes, and the downloaded ROM is named after your file with `[Team Swap]` added. A ROM that already has swapped teams can't be swapped again; start from the ROM before the swap and load your swap file.
+
 ### Swap files
 
 **Save swap file** writes your choices (teams, names, colors) as a small JSON file with no ROM data in it. Load it later, or share it, to rebuild the same ROM from the same source ROMs.
@@ -68,6 +70,7 @@ Files can be `.md`, `.bin` or `.gen`, or a `.zip` containing one. The Rebalanced
 - The menu, end zone, helmet and celebration helpers were run on their own in a 68000 emulator (every team; for the celebration: home win, visitor win and an unswapped team).
 - Celebration: test ROMs that play it at the title screen show "GO TEAM!" in Tulane's and Idaho's colors, Penn State's own "PENN STATE #1" unchanged, and the same on a Rebalanced ROM.
 - ROMs downloaded from the app are byte-identical to the CLI builds above.
+- Elevated v1.1.0-beta.11 (Fixed and No Fatigue): Pitt → Tulane and Wisconsin → Idaho, and all 36 teams swapped. Nothing outside the swap's own changes differs from the input, and every roster is kept. In the emulator: the Elevated title screen, Tulane on the setup screen and the pregame menu. The Tulane builds of beta.11 are refused because they already have a swap.
 
 Not tested in a real game: a full season through the bowls with swapped teams (the celebration was only forced at the title screen), and real hardware.
 

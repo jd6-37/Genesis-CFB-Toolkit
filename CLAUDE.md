@@ -41,7 +41,7 @@ Read this before changing anything. More than one person or Claude session may b
 - If the change touches ROM building (`src/core/`), rebuild a known swap with the CLI (see the README) and compare the SHA-1 with the one from before the change. The bytes must only change when the change is meant to change them.
 - If the change touches the Rosters tool (`src/core/roster*.ts`, `src/tools/rosters/`), `npm run test:rosters -- BW95 CF96 CF97` passes (paths to the three ROMs; zips work).
 - Saved files keep loading: swap files written by earlier versions must still open (see `isSwapFile` in `src/core/build.ts`). Any new file format gets an `app`, `tool` and `version` field from the start.
-- ROM space: every area the app writes must be checked as free first (like `assertFree` in `src/core/build.ts`), and must not overlap the areas the README lists or those used by Bill Walsh College Football '95 Rebalanced.
+- ROM space: every area the app writes must be checked as free first, and every piece of code it patches as unchanged (like `swapProblems` in `src/core/build.ts`), because the tools also take modded ROMs. New areas must not overlap the areas the README lists or those used by Bill Walsh College Football '95 Elevated (formerly Rebalanced).
 - No ROMs, ROM data or game art in the repo. Everything is read from the user's own ROMs in the browser.
 - Update the README when anything a user sees changes.
 - US English spelling everywhere: code, UI labels, file names, docs ("color", "catalog").
