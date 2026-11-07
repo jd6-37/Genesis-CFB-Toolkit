@@ -8,6 +8,7 @@ import { describeUnknown, OpenedRom, openRom } from './core/romfile';
 import { buildGenericCelebration, CelebBlob, defaultCelebration, PREVIEW_FRAME } from './core/celebration';
 import { SpriteCanvas, Swatch, UniformEditor } from './components';
 import { RosterTool, type TeamSwapSource } from './tools/rosters/RosterTool';
+import { SeasonTool } from './tools/season/SeasonTool';
 
 interface BwState {
   rom: OpenedRom;
@@ -21,12 +22,13 @@ type Note = { kind: 'error' | 'ok'; text: string } | null;
 
 const EMPTY: (SlotConfig | null)[] = Array(36).fill(null);
 
-type Tab = 'swap' | 'rosters';
+type Tab = 'swap' | 'season' | 'rosters';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'swap', label: 'Team Swap' },
+  { id: 'season', label: 'Season' },
   { id: 'rosters', label: 'Rosters' },
 ];
-const tabFromHash = (): Tab => (window.location.hash === '#rosters' ? 'rosters' : 'swap');
+const tabFromHash = (): Tab => (window.location.hash === '#rosters' ? 'rosters' : window.location.hash === '#season' ? 'season' : 'swap');
 
 function download(name: string, data: BlobPart, type: string) {
   const url = URL.createObjectURL(new Blob([data], { type }));
@@ -61,6 +63,10 @@ export default function App() {
   const registerRosterDrop = useCallback((fn: ((files: FileList | File[]) => void) | null) => {
     rosterDrop.current = fn;
   }, []);
+  const seasonDrop = useRef<((files: FileList | File[]) => void) | null>(null);
+  const registerSeasonDrop = useCallback((fn: ((files: FileList | File[]) => void) | null) => {
+    seasonDrop.current = fn;
+  }, []);
 
   useEffect(() => {
     const onHash = () => setTab(tabFromHash());
@@ -69,7 +75,7 @@ export default function App() {
   }, []);
   const pickTab = (t: Tab) => {
     setTab(t);
-    window.history.replaceState(null, '', t === 'rosters' ? '#rosters' : window.location.pathname + window.location.search);
+    window.history.replaceState(null, '', t === 'swap' ? window.location.pathname + window.location.search : `#${t}`);
   };
 
   const onFiles = useCallback(async (files: FileList | File[]) => {
@@ -163,6 +169,7 @@ export default function App() {
         e.preventDefault();
         setDragging(false);
         if (tab === 'rosters') rosterDrop.current?.(e.dataTransfer.files);
+        else if (tab === 'season') seasonDrop.current?.(e.dataTransfer.files);
         else onFiles(e.dataTransfer.files);
       }}
     >
@@ -200,6 +207,10 @@ export default function App() {
           </button>
         ))}
       </nav>
+
+      <div id="panel-season" role="tabpanel" aria-labelledby="tab-season" hidden={tab !== 'season'}>
+        <SeasonTool teamSwap={teamSwap} registerDrop={registerSeasonDrop} />
+      </div>
 
       <div id="panel-rosters" role="tabpanel" aria-labelledby="tab-rosters" hidden={tab !== 'rosters'}>
         <RosterTool teamSwap={teamSwap} registerDrop={registerRosterDrop} />
