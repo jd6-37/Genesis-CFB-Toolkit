@@ -61,14 +61,15 @@ function readStrings(d: Uint8Array, p: number, n: number): string[] {
   return out;
 }
 
-/** Opens a ROM for roster editing (works on a copy). Throws with a readable message. */
-export function openRosterRom(input: Uint8Array): RosterRom {
+/** Opens a ROM for roster editing: on a copy, or with `inPlace` on the bytes given (the shared
+ *  working ROM). Throws with a readable message. */
+export function openRosterRom(input: Uint8Array, inPlace = false): RosterRom {
   const game = detectGame(input);
   if (!game) {
     throw new Error("Not a Bill Walsh College Football '95, College Football USA '96 or '97 ROM.");
   }
   const info = GAMES[game];
-  const data = new Uint8Array(input);
+  const data = inPlace ? input : new Uint8Array(input);
   const teams: RosterTeam[] = [];
   for (let i = 0; i < info.teamCount; i++) {
     const block = u32(data, info.teamTable + 4 * i);
