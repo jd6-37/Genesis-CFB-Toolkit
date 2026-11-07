@@ -7,9 +7,10 @@ Everything runs in your browser. Your ROMs are opened on your own computer and a
 ## Tools
 
 - **[Team Swap](#team-swap):** swap College Football USA 97 teams into Bill Walsh College Football '95.
+- **[Season](#season):** rename the four conferences, choose which teams play in each, and lock in schedules in Bill Walsh '95.
 - **[Rosters](#rosters):** edit the players of Bill Walsh '95, CF96 or CF97, team by team or from a spreadsheet (CSV or Excel), or bring in real College Football 27 rosters.
 
-Each tool has its own tab. `#rosters` at the end of the address opens the Rosters tab directly.
+Each tool has its own tab. `#season` or `#rosters` at the end of the address opens that tab directly.
 
 ## Team Swap
 
@@ -27,7 +28,7 @@ Pick any of BW95's 36 teams, choose a CF97 team to replace it with, adjust the n
 
 ### What stays the same
 
-- Schedules, rankings, conferences and battery saves: the new team plays in the old team's slot.
+- Schedules, rankings, conferences and battery saves: the new team plays in the old team's slot (change conferences and schedules in the [Season](#season) tab).
 - Rosters (edit them in the [Rosters](#rosters) tab, which can open the swapped ROM directly).
 - The Walsh Report keeps the original team's scouting text, with the names changed.
 - Teams you don't swap keep their own celebrations.
@@ -59,7 +60,7 @@ Other Bill Walsh '95 ROMs with a mod work too, such as Elevated v1.1 (checked wi
   - `0x1F0300` helmet tile base on the setup screen, so helmets of up to 36 tiles fit (the stock layout leaves 32).
   - `0x1F0320` celebration colors: when the generic card stunt plays, palette entries 9, 10 and 13 are replaced with the winning team's colors.
 - **Walsh Report:** the swapped teams' paragraphs get the new names, and the text block stays where it is: if it gets longer, some two-space sentence gaps become one space; if it gets shorter, the leftover bytes after the last paragraph are filled with spaces. Only if very long names still don't fit is the block moved to `0x1F8000` (its only reference is the pointer at `0x078FC0`).
-- **ROM space:** the swap uses about 4.4 KB of unused ROM (`0x1EEF00`-`0x1EFF17` and `0x1F0000`-`0x1F043B`), and checks that it's unused before writing. The Rosters tool's OL weight tweak uses `0x1EFF20`-`0x1EFF3D` (see [Rosters](#how-it-works-1)).
+- **ROM space:** the swap uses about 4.4 KB of unused ROM (`0x1EEF00`-`0x1EFF17` and `0x1F0000`-`0x1F043B`), and checks that it's unused before writing. The Rosters tool's OL weight tweak uses `0x1EFF20`-`0x1EFF3D` (see [Rosters](#how-it-works-2)) and the Season tool's locked-team table `0x1EFF40`-`0x1EFF87` (see [Season](#how-it-works-1)).
 - **Celebration:** one "GO TEAM!" card stunt at `0x1EEF00`, built from your BW95 ROM: Pitt's "GO PITT!" card stunt with four cards re-lettered, using letters copied from Pitt's and Texas A&M's cards. Swapped teams' entries in the celebration table (`0x034A68`) point to it.
 - **Checksums:** EA's boot check (the sum at `0x1E6430`) and the Genesis header checksum are recomputed.
 
@@ -73,6 +74,46 @@ Other Bill Walsh '95 ROMs with a mod work too, such as Elevated v1.1 (checked wi
 - Elevated v1.1.0-beta.11 (Fixed and No Fatigue): Pitt → Tulane and Wisconsin → Idaho, and all 36 teams swapped. Nothing outside the swap's own changes differs from the input, and every roster is kept. In the emulator: the Elevated title screen, Tulane on the setup screen and the pregame menu. The Tulane builds of beta.11 are refused because they already have a swap.
 
 Not tested in a real game: a full season through the bowls with swapped teams (the celebration was only forced at the title screen), and real hardware.
+
+## Season
+
+Rename Bill Walsh '95's four conferences, choose which teams play in each, and set schedules. It works on the original ROM, Elevated, a Team Swap result or a ROM it saved earlier, so you can keep editing the same ROM. **Use the Team Swap result** opens the ROM you set up in the Team Swap tab.
+
+### How the game schedules a season
+
+Bill Walsh '95 has no fixed schedules. When you start a New Season, it deals each team into a random place in its conference, and a built-in 16-week schedule says which places play each other, so opponents change from season to season. Every team plays every week (there are no bye weeks), and Game Setup's **Weeks** row (1-16, 12 by default) picks how many weeks are played. After the regular season, each conference's best-ranked team goes to one of the four bowls (**Bowl Games**), or the top 16 teams play the EA Cup (**Playoffs**).
+
+### Conferences
+
+- Names can be up to 22 characters (letters, digits, spaces and `. , & ' -`). The rankings screen shows the new names, and so does the Walsh Report's one mention of a conference ("Southern Conference", in Air Force's report) if the new name fits there.
+- **Move** puts a team in another conference. Any sizes work as long as every conference keeps at least 2 teams (each one sends a team to a bowl). With sizes other than 10, 10, 8 and 8, the built-in schedule's conference games come out uneven; lock teams to set theirs.
+
+### Schedules
+
+- Teams are random by default, as in the original game. **Lock this team's schedule** gives a team a fixed place: then pick its opponent and Home or Away for each of the 16 weeks. **Any SEC team** (with your conference names) leaves that week to one of the conference's random teams.
+- Picking a team for a week locks that team too (●), and the two teams' old opponents play each other that week. If that changes another locked team's game, the app lists it.
+- **Lock every team** makes the whole schedule fixed; **Make every team random** goes back to the game's own dealing.
+- Start a New Season with the new ROM. A season already in progress rebuilds its schedule from the ROM, so its games would change.
+
+### Season files
+
+**Save season file** writes the conferences and schedules as a small JSON file with no ROM data in it. Load it into another copy of the ROM, for example after redoing a Team Swap. Teams are stored by slot, so a swapped team takes the place of the team it replaced.
+
+### How it works
+
+- **Conferences:** each team's conference is the last word of its ratings group (team block + header word [3], + 6). The names are four 22-character strings at `0x0DF6E8`-`0x0DF747`.
+- **Schedule:** 16 weeks × 18 games of (visitor, home) places at `0x0E0004` (576 bytes). The deal at `0x071824` puts each team into a random empty place of its conference's range ({first, count} per conference at `0x0718DC`), using the season's saved random seed.
+- **Locked teams:** the deal loop's body at `0x07182A` (40 bytes, rewritten in place) reads a per-team {first place, count} table at `0x1EFF40`-`0x1EFF87` instead: a locked team gets {its place, 1}, the others their conference's range. The app relabels the places so each conference's random places form one range and the locked ones come after them.
+- **ROM space:** everything is rewritten in place except the 72-byte locked-team table, which is only written when a team is locked (and freed again when none is). Before writing, the app checks that the code it changes is the original (or its own) and that the table's space is free.
+- **Checksums:** EA's boot check and the Genesis header checksum are recomputed.
+
+### Testing
+
+- In an emulator (Genesis Plus GX), a New Season with Weeks set to 16 for four test ROMs: four locked teams, all 36 locked, all but one locked, and random schedules with moved conferences (9, 10, 6 and 11 teams). The game's list of games matched the app's schedule for every locked team in every week, every "any team" week got a random team of that conference, and every random team was dealt into its own conference's places. The rankings screen shows the new conference names. The same checks passed on Elevated v1.1.0-beta.11 and on a Team Swap result.
+- 9 Node tests: an unchanged setup writes back byte-identical (original, Rebalanced v1.0 and Elevated beta.11), 4,000 random edits stay valid and survive writing and reading back, unlocking every team restores the original code and frees the table, Team Swap works before or after, and the Rosters OL hook sits next to the table.
+- ROMs downloaded from the app are byte-identical to the same edits made with the code in Node, and a saved season file loaded into a fresh ROM gives the same download.
+
+Not tested: playing through a season with an edited schedule (the emulator used has no battery save, so a season can't get past "Saving Season Games"), bowls with other conference sizes (checked in the code only), and real hardware.
 
 ## Rosters
 
@@ -169,6 +210,13 @@ Roster engine tests need your own ROMs (`.md`, `.bin`, `.gen` or `.zip`):
 
 ```sh
 npm run test:rosters -- BW95.md CF96.md CF97.md
+```
+
+How the Season tool works: [docs/season.md](docs/season.md). Its tests take the original BW95 ROM, CF97 (for the Team Swap checks) and optionally more BW95 ROMs such as Elevated builds; `cli/season.ts` applies a season setup from a JSON spec:
+
+```sh
+npm run test:season -- BW95.md CF97.md [Elevated.md …]
+npx tsx cli/season.ts BW95.md out.md spec.json
 ```
 
 The CFB 27 conversion also runs from the command line, and the stock rating table can be rebuilt from the three original ROMs:
