@@ -74,6 +74,8 @@ export interface WorkApi {
   setBlocker: (b: string | null) => void;
   loadFiles: (files: FileList | File[]) => Promise<void>;
   takeTeamSwap: (src: TeamSwapSource) => void;
+  /** Opens a ROM handed over by another tab (the Patch tab). */
+  takeRom: (inc: Incoming) => void;
   pending: (Incoming & { carry: boolean }) | null;
   resolve: (choice: 'keep' | 'fresh' | 'cancel') => void;
   note: Note;
@@ -172,7 +174,7 @@ export function useWorkRom(): WorkApi {
     };
   };
 
-  return { work, rev, edited, edits, blocker, setBlocker, loadFiles, takeTeamSwap, pending, resolve, note, save };
+  return { work, rev, edited, edits, blocker, setBlocker, loadFiles, takeTeamSwap, takeRom: offer, pending, resolve, note, save };
 }
 
 /** The ROM card both tabs show: the working ROM, a file chooser, the Team Swap button and the
