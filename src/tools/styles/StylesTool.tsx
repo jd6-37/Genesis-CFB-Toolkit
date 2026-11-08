@@ -174,11 +174,12 @@ function StyleLegend({ info }: { info: StyleInfo }) {
         ))}
       </dl>
       {info.elevated ? (
-        <p className="hint">Every team has the same roster layout on this ROM, so a new defense needs no roster changes.</p>
+        <p className="hint">Every team uses the same roster layout on this ROM, so a new defense needs no roster changes.</p>
       ) : (
         <p className="hint">
-          On this ROM the defense also sets the team's roster layout. Slot 21 is a tackle in the 4-3 and an inside
-          linebacker in the 3-4; the Rosters tab and its imports follow the defense you pick here.
+          This ROM still has the original game's two roster layouts: slot 21 is a tackle on 4-3 teams and an inside
+          linebacker on 3-4 teams. Switching a team between 3-4 and 4-3 switches its layout too, so re-import its roster
+          to put the right player in slot 21. Elevated beta.7 and later use one layout for every team.
         </p>
       )}
     </aside>

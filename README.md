@@ -131,21 +131,22 @@ In Bill Walsh '95 the computer calls plays by its team's **style**: one of five 
 | Shotgun | I-Form, Pro Form, Shotgun, Near, Far, Goal Line | Florida, LSU, Miami, Pitt, Stanford |
 | Power | Trap, I-Form, Tee, Pro Form, Near, Far (and Veer on Elevated) | Notre Dame |
 
-| Defense | Original game | Elevated (v1.1.0-beta.7 and later) | Original teams |
+| Defense | Elevated (v1.1.0-beta.7 and later) | Original game | Original teams |
 |---|---|---|---|
-| 3-4 | 3-4 on early downs, Nickel on 3rd down | 3-4 with some 4-4 against the run, Nickel on 3rd down, Dime on 3rd and long | 13 teams, e.g. Michigan, Notre Dame, Texas |
-| 4-3 | 4-3 on early downs, Nickel on 3rd down | 4-3 with some 4-4 against the run, Nickel on 3rd down, Dime on 3rd and long | 20 teams, e.g. Florida State, Ohio State, Penn State |
-| Multiple | 3-4 on early downs, 4-4 on 3rd down | 3-4 and 4-3 half and half, 4-4 on 3rd and 4th and 3 | Arizona, Florida, Navy |
+| 3-4 | 3-4 with some 4-4 against the run, Nickel on 3rd down, Dime on 3rd and long | 3-4 on early downs, Nickel on 3rd down | 13 teams, e.g. Michigan, Notre Dame, Texas |
+| 4-3 | 4-3 with some 4-4 against the run, Nickel on 3rd down, Dime on 3rd and long | 4-3 on early downs, Nickel on 3rd down | 20 teams, e.g. Florida State, Ohio State, Penn State |
+| Multiple | 3-4 and 4-3 half and half, 4-4 on 3rd and 4th and 3 | 3-4 on early downs, 4-4 on 3rd down | Arizona, Florida, Navy |
 
 Every style uses Goal Line defense near the goal and short yardage, Dime on 4th and long and its special teams for kicks. Each style's lists also change with the situation (short yardage, passing downs, hurry-up, running out the clock); the tables list everything the style calls.
 
-- **Roster layout:** on the original ROM (and Elevated up to beta.6) a team's defense also sets its roster layout: slot 21 is a tackle (RDT) in the 4-3 and an inside linebacker (RILB) in the 3-4, as in the original game. The Rosters tab and its imports follow the defense you pick, but the players already in the slot were chosen for the old one, so import a roster or check slot 21 after switching between 3-4 and 4-3. Elevated beta.7 and later use one layout for every team, so nothing changes there.
+- **Rosters:** Elevated v1.1.0-beta.7 and later use one roster layout for every team (LE, DT1, DT2, RE, LOLB, MLB1, MLB2, ROLB), so a new defense needs no roster changes.
+  - Older ROMs (the original game, and Elevated up to beta.6) still have the original game's two layouts: slot 21 is a tackle (RDT) on 4-3 teams and an inside linebacker (RILB) on 3-4 teams. On those, switching a team between 3-4 and 4-3 switches its layout too (the Rosters tab and its imports follow), but the player in slot 21 is still the one picked for the old defense, so re-import the team's roster.
 - The Walsh Report's scouting text isn't changed (it describes some teams' offenses).
 
 ### How it works
 
 - **Team sets:** the computer's play-calling rules test a team's membership in 8 sets, kept as a bit table at `0x062D87` (8 bytes per set, team t = bit t & 7 of byte t >> 3; its offset is the 8th word of the rule table at `0x06106E`). Offense: sets 0-3 = Option, Pro Style, Multiple, Shotgun; a team in none of them runs Power. Defense: sets 5-7 = 3-4, 4-3, Multiple. Set 4 is tested by no rule and left alone.
-- **A style change** puts the team in exactly one offense set (none for Power) and exactly one defense set. On ROMs with the original roster layout it also sets the team's bit in the 3-4 roster flags (`0x061068`, clear = 3-4). Nothing else changes, and no free space is used. The app checks that the table is where the original game has it and that its unused bits are clear before writing.
+- **A style change** puts the team in exactly one offense set (none for Power) and exactly one defense set. On ROMs with the two original roster layouts (not Elevated beta.7+) it also sets the team's bit in the 3-4 roster flags (`0x061068`, clear = 3-4). Nothing else changes, and no free space is used. The app checks that the table is where the original game has it and that its unused bits are clear before writing.
 - **Veer:** Elevated v1.1.0-beta.6 and later give the Option and Power styles the Veer plays; the app recognizes them by their play-list jump at `0x079AAE`.
 - **Checksums:** EA's boot check and the Genesis header checksum are recomputed.
 
