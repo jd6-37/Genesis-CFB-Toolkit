@@ -10,7 +10,8 @@
     "cli": "tsx cli/build.ts",
     "test": "tsx cli/selftest.ts",
     "test:rosters": "tsx cli/rostertest.ts",
-    "test:season": "tsx cli/seasontest.ts"
+    "test:season": "tsx cli/seasontest.ts",
+    "test:styles": "tsx cli/stylestest.ts"
   },
   "dependencies": {
     "@fontsource/barlow": "^5.3.0",

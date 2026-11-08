@@ -6,7 +6,7 @@ import {
   type Attr, type SlotDef,
 } from '../../core/rosterLayouts';
 import {
-  getRating, jerseyByte, jerseyNumber, openRosterRom, readPlayer, setRating, teamLayout, teamName, writePlayer,
+  getRating, jerseyByte, jerseyNumber, openRosterRom, readPlayer, refreshThreeFour, setRating, teamLayout, teamName, writePlayer,
   type Player, type RosterRom,
 } from '../../core/rosterRom';
 import { detectImport, importSheet, type ImportReport } from '../../core/rosterImport';
@@ -14,7 +14,9 @@ import { applyCfb27, convertCfb27, type Cfb27Plan } from '../../core/rosterCfb27
 import { hasOlPatch, installOlPatch, olPatchState, restoreOlPatch, shownWeightOffset } from '../../core/rosterOlPatch';
 import { exportRostersCsv } from '../../core/rosterExport';
 import { readSheet, type Sheet } from '../../core/rosterSheet';
+import { readStyle, styleInfo, styleProblems, writeStyle } from '../../core/styles';
 import { WorkRomCard, type TeamSwapSource, type WorkApi } from '../shared/WorkRom';
+import { StylePicks } from '../styles/StylePicks';
 import './rosters.css';
 
 export type { TeamSwapSource };
@@ -102,6 +104,7 @@ export function RosterTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwap
           <p className="dock-count" aria-live="polite">
             {changed.length ? `${changed.length} team${changed.length === 1 ? '' : 's'} changed` : 'No roster changes yet'}
             {api.edits.season && <small className="dock-also">+ season changes</small>}
+            {api.edits.styles && <small className="dock-also">+ style changes</small>}
           </p>
           {note && (
             <p className={`note ${note.kind}`} role={note.kind === 'error' ? 'alert' : 'status'}>
@@ -133,8 +136,12 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
     onChange();
   };
 
+  // Team styles (BW95): the defense also sets the 3-4 roster layout on the original layout, and the
+  // Styles tab can change it too, so the layouts are re-read from the bytes on every render.
+  const sinfo = useMemo(() => (rom.game === 'bw95' && !styleProblems(rom.data).length ? styleInfo(rom.data) : null), [rom]);
+  refreshThreeFour(rom);
   const t = rom.teams[team];
-  const layout = useMemo(() => teamLayout(rom, team), [rom, team]);
+  const layout = useMemo(() => teamLayout(rom, team), [rom, team, t.threeFour]);
   const recLen = rom.info.players * rom.info.stride;
   const isChanged = (i: number) => changed.includes(i);
   const base = (slot: number): Player => {
@@ -239,7 +246,21 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
             ))}
           </select>
         </label>
-        {rom.game === 'bw95' && !rom.elevated && <span className="ros-chip">{t.threeFour ? '3-4 defense' : '4-3 defense'}</span>}
+        {sinfo ? (
+          <StylePicks
+            mode="bar"
+            team={t.school}
+            value={readStyle(rom.data, team)}
+            info={sinfo}
+            onChange={(st) => {
+              writeStyle(rom.data, team, st);
+              refreshThreeFour(rom);
+              bump();
+            }}
+          />
+        ) : (
+          rom.game === 'bw95' && !rom.elevated && <span className="ros-chip">{t.threeFour ? '3-4 defense' : '4-3 defense'}</span>
+        )}
         {hasOlPatch(rom) && (
           <span className="ros-chip" title="The roster screen shows offensive linemen 25 lb heavier (display only). Weights here match the screen.">
             OL weights +25 lb

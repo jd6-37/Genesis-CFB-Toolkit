@@ -10,6 +10,9 @@ import { SpriteCanvas, Swatch, UniformEditor } from './components';
 import { RosterTool } from './tools/rosters/RosterTool';
 import { SeasonTool } from './tools/season/SeasonTool';
 import { useWorkRom, type TeamSwapSource } from './tools/shared/WorkRom';
+import { StylesTool } from './tools/styles/StylesTool';
+import { StylePicks } from './tools/styles/StylePicks';
+import { DEFENSE, OFFENSE, parseStyle, readStyles, styleInfo, styleProblems, type StyleInfo, type TeamStyle } from './core/styles';
 
 interface BwState {
   rom: OpenedRom;
@@ -23,13 +26,14 @@ type Note = { kind: 'error' | 'ok'; text: string } | null;
 
 const EMPTY: (SlotConfig | null)[] = Array(36).fill(null);
 
-type Tab = 'swap' | 'season' | 'rosters';
+type Tab = 'swap' | 'season' | 'styles' | 'rosters';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'swap', label: 'Team Swap' },
   { id: 'season', label: 'Season' },
+  { id: 'styles', label: 'Styles' },
   { id: 'rosters', label: 'Rosters' },
 ];
-const tabFromHash = (): Tab => (window.location.hash === '#rosters' ? 'rosters' : window.location.hash === '#season' ? 'season' : 'swap');
+const tabFromHash = (): Tab => TABS.find((t) => `#${t.id}` === window.location.hash)?.id ?? 'swap';
 
 function download(name: string, data: BlobPart, type: string) {
   const url = URL.createObjectURL(new Blob([data], { type }));
@@ -60,7 +64,7 @@ export default function App() {
   const [note, setNote] = useState<Note>(null);
   const [dragging, setDragging] = useState(false);
   const [tab, setTab] = useState<Tab>(tabFromHash);
-  const work = useWorkRom(); // the ROM the Season and Rosters tabs edit together
+  const work = useWorkRom(); // the ROM the Season, Styles and Rosters tabs edit together
   const seasonDrop = useRef<((files: FileList | File[]) => void) | null>(null);
   const registerSeasonDrop = useCallback((fn: ((files: FileList | File[]) => void) | null) => {
     seasonDrop.current = fn;
@@ -105,6 +109,10 @@ export default function App() {
 
   const ready = !!bw && !!cf;
   const celeb = useMemo(() => (bw ? buildGenericCelebration(bw.rom.data) : null), [bw]);
+  const teamStyles = useMemo(
+    () => (bw && !styleProblems(bw.rom.data).length ? { info: styleInfo(bw.rom.data), styles: readStyles(bw.rom.data) } : null),
+    [bw],
+  );
   const swapped = slots.filter(Boolean) as SlotConfig[];
   const problems = useMemo(
     () => swapped.flatMap((s) => validateSlot(s).map((p) => `${bw?.teams[s.slot].school} → ${s.school || '(no name)'}: ${p}`)),
@@ -146,6 +154,8 @@ export default function App() {
         const t = cf.teams.find((c) => c.index === s.cf97);
         if (!t || t.school !== s.cf97School) throw new Error(`The swap file uses a CF97 team (${s.cf97School}) this ROM doesn't have.`);
         if (!(s.slot >= 0 && s.slot < 36) || s.home?.length !== 16 || s.away?.length !== 16) throw new Error('The swap file is damaged.');
+        if (s.offense !== undefined) parseStyle('offense', s.offense);
+        if (s.defense !== undefined) parseStyle('defense', s.defense);
         next[s.slot] = { ...s, celebration: s.celebration?.length === 3 ? s.celebration : defaultCelebration(s.home) };
       }
       setSlots(next);
@@ -166,7 +176,7 @@ export default function App() {
       onDrop={(e) => {
         e.preventDefault();
         setDragging(false);
-        if (tab === 'rosters') void work.loadFiles(e.dataTransfer.files);
+        if (tab === 'rosters' || tab === 'styles') void work.loadFiles(e.dataTransfer.files);
         else if (tab === 'season') seasonDrop.current?.(e.dataTransfer.files);
         else onFiles(e.dataTransfer.files);
       }}
@@ -210,6 +220,10 @@ export default function App() {
         <SeasonTool api={work} teamSwap={teamSwap} registerDrop={registerSeasonDrop} />
       </div>
 
+      <div id="panel-styles" role="tabpanel" aria-labelledby="tab-styles" hidden={tab !== 'styles'}>
+        <StylesTool api={work} teamSwap={teamSwap} />
+      </div>
+
       <div id="panel-rosters" role="tabpanel" aria-labelledby="tab-rosters" hidden={tab !== 'rosters'}>
         <RosterTool api={work} teamSwap={teamSwap} />
       </div>
@@ -219,8 +233,8 @@ export default function App() {
         <h2>Team Swap</h2>
         <p>
           Replace any of Bill Walsh College Football '95's 36 teams with teams from College Football USA 97: logo,
-          helmet, wordmark, names and uniform colors. Schedules, rosters and saves stay as they are (edit rosters in
-          the Rosters tab).
+          helmet, wordmark, names, uniform colors and the computer's offense and defense styles. Schedules, rosters and
+          saves stay as they are (edit them in the Season and Rosters tabs).
         </p>
       </section>
 
@@ -257,6 +271,7 @@ export default function App() {
                 bw={t}
                 cfTeams={cf.teams}
                 celeb={celeb}
+                styles={teamStyles && { info: teamStyles.info, was: teamStyles.styles[t.index] }}
                 slot={slots[t.index]}
                 open={open === t.index}
                 onToggle={() => setOpen(open === t.index ? null : t.index)}
@@ -270,6 +285,10 @@ export default function App() {
               <li>
                 Rosters, schedules, rankings and battery saves keep the original team's slot. To change the players, use
                 the Rosters tab (it can open the swapped ROM directly).
+              </li>
+              <li>
+                The computer's offense and defense styles stay the original team's unless you change them in the team's
+                edit screen (or later in the Styles tab).
               </li>
               <li>The Walsh Report keeps the original team's scouting text, with the names changed.</li>
               <li>
@@ -357,6 +376,7 @@ function TeamRow({
   bw,
   cfTeams,
   celeb,
+  styles,
   slot,
   open,
   onToggle,
@@ -365,6 +385,8 @@ function TeamRow({
   bw: BwTeam;
   cfTeams: CfTeam[];
   celeb: CelebBlob | null;
+  /** The ROM's style info and the slot's own styles; null if this ROM's styles can't be changed. */
+  styles: { info: StyleInfo; was: TeamStyle } | null;
   slot: SlotConfig | null;
   open: boolean;
   onToggle: () => void;
@@ -461,6 +483,19 @@ function TeamRow({
             {text('city', 'City')}
             {text('nickname', 'Nickname')}
             <p className="hint">The city appears in Bill Walsh's welcome. CF97 stores the stadium ({cf!.stadium}), so the city is filled in for you.</p>
+            {styles && (
+              <StylePicks
+                team={slot.school}
+                info={styles.info}
+                was={styles.was}
+                wasName={bw.school}
+                value={{
+                  offense: slot.offense === undefined ? styles.was.offense : parseStyle('offense', slot.offense),
+                  defense: slot.defense === undefined ? styles.was.defense : parseStyle('defense', slot.defense),
+                }}
+                onChange={(st) => onChange({ ...slot, offense: OFFENSE[st.offense], defense: DEFENSE[st.defense] })}
+              />
+            )}
           </div>
           <UniformEditor title="Home" u={slot.home} onChange={(home) => onChange({ ...slot, home })} />
           <UniformEditor title="Away" u={slot.away} onChange={(away) => onChange({ ...slot, away })} />

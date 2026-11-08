@@ -91,6 +91,13 @@ export function openRosterRom(input: Uint8Array, inPlace = false): RosterRom {
   return { game, info, data, teams, elevated };
 }
 
+/** BW95, original layout: re-reads the 3-4 flags, which follow a team's defense when its style
+ *  changes (src/core/styles.ts). */
+export function refreshThreeFour(rom: RosterRom): void {
+  if (rom.game !== 'bw95' || rom.elevated) return;
+  for (const t of rom.teams) t.threeFour = ((rom.data[BW95_DEFENSE_BITS + (t.index >> 3)] >> (t.index & 7)) & 1) === 0;
+}
+
 export const teamLayout = (rom: RosterRom, team: number): SlotDef[] =>
   rosterLayout(rom.game, rom.teams[team].threeFour, rom.elevated);
 

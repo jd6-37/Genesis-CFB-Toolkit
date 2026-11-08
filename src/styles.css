@@ -68,7 +68,7 @@ button, input, select { font: inherit; color: inherit; }
 .tool-head p { max-width: 62ch; margin: 6px 0 0; color: var(--chalk-dim); }
 
 /* Tool tabs */
-.tabs { display: flex; gap: 32px; margin: 0 0 32px; border-bottom: 1px solid var(--line); }
+.tabs { display: flex; gap: 32px; margin: 0 0 32px; border-bottom: 1px solid var(--line); overflow-x: auto; }
 .tab {
   padding: 4px 0 10px;
   margin-bottom: -1px;
@@ -80,6 +80,7 @@ button, input, select { font: inherit; color: inherit; }
   font-weight: 800;
   font-size: 30px;
   color: var(--chalk-dim);
+  white-space: nowrap;
   cursor: pointer;
 }
 .tab:hover { color: var(--chalk); }
@@ -287,4 +288,8 @@ button, input, select { font: inherit; color: inherit; }
   .picker { right: auto; left: 0; }
   .tabs { gap: 24px; }
   .tab { font-size: 26px; }
+}
+@media (max-width: 480px) {
+  .tabs { gap: 14px; }
+  .tab { font-size: 20px; }
 }

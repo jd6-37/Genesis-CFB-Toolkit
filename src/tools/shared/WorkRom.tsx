@@ -1,10 +1,10 @@
-// The working ROM shared by the Season and Rosters tabs: one buffer both edit in place, loaded from
-// a file or from the Team Swap tab, downloaded from either tab with all edits in it.
+// The working ROM shared by the Season, Styles and Rosters tabs: one buffer they all edit in place,
+// loaded from a file or from the Team Swap tab, downloaded from any of them with all edits in it.
 import { useCallback, useMemo, useState } from 'react';
 import { openRom } from '../../core/romfile';
 import { detectGame, findEaChecksum, fixChecksums } from '../../core/rosterRom';
 import { GAMES, type Game } from '../../core/rosterLayouts';
-import { canCarry, carryEdits, editsSince, workFileName } from '../../core/workRom';
+import { canCarry, carryEdits, editsSince, workFileName, type Edits } from '../../core/workRom';
 import './workrom.css';
 
 export interface TeamSwapSource {
@@ -19,7 +19,7 @@ export interface WorkRom {
   name: string;
   label: string;
   game: Game;
-  /** The bytes Season and Rosters edit in place. */
+  /** The bytes Season, Styles and Rosters edit in place. */
   data: Uint8Array;
   /** The bytes as loaded: change marks, undo and the "unsaved changes" check compare against these. */
   base: Uint8Array;
@@ -68,7 +68,7 @@ export interface WorkApi {
   rev: number;
   /** Call after changing work.data. */
   edited: () => void;
-  edits: { season: boolean; rosters: boolean; any: boolean };
+  edits: Edits;
   /** Set by a tab whose edits can't be saved right now (e.g. a conference without a name). */
   blocker: string | null;
   setBlocker: (b: string | null) => void;
@@ -90,7 +90,7 @@ export function useWorkRom(): WorkApi {
   const edited = useCallback(() => setRev((r) => r + 1), []);
 
   const edits = useMemo(
-    () => (work ? editsSince(work.base, work.data, work.game) : { season: false, rosters: false, any: false }),
+    () => (work ? editsSince(work.base, work.data, work.game) : { season: false, styles: false, rosters: false, any: false }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [work, rev],
   );
@@ -99,8 +99,9 @@ export function useWorkRom(): WorkApi {
     const w = makeWork(inc);
     let msg = '';
     if (carryFrom) {
-      const r = carryEdits(carryFrom.data, w.data);
-      msg = `Kept your edits: ${[r.season && 'conferences and schedules', 'rosters', r.olTweak && 'the OL weight tweak'].filter(Boolean).join(', ')}.`;
+      const r = carryEdits(carryFrom.data, w.data, carryFrom.base);
+      const styles = r.styles && `the style${r.styles === 1 ? '' : 's'} of ${r.styles} team${r.styles === 1 ? '' : 's'}`;
+      msg = `Kept your edits: ${[r.season && 'conferences and schedules', styles, 'rosters', r.olTweak && 'the OL weight tweak'].filter(Boolean).join(', ')}.`;
       if (r.skipped.length) msg += ` Not carried: ${r.skipped.join('; ')}.`;
     }
     setWork(w);
@@ -161,7 +162,8 @@ export function useWorkRom(): WorkApi {
     const res = fixChecksums(out, work.game);
     const name = workFileName(work.name, edits);
     download(name, out as Uint8Array<ArrayBuffer>);
-    const what = [edits.season && 'season', edits.rosters && 'roster'].filter(Boolean).join(' and ');
+    const parts = [edits.season && 'season', edits.styles && 'style', edits.rosters && 'roster'].filter(Boolean) as string[];
+    const what = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0];
     return {
       kind: 'ok',
       text:
@@ -184,7 +186,7 @@ export function WorkRomCard({ api, teamSwap, hint }: { api: WorkApi; teamSwap: T
         {work ? (
           <span className="rom-status">
             {work.label}
-            <small>{work.name} · Season and Rosters both edit this ROM · choose another file to switch</small>
+            <small>{work.name} · Season, Styles and Rosters all edit this ROM · choose another file to switch</small>
           </span>
         ) : (
           <span className="rom-status rom-empty">
@@ -207,19 +209,19 @@ export function WorkRomCard({ api, teamSwap, hint }: { api: WorkApi; teamSwap: T
           <button className="btn btn-quiet" onClick={() => api.takeTeamSwap(teamSwap)}>
             Use the Team Swap result ({teamSwap.count} team{teamSwap.count === 1 ? '' : 's'} swapped)
           </button>
-          <p className="hint">Builds the ROM from the Team Swap tab and opens it here, for Season and Rosters.</p>
+          <p className="hint">Builds the ROM from the Team Swap tab and opens it here, for Season, Styles and Rosters.</p>
         </div>
       )}
       {pending && (
         <div className="work-ask" role="alertdialog" aria-labelledby="work-ask-q">
           <p id="work-ask-q">
-            The ROM you're editing has season or roster changes. Open <b>{pending.label}</b>{' '}
+            The ROM you're editing has season, style or roster changes. Open <b>{pending.label}</b>{' '}
             <span className="work-ask-file">({pending.name})</span>?
           </p>
           <div className="work-ask-actions">
             {pending.carry && (
               <button className="btn btn-go" onClick={() => api.resolve('keep')}>
-                Keep my season and roster edits
+                Keep my edits
               </button>
             )}
             <button className="btn" onClick={() => api.resolve('fresh')}>
@@ -231,8 +233,8 @@ export function WorkRomCard({ api, teamSwap, hint }: { api: WorkApi; teamSwap: T
           </div>
           {pending.carry && (
             <p className="hint">
-              Keeping them puts every team's roster and the conferences and schedules into the new ROM, by slot, so a
-              swapped team gets the edits made for its slot.
+              Keeping them puts every team's roster, the conferences and schedules, and the styles you changed into the
+              new ROM, by slot, so a swapped team gets the edits made for its slot.
             </p>
           )}
         </div>
