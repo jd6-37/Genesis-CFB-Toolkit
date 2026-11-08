@@ -9,6 +9,7 @@ How the Styles tool (and the style selects in Team Swap and Rosters) reads and c
 | `src/core/styles.ts` | Read, write and check styles; style names and hints. No DOM. |
 | `src/tools/styles/StylesTool.tsx`, `teamstyles.css` | The Styles tab: all 36 teams in a table, what each style calls beside it, undo, dock. |
 | `src/tools/styles/StylePicks.tsx` | The two selects, used by the Styles tab, the Team Swap edit screen and the Rosters bar. |
+| `src/core/cfb27Styles.ts`, `src/tools/styles/Cfb27Reference.tsx` | The College Football 27 reference table: each team's offense style and defensive playbook, the recommended BW95 styles, name matching, and the table (search, "only teams on this ROM"). |
 | `src/core/build.ts` | `SlotConfig.offense` / `defense` (optional style names); `buildRom` writes them. |
 | `src/core/workRom.ts` | `editsSince` (`styles`), `workFileName` (`[Styles]`), `carryEdits` (changed styles). |
 | `cli/styles.ts` | Lists or changes a ROM's styles. |
@@ -46,13 +47,24 @@ No free space is used. The callers fix the checksums when saving.
 - **Styles tab:** the working ROM's 36 teams in alphabetical order, with Undo per team and for all. Writes straight into the working ROM.
 - **Rosters tab:** the selects in the team bar, for the team on screen. On the original layout the 3-4 flags are re-read on every render (`refreshThreeFour`), so a change in either tab relabels the grid.
 
+## College Football 27 reference
+
+`CFB27_TEAMS` holds the 138 FBS teams of College Football 27 as of November 2026: school, conference, offense style and default defensive playbook (collected from community sites; where they disagreed, the more reliable one's playbook was kept). Recommendations:
+
+- **Offense** (`OFFENSE_FOR`): Option → Option (only the service academies); Pro Style and Multiple → Pro Style (CFB 27's Multiple offenses are balanced and often under center); Power Spread and Spread Option → Multiple (BW95's Multiple adds Shotgun and Trap to Pro Style); Spread, Air Raid, Run & Shoot, Veer & Shoot → Shotgun; Pistol → Power. Totals: Shotgun 78, Multiple 31, Pro Style 22, Power 4, Option 3.
+- **Defense** (`defenseFor`): by the playbook's down linemen. Three (3-4, 3-3-5, 3-2-6) → 3-4; four (4-3, 4-2-5) → 4-3; Multiple → Multiple. Totals: 4-3 63, 3-4 58, Multiple 17.
+
+`findCfb27(school)` matches a ROM's school name (case, periods and apostrophes ignored) directly or through an alias table for BW95's and CF97's own spellings (Pitt, Miami, USMA, Brigham Young, Central Florida, CMU, EMU, Kent, Miami of Ohio, Mississippi St., New Mexico St., NIU, N.C. State, Northeast LA., USL, Washington St., WMU). Every original BW95 team matches; of CF97's 111, all but Idaho (not in College Football 27). An edited school name that matches nothing simply gets no recommendation.
+
+**Apply recommended styles** writes `writeStyle` for each matched team whose style differs, and reports the teams with no match. It's an ordinary style edit: Undo and the working ROM's carrying treat it like any other.
+
 ## Carrying style edits
 
 `carryEdits(old, new, oldBase)` carries the style of every team whose style differs between `oldBase` (the working ROM as loaded) and `old`. Team Swap results can set styles themselves, so a team whose style wasn't edited in the Styles or Rosters tab keeps the new result's. Without `oldBase` (the CLI and tests), every team whose style differs is carried.
 
 ## Tests
 
-`npm run test:styles -- BW95 CF97 [more BW95 ROMs]` (9 tests): the original ROM reads as documented (5 offense and 3 defense styles, the 3-4 flags match set 5); on every ROM given, every style on every team reads back with one offense set at most and exactly one defense set, leaves the other teams and set 4 alone, changes only the table (and the flags on the original layout, never on Elevated), and `restoreStyle` gives back the input exactly; damaged and moved tables are refused; style names parse; Rosters labels follow the defense; Team Swap without styles is byte-identical, with styles only the style bytes and checksums change; swap files round-trip; the working ROM tracks, names and carries style edits.
+`npm run test:styles -- BW95 CF97 [more BW95 ROMs]` (10 tests): the original ROM reads as documented (5 offense and 3 defense styles, the 3-4 flags match set 5); on every ROM given, every style on every team reads back with one offense set at most and exactly one defense set, leaves the other teams and set 4 alone, changes only the table (and the flags on the original layout, never on Elevated), and `restoreStyle` gives back the input exactly; damaged and moved tables are refused; style names parse; Rosters labels follow the defense; Team Swap without styles is byte-identical, with styles only the style bytes and checksums change; swap files round-trip; the working ROM tracks, names and carries style edits; the College Football 27 table gives the totals above, only Air Force, Army and Navy are Option, every BW95 name and every CF97 name but Idaho matches (no two CF97 names on one team), and spot checks (USMA = Option + Multiple, Iowa = Pro Style + 4-3, Michigan = Multiple + 4-3, Texas = Shotgun + 3-4).
 
 Emulator check (stable-retro, Genesis Plus GX): the title screen runs demo games, computer against computer, so `cli/styles.ts` made test ROMs where all 36 teams have one style (any matchup then tests it), and `$DC84` (offense play) and `$DC8E` (defense play) were logged each time they changed over 400,000 frames (about 275 calls, three matchups per ROM). Play numbers map to formations as in the play-call pages (offense 0-7 Wishbone, 8-15 Flexbone, 16-23 Trap, 24-31 I-Form, 32-39 Veer, 40-47 Tee, 48-59 Pro Form, 60-67 Shotgun, 68-79 Near, 80-87 Far, 88-95 Goal Line; Elevated's new plays 100-167 by the same formation order; defense 0-7 4-4, 8-19 4-3, 20-31 3-4, 36-43 Nickel, 44-51 Dime, 52-59 Goal Line).
 
@@ -65,5 +77,7 @@ Emulator check (stable-retro, Genesis Plus GX): the title screen runs demo games
 Matchups included Notre Dame at Florida State, Florida State and Oklahoma, Air Force and Boston College (original), Auburn and Arizona, Georgia and USC, Clemson and BYU, North Carolina and California. No call fell outside its style. In the original game these teams run other styles (for example Notre Dame Power, with Trap and Tee, and a 3-4; Florida State Pro Style and a 4-3).
 
 Browser (Playwright on `vite preview`): Pitt → Tulane with Option and 3-4 in the edit screen downloads the same bytes as `cli/build.ts --pair Pitt=Tulane --style Pitt=Option,3-4`; the swap file holds the styles and loads back; on that result, Oklahoma changed in the Styles tab and Florida State's defense in the Rosters bar (the grid's slot 21 label turns from RDT to RILB) download the same bytes as `cli/styles.ts`; after adding Wisconsin → Idaho and keeping the edits, the download equals the new swap with the two changes; Undo; Elevated beta.11 shows Veer in the Option and Power hints; CF97 gets a message; phone layout; no console errors.
+
+Apply recommended styles in the browser: on the original ROM (28 teams changed) and on a Pitt → Tulane Team Swap result (29), the downloads equal applying `findCfb27` + `writeStyle` in Node; pressing it again reports nothing to change; beta.11 (28); no source names in the page; phone layout (the shared ROM card now drops to one column under 900 px, and long file names wrap).
 
 Not tested: real hardware.

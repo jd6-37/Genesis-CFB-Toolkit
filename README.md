@@ -143,6 +143,19 @@ Every style uses Goal Line defense near the goal and short yardage, Dime on 4th 
   - Older ROMs (the original game, and Elevated up to beta.6) still have the original game's two layouts: slot 21 is a tackle (RDT) on 4-3 teams and an inside linebacker (RILB) on 3-4 teams. On those, switching a team between 3-4 and 4-3 switches its layout too (the Rosters tab and its imports follow), but the player in slot 21 is still the one picked for the old defense, so re-import the team's roster.
 - The Walsh Report's scouting text isn't changed (it describes some teams' offenses).
 
+**College Football 27 reference:** below the teams, a searchable table lists every FBS team in College Football 27 (as of November 2026) with its offense style, its defensive playbook and the Bill Walsh '95 styles recommended for it. **Apply recommended styles** sets them for every team on the ROM that's in College Football 27 (matched by school name, including College Football USA 97's spellings such as USMA for Army); Undo puts back the styles the ROM was loaded with. The recommendations follow these rules:
+
+| College Football 27 | Bill Walsh '95 |
+|---|---|
+| Offense: Option (Air Force, Army, Navy) | Option |
+| Offense: Pro Style, Multiple | Pro Style |
+| Offense: Power Spread, Spread Option | Multiple (Pro Style plus Shotgun and Trap) |
+| Offense: Spread, Air Raid, Run & Shoot, Veer & Shoot | Shotgun |
+| Offense: Pistol | Power |
+| Defense: 3-4, 3-3-5, 3-2-6 playbooks (three down linemen) | 3-4 |
+| Defense: 4-3, 4-2-5 playbooks (four down linemen) | 4-3 |
+| Defense: Multiple | Multiple |
+
 ### How it works
 
 - **Team sets:** the computer's play-calling rules test a team's membership in 8 sets, kept as a bit table at `0x062D87` (8 bytes per set, team t = bit t & 7 of byte t >> 3; its offset is the 8th word of the rule table at `0x06106E`). Offense: sets 0-3 = Option, Pro Style, Multiple, Shotgun; a team in none of them runs Power. Defense: sets 5-7 = 3-4, 4-3, Multiple. Set 4 is tested by no rule and left alone.
@@ -152,9 +165,9 @@ Every style uses Goal Line defense near the goal and short yardage, Dime on 4th 
 
 ### Testing
 
-- 9 Node tests: the original ROM reads as the game's documented teams and styles; every style on every team on the original ROM, Rebalanced v1.0, Elevated beta.11 and its Tulane build reads back, changes only the style table (and the 3-4 flags on the original layout), and undoes exactly; damaged tables are refused; Team Swap builds without styles are unchanged, with styles only the style bytes change; style edits are tracked, named and carried to a new Team Swap result.
+- 10 Node tests: the original ROM reads as the game's documented teams and styles; every style on every team on the original ROM, Rebalanced v1.0, Elevated beta.11 and its Tulane build reads back, changes only the style table (and the 3-4 flags on the original layout), and undoes exactly; damaged tables are refused; Team Swap builds without styles are unchanged, with styles only the style bytes change; style edits are tracked, named and carried to a new Team Swap result; the College Football 27 table gives the agreed totals, and every original team and every College Football USA 97 team but Idaho (not in College Football 27) finds its match.
 - In an emulator (Genesis Plus GX), the title screen's demo games (computer against computer, about 275 play calls per ROM, three matchups each) on test ROMs where every team has one style. Original ROM, every team Option and 4-3: only Wishbone, Flexbone and Goal Line plays, and only 4-3, Nickel, Dime and Goal Line defenses (Notre Dame and Oklahoma included, normally 3-4). Every team Shotgun and 3-4: only I-Form, Pro Form, Shotgun (39 calls), Near, Far and Goal Line plays, and only 3-4, Nickel, Dime and Goal Line defenses. Elevated beta.11, every team Option and Multiple: Veer 71 times besides Wishbone, Flexbone and Goal Line, and 4-3 (77) and 3-4 (69) fronts about half and half with a few 4-4 calls.
-- ROMs downloaded from the app are byte-identical to the same changes made with the command-line tools: a Team Swap with styles, style changes in the Styles and Rosters tabs on a Team Swap result, and those changes kept after changing the swap.
+- ROMs downloaded from the app are byte-identical to the same changes made with the command-line tools: a Team Swap with styles, style changes in the Styles and Rosters tabs on a Team Swap result, those changes kept after changing the swap, and Apply recommended styles on the original ROM and on a Team Swap result.
 
 Not tested: real hardware.
 
