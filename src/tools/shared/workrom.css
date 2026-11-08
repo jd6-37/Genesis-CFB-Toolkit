@@ -17,3 +17,9 @@
 .work-ask-actions .btn-go { font-size: 16px; padding: 8px 16px; }
 .work-ask-actions .btn-quiet { align-self: center; }
 .dock-also { display: block; font-family: var(--body); font-weight: 400; font-size: 14px; color: var(--chalk-dim); }
+/* One column on phones (this rule would otherwise override .roms's), and long file names wrap. */
+.work-roms > * { min-width: 0; }
+.work-roms .rom-status small { overflow-wrap: anywhere; }
+@media (max-width: 900px) {
+  .work-roms { grid-template-columns: 1fr; }
+}
