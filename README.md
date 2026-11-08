@@ -6,14 +6,34 @@ Everything runs in your browser. Your ROMs are opened on your own computer and a
 
 ## Tools
 
+- **[Patch](#patch):** start here. Load your Bill Walsh College Football '95 ROM and, if it's the original game, add the latest release of the Elevated mod's patches.
 - **[Team Swap](#team-swap):** swap College Football USA 97 teams into Bill Walsh College Football '95.
 - **[Season](#season):** rename the four conferences, choose which teams play in each, and lock in schedules in Bill Walsh '95.
 - **[Styles](#styles):** choose the offense and defense the computer runs for each Bill Walsh '95 team.
 - **[Rosters](#rosters):** edit the players of Bill Walsh '95, CF96 or CF97, team by team or from a spreadsheet (CSV or Excel), or bring in real College Football 27 rosters.
 
-Each tool has its own tab. `#season`, `#styles` or `#rosters` at the end of the address opens that tab directly.
+Each tool has its own tab. The app opens on Patch; `#swap`, `#season`, `#styles` or `#rosters` at the end of the address opens that tab directly.
 
-**Season, Styles and Rosters edit the same ROM.** Load a ROM in any of them, or take the Team Swap result, then switch between them as often as you like. **Download ROM** in any of the three saves everything, named after the ROM with `[Season]`, `[Styles]` and/or `[Rosters]` added. Team Swap always starts from an unswapped ROM; if you change the swap and take its result again while you have changes, the app asks: **Keep my edits** puts every team's roster, the conferences and schedules, and the styles you changed into the new ROM, by slot (a swapped team gets the edits made for its slot), or **Start fresh**. The same question comes up when you open another ROM file of the same game.
+**Season, Styles and Rosters edit the same ROM.** Load a ROM in any of them, or take the Team Swap result, then switch between them as often as you like. **Download ROM** in any of the three saves everything, named after the ROM with `[Season]`, `[Styles]` and/or `[Rosters]` added. Team Swap uses the ROM from the Patch tab and always starts from an unswapped ROM; if you change the swap and take its result again while you have changes, the app asks: **Keep my edits** puts every team's roster, the conferences and schedules, and the styles you changed into the new ROM, by slot (a swapped team gets the edits made for its slot), or **Start fresh**. The same question comes up when you open another ROM file of the same game.
+
+## Patch
+
+Start here. Load your Bill Walsh College Football '95 ROM (`.md`, `.bin`, `.gen` or `.zip`):
+
+- **The original game:** pick a patch and choose **Apply patch**. The app downloads the patch from the [Elevated](https://github.com/jd6-37/Bill-Walsh-CFB-95-Elevated) mod's GitHub page, applies it in your browser and checks the result, so it always offers the latest release. **Download patched ROM** saves the patched ROM, and **Back to the original game** undoes the patch. **Use a .bps file** applies a patch you downloaded yourself, for example if GitHub can't be reached.
+- **A ROM with a released patch:** the app says which release it has, and whether a newer one is out. Patches go onto the original game only, so to update, load the original ROM and patch it here.
+- **Any other modded or edited ROM:** used as it is.
+
+Then **Swap teams** takes the ROM to the Team Swap tab, or **Edit season, styles and rosters** opens it in those tabs. A ROM whose teams are already swapped goes straight to Season, Styles and Rosters. Team Swap always uses the Patch tab's ROM: a Bill Walsh ROM you load in the Team Swap tab shows up in the Patch tab too.
+
+### How it works
+
+The mod's GitHub repo has a patch list, `patches.json`: the latest release's patches, with each patch file's size and SHA-256 and the SHA-1 of the ROM it makes, plus older releases so their ROMs are still recognized. The app reads the list when the page opens and downloads only the patch you pick. The patches are BPS files; the app checks the three checksums every BPS file carries (the original ROM, the patch, the result) and then the result's SHA-1 against the list. Format and release steps: [docs/patches.md](docs/patches.md).
+
+### Testing
+
+- `npm run test:patch` (see [Development](#development)): the BPS code with patches that use every BPS command, damaged patches and patches for another ROM; the repo's patch list and broken ones; each listed patch applied to the original ROM gives the SHA-1 in the list, and the patched ROM takes a team swap.
+- In the browser: both v1.0 patches downloaded from GitHub and applied (SHA-1s as in the list), the patched ROM taken to Team Swap (Pitt → Tulane, identical to the CLI build) and to Season, Styles and Rosters; v1.0, Elevated beta and already swapped ROMs loaded directly; the patch list unreachable (a `.bps` file still works); a damaged `.bps` file; phone layout.
 
 ## Team Swap
 
@@ -46,7 +66,7 @@ Pick any of BW95's 36 teams, choose a CF97 team to replace it with, adjust the n
 | Bill Walsh College Football '95 Rebalanced v1.0, No Fatigue | `c012fbd0fb0db59648f2d9bff78acc29d9f63ea0` |
 | College Football USA 97 (USA) | `9b93035ecdc2b6f0815281764ef647f2de039e7b` |
 
-Files can be `.md`, `.bin` or `.gen`, or a `.zip` containing one. The Rebalanced ROMs come from the [Bill Walsh College Football '95 Rebalanced](https://github.com/jd6-37/Bill-Walsh-College-Football-95-Rebalanced) patches; the swap keeps all of their changes.
+Files can be `.md`, `.bin` or `.gen`, or a `.zip` containing one. The Rebalanced ROMs are the Elevated mod's v1.0 release (released as Rebalanced; the [Patch](#patch) tab makes them from the original ROM); the swap keeps all of their changes.
 
 Other Bill Walsh '95 ROMs with a mod work too, such as Elevated v1.1 (checked with v1.1.0-beta.11): when you load one, the app checks that the code the swap patches is unchanged and the ROM space it uses is empty, and says what's in the way if not. The swap keeps all of the mod's changes, and the downloaded ROM is named after your file with `[Team Swap]` added. A ROM that already has swapped teams can't be swapped again; start from the ROM before the swap and load your swap file.
 
@@ -268,6 +288,12 @@ Roster engine tests need your own ROMs (`.md`, `.bin`, `.gen` or `.zip`):
 
 ```sh
 npm run test:rosters -- BW95.md CF96.md CF97.md
+```
+
+How the Patch tab works, the patch list format and the steps for a new release: [docs/patches.md](docs/patches.md). Its tests take the original BW95 ROM, a local copy of the [Elevated repo](https://github.com/jd6-37/Bill-Walsh-CFB-95-Elevated) and optionally CF97 (to check that each patched ROM takes a team swap):
+
+```sh
+npm run test:patch -- BW95.md path/to/Bill-Walsh-CFB-95-Elevated [CF97.md]
 ```
 
 How the Season tool works: [docs/season.md](docs/season.md). Its tests take the original BW95 ROM, CF97 (for the Team Swap checks) and optionally more BW95 ROMs such as Elevated builds; `cli/season.ts` applies a season setup from a JSON spec:
