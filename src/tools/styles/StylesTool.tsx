@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { openRosterRom } from '../../core/rosterRom';
 import {
-  DEFENSE, OFFENSE, TEAMS, defensePlan, offenseFormations, readStyles, restoreStyle, styleInfo, styleProblems, writeStyle,
+  DEFENSE, OFFENSE, TEAMS, defensePlan, offenseFormations, readStyle, readStyles, restoreStyle, styleInfo, styleProblems, writeStyle,
   type StyleInfo, type TeamStyle,
 } from '../../core/styles';
 import { WorkRomCard, type TeamSwapSource, type WorkApi } from '../shared/WorkRom';
 import { StylePicks } from './StylePicks';
+import { Cfb27Reference } from './Cfb27Reference';
+import { findCfb27 } from '../../core/cfb27Styles';
 import './teamstyles.css';
 
 type Note = { kind: 'error' | 'ok'; text: string } | null;
@@ -43,6 +45,34 @@ export function StylesTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwap
     () => (ok ? Array.from({ length: TEAMS }, (_, t) => t).sort((a, b) => ok.names[a].localeCompare(ok.names[b], 'en')) : []),
     [ok],
   );
+
+  // College Football 27 matches for the ROM's teams, by school name.
+  const matches = useMemo(() => (ok ? ok.names.map(findCfb27) : []), [ok]);
+  const onRom = useMemo(() => (ok ? new Set(matches.flatMap((m) => (m ? [m.school] : []))) : null), [ok, matches]);
+  const applyRecommended = () => {
+    if (!work || !ok) return;
+    let n = 0;
+    try {
+      matches.forEach((m, t) => {
+        if (!m) return;
+        const now = readStyle(work.data, t);
+        if (now.offense === m.recommended.offense && now.defense === m.recommended.defense) return;
+        writeStyle(work.data, t, m.recommended);
+        n++;
+      });
+    } catch (e) {
+      setNote({ kind: 'error', text: (e as Error).message });
+      return;
+    }
+    const missing = ok.names.filter((_, t) => !matches[t]);
+    setNote({
+      kind: 'ok',
+      text:
+        (n ? `Applied the recommended styles: ${n} team${n === 1 ? '' : 's'} changed.` : 'Every team already has its recommended styles.') +
+        (missing.length ? ` Not in College Football 27, so left as they were: ${missing.join(', ')}.` : ''),
+    });
+    if (n) api.edited();
+  };
 
   const set = (t: number, st: TeamStyle) => {
     if (!work) return;
@@ -80,6 +110,15 @@ export function StylesTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwap
       {work && ok ? (
         <div className="sty-layout">
           <section aria-label="Team styles">
+            <div className="sty-apply">
+              <button className="btn" onClick={applyRecommended} disabled={!onRom?.size}>
+                Apply recommended styles
+              </button>
+              <p className="hint">
+                Sets each team's styles from its College Football 27 playbooks ({onRom?.size ?? 0} of {TEAMS} teams on this
+                ROM have one; see the table below). Undo puts back the styles the ROM was loaded with.
+              </p>
+            </div>
             <table className="sty-table">
               <thead>
                 <tr>
@@ -128,6 +167,8 @@ export function StylesTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwap
           </p>
         </section>
       )}
+
+      <Cfb27Reference onRom={work && ok ? onRom : null} />
 
       {work && ok && (
         <footer className="dock">

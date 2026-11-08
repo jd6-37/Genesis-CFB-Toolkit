@@ -15,6 +15,7 @@ import {
   rosterIs34, styleChanges, styleInfo, styleProblems, writeStyle,
 } from '../src/core/styles';
 import { readSeason, setName, writeSeason } from '../src/core/season';
+import { CFB27, findCfb27 } from '../src/core/cfb27Styles';
 
 const paths = process.argv.slice(2);
 if (paths.length < 2) {
@@ -212,6 +213,36 @@ for (const rom of [{ name: basename(paths[0]), data: bw }, ...extra]) {
   assert.equal(carryEdits(w, to2).styles, 2);
   assert.equal(readStyle(to2, army).offense, 1);
   ok('working ROM: style edits tracked and named; carried by slot (changed ones with a base)');
+}
+
+// 7. College Football 27 reference: the agreed mapping, and name matching for BW95 and CF97 teams.
+{
+  assert.equal(CFB27.length, 138);
+  const count = (f: (t: (typeof CFB27)[number]) => string) =>
+    Object.fromEntries(Object.entries(CFB27.reduce<Record<string, number>>((m, t) => ((m[f(t)] = (m[f(t)] ?? 0) + 1), m), {})).sort());
+  assert.deepEqual(count((t) => OFFENSE[t.recommended.offense]), { Multiple: 31, Option: 3, Power: 4, 'Pro Style': 22, Shotgun: 78 });
+  assert.deepEqual(count((t) => DEFENSE[t.recommended.defense]), { '3-4': 58, '4-3': 63, Multiple: 17 });
+  assert.deepEqual(CFB27.filter((t) => t.recommended.offense === 0).map((t) => t.school), ['Air Force', 'Army', 'Navy']);
+  // Every original BW95 team has a match.
+  assert.deepEqual(names.filter((n) => !findCfb27(n)), []);
+  assert.equal(findCfb27('Pitt')!.school, 'Pittsburgh');
+  assert.equal(findCfb27('Miami')!.school, 'Miami FL');
+  // CF97: all but Idaho (not in College Football 27).
+  const cfNames = parseCf97(cf).map((c) => c.school);
+  assert.equal(cfNames.length, 111);
+  assert.deepEqual(cfNames.filter((n) => !findCfb27(n)), ['Idaho']);
+  assert.equal(findCfb27('USMA')!.school, 'Army');
+  assert.equal(findCfb27('Northeast LA.')!.school, 'UL Monroe');
+  assert.equal(findCfb27('N.C. State')!.school, 'NC State');
+  // Two CF97 names never point at the same CFB 27 team.
+  const hits = cfNames.flatMap((n) => (findCfb27(n) ? [findCfb27(n)!.school] : []));
+  assert.equal(new Set(hits).size, hits.length);
+  // Examples: Army = Option + Multiple (the less trusted source's 3-4 isn't used), Iowa = Pro Style + 4-3.
+  assert.deepEqual(findCfb27('USMA')!.recommended, { offense: 0, defense: 2 });
+  assert.deepEqual(findCfb27('Iowa')!.recommended, { offense: 1, defense: 1 });
+  assert.deepEqual(findCfb27('Michigan')!.recommended, { offense: 2, defense: 1 });
+  assert.deepEqual(findCfb27('Texas')!.recommended, { offense: 3, defense: 0 });
+  ok('College Football 27 reference: mapping totals, BW95 and CF97 names match (Idaho has none)');
 }
 
 console.log(`${passed} passed`);

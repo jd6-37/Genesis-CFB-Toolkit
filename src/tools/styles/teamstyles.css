@@ -53,3 +53,38 @@
   .sty-undo-cell { width: auto; }
   .sty-cell select { min-width: 6rem; padding: 5px 4px; font-size: 14px; }
 }
+
+/* Apply recommended styles (above the team table). */
+.sty-apply { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 14px; }
+.sty-apply .hint { flex: 1 1 18rem; margin: 0; }
+
+/* College Football 27 reference table. */
+.cfb-ref { margin: 8px 0 32px; }
+.cfb-ref h3 { margin: 0 0 6px; font-family: var(--display); font-size: 28px; font-style: italic; font-weight: 800; }
+.cfb-ref-lede { max-width: 70ch; margin: 0 0 14px; color: var(--chalk-dim); }
+.cfb-rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 8px 32px; max-width: 60rem; margin-bottom: 16px; }
+.cfb-rules h4 { margin: 0 0 4px; font-size: 15px; color: var(--menu); }
+.cfb-rules ul { margin: 0; padding-left: 18px; color: var(--chalk-dim); font-size: 14px; line-height: 1.5; }
+.cfb-rules b { color: var(--chalk); }
+.cfb-tools { display: flex; flex-wrap: wrap; align-items: end; gap: 10px 20px; margin-bottom: 10px; }
+.cfb-search { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--chalk-dim); }
+.cfb-search input {
+  width: 16rem;
+  max-width: 100%;
+  padding: 7px 10px;
+  background: var(--night);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--chalk);
+  font-size: 15px;
+}
+.cfb-only { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.cfb-count { color: var(--chalk-dim); font-size: 14px; }
+.cfb-scroll { max-height: 34rem; overflow: auto; border: 1px solid var(--line); border-radius: 6px; }
+.cfb-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.cfb-table th, .cfb-table td { padding: 5px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+.cfb-table thead th { position: sticky; top: 0; background: var(--night); font-weight: 700; }
+.cfb-table tbody th { font-weight: 600; }
+.cfb-table .cfb-bw { color: var(--menu); }
+.cfb-table thead .cfb-bw { color: var(--menu); }
+.cfb-on-rom th[scope='row']::after { content: ' ●'; color: var(--menu); font-size: 10px; vertical-align: middle; }
