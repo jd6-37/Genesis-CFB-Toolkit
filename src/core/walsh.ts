@@ -11,12 +11,11 @@ export const WALSH_PARAS = 78;
 export const WALSH_PTR = 0x078fc0;
 // End of the text's own space in the ROM (the byte after the last CR of the original text).
 export const WALSH_END = 0x061067;
-// Only used when the renamed text no longer fits in place. Free 0xFF padding in the stock ROM and in
-// Rebalanced v1.0 and v1.1. Paragraph offsets are signed words, so the block must stay under 32 KB.
+// Where versions of the app before the Walsh Report editor moved the text when very long names didn't
+// fit in place. The text is read from there and put back; nothing is written there any more.
 export const WALSH_RELOC = 0x1f8000;
-export const WALSH_RELOC_END = 0x200000;
 
-/** Where the text is: WALSH_BASE, or WALSH_RELOC after a swap that had to move it. */
+/** Where the text is: WALSH_BASE, or WALSH_RELOC after an older swap that had to move it. */
 export function walshAt(rom: Uint8Array): number {
   return rl(rom, WALSH_PTR);
 }
@@ -69,13 +68,85 @@ export function renameInText(text: string, ch: NameChange): string {
   return text.replace(re, (m) => map.get(m) ?? m);
 }
 
-/** Rewrites the swapped teams' paragraphs. Keeps the block in place when it fits: if the new text
- *  is longer, sentence gaps of two spaces become one (the swapped teams' paragraphs first, then the
- *  rest); if it's shorter, the leftover bytes after the last CR are filled with spaces (never read).
- *  Only if that still doesn't fit is the block moved to WALSH_RELOC. On a ROM swapped before, the
- *  text is read from wherever that swap left it, and its old copy at WALSH_RELOC is reused or freed. */
-export function rewriteWalsh(rom: Uint8Array, changes: NameChange[]): 'unchanged' | 'in place' | 'moved' {
-  if (!changes.length) return 'unchanged';
+// ---- Each team's report: offense + defense ----
+
+/** The most characters a team's report (offense and defense together) may have once reports are
+ *  edited. 36 × 650 plus the intro lines and line breaks (195 bytes in EA's text) leaves room in the
+ *  text's own space for longer names from a team swap. */
+export const REPORT_LIMIT = 650;
+
+export interface Report {
+  offense: string;
+  defense: string;
+}
+
+export const reportParas = (slot: number): [number, number] => [6 + 2 * slot, 7 + 2 * slot];
+export const reportLength = (r: Report) => r.offense.length + r.defense.length;
+
+/** Where each sentence of a paragraph ends (before the spaces that follow), apart from the last. */
+function sentenceEnds(p: string): number[] {
+  const end = p.trimEnd().length;
+  const out: number[] = [];
+  for (const m of p.matchAll(/[.!?]+["'\xd3\xd5)]*(?=\s)/g)) {
+    const at = m.index! + m[0].length;
+    if (at < end) out.push(at);
+  }
+  return out;
+}
+
+/** The paragraph without its last sentence; null if it has only one. */
+function dropLastSentence(p: string): string | null {
+  const ends = sentenceEnds(p);
+  return ends.length ? p.slice(0, ends[ends.length - 1]) : null;
+}
+
+/** Shortens a report to `limit` characters by dropping last sentences (a paragraph keeps at least its
+ *  first sentence). Each step drops the last sentence of the longer paragraph, unless dropping one
+ *  from either paragraph already fits: then the drop that keeps the most text. Only a report whose
+ *  paragraphs are single sentences that are still too long is cut at a word and ended with a period. */
+export function trimReport(r: Report, limit = REPORT_LIMIT): Report {
+  let cur: Report = { offense: r.offense, defense: r.defense };
+  while (reportLength(cur) > limit) {
+    const o = dropLastSentence(cur.offense);
+    const d = dropLastSentence(cur.defense);
+    const options: Report[] = [];
+    if (o !== null) options.push({ offense: o, defense: cur.defense });
+    if (d !== null) options.push({ offense: cur.offense, defense: d });
+    const fits = options.filter((x) => reportLength(x) <= limit).sort((x, y) => reportLength(y) - reportLength(x));
+    if (fits.length) {
+      cur = fits[0];
+    } else if (options.length) {
+      const longer = cur.offense.length >= cur.defense.length ? 'offense' : 'defense';
+      cur = options.find((x) => x[longer] !== cur[longer]) ?? options[0];
+    } else {
+      const longer = cur.offense.length >= cur.defense.length ? 'offense' : 'defense';
+      const keep = limit - (longer === 'offense' ? cur.defense.length : cur.offense.length) - 1;
+      const p = cur[longer];
+      const at = p.lastIndexOf(' ', keep);
+      cur = { ...cur, [longer]: p.slice(0, at > 0 ? at : Math.max(keep, 0)).replace(/[\s,;:-]+$/, '') + '.' };
+    }
+  }
+  return cur;
+}
+
+const readReportAt = (paras: string[], slot: number): Report => {
+  const [o, d] = reportParas(slot);
+  return { offense: paras[o], defense: paras[d] };
+};
+
+/** Rewrites the Walsh text: the swapped teams' paragraphs get their new names, and teams in `reports`
+ *  get the given text. Once any report is set, every other report longer than REPORT_LIMIT is trimmed
+ *  (trimReport), so all of them fit. The text always stays in its own space: if it's longer than
+ *  before, sentence gaps of two spaces become one (changed paragraphs first, then the rest); if it
+ *  still doesn't fit, the longest reports lose their last sentences. If it's shorter, the bytes after
+ *  the last CR are filled with spaces (never read). A text that an older version of the app moved to
+ *  WALSH_RELOC is read from there, put back in place and its copy freed. */
+export function rewriteWalsh(
+  rom: Uint8Array,
+  changes: NameChange[],
+  reports: Map<number, Report> = new Map(),
+): 'unchanged' | 'in place' | 'trimmed' {
+  if (!changes.length && !reports.size) return 'unchanged';
   const at = walshAt(rom);
   const paras = readWalsh(rom);
   const join = () => paras.map((p) => p + '\r').join('');
@@ -85,10 +156,24 @@ export function rewriteWalsh(rom: Uint8Array, changes: NameChange[]): 'unchanged
   const spacesAfter = rom.subarray(WALSH_BASE + oldSize, WALSH_END).every((b) => b === 0x20);
   const room = at !== WALSH_BASE ? WALSH_END - WALSH_BASE : spacesAfter ? Math.max(oldSize, WALSH_END - WALSH_BASE) : oldSize;
   const changed = new Set<number>();
+  const setReport = (slot: number, r: Report) => {
+    const [o, d] = reportParas(slot);
+    paras[o] = r.offense;
+    paras[d] = r.defense;
+    changed.add(o).add(d);
+  };
   for (const ch of changes) {
-    for (const p of [6 + 2 * ch.slot, 7 + 2 * ch.slot]) {
+    if (reports.has(ch.slot)) continue;
+    for (const p of reportParas(ch.slot)) {
       paras[p] = renameInText(paras[p], ch);
       changed.add(p);
+    }
+  }
+  for (const [slot, r] of reports) setReport(slot, r);
+  if (reports.size) {
+    for (let slot = 0; 7 + 2 * slot < WALSH_PARAS; slot++) {
+      const r = readReportAt(paras, slot);
+      if (!reports.has(slot) && reportLength(r) > REPORT_LIMIT) setReport(slot, trimReport(r));
     }
   }
   let excess = join().length - room;
@@ -101,28 +186,25 @@ export function rewriteWalsh(rom: Uint8Array, changes: NameChange[]): 'unchanged
     }
     if (excess <= 0) break;
   }
-  const text = join();
-  const put = (to: number) => {
-    for (let i = 0; i < text.length; i++) rom[to + i] = text.charCodeAt(i) & 0xff;
-  };
-  if (text.length <= room) {
-    put(WALSH_BASE);
-    rom.fill(0x20, WALSH_BASE + text.length, WALSH_BASE + room);
-    if (at === WALSH_RELOC) {
-      rom.fill(0xff, WALSH_RELOC, WALSH_RELOC + oldSize); // the moved copy isn't needed any more
-      wl(rom, WALSH_PTR, WALSH_BASE);
+  let trimmed = false;
+  while (excess > 0) {
+    // Only very long made-up names get here: drop a sentence from the longest report.
+    let slot = -1;
+    for (let s = 0; 7 + 2 * s < WALSH_PARAS; s++) {
+      if (slot < 0 || reportLength(readReportAt(paras, s)) > reportLength(readReportAt(paras, slot))) slot = s;
     }
-    return 'in place';
+    const r = readReportAt(paras, slot);
+    const short = trimReport(r, reportLength(r) - 1);
+    setReport(slot, short);
+    excess -= reportLength(r) - reportLength(short);
+    trimmed = true;
   }
-  if (text.length > WALSH_RELOC_END - WALSH_RELOC || text.length > 0x7fff) {
-    throw new Error('Walsh Report text is too long after renaming');
+  const text = join();
+  for (let i = 0; i < text.length; i++) rom[WALSH_BASE + i] = text.charCodeAt(i) & 0xff;
+  rom.fill(0x20, WALSH_BASE + text.length, WALSH_BASE + room);
+  if (at === WALSH_RELOC) {
+    rom.fill(0xff, WALSH_RELOC, WALSH_RELOC + oldSize); // the moved copy isn't needed any more
+    wl(rom, WALSH_PTR, WALSH_BASE);
   }
-  const own = at === WALSH_RELOC ? oldSize : 0; // bytes at WALSH_RELOC that already hold the text
-  for (let a = WALSH_RELOC + own; a < WALSH_RELOC + text.length; a++) {
-    if (rom[a] !== 0xff) throw new Error('The ROM has no free space for the longer Walsh Report text');
-  }
-  put(WALSH_RELOC);
-  if (own > text.length) rom.fill(0xff, WALSH_RELOC + text.length, WALSH_RELOC + own);
-  wl(rom, WALSH_PTR, WALSH_RELOC);
-  return 'moved';
+  return trimmed ? 'trimmed' : 'in place';
 }

@@ -2,7 +2,7 @@
 // and, optionally, the Elevated 2026 Season Edition (the original game with that patch):
 //   npx tsx cli/swaptest.ts BW95 CF97 [ELEVATED_2026]
 // Covers swapping a ROM that Team Swap swapped before: new slots, slots swapped before, the Walsh
-// Report text in place and moved, and ROMs swapped by other tools.
+// Report text (always in its own space), and ROMs swapped by other tools.
 import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { strict as assert } from 'node:assert';
@@ -117,36 +117,45 @@ const one = swap(bw, [['Pitt', 'Tulane']]).rom;
   ok('a swapped slot takes another CF97 team (same ROM as a direct swap, outside the Walsh text)');
 }
 
-// 5. The Walsh text: shorter names leave spaces that a later, longer rename can use; a moved text is
-//    read from where it is, and moved back (its old copy freed) once it fits in place.
+// 5. The Walsh text never leaves its own space: very long names drop last sentences instead; a text
+//    an older version moved to 0x1F8000 is read from there and put back (its copy freed); shorter
+//    names leave spaces that a later, longer rename can use.
 {
   const long = 'W'.repeat(16);
   const all = schools(bw).map((_, i) => [i, cfTeams[i * 3].school] as [number, string]);
-  const moved = swap(bw, all, (sc) => {
+  const tight = swap(bw, all, (sc) => {
     sc.school = long;
     sc.nickname = 'W'.repeat(15);
   });
-  assert.equal(moved.walsh, 'moved');
-  assert.equal(walshAt(moved.rom), WALSH_RELOC);
-  // Renaming one team again keeps it moved (the other 35 long names still don't fit).
-  const still = swap(moved.rom, [[0, 'Tulane']], (sc) => (sc.school = 'Tulane'));
-  assert.equal(still.walsh, 'moved');
-  assert.match(readWalsh(still.rom).slice(6, 8).join(" "), /Green Wave/);
-  // Short names for all 36: back in place, the copy at 0x1F8000 freed.
-  const back = swap(still.rom, schools(bw).map((_, i) => [i, cfTeams[i * 3 + 1].school] as [number, string]), (sc) => {
+  assert.equal(tight.walsh, 'trimmed');
+  assert.equal(walshAt(tight.rom), WALSH_BASE);
+  assert.ok(tight.rom.subarray(WALSH_RELOC, 0x200000).every((b) => b === 0xff));
+  const used = readWalsh(tight.rom).map((p) => p + '\r').join('').length;
+  assert.ok(used <= WALSH_END - WALSH_BASE && tight.rom.subarray(WALSH_BASE + used, WALSH_END).every((b) => b === 0x20));
+  assert.ok(readWalsh(tight.rom).slice(6).every((p) => p.length > 0));
+  // An older build's moved text: the same ROM as if it had stayed in place.
+  const moved = one.slice();
+  const text = readWalsh(one).map((p) => p + '\r').join('');
+  for (let i = 0; i < text.length; i++) moved[WALSH_RELOC + i] = text.charCodeAt(i);
+  moved.set(bw.subarray(WALSH_BASE, WALSH_END), WALSH_BASE); // what an older build left in place
+  moved[0x078fc0] = 0x00; moved[0x078fc1] = 0x1f; moved[0x078fc2] = 0x80; moved[0x078fc3] = 0x00;
+  assert.equal(walshAt(moved), WALSH_RELOC);
+  assert.equal(swappedByTeamSwap(moved), true);
+  const back = swap(moved, [['Wisconsin', 'Idaho']]);
+  assert.equal(walshAt(back.rom), WALSH_BASE);
+  assert.ok(back.rom.subarray(WALSH_RELOC, 0x200000).every((b) => b === 0xff));
+  assert.deepEqual(Array.from(back.rom.subarray(0x200, 0x1e6430)), Array.from(swap(one, [['Wisconsin', 'Idaho']]).rom.subarray(0x200, 0x1e6430)));
+  // Short names for all 36, then a longer rename fills the spaces they left.
+  const short = swap(one, schools(one).map((_, i) => [i, cfTeams[i * 3 + 1].school] as [number, string]), (sc) => {
     sc.school = 'A';
     sc.nickname = 'Bs';
   });
-  assert.equal(back.walsh, 'in place');
-  assert.equal(walshAt(back.rom), WALSH_BASE);
-  assert.ok(back.rom.subarray(WALSH_RELOC, 0x200000).every((b) => b === 0xff));
-  assert.ok(readWalsh(back.rom).slice(6).every((p) => !/W{15}/.test(p)));
-  // Then a longer rename fills the spaces the short names left.
-  const grow = swap(back.rom, [[0, 'Tulane']], (sc) => (sc.school = 'Tulane Green Wave'.slice(0, 16)));
+  assert.equal(short.walsh, 'in place');
+  const grow = swap(short.rom, [[0, 'Tulane']], (sc) => (sc.school = 'Tulane Green Wave'.slice(0, 16)));
   assert.equal(grow.walsh, 'in place');
   const gaps = (rom: Uint8Array) => readWalsh(rom).join('').split(/[.!?]  /).length;
-  assert.equal(gaps(grow.rom), gaps(back.rom)); // no sentence gap had to give way
-  ok('Walsh text: moved and moved back, the spaces left by shorter names reused');
+  assert.equal(gaps(grow.rom), gaps(short.rom)); // no sentence gap had to give way
+  ok('Walsh text: stays in its space (long names trim), an older moved text comes back, spaces reused');
 }
 
 // 6. The Elevated 2026 Season Edition: its 11 swapped teams stay, two more slots change.

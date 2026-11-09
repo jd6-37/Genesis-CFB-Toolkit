@@ -16,6 +16,9 @@ import { ovrFromSim, ratingProblems, readRating, readWeather, weatherFromWord, t
 import { StylePicks } from './tools/styles/StylePicks';
 import { PatchTool, usePatchRom } from './tools/patch/PatchTool';
 import { DEFENSE, OFFENSE, parseStyle, readStyles, styleInfo, styleProblems, type StyleInfo, type TeamStyle } from './core/styles';
+import { renameInText } from './core/walsh';
+import { REPORT_LIMIT, readReports, reportLength, reportProblems, showReport, type Report } from './core/walshReports';
+import { WalshField } from './tools/walsh/WalshEditor';
 
 interface BwState {
   rom: OpenedRom;
@@ -142,6 +145,24 @@ export default function App() {
     [bw],
   );
   const swapped = slots.filter(Boolean) as SlotConfig[];
+  const baseReports = useMemo(() => (bw ? readReports(bw.rom.data) : []), [bw]);
+  /** A swapped slot's report with its new names (the build's text when it isn't edited). */
+  const renamedReport = (sc: SlotConfig): Report => {
+    const t = bw!.teams[sc.slot];
+    const ch = { slot: sc.slot, oldSchool: t.school, oldNickname: t.nickname, newSchool: sc.school, newNickname: sc.nickname };
+    const r = baseReports[sc.slot];
+    return { offense: renameInText(r.offense, ch), defense: renameInText(r.defense, ch) };
+  };
+  const buildReport = (s: number): Report => {
+    const sc = slots[s];
+    if (!sc) return baseReports[s];
+    return sc.walsh ? { offense: sc.walsh[0], defense: sc.walsh[1] } : renamedReport(sc);
+  };
+  /** Reports the build will trim when a first report is edited (none once one is). */
+  const trimsFor = (slot: number) =>
+    !bw || swapped.some((s) => s.walsh)
+      ? []
+      : bw.teams.flatMap((t) => (t.index !== slot && reportLength(buildReport(t.index)) > REPORT_LIMIT ? [slots[t.index]?.school ?? t.school] : []));
   const problems = useMemo(
     () => swapped.flatMap((s) => validateSlot(s).map((p) => `${bw?.teams[s.slot].school} → ${s.school || '(no name)'}: ${p}`)),
     [swapped, bw],
@@ -188,6 +209,13 @@ export default function App() {
           Array.isArray(a) && a.length === n && a.every((v) => Number.isInteger(v) && v >= 0 && v <= max);
         if ((s.ovr !== undefined && !inRange(s.ovr, 2, 99)) || (s.weather !== undefined && !inRange(s.weather, 4, 15))) {
           throw new Error('The swap file is damaged (team ratings or weather).');
+        }
+        const w = s.walsh as unknown;
+        if (
+          w !== undefined &&
+          !(Array.isArray(w) && w.length === 2 && w.every((p) => typeof p === 'string') && !reportProblems({ offense: w[0], defense: w[1] }).length)
+        ) {
+          throw new Error('The swap file is damaged (Walsh Report).');
         }
         next[s.slot] = { ...s, celebration: s.celebration?.length === 3 ? s.celebration : defaultCelebration(s.home) };
       }
@@ -338,6 +366,15 @@ export default function App() {
                 celeb={celeb}
                 styles={teamStyles && { info: teamStyles.info, was: teamStyles.styles[t.index] }}
                 ratings={teamRatings && teamRatings[t.index]}
+                walsh={
+                  slots[t.index]
+                    ? {
+                        value: showReport(buildReport(t.index)),
+                        original: showReport(renamedReport(slots[t.index]!)),
+                        trims: trimsFor(t.index),
+                      }
+                    : null
+                }
                 slot={slots[t.index]}
                 open={open === t.index}
                 onToggle={() => setOpen(open === t.index ? null : t.index)}
@@ -356,7 +393,10 @@ export default function App() {
                 The computer's offense and defense styles stay the original team's unless you change them in the team's
                 edit screen (or later in the Teams tab).
               </li>
-              <li>The Walsh Report keeps the original team's scouting text, with the names changed.</li>
+              <li>
+                The Walsh Report keeps the original team's scouting text with the names changed, unless you write a new
+                one in the team's edit screen (or later in the Teams tab).
+              </li>
               <li>
                 After a season-ending win, a swapped team gets a GO TEAM! card stunt in its colors instead of the original
                 team's celebration.
@@ -444,6 +484,7 @@ function TeamRow({
   celeb,
   styles,
   ratings,
+  walsh,
   slot,
   open,
   onToggle,
@@ -456,6 +497,8 @@ function TeamRow({
   styles: { info: StyleInfo; was: TeamStyle } | null;
   /** The slot's own OVRs and home weather; null if this ROM's can't be changed. */
   ratings: { rating: TeamRating; weather: Weather } | null;
+  /** The swapped team's Walsh Report (shown form), the renamed original, and the reports a first edit trims. */
+  walsh: { value: Report; original: Report; trims: string[] } | null;
   slot: SlotConfig | null;
   open: boolean;
   onToggle: () => void;
@@ -578,6 +621,21 @@ function TeamRow({
                 was={{ name: bw.school, rating: ratings.rating, weather: ratings.weather }}
                 onRating={(r) => onChange({ ...slot, ovr: [r.off, r.def] })}
                 onWeather={(w) => onChange({ ...slot, weather: [...w] })}
+              />
+            )}
+            {walsh && (
+              <WalshField
+                team={slot.school}
+                value={walsh.value}
+                original={walsh.original}
+                edited={!!slot.walsh}
+                trims={walsh.trims}
+                onSave={(r) => {
+                  // The renamed original as it is: no edit, so it keeps following the names.
+                  const orig = walsh.original;
+                  const same = reportLength(orig) <= REPORT_LIMIT && r.offense === orig.offense.trim() && r.defense === orig.defense.trim();
+                  onChange({ ...slot, walsh: same ? undefined : [r.offense, r.defense] });
+                }}
               />
             )}
           </div>
