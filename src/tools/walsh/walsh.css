@@ -1,0 +1,90 @@
+/* Walsh Report editor. Uses the app's tokens from src/styles.css. The preview box copies the game's
+   report box: black, a light grey frame and white text, 20 characters to a line. */
+.wr {
+  width: min(58rem, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  padding: 0;
+  background: var(--night);
+  color: var(--chalk);
+  border: 1px solid var(--chalk-dim);
+  border-radius: 6px;
+}
+.wr::backdrop { background: rgba(9, 7, 40, 0.72); }
+.wr form { display: flex; flex-direction: column; gap: 16px; padding: 22px 24px 20px; }
+
+.wr-head h2 {
+  margin: 0 0 4px;
+  font-family: var(--display);
+  font-style: italic;
+  font-weight: 800;
+  font-size: 30px;
+  line-height: 1;
+}
+.wr-head h2 span { color: var(--menu); }
+.wr-head .hint { max-width: 60ch; }
+
+.wr-body { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 24px; align-items: start; }
+.wr-edit { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.wr-field { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--chalk-dim); }
+.wr-field textarea {
+  width: 100%;
+  padding: 8px 10px;
+  background: var(--deep);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--chalk);
+  font: 16px/1.45 var(--body);
+  resize: vertical;
+}
+.wr-field textarea[aria-invalid='true'] { border-color: var(--error); }
+.wr-count { margin: 0; font-size: 14px; font-variant-numeric: tabular-nums; color: var(--chalk-dim); }
+.wr-count.wr-over { color: var(--error); }
+.wr-chars { max-width: none; }
+
+.wr-preview { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.wr-preview figcaption { font-size: 14px; color: var(--chalk-dim); }
+.wr-box {
+  display: flex;
+  flex-direction: column;
+  width: calc(20ch + 24px);
+  height: calc(6 * 1.25em + 26px); /* six lines, the padding and the 3px frame */
+  overflow-y: auto;
+  padding: 10px 12px;
+  background: #000;
+  border: 3px solid #c8c8c8;
+  color: #fff;
+  font: 15px/1.25 ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  white-space: pre;
+}
+.wr-preview .hint { max-width: calc(20ch + 24px); font-size: 13px; }
+
+.wr-problems { margin: 0; padding-left: 18px; color: var(--error); font-size: 14px; }
+.wr-trims { margin: 0; color: var(--menu); font-size: 14px; max-width: 75ch; }
+
+.wr-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.wr-gap { flex: 1; }
+.wr-actions .btn-quiet { align-self: auto; }
+
+@media (max-width: 720px) {
+  .wr form { padding: 18px 16px 16px; }
+  .wr-body { grid-template-columns: 1fr; }
+}
+
+/* Teams tab column */
+.wr-col { white-space: nowrap; }
+.wr-len { margin-left: 8px; font-size: 12px; color: var(--chalk-dim); font-variant-numeric: tabular-nums; }
+.wr-len-long { color: var(--menu); }
+
+/* Team Swap edit screen block */
+.wr-fieldset { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.wr-title { font-size: 14px; color: var(--chalk-dim); }
+.wr-title small { float: right; }
+.wr-snippet {
+  margin: 0;
+  font-size: 14px;
+  color: var(--chalk);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

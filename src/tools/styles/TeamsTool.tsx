@@ -16,6 +16,11 @@ import {
 } from '../../core/teamRatings';
 import { Cfb27Reference } from './Cfb27Reference';
 import { findCfb27 } from '../../core/cfb27Styles';
+import {
+  REPORT_LIMIT, editedReports, longReports, readReports, reportLength, restoreAllReports, restoreReport, showReport, trimReport,
+  writeReports, type Report,
+} from '../../core/walshReports';
+import { WalshEditor } from '../walsh/WalshEditor';
 import './teamstyles.css';
 
 type Note = { kind: 'error' | 'ok'; text: string } | null;
@@ -24,7 +29,11 @@ type Ctx = { problem: string } | { names: string[]; info: StyleInfo; ovrShown: b
 export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapSource | null }) {
   const { work, rev } = api;
   const [note, setNote] = useState<Note>(null);
-  useEffect(() => setNote(null), [work]);
+  const [editing, setEditing] = useState<number | null>(null);
+  useEffect(() => {
+    setNote(null);
+    setEditing(null);
+  }, [work]);
 
   const ctx = useMemo<Ctx | null>(() => {
     if (!work) return null;
@@ -52,7 +61,13 @@ export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapS
     () => (work && ok ? Array.from({ length: TEAMS }, (_, t) => ({ r: readRating(work.base, t), w: readWeather(work.base, t) })) : []),
     [work, ok],
   );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const reports = useMemo(() => (work && ok ? readReports(work.data) : []), [work, ok, rev]);
+  const loadedReports = useMemo(() => (work && ok ? readReports(work.base) : []), [work, ok]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const editedSet = useMemo(() => new Set(work && ok ? editedReports(work.base, work.data) : []), [work, ok, rev]);
   const isChanged = (t: number) =>
+    editedSet.has(t) ||
     styles[t].offense !== loadedStyles[t].offense ||
     styles[t].defense !== loadedStyles[t].defense ||
     ratings[t].off !== loaded[t].r.off ||
@@ -92,28 +107,41 @@ export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapS
     if (n) api.edited();
   };
 
-  const edit = (f: () => void) => {
+  const edit = (f: () => Note | void) => {
     if (!work) return;
     try {
-      f();
-      setNote(null);
+      setNote(f() ?? null);
       api.edited();
     } catch (e) {
       setNote({ kind: 'error', text: (e as Error).message });
     }
   };
-  const set = (t: number, st: TeamStyle) => edit(() => writeStyle(work!.data, t, st));
-  const setRating = (t: number, r: TeamRating) => edit(() => writeRating(work!.data, t, r));
-  const setWeather = (t: number, w: Weather) => edit(() => writeWeather(work!.data, t, w));
+  const set = (t: number, st: TeamStyle) => edit(() => void writeStyle(work!.data, t, st));
+  const setRating = (t: number, r: TeamRating) => edit(() => void writeRating(work!.data, t, r));
+  const setWeather = (t: number, w: Weather) => edit(() => void writeWeather(work!.data, t, w));
   const undo = (teams: number[]) => {
     if (!work) return;
-    for (const t of teams) {
-      restoreStyle(work.data, work.base, t);
-      restoreTeam(work.data, work.base, t);
+    try {
+      for (const t of teams) {
+        restoreStyle(work.data, work.base, t);
+        restoreTeam(work.data, work.base, t);
+        restoreReport(work.data, work.base, t);
+      }
+      // With no report edited any more, the trims of the long reports go too.
+      if (!editedReports(work.base, work.data).length) restoreAllReports(work.data, work.base);
+      setNote(null);
+    } catch (e) {
+      setNote({ kind: 'error', text: (e as Error).message });
     }
-    setNote(null);
     api.edited();
   };
+  const saveReport = (t: number, r: Report) =>
+    edit((): Note => {
+      const trimmed = writeReports(work!.data, new Map([[t, r]]));
+      if (!trimmed.length || !ok) return null;
+      const n = trimmed.length;
+      return { kind: 'ok', text: `Saved ${ok.names[t]}'s Walsh Report and trimmed ${n} longer report${n === 1 ? '' : 's'} to ${REPORT_LIMIT} characters.` };
+    });
 
   return (
     <>
@@ -155,6 +183,9 @@ export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapS
                   <th scope="colgroup" colSpan={4} className="rat-wx-head">
                     Home weather
                   </th>
+                  <th scope="col" rowSpan={2} className="wr-col">
+                    Walsh Report
+                  </th>
                   <th scope="col" rowSpan={2} className="sty-undo-cell">
                     <span className="sr-only">Undo</span>
                   </th>
@@ -182,6 +213,12 @@ export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapS
                       onRating={(r) => setRating(t, r)}
                       onWeather={(w) => setWeather(t, w)}
                     />
+                    <td className="wr-col">
+                      <button className="sty-link" onClick={() => setEditing(t)} aria-label={`Edit ${ok.names[t]}'s Walsh Report`}>
+                        Edit
+                      </button>
+                      <small className={reportLength(reports[t]) > REPORT_LIMIT ? 'wr-len wr-len-long' : 'wr-len'}>{reportLength(reports[t])}</small>
+                    </td>
                     <td className="sty-undo-cell">
                       {isChanged(t) && (
                         <button className="sty-link" onClick={() => undo([t])} aria-label={`Undo the changes to ${ok.names[t]}`}>
@@ -215,6 +252,18 @@ export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapS
       )}
 
       <Cfb27Reference onRom={work && ok ? onRom : null} />
+
+      {work && ok && editing !== null && (
+        <WalshEditor
+          team={ok.names[editing]}
+          value={showReport(reportLength(reports[editing]) > REPORT_LIMIT ? trimReport(reports[editing]) : reports[editing])}
+          original={showReport(trimReport(loadedReports[editing]))}
+          originalLabel="Back to the loaded report"
+          trims={longReports(work.data).filter((s) => s !== editing).map((s) => ok.names[s])}
+          onSave={(r) => saveReport(editing, r)}
+          onClose={() => setEditing(null)}
+        />
+      )}
 
       {work && ok && (
         <footer className="dock">
@@ -272,6 +321,12 @@ function StyleLegend({ info, ovrShown }: { info: StyleInfo; ovrShown: boolean })
           {ovrShown
             ? 'This ROM also shows them under each team on Game Setup.'
             : 'Elevated v1.1.0 and later also show them on Game Setup; this ROM keeps them as the original game does (a 0-100 rating), so only OVRs from 62 to 98 are stored exactly.'}
+        </p>
+        <p>
+          <b>Walsh Report</b> is Bill Walsh's scouting report before the team's games: up to {REPORT_LIMIT} characters for
+          the offense and the defense together. The number next to Edit is the report's length. Some of EA's reports are
+          longer, so the first report you save trims those to {REPORT_LIMIT}, dropping their last sentences, to keep every
+          report in the game's text space.
         </p>
         <p>
           <b>Home weather</b> is how often each kind of weather comes up in the team's home games in a season, as
