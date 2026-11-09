@@ -109,7 +109,7 @@ button, input, select { font: inherit; color: inherit; }
 .rom:focus-within { outline: 2px solid var(--menu); outline-offset: 2px; }
 .rom-title { font-family: var(--display); font-weight: 700; font-size: 22px; }
 .rom-status { color: var(--menu); font-weight: 600; }
-.rom-status small { display: block; color: var(--chalk-dim); font-weight: 400; font-size: 14px; }
+.rom-status small { display: block; color: var(--chalk-dim); font-weight: 400; font-size: 14px; overflow-wrap: anywhere; }
 .rom-empty { color: var(--chalk); }
 .rom-choose { text-decoration: underline; text-underline-offset: 3px; }
 .rom-ok { border-color: rgba(246, 216, 74, 0.5); }
