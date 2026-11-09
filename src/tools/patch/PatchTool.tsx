@@ -258,7 +258,7 @@ export function PatchTool({ api, onSwap, onEdit }: { api: PatchApi; onSwap: () =
                   onPick={(id) => setContent(id)}
                 />
               )}
-              {fatigues.length > 0 && (
+              {fatigues.length > 1 && (
                 <Choices legend="Fatigue" name="pat-fatigue" items={fatigues} value={pickFatigue} onPick={(id) => setFatigue(id)} />
               )}
             </div>
