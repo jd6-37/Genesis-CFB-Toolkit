@@ -283,11 +283,16 @@ export function swapProblems(rom: Uint8Array): string[] {
   return out;
 }
 
+/** True if the menu-order area is in use: the teams were already swapped (by Team Swap or another tool). */
+export function hasSwappedTeams(rom: Uint8Array): boolean {
+  return rom.subarray(MENU_ORDER.addr, MENU_ORDER.addr + MENU_ORDER.code.length).some((b) => b !== 0xff);
+}
+
 /** One message for swapProblems; null if there are none. */
 export function swapProblemText(rom: Uint8Array): string | null {
   const p = swapProblems(rom);
   if (!p.length) return null;
-  if (rom.subarray(MENU_ORDER.addr, MENU_ORDER.addr + MENU_ORDER.code.length).some((b) => b !== 0xff)) {
+  if (hasSwappedTeams(rom)) {
     return (
       "This ROM already has swapped teams, so Team Swap can't run on it again. " +
       'Start from the ROM before the swap (a saved swap file brings your choices back).'

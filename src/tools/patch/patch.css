@@ -1,0 +1,69 @@
+/* Patch tab. Uses the app's tokens from src/styles.css (--night, --deep, --menu, --chrome …). The
+   selected patch option gets the chrome selection bar, like the open row on the Team Swap board. */
+.pat-roms { grid-template-columns: minmax(0, 36rem); margin-bottom: 32px; }
+.pat-roms .rom-status small { overflow-wrap: anywhere; }
+
+.pat-add, .pat-next { max-width: 46rem; margin-bottom: 40px; }
+.pat-add > p { margin: 0; }
+.pat-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 20px; margin-bottom: 14px; }
+.pat-head h3, .pat-next h3 { margin: 0; font-family: var(--display); font-weight: 700; font-size: 32px; }
+.pat-head p { margin: 0; color: var(--chalk-dim); }
+.pat-head b { color: var(--chalk); font-weight: 600; }
+.pat-add a { color: inherit; text-underline-offset: 3px; }
+
+.pat-choices { display: flex; flex-direction: column; gap: 20px; margin-bottom: 20px; }
+.pat-group { margin: 0; padding: 0; border: 0; }
+.pat-group legend { padding: 0 0 8px; font-family: var(--display); font-weight: 700; font-size: 20px; }
+.pat-opt {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 12px;
+  align-items: baseline;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+.pat-group legend + .pat-opt { border-top: 1px solid var(--line); }
+.pat-opt input { grid-row: 1 / span 2; align-self: center; margin: 0; accent-color: var(--indigo); }
+.pat-opt:hover { background: rgba(242, 240, 255, 0.05); }
+.pat-opt:focus-within { outline: 2px solid var(--menu); outline-offset: 2px; }
+.pat-label { font-weight: 600; font-size: 17px; }
+.pat-about { grid-column: 2; font-size: 14px; color: var(--chalk-dim); }
+.pat-on, .pat-on:hover { background: var(--chrome); color: var(--night); }
+.pat-on .pat-about { color: var(--night); }
+
+.pat-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.pat-actions .btn-quiet { align-self: center; }
+.pat-done {
+  margin-top: 20px;
+  padding: 12px 16px;
+  background: var(--deep);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--menu);
+  border-radius: 6px;
+}
+.pat-done p { margin: 0 0 10px; overflow-wrap: anywhere; }
+.pat-done b { color: var(--menu); font-weight: 600; }
+.pat-done-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.pat-done-actions .btn-quiet { align-self: center; }
+
+.pat-next ul { display: grid; gap: 14px; margin: 12px 0 0; padding: 0; list-style: none; }
+.pat-step { display: grid; grid-template-columns: 17rem 1fr; gap: 16px; align-items: center; }
+.pat-step .btn { justify-content: center; }
+.pat-step .hint { max-width: 52ch; }
+.pat-step > .hint:only-child { grid-column: 1 / -1; }
+@media (max-width: 700px) {
+  .pat-step { grid-template-columns: 1fr; gap: 6px; }
+}
+
+/* A button that reads as a link (Team Swap's pointer to the Patch tab). */
+.link-btn {
+  padding: 0;
+  background: none;
+  border: 0;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}

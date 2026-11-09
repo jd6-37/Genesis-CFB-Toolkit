@@ -12,6 +12,7 @@ import { SeasonTool } from './tools/season/SeasonTool';
 import { useWorkRom, type TeamSwapSource } from './tools/shared/WorkRom';
 import { StylesTool } from './tools/styles/StylesTool';
 import { StylePicks } from './tools/styles/StylePicks';
+import { PatchTool, usePatchRom } from './tools/patch/PatchTool';
 import { DEFENSE, OFFENSE, parseStyle, readStyles, styleInfo, styleProblems, type StyleInfo, type TeamStyle } from './core/styles';
 
 interface BwState {
@@ -26,14 +27,15 @@ type Note = { kind: 'error' | 'ok'; text: string } | null;
 
 const EMPTY: (SlotConfig | null)[] = Array(36).fill(null);
 
-type Tab = 'swap' | 'season' | 'styles' | 'rosters';
+type Tab = 'patch' | 'swap' | 'season' | 'styles' | 'rosters';
 const TABS: { id: Tab; label: string }[] = [
+  { id: 'patch', label: 'Patch' },
   { id: 'swap', label: 'Team Swap' },
   { id: 'season', label: 'Season' },
   { id: 'styles', label: 'Styles' },
   { id: 'rosters', label: 'Rosters' },
 ];
-const tabFromHash = (): Tab => TABS.find((t) => `#${t.id}` === window.location.hash)?.id ?? 'swap';
+const tabFromHash = (): Tab => TABS.find((t) => `#${t.id}` === window.location.hash)?.id ?? 'patch';
 
 function download(name: string, data: BlobPart, type: string) {
   const url = URL.createObjectURL(new Blob([data], { type }));
@@ -65,6 +67,7 @@ export default function App() {
   const [dragging, setDragging] = useState(false);
   const [tab, setTab] = useState<Tab>(tabFromHash);
   const work = useWorkRom(); // the ROM the Season, Styles and Rosters tabs edit together
+  const start = usePatchRom(); // the BW95 ROM from the Patch tab, which Team Swap builds on
   const seasonDrop = useRef<((files: FileList | File[]) => void) | null>(null);
   const registerSeasonDrop = useCallback((fn: ((files: FileList | File[]) => void) | null) => {
     seasonDrop.current = fn;
@@ -77,23 +80,36 @@ export default function App() {
   }, []);
   const pickTab = (t: Tab) => {
     setTab(t);
-    window.history.replaceState(null, '', t === 'swap' ? window.location.pathname + window.location.search : `#${t}`);
+    window.history.replaceState(null, '', t === 'patch' ? window.location.pathname + window.location.search : `#${t}`);
   };
 
-  const onFiles = useCallback(async (files: FileList | File[]) => {
+  // Team Swap uses the Patch tab's ROM (loaded there or here, patched or not).
+  const startRom = start.rom;
+  useEffect(() => {
+    if (!startRom) return;
+    setRomNote(null);
+    const problem = swapProblemText(startRom.data);
+    if (problem) {
+      setBw(null);
+      setRomNote({ kind: 'error', text: `${startRom.name}: ${problem}` });
+      return;
+    }
+    const teams = parseBw95(startRom.data);
+    if (!bw || bw.teams.some((t, i) => t.school !== teams[i]?.school)) {
+      setSlots(EMPTY);
+      setOpen(null);
+    }
+    setBw({ rom: startRom, teams });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startRom]);
+
+  const onFiles = async (files: FileList | File[]) => {
     setRomNote(null);
     for (const f of Array.from(files)) {
       try {
         const r = await openRom(f.name, new Uint8Array(await f.arrayBuffer()));
         if (r.known?.kind === 'bw95') {
-          const problem = swapProblemText(r.data);
-          if (problem) {
-            setRomNote({ kind: 'error', text: `${f.name}: ${problem}` });
-            continue;
-          }
-          setBw({ rom: r, teams: parseBw95(r.data) });
-          setSlots(EMPTY);
-          setOpen(null);
+          start.open(r); // shared with the Patch tab; the effect above takes it from there
         } else if (r.known?.kind === 'cf97') {
           setCf({ rom: r, teams: parseCf97(r.data) });
           setSlots(EMPTY);
@@ -105,7 +121,7 @@ export default function App() {
         setRomNote({ kind: 'error', text: `${f.name}: ${(e as Error).message}` });
       }
     }
-  }, []);
+  };
 
   const ready = !!bw && !!cf;
   const celeb = useMemo(() => (bw ? buildGenericCelebration(bw.rom.data) : null), [bw]);
@@ -176,7 +192,8 @@ export default function App() {
       onDrop={(e) => {
         e.preventDefault();
         setDragging(false);
-        if (tab === 'rosters' || tab === 'styles') void work.loadFiles(e.dataTransfer.files);
+        if (tab === 'patch') void start.loadFiles(e.dataTransfer.files);
+        else if (tab === 'rosters' || tab === 'styles') void work.loadFiles(e.dataTransfer.files);
         else if (tab === 'season') seasonDrop.current?.(e.dataTransfer.files);
         else onFiles(e.dataTransfer.files);
       }}
@@ -216,6 +233,18 @@ export default function App() {
         ))}
       </nav>
 
+      <div id="panel-patch" role="tabpanel" aria-labelledby="tab-patch" hidden={tab !== 'patch'}>
+        <PatchTool
+          api={start}
+          onSwap={() => pickTab('swap')}
+          onEdit={() => {
+            if (!start.rom) return;
+            work.takeRom({ name: start.rom.name, label: start.rom.known?.label ?? start.rom.name, data: start.rom.data });
+            pickTab('season');
+          }}
+        />
+      </div>
+
       <div id="panel-season" role="tabpanel" aria-labelledby="tab-season" hidden={tab !== 'season'}>
         <SeasonTool api={work} teamSwap={teamSwap} registerDrop={registerSeasonDrop} />
       </div>
@@ -254,6 +283,15 @@ export default function App() {
         {romNote && (
           <p className={`note ${romNote.kind}`} role="alert">
             {romNote.text}
+          </p>
+        )}
+        {start.original && start.rom === start.original && (
+          <p className="note ok">
+            This is the original game. To add the mod's fatigue fix and more first, use the{' '}
+            <button className="link-btn" onClick={() => pickTab('patch')}>
+              Patch tab
+            </button>
+            .
           </p>
         )}
       </section>
