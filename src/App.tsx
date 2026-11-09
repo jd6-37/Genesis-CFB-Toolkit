@@ -64,6 +64,12 @@ function outName(rom: OpenedRom): string {
   return `${base} [Team Swap].md`;
 }
 
+function sameBytes(a: Uint8Array | undefined, b: Uint8Array): boolean {
+  if (!a || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
 export default function App() {
   const [bw, setBw] = useState<BwState | null>(null);
   const [cf, setCf] = useState<CfState | null>(null);
@@ -109,6 +115,16 @@ export default function App() {
     setBw({ rom: startRom, teams });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startRom]);
+
+  // Season, Teams and Rosters open the Patch tab's ROM too, as soon as it's loaded or patched. If they
+  // already have changes in another ROM, the usual "keep my edits?" question comes up there instead.
+  useEffect(() => {
+    if (!startRom || sameBytes(work.work?.base, startRom.data)) return;
+    work.takeRom({ name: startRom.name, label: startRom.known?.label ?? startRom.name, data: startRom.data });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startRom]);
+
+  const workHasStart = useMemo(() => !!startRom && sameBytes(work.work?.base, startRom.data), [work.work, startRom]);
 
   const onFiles = async (files: FileList | File[]) => {
     setRomNote(null);
@@ -285,10 +301,13 @@ export default function App() {
       <div id="panel-patch" role="tabpanel" aria-labelledby="tab-patch" hidden={tab !== 'patch'}>
         <PatchTool
           api={start}
+          inWork={workHasStart}
           onSwap={() => pickTab('swap')}
           onEdit={() => {
             if (!start.rom) return;
-            work.takeRom({ name: start.rom.name, label: start.rom.known?.label ?? start.rom.name, data: start.rom.data });
+            if (!sameBytes(work.work?.base, start.rom.data)) {
+              work.takeRom({ name: start.rom.name, label: start.rom.known?.label ?? start.rom.name, data: start.rom.data });
+            }
             pickTab('season');
           }}
         />
