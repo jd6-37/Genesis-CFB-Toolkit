@@ -39,6 +39,7 @@ Read this before changing anything. More than one person or Claude session may b
 
 - `npm run build` passes (type check and build).
 - If the change touches ROM building (`src/core/`), rebuild a known swap with the CLI (see the README) and compare the SHA-1 with the one from before the change. The bytes must only change when the change is meant to change them.
+- If the change touches Team Swap (`src/core/build.ts`, `src/core/walsh.ts`, `src/core/celebration.ts`), `npm run test:swap -- BW95 CF97 ELEVATED_2026` passes (the last is optional: the Elevated 2026 Season Edition, whose teams Team Swap swapped).
 - If the change touches the Rosters tool (`src/core/roster*.ts`, `src/tools/rosters/`), `npm run test:rosters -- BW95 CF96 CF97` passes (paths to the three ROMs; zips work).
 - If the change touches the Season tool (`src/core/season*.ts`, `src/tools/season/`), `npm run test:season -- BW95 CF97` passes.
 - If the change touches the Teams tool (`src/core/styles.ts`, `src/core/teamRatings.ts`, `src/tools/styles/`), `npm run test:styles -- BW95 CF97` and `npm run test:teams -- BW95 CF97 ELEVATED ELEVATED_2026` pass (the two Elevated v1.1.0 editions).

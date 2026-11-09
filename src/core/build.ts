@@ -9,7 +9,7 @@ import { CITY, MAX_LEN, NAME_CHARS, NICKNAME_FIX, UNIFORM_FIX } from './defaults
 import { CELEBRATION, END_ZONE, HELMET_BASE, MENU_ORDER } from './helpers68k';
 import { buildGenericCelebration, CELEB_ADDR, CELEB_TABLE, defaultCelebration } from './celebration';
 import { bbox, packTiles, Sprite, writeGroups } from './sprites';
-import { rewriteWalsh } from './walsh';
+import { rewriteWalsh, WALSH_BASE, WALSH_PTR, WALSH_RELOC } from './walsh';
 import { parseStyle, readStyle, styleProblems, writeStyle } from './styles';
 import { ovrFromSim, ratingProblems, readRating, weatherFromWord, writeRating, writeWeather, type Weather } from './teamRatings';
 
@@ -185,10 +185,15 @@ function patchStepper(rom: Uint8Array, at: number, store: number, helper: number
 }
 
 function installCelebration(rom: Uint8Array, base: Uint8Array, swaps: SlotConfig[]): void {
-  const blob = buildGenericCelebration(base);
-  if (CELEB_ADDR + blob.bytes.length > 0x1f0000) throw new Error('celebration does not fit');
-  rom.set(blob.bytes, CELEB_ADDR);
-  const code = CELEBRATION.code.slice();
+  // A ROM swapped before already has the card stunt and the earlier swapped teams' colors: keep them.
+  const before = rom.slice(CELEBRATION.addr, CELEBRATION.addr + CELEBRATION.code.length);
+  const again = before.some((b) => b !== 0xff);
+  if (!again) {
+    const blob = buildGenericCelebration(base);
+    if (CELEB_ADDR + blob.bytes.length > 0x1f0000) throw new Error('celebration does not fit');
+    rom.set(blob.bytes, CELEB_ADDR);
+  }
+  const code = again ? before : CELEBRATION.code.slice();
   for (const sc of swaps) {
     wl(rom, CELEB_TABLE + 4 * sc.slot, CELEB_ADDR);
     const cols = sc.celebration ?? defaultCelebration(sc.home);
@@ -231,11 +236,11 @@ export function fixChecksums(rom: Uint8Array): void {
   ww(rom, 0x18e, h);
 }
 
-/** Display order: unswapped teams keep EA's order; each swapped team is inserted where its
- *  name sorts alphabetically. */
-export function menuOrder(names: string[], swapped: Set<number>): number[] {
+/** Display order: the other teams keep their order (EA's, or the one an earlier swap gave the ROM);
+ *  each team swapped now is inserted where its name sorts alphabetically. */
+export function menuOrder(names: string[], swapped: Set<number>, before = names.map((_, i) => i)): number[] {
   const cmp = (a: number, b: number) => names[a].localeCompare(names[b], 'en', { sensitivity: 'base' });
-  const order = names.map((_, i) => i).filter((i) => !swapped.has(i));
+  const order = before.filter((i) => !swapped.has(i));
   const ins = [...swapped].sort((a, b) => cmp(a, b) || a - b);
   for (const t of ins) {
     const at = order.findIndex((o) => cmp(o, t) > 0);
@@ -275,9 +280,63 @@ export function swapAreas(): [number, number][] {
 }
 
 const hex = (n: number) => '0x' + n.toString(16).toUpperCase().padStart(6, '0');
+const same = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.every((v, i) => v === b[i]);
+const fromHex = (h: string) => Uint8Array.from(h.match(/../g)!, (x) => parseInt(x, 16));
+
+let jumps: Uint8Array | null = null;
+/** What a swap writes at the patch sites (the jumps into its helpers), in an otherwise empty ROM. */
+function swapJumps(): Uint8Array {
+  if (!jumps) {
+    jumps = new Uint8Array(0x200000);
+    installHelpers(jumps, Array.from({ length: BW_TEAMS }, (_, i) => i), new Array(BW_TEAMS).fill(0));
+    patch(jumps, 0x079f00, JSR(CELEBRATION.addr), 12);
+  }
+  return jumps;
+}
+
+/** True if Team Swap itself swapped this ROM's teams: its jumps are at the patch sites and its own
+ *  helpers are installed (only their tables differ). Such a ROM can take another swap, which keeps
+ *  the teams swapped before (their names, art, end zones, card stunt colors and menu places). */
+export function swappedByTeamSwap(rom: Uint8Array): boolean {
+  const celebration = rom.subarray(CELEBRATION.addr, CELEBRATION.addr + CELEBRATION.code.length).some((b) => b !== 0xff);
+  for (const [at, stock] of PATCH_SITES) {
+    const n = stock.length / 2;
+    if (at === 0x078fbe) {
+      // lea of the Walsh Report text: the text is in place or was moved by the swap
+      const ptr = rl(rom, WALSH_PTR);
+      if (rw(rom, at) !== 0x43f9 || (ptr !== WALSH_BASE && ptr !== WALSH_RELOC)) return false;
+    } else if (at === 0x079f00 && !celebration) {
+      if (!same(rom.subarray(at, at + n), fromHex(stock))) return false;
+    } else if (!same(rom.subarray(at, at + n), swapJumps().subarray(at, at + n))) return false;
+  }
+  const code: [{ addr: number; code: Uint8Array }, number][] = [
+    [MENU_ORDER, MENU_ORDER.ORD],
+    [END_ZONE, END_ZONE.EZT],
+    [HELMET_BASE, HELMET_BASE.code.length],
+    [CELEBRATION, CELEBRATION.CT],
+  ];
+  for (const [h, end] of code) {
+    if (h === CELEBRATION && !celebration) continue;
+    if (!same(rom.subarray(h.addr, h.addr + end), h.code.subarray(0, end))) return false;
+  }
+  if (celebration && rw(rom, CELEB_ADDR) !== 0x42) return false; // the card stunt's container offset
+  const order = menuTable(rom);
+  return order.slice().sort((a, b) => a - b).every((t, i) => t === i);
+}
+
+/** The menu order a swap left in the ROM: the team in each menu position. */
+function menuTable(rom: Uint8Array): number[] {
+  return Array.from(rom.subarray(MENU_ORDER.addr + MENU_ORDER.ORD, MENU_ORDER.addr + MENU_ORDER.ORD + BW_TEAMS));
+}
+
+/** The slots Team Swap gave a new team (they play the GO TEAM! card stunt). */
+export function swappedSlots(rom: Uint8Array): number[] {
+  return Array.from({ length: BW_TEAMS }, (_, i) => i).filter((i) => rl(rom, CELEB_TABLE + 4 * i) === CELEB_ADDR);
+}
 
 /** Why this BW95 ROM can't take a swap: patched code or used ROM space. Empty if it can. */
 export function swapProblems(rom: Uint8Array): string[] {
+  if (swappedByTeamSwap(rom)) return [];
   const out: string[] = [];
   for (const [at, want] of PATCH_SITES) {
     const have = Array.from(rom.subarray(at, at + want.length / 2), (b) => b.toString(16).padStart(2, '0')).join('');
@@ -299,10 +358,7 @@ export function swapProblemText(rom: Uint8Array): string | null {
   const p = swapProblems(rom);
   if (!p.length) return null;
   if (hasSwappedTeams(rom)) {
-    return (
-      "This ROM already has swapped teams, so Team Swap can't run on it again. " +
-      'Start from the ROM before the swap (a saved swap file brings your choices back).'
-    );
+    return "This ROM's teams were swapped with another tool, so Team Swap can't run on it. Start from the ROM before that swap.";
   }
   return `This ROM can't take a team swap: ${p.join('; ')}.`;
 }
@@ -311,11 +367,13 @@ export function buildRom(base: Uint8Array, bwTeams: BwTeam[], cfTeams: CfTeam[],
   const rom = base.slice();
   const problem = swapProblemText(rom);
   if (problem) throw new Error(problem);
+  const again = swappedByTeamSwap(rom);
   const cfByIndex = new Map(cfTeams.map((t) => [t.index, t]));
   const used = new Set<number>();
   const blocks: Record<number, BlockInfo> = {};
   const finalNames = bwTeams.map((t) => t.school);
-  const endZones = new Array(BW_TEAMS).fill(0);
+  // Teams swapped before keep their end zones (0 = the game's own darkening).
+  const endZones = Array.from({ length: BW_TEAMS }, (_, i) => (again ? rw(rom, END_ZONE.addr + END_ZONE.EZT + 2 * i) : 0));
   for (const sc of swaps) {
     if (sc.slot < 0 || sc.slot >= BW_TEAMS) throw new Error(`bad slot ${sc.slot}`);
     if (used.has(sc.slot)) throw new Error(`slot ${sc.slot} is swapped twice`);
@@ -353,7 +411,7 @@ export function buildRom(base: Uint8Array, bwTeams: BwTeam[], cfTeams: CfTeam[],
       if (sc.weather) writeWeather(rom, sc.slot, sc.weather.slice(0, 4) as Weather);
     }
   }
-  const order = menuOrder(finalNames, used);
+  const order = menuOrder(finalNames, used, again ? menuTable(rom) : undefined);
   installHelpers(rom, order, endZones);
   if (swaps.length) installCelebration(rom, base, swaps);
   const walsh = rewriteWalsh(

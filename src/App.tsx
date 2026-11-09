@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BwTeam, parseBw95 } from './core/bw95';
 import { CfTeam, parseCf97 } from './core/cf97';
-import { buildRom, defaultSlot, isSwapFile, SlotConfig, swapFile, swapProblemText, validateSlot } from './core/build';
+import { buildRom, defaultSlot, isSwapFile, SlotConfig, swapFile, swappedSlots, swapProblemText, validateSlot } from './core/build';
 import { MAX_LEN } from './core/defaults';
 import { renderSprites } from './core/render';
 import { describeUnknown, OpenedRom, openRom } from './core/romfile';
-import { buildGenericCelebration, CelebBlob, defaultCelebration, PREVIEW_FRAME } from './core/celebration';
+import { CelebBlob, defaultCelebration, genericCelebration, PREVIEW_FRAME } from './core/celebration';
 import { SpriteCanvas, Swatch, UniformEditor } from './components';
 import { RosterTool } from './tools/rosters/RosterTool';
 import { SeasonTool } from './tools/season/SeasonTool';
@@ -53,7 +53,7 @@ function download(name: string, data: BlobPart, type: string) {
 }
 
 function outName(rom: OpenedRom): string {
-  if (rom.known?.modded) return `${rom.name.replace(/\.(md|bin|gen)$/i, '')} [Team Swap].md`;
+  if (rom.known?.modded) return `${rom.name.replace(/\.(md|bin|gen)$/i, '').replace(/ \[Team Swap\]/g, '')} [Team Swap].md`;
   const r = rom.known?.rebalanced;
   const base = r
     ? `Bill Walsh College Football 95 Rebalanced v1.0 [${r === 'fixed' ? 'Fixed' : 'No'} Fatigue]`
@@ -128,7 +128,8 @@ export default function App() {
   };
 
   const ready = !!bw && !!cf;
-  const celeb = useMemo(() => (bw ? buildGenericCelebration(bw.rom.data) : null), [bw]);
+  const celeb = useMemo(() => (bw ? genericCelebration(bw.rom.data) : null), [bw]);
+  const swappedBefore = useMemo(() => (bw ? swappedSlots(bw.rom.data) : []), [bw]);
   const teamStyles = useMemo(
     () => (bw && !styleProblems(bw.rom.data).length ? { info: styleInfo(bw.rom.data), styles: readStyles(bw.rom.data) } : null),
     [bw],
@@ -312,6 +313,12 @@ export default function App() {
               Patch tab
             </button>
             .
+          </p>
+        )}
+        {bw && swappedBefore.length > 0 && (
+          <p className="note ok">
+            Already swapped in: {swappedBefore.map((s) => bw.teams[s].school).join(', ')}. They stay as they are unless
+            you pick another team for their slot.
           </p>
         )}
       </section>

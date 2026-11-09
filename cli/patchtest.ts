@@ -13,7 +13,7 @@ import {
   applyListed, checkPatchFile, findRelease, offered, patchBase, patchListProblems, refFromPage, romFileName,
   type PatchList,
 } from '../src/core/patches';
-import { buildRom, defaultSlot, hasSwappedTeams, swapProblemText } from '../src/core/build';
+import { buildRom, defaultSlot, hasSwappedTeams, swappedByTeamSwap, swapProblemText } from '../src/core/build';
 import { parseBw95 } from '../src/core/bw95';
 import { parseCf97 } from '../src/core/cf97';
 
@@ -133,20 +133,21 @@ for (const p of offered(list)) {
   const changed = file.slice();
   changed[10] ^= 1;
   await assert.rejects(checkPatchFile(p, changed), /doesn't match the patch list/);
-  // A patched ROM with swapped teams (the 2026 Season Edition) can't take another swap; the others go to
-  // Team Swap, and with CF97 a swap builds on them.
+  // Every patched ROM takes a team swap, the 2026 Season Edition too: Team Swap swapped its teams, so it
+  // can swap them again. With CF97 a swap builds on it (Pitt's slot → Tulane), and the result takes another.
   const swappedAlready = hasSwappedTeams(out.data);
   const problem = swapProblemText(out.data);
-  if (swappedAlready) assert.match(problem!, /already has swapped teams/);
-  if (cf && !problem) {
+  assert.equal(problem, null);
+  assert.equal(swappedByTeamSwap(out.data), swappedAlready);
+  if (cf) {
     const bwTeams = parseBw95(out.data);
     const cfTeams = parseCf97(cf);
     const tulane = cfTeams.find((t) => t.school === 'Tulane')!;
-    const swapped = buildRom(out.data, bwTeams, cfTeams, [defaultSlot(bwTeams[bwTeams.findIndex((t) => t.school === 'Pitt')], tulane)]).rom;
-    assert.equal(hasSwappedTeams(swapped), true);
-    assert.match(swapProblemText(swapped)!, /already has swapped teams/);
+    const swapped = buildRom(out.data, bwTeams, cfTeams, [defaultSlot(bwTeams[25], tulane)]).rom;
+    assert.equal(swappedByTeamSwap(swapped), true);
+    assert.equal(swapProblemText(swapped), null);
   }
-  ok(`${p.name}: applies to the original ROM, SHA-1 ${p.rom.slice(0, 8)}…${swappedAlready ? ', teams already swapped' : problem ? ` (Team Swap: ${problem})` : cf ? ', takes a team swap' : ''}`);
+  ok(`${p.name}: applies to the original ROM, SHA-1 ${p.rom.slice(0, 8)}…${swappedAlready ? ', teams already swapped' : ''}${cf ? ', takes a team swap' : ''}`);
 }
 
 {
