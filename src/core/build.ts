@@ -9,8 +9,9 @@ import { CITY, MAX_LEN, NAME_CHARS, NICKNAME_FIX, UNIFORM_FIX } from './defaults
 import { CELEBRATION, END_ZONE, HELMET_BASE, MENU_ORDER } from './helpers68k';
 import { buildGenericCelebration, CELEB_ADDR, CELEB_TABLE, defaultCelebration } from './celebration';
 import { bbox, packTiles, Sprite, writeGroups } from './sprites';
-import { rewriteWalsh, WALSH_BASE, WALSH_PTR, WALSH_RELOC } from './walsh';
+import { rewriteWalsh, WALSH_BASE, WALSH_PTR, WALSH_RELOC, type Report } from './walsh';
 import { parseStyle, readStyle, styleProblems, writeStyle } from './styles';
+import { reportProblems } from './walshReports';
 import { ovrFromSim, ratingProblems, readRating, weatherFromWord, writeRating, writeWeather, type Weather } from './teamRatings';
 
 export interface SlotConfig {
@@ -28,6 +29,7 @@ export interface SlotConfig {
   defense?: string; // CPU defense style name (DEFENSE); none = keep the slot's
   ovr?: [number, number]; // team OVR [offense, defense] 0-99 (src/core/teamRatings.ts); none = keep the slot's
   weather?: number[]; // home weather weights [Fair, Windy, Rain, Snow] 0-15; none = keep the slot's
+  walsh?: [string, string]; // Walsh Report [offense, defense] (src/core/walshReports.ts); none = the slot's text with the new names
 }
 
 export interface SwapFile {
@@ -87,6 +89,7 @@ export function validateSlot(sc: SlotConfig): string[] {
     if (v.length > MAX_LEN[k]) errs.push(`${k} is longer than ${MAX_LEN[k]} characters`);
     if (!NAME_CHARS.test(v)) errs.push(`${k} has characters the game font may not have`);
   }
+  if (sc.walsh) for (const p of reportProblems({ offense: sc.walsh[0], defense: sc.walsh[1] })) errs.push(`Walsh Report: ${p}`);
   return errs;
 }
 
@@ -254,7 +257,7 @@ export interface BuildResult {
   rom: Uint8Array;
   blocks: Record<number, BlockInfo>;
   order: number[];
-  walsh: 'unchanged' | 'in place' | 'moved';
+  walsh: 'unchanged' | 'in place' | 'trimmed';
 }
 
 /** The code the swap patches, with the original bytes it must find there. A modded ROM can only
@@ -423,6 +426,7 @@ export function buildRom(base: Uint8Array, bwTeams: BwTeam[], cfTeams: CfTeam[],
       newSchool: sc.school,
       newNickname: sc.nickname,
     })),
+    new Map(swaps.flatMap((sc): [number, Report][] => (sc.walsh ? [[sc.slot, { offense: sc.walsh[0], defense: sc.walsh[1] }]] : []))),
   );
   fixChecksums(rom);
   return { rom, blocks, order, walsh };

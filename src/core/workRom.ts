@@ -2,8 +2,8 @@
 //
 // The three tabs write different bytes (Season: conference names and words, the schedule template
 // and its tables; Teams: the CPU's team set table and the 3-4 roster flags, each team's ratings and
-// home weather (group +0 to +5) and Elevated's OVR table; Rosters: roster records and the OL display
-// tweak; a CFB 27 conversion can set ratings too), so all edit the same buffer in place. Team Swap keeps every
+// home weather (group +0 to +5), Elevated's OVR table and the Walsh Report text; Rosters: roster records
+// and the OL display tweak; a CFB 27 conversion can set ratings too), so all edit the same buffer in place. Team Swap keeps every
 // roster and ratings group per slot, so edits can be carried from one ROM to another of the same
 // game: a new Team Swap result, or another build.
 
@@ -13,13 +13,15 @@ import { dealMode, LOCK_TABLE_SIZE, readSeason, SEASON_AREAS, SLOTS, WEEKS, writ
 import { readStyle, STYLE_RANGES, styleChanges, styleProblems, writeStyle } from './styles';
 import { ratingChanges, ratingProblems, ratingRanges, readRating, readWeather, writeRating, writeWeather } from './teamRatings';
 import { rl, rw } from './bytes';
+import { parseBw95 } from './bw95';
+import { editedReports, readReport, reportLength, REPORT_LIMIT, writeReports, type Report } from './walshReports';
 import type { Game } from './rosterLayouts';
 
 export interface CarryResult {
   rosters: number;
   olTweak: boolean;
   season: boolean;
-  /** Teams whose style, ratings or home weather was carried. */
+  /** Teams whose style, ratings, home weather or Walsh Report was carried. */
   teams: number;
   /** Things that couldn't be carried, as readable lines. */
   skipped: string[];
@@ -50,7 +52,7 @@ const differs = (a: Uint8Array, b: Uint8Array, ranges: [number, number][]) =>
 
 export interface Edits {
   season: boolean;
-  /** The Teams tab's bytes: styles, ratings, home weather. */
+  /** The Teams tab's bytes: styles, ratings, home weather, Walsh Reports. */
   teams: boolean;
   rosters: boolean;
   any: boolean;
@@ -72,10 +74,31 @@ export function editsSince(base: Uint8Array, data: Uint8Array, game: Game): Edit
   if (game === 'bw95') rosterRanges.push([OL_PATCH.site, OL_PATCH.site + 8], [OL_PATCH.hook, OL_PATCH.hook + OL_PATCH.hookCode.length]);
   return {
     season: game === 'bw95' && differs(base, data, seasonRanges(base)),
-    teams: game === 'bw95' && (differs(base, data, STYLE_RANGES) || (!ratingProblems(base).length && differs(base, data, ratingRanges(base)))),
+    teams:
+      game === 'bw95' &&
+      (differs(base, data, STYLE_RANGES) ||
+        (!ratingProblems(base).length && differs(base, data, ratingRanges(base))) ||
+        reportsDiffer(base, data)),
     rosters: differs(base, data, rosterRanges),
     any,
   };
+}
+
+/** Whether a Walsh Report changed (a renamed conference's mention doesn't count: that's the Season tab's). */
+function reportsDiffer(base: Uint8Array, data: Uint8Array): boolean {
+  try {
+    return editedReports(base, data).length > 0 || longTrimmed(base, data);
+  } catch {
+    return false;
+  }
+}
+
+/** The trim the first edit makes to every long report, when that's all that changed. */
+function longTrimmed(base: Uint8Array, data: Uint8Array): boolean {
+  for (let s = 0; s < 36; s++) {
+    if (reportLength(readReport(base, s)) > REPORT_LIMIT && reportLength(readReport(data, s)) <= REPORT_LIMIT) return true;
+  }
+  return false;
 }
 
 /** Download name: the ROM's name with a tag for each tool whose changes it holds. */
@@ -155,6 +178,26 @@ export function carryEdits(from: Uint8Array, to: Uint8Array, fromBase?: Uint8Arr
         teams.forEach((t) => carried.add(t));
       }
     }
+  }
+  // Walsh Reports edited since loading, for slots that still hold the same team (a report is about its team).
+  try {
+    const base = fromBase ?? to;
+    const edited = editedReports(base, from);
+    if (edited.length) {
+      const fromNames = parseBw95(from).map((t) => t.school);
+      const toNames = parseBw95(to).map((t) => t.school);
+      const reports = new Map<number, Report>();
+      for (const t of edited) {
+        if (fromNames[t] === toNames[t]) reports.set(t, readReport(from, t));
+        else res.skipped.push(`Walsh Report of ${fromNames[t]}: its slot now holds ${toNames[t]}`);
+      }
+      if (reports.size) {
+        writeReports(to, reports);
+        reports.forEach((_, t) => carried.add(t));
+      }
+    }
+  } catch (e) {
+    res.skipped.push(`Walsh Reports: ${(e as Error).message}`);
   }
   res.teams = carried.size;
   return res;
