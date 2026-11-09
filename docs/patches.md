@@ -55,7 +55,7 @@ The patches live in the mod's repo, [jd6-37/Bill-Walsh-CFB-95-Elevated](https://
 | `app`, `tool`, `version` | Identify the file. `tool` must be `"patches"`; the app reads `version` 1 only (a change it can't read gets a new version number). |
 | `original` | The ROM every patch applies to: its name and SHA-1. Loading this ROM shows the patch choices. |
 | `contents` | The "What to add" choices (`id`, `label`, optional `about`), in the order shown. The app shows the choice only when the current release offers more than one. |
-| `fatigue` | The "Fatigue" choices, same fields. The app shows only those the picked content has. |
+| `fatigue` | The "Fatigue" choices, same fields. The app shows only those the picked content has, and the choice only when that's more than one (in v1.1.0, only under Fatigue only). |
 | `releases` | Newest first. **The first release is the current one**: only its patches with a `file` are offered. |
 | `releases[].version`, `name`, `date` | Version (`v1.1.0`), the name shown as "Latest release" and in messages, and the release date. |
 | `patches[].content`, `fatigue` | The choice ids the patch belongs to. One patch per combination in the current release. |
