@@ -58,8 +58,8 @@ button, input, select { font: inherit; color: inherit; }
   flex-direction: column;
 }
 .mast-1 { font-size: 30px; color: var(--chalk-dim); }
-.mast-2 { font-size: 46px; }
-.mast-elev { color: #ff4a3d; } /* the mod's red ELEVATED from its title screen */
+.mast-2 { font-size: 46px; color: var(--chalk-dim); }
+.mast-elev { color: #ff2d2d; } /* red like ELEVATED on the mod's title screen (its own #a80020 is too dark here) */
 .mast-3 { font-size: clamp(64px, 11vw, 120px); margin-top: 6px; }
 .lede { max-width: 62ch; margin: 20px 0 0; color: var(--chalk-dim); font-size: 18px; }
 .lede a { color: var(--chalk); text-underline-offset: 3px; }
