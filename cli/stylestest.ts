@@ -186,14 +186,14 @@ for (const rom of [{ name: basename(paths[0]), data: bw }, ...extra]) {
   const work = new Uint8Array(bw);
   writeStyle(work, T('Oklahoma'), { offense: 3, defense: 1 });
   let e = editsSince(base, work, 'bw95');
-  assert.deepEqual({ ...e }, { season: false, styles: true, rosters: false, any: true });
+  assert.deepEqual({ ...e }, { season: false, teams: true, rosters: false, any: true });
   writeSeason(work, setName(readSeason(work), 0, 'SEC'));
   e = editsSince(base, work, 'bw95');
-  assert.deepEqual({ ...e }, { season: true, styles: true, rosters: false, any: true });
-  assert.equal(workFileName('BW [Season] [Styles].md', e), 'BW [Season] [Styles].md');
-  assert.equal(workFileName('BW.md', { season: false, styles: true, rosters: true }), 'BW [Styles] [Rosters].md');
+  assert.deepEqual({ ...e }, { season: true, teams: true, rosters: false, any: true });
+  assert.equal(workFileName('BW [Season] [Styles].md', e), 'BW [Season] [Teams].md');
+  assert.equal(workFileName('BW.md', { season: false, teams: true, rosters: true }), 'BW [Teams] [Rosters].md');
   restoreStyle(work, base, T('Oklahoma'));
-  assert.equal(editsSince(base, work, 'bw95').styles, false);
+  assert.equal(editsSince(base, work, 'bw95').teams, false);
 
   // Carry: with the base, only styles changed since loading go over (a new Team Swap result may
   // set its own); without it, every style that differs.
@@ -206,11 +206,11 @@ for (const rom of [{ name: basename(paths[0]), data: bw }, ...extra]) {
   const swapB = buildRom(bw, bwT, cfT, [{ ...defaultSlot(bwT[army], cfT.find((c) => c.school === 'Indiana')!), offense: 'Multiple' }]).rom;
   const to = new Uint8Array(swapB);
   const r = carryEdits(w, to, swapA);
-  assert.equal(r.styles, 1);
+  assert.equal(r.teams, 1);
   assert.deepEqual(readStyle(to, T('Oklahoma')), { offense: 3, defense: 1 });
   assert.equal(readStyle(to, army).offense, 2, "the new swap's own style stays");
   const to2 = new Uint8Array(swapB);
-  assert.equal(carryEdits(w, to2).styles, 2);
+  assert.equal(carryEdits(w, to2).teams, 2);
   assert.equal(readStyle(to2, army).offense, 1);
   ok('working ROM: style edits tracked and named; carried by slot (changed ones with a base)');
 }
