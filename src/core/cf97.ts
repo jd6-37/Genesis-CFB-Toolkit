@@ -1,6 +1,7 @@
 // College Football USA 97 team records.
 // Pointer table at 0x002CEA: 112 records (111 teams + a "Division 1AA" placeholder).
-// Record header words: [1] -> names (school, stadium, nickname), [3] -> image container.
+// Record header words: [1] -> names (school, stadium, nickname), [2] -> the 4-word group BW95 has too
+// (+0 home weather, +2 offense, +4 defense), [3] -> image container.
 // Image container: {long pal_off, long map_off, word 0x8000 | ntiles}, then compressed tiles.
 // Palette: 3 lines (logo, home uniform, away uniform). Sprite map groups: logo, wordmark, helmet.
 
@@ -23,6 +24,10 @@ export interface CfTeam {
   logo: Sprite[];
   wordmark: Sprite[];
   helmet: Sprite[];
+  /** The record's group: home weather word, offense and defense (0-100, CF97's own 1996 ratings). */
+  weather: number;
+  offense: number;
+  defense: number;
 }
 
 export function readString(d: Uint8Array, a: number): { s: string; next: number } {
@@ -46,6 +51,7 @@ export function parseCf97(d: Uint8Array): CfTeam[] {
       a = next;
     }
     if (names[0] === 'Division 1AA') continue;
+    const grp = r + rw(d, r + 4);
     const c = r + rw(d, r + 6);
     const pal = c + rl(d, c);
     const map = c + rl(d, c + 4);
@@ -67,6 +73,9 @@ export function parseCf97(d: Uint8Array): CfTeam[] {
       logo: g[0],
       wordmark: g[1],
       helmet: g[2],
+      weather: rw(d, grp),
+      offense: rw(d, grp + 2),
+      defense: rw(d, grp + 4),
     });
   }
   return teams;

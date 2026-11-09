@@ -2,19 +2,19 @@
 
 Browser-based modding tools for EA's college football games on the Sega Genesis: Bill Walsh College Football '95, College Football USA 96 and College Football USA 97.
 
-Everything runs in your browser. Your ROMs are opened on your own computer and are never uploaded anywhere. The app contains no ROM data or artwork, apart from a table of how many players the original games have at each rating step (used to convert CFB 27 ratings); you bring your own ROMs.
+Everything runs in your browser. Your ROMs are opened on your own computer and are never uploaded anywhere. The app contains no ROM data or artwork; you bring your own ROMs. It does come with two tables for the College Football 27 roster conversion: how many players the original games have at each rating step, and EA's College Football 27 player ratings (2026 season, Week 9) for the built-in rosters.
 
 ## Tools
 
 - **[Patch](#patch):** start here. Load your Bill Walsh College Football '95 ROM and, if it's the original game, add the latest release of the Elevated mod's patches.
 - **[Team Swap](#team-swap):** swap College Football USA 97 teams into Bill Walsh College Football '95.
 - **[Season](#season):** rename the four conferences, choose which teams play in each, and lock in schedules in Bill Walsh '95.
-- **[Styles](#styles):** choose the offense and defense the computer runs for each Bill Walsh '95 team.
-- **[Rosters](#rosters):** edit the players of Bill Walsh '95, CF96 or CF97, team by team or from a spreadsheet (CSV or Excel), or bring in real College Football 27 rosters.
+- **[Teams](#teams):** for each Bill Walsh '95 team, choose the offense and defense the computer runs, the team's OFF and DEF ratings and the weather in its home games.
+- **[Rosters](#rosters):** edit the players of Bill Walsh '95, CF96 or CF97, team by team or from a spreadsheet (CSV or Excel), or bring in real College Football 27 rosters (built in: 2026 season, Week 9).
 
-Each tool has its own tab. The app opens on Patch; `#swap`, `#season`, `#styles` or `#rosters` at the end of the address opens that tab directly.
+Each tool has its own tab. The app opens on Patch; `#swap`, `#season`, `#teams` or `#rosters` at the end of the address opens that tab directly (`#styles`, the Teams tab's old address, still works).
 
-**Season, Styles and Rosters edit the same ROM.** Load a ROM in any of them, or take the Team Swap result, then switch between them as often as you like. **Download ROM** in any of the three saves everything, named after the ROM with `[Season]`, `[Styles]` and/or `[Rosters]` added. Team Swap uses the ROM from the Patch tab and always starts from an unswapped ROM; if you change the swap and take its result again while you have changes, the app asks: **Keep my edits** puts every team's roster, the conferences and schedules, and the styles you changed into the new ROM, by slot (a swapped team gets the edits made for its slot), or **Start fresh**. The same question comes up when you open another ROM file of the same game.
+**Season, Teams and Rosters edit the same ROM.** Load a ROM in any of them, or take the Team Swap result, then switch between them as often as you like. **Download ROM** in any of the three saves everything, named after the ROM with `[Season]`, `[Teams]` and/or `[Rosters]` added. Team Swap uses the ROM from the Patch tab and always starts from an unswapped ROM; if you change the swap and take its result again while you have changes, the app asks: **Keep my edits** puts every team's roster, the conferences and schedules, and the styles, ratings and weather you changed into the new ROM, by slot (a swapped team gets the edits made for its slot), or **Start fresh**. The same question comes up when you open another ROM file of the same game.
 
 ## Patch
 
@@ -24,7 +24,7 @@ Start here. Load your Bill Walsh College Football '95 ROM (`.md`, `.bin`, `.gen`
 - **A ROM with a released patch:** the app says which release it has, and whether a newer one is out. Patches go onto the original game only, so to update, load the original ROM and patch it here.
 - **Any other modded or edited ROM:** used as it is.
 
-Then **Swap teams** takes the ROM to the Team Swap tab, or **Edit season, styles and rosters** opens it in those tabs. A ROM whose teams are already swapped goes straight to Season, Styles and Rosters. Team Swap always uses the Patch tab's ROM: a Bill Walsh ROM you load in the Team Swap tab shows up in the Patch tab too.
+Then **Swap teams** takes the ROM to the Team Swap tab, or **Edit season, teams and rosters** opens it in those tabs. A ROM whose teams are already swapped goes straight to Season, Teams and Rosters. Team Swap always uses the Patch tab's ROM: a Bill Walsh ROM you load in the Team Swap tab shows up in the Patch tab too.
 
 ### How it works
 
@@ -32,8 +32,8 @@ The mod's GitHub repo has a patch list, `patches.json`: the latest release's pat
 
 ### Testing
 
-- `npm run test:patch` (see [Development](#development)): the BPS code with patches that use every BPS command, damaged patches and patches for another ROM; the repo's patch list and broken ones; each listed patch applied to the original ROM gives the SHA-1 in the list, and the patched ROM takes a team swap (the 2026 Season Edition, whose teams are already swapped, goes straight to Season, Styles and Rosters).
-- In the browser: both v1.0 patches downloaded from GitHub and applied (SHA-1s as in the list), the patched ROM taken to Team Swap (Pitt → Tulane, identical to the CLI build) and to Season, Styles and Rosters; v1.0, Elevated beta and already swapped ROMs loaded directly; the patch list unreachable (a `.bps` file still works); a damaged `.bps` file; phone layout.
+- `npm run test:patch` (see [Development](#development)): the BPS code with patches that use every BPS command, damaged patches and patches for another ROM; the repo's patch list and broken ones; each listed patch applied to the original ROM gives the SHA-1 in the list, and the patched ROM takes a team swap (the 2026 Season Edition, whose teams are already swapped, goes straight to Season, Teams and Rosters).
+- In the browser: both v1.0 patches downloaded from GitHub and applied (SHA-1s as in the list), the patched ROM taken to Team Swap (Pitt → Tulane, identical to the CLI build) and to Season, Teams and Rosters; v1.0, Elevated beta and already swapped ROMs loaded directly; the patch list unreachable (a `.bps` file still works); a damaged `.bps` file; phone layout.
 
 ## Team Swap
 
@@ -45,7 +45,8 @@ Pick any of BW95's 36 teams, choose a CF97 team to replace it with, adjust the n
 - School name, city and nickname. CF97 stores each team's stadium rather than its city, so the city Bill Walsh welcomes you to is filled in for you.
 - Home and away uniform colors, mapped from CF97's uniforms and editable with a Genesis color picker.
 - End zone color for the team's home games.
-- The computer's offense and defense style for the team (optional; see [Styles](#styles)). By default the new team keeps the old team's styles.
+- The computer's offense and defense style for the team (optional; see [Teams](#styles)). By default the new team keeps the old team's styles.
+- The team's OFF and DEF ratings and its home weather (see [Teams](#off-and-def)): by default the CF97 team's own (its 1996 ratings, and its weather, e.g. Tulane OFF 74 DEF 75, fair 90% of home games), editable in the team's edit screen. Simulated games, the preseason poll and Elevated's Game Setup use them. Converting the rosters to College Football 27 sets OFF and DEF from the new players. A swap file saved before this keeps the old team's.
 - The end-of-season celebration: swapped teams get a "GO TEAM!" card stunt in their own colors (cards, skirts and pom-poms, tops; editable, with a preview).
 - The team menus stay alphabetical with the new names.
 - The Walsh Report uses the new names.
@@ -53,7 +54,7 @@ Pick any of BW95's 36 teams, choose a CF97 team to replace it with, adjust the n
 ### What stays the same
 
 - Schedules, rankings, conferences and battery saves: the new team plays in the old team's slot (change conferences and schedules in the [Season](#season) tab).
-- Rosters (edit them in the [Rosters](#rosters) tab, which can open the swapped ROM directly).
+- Rosters (edit them in the [Rosters](#rosters) tab, which can open the swapped ROM directly; its **CFB 27 rosters (2026, Week 9)** button gives every team its current players).
 - The Walsh Report keeps the original team's scouting text, with the names changed.
 - Teams you don't swap keep their own celebrations.
 
@@ -84,7 +85,7 @@ Other Bill Walsh '95 ROMs with a mod work too, such as Elevated v1.1 (checked wi
   - `0x1F0300` helmet tile base on the setup screen, so helmets of up to 36 tiles fit (the stock layout leaves 32).
   - `0x1F0320` celebration colors: when the generic card stunt plays, palette entries 9, 10 and 13 are replaced with the winning team's colors.
 - **Walsh Report:** the swapped teams' paragraphs get the new names, and the text block stays where it is: if it gets longer, some two-space sentence gaps become one space; if it gets shorter, the leftover bytes after the last paragraph are filled with spaces. Only if very long names still don't fit is the block moved to `0x1F8000` (its only reference is the pointer at `0x078FC0`).
-- **ROM space:** the swap uses about 4.4 KB of unused ROM (`0x1EEF00`-`0x1EFF17` and `0x1F0000`-`0x1F043B`), and checks that it's unused before writing. The Rosters tool's OL weight tweak uses `0x1EFF20`-`0x1EFF3D` (see [Rosters](#how-it-works-2)) and the Season tool's locked-team table `0x1EFF40`-`0x1EFF87` (see [Season](#how-it-works-1)).
+- **ROM space:** the swap uses about 4.4 KB of unused ROM (`0x1EEF00`-`0x1EFF17` and `0x1F0000`-`0x1F043B`), and checks that it's unused before writing. The Rosters tool's OL weight tweak uses `0x1EFF20`-`0x1EFF3D` (see [Rosters](#how-it-works-3)) and the Season tool's locked-team table `0x1EFF40`-`0x1EFF87` (see [Season](#how-it-works-1)).
 - **Celebration:** one "GO TEAM!" card stunt at `0x1EEF00`, built from your BW95 ROM: Pitt's "GO PITT!" card stunt with four cards re-lettered, using letters copied from Pitt's and Texas A&M's cards. Swapped teams' entries in the celebration table (`0x034A68`) point to it.
 - **Checksums:** EA's boot check (the sum at `0x1E6430`) and the Genesis header checksum are recomputed.
 
@@ -139,9 +140,14 @@ Bill Walsh '95 has no fixed schedules. When you start a New Season, it deals eac
 
 Not tested: playing through a season with an edited schedule (the emulator used has no battery save, so a season can't get past "Saving Season Games"), bowls with other conference sizes (checked in the code only), and real hardware.
 
-## Styles
+## Teams
 
-In Bill Walsh '95 the computer calls plays by its team's **style**: one of five offenses and one of three defenses. The style decides which formations it uses on each down; it belongs to the team's slot, so a team swapped in plays the old team's style until you change it. The Styles tab lists all 36 teams with an offense and a defense for each. You can also set them in a swapped team's edit screen in Team Swap, and for the team on screen in the Rosters tab.
+The Teams tab lists all 36 teams of a Bill Walsh '95 ROM with the settings that belong to a team rather than its players: the offense and defense the computer runs, the team's OFF and DEF ratings, and its home weather. Undo puts a team back as the ROM was loaded.
+
+<a id="styles"></a>
+### Styles
+
+In Bill Walsh '95 the computer calls plays by its team's **style**: one of five offenses and one of three defenses. The style decides which formations it uses on each down; it belongs to the team's slot, so a team swapped in plays the old team's style until you change it. You can also set them in a swapped team's edit screen in Team Swap, and for the team on screen in the Rosters tab.
 
 | Offense | Formations the computer calls | Original teams |
 |---|---|---|
@@ -163,7 +169,22 @@ Every style uses Goal Line defense near the goal and short yardage, Dime on 4th 
   - Older ROMs (the original game, and Elevated up to beta.6) still have the original game's two layouts: slot 21 is a tackle (RDT) on 4-3 teams and an inside linebacker (RILB) on 3-4 teams. On those, switching a team between 3-4 and 4-3 switches its layout too (the Rosters tab and its imports follow), but the player in slot 21 is still the one picked for the old defense, so re-import the team's roster.
 - The Walsh Report's scouting text isn't changed (it describes some teams' offenses).
 
-**College Football 27 reference:** below the teams, a searchable table lists every FBS team in College Football 27 (as of November 2026) with its offense style, its defensive playbook and the Bill Walsh '95 styles recommended for it. **Apply recommended styles** sets them for every team on the ROM that's in College Football 27 (matched by school name, including College Football USA 97's spellings such as USMA for Army); Undo puts back the styles the ROM was loaded with. The recommendations follow these rules:
+### OFF and DEF
+
+Every team has an offense and a defense rating. The season's simulated games (computer against computer) and the preseason poll use them; the original game's are EA's own numbers, not worked out from the rosters. **Elevated v1.1.0** shows them under each team on Game Setup as team OVRs ("OFF 80 DEF 75"), and fixes the original game's simulation, which read each team's ratings the wrong way round.
+
+The app shows and edits them as OVRs, 0-99. The game itself keeps a 0-100 rating that follows the OVR on a fixed line (OVR 62 = 0, OVR 98 = 100, about the original game's spread); Elevated v1.1.0 keeps the OVRs too, in its own table. On other ROMs only OVRs from 62 to 98 are stored exactly.
+
+- **Team Swap:** a swapped team gets its College Football USA 97 ratings by default.
+- **College Football 27 rosters:** the conversion sets each converted team's OVRs from its starters, the way the Elevated 2026 Season Edition was made: the best player by Overall at QB, HB, 3 WR, TE and the five line spots (OFF) and at LE, RE, 2 DT, the three linebackers, 2 CB, FS and SS (DEF); OVR = 65 + 3 × (their average Overall − 77).
+
+### Home weather
+
+Each team has four weights, 0-15, for how often a season home game is Fair, Windy, Rainy or Snowy (the original teams' add up to 10, e.g. Washington 1-2-7-0, Wisconsin 1-1-1-7, Texas 9-1-0-0). The tab shows the chances as percentages. Exhibition games use the weather picked on Game Setup. A swapped team gets its College Football USA 97 weather by default.
+
+### College Football 27 reference
+
+Below the teams, a searchable table lists every FBS team in College Football 27 (as of November 2026) with its offense style, its defensive playbook and the Bill Walsh '95 styles recommended for it. **Apply recommended styles** sets them for every team on the ROM that's in College Football 27 (matched by school name, including College Football USA 97's spellings such as USMA for Army); Undo puts back the styles the ROM was loaded with. The recommendations follow these rules:
 
 | College Football 27 | Bill Walsh '95 |
 |---|---|
@@ -178,6 +199,7 @@ Every style uses Goal Line defense near the goal and short yardage, Dime on 4th 
 
 ### How it works
 
+- **Ratings and weather:** each team block has a 4-word group (header word 3): home weather (one nibble per kind, Fair to Snow), offense, defense, conference (the Season tab's). Team Swap keeps the group with the slot. Elevated v1.1.0's OVR table is at `0x10DFB0` ("OVR1", then OFF and DEF bytes for the 36 slots); the app writes it only when it's there.
 - **Team sets:** the computer's play-calling rules test a team's membership in 8 sets, kept as a bit table at `0x062D87` (8 bytes per set, team t = bit t & 7 of byte t >> 3; its offset is the 8th word of the rule table at `0x06106E`). Offense: sets 0-3 = Option, Pro Style, Multiple, Shotgun; a team in none of them runs Power. Defense: sets 5-7 = 3-4, 4-3, Multiple. Set 4 is tested by no rule and left alone.
 - **A style change** puts the team in exactly one offense set (none for Power) and exactly one defense set. On ROMs with the two original roster layouts (not Elevated beta.7+) it also sets the team's bit in the 3-4 roster flags (`0x061068`, clear = 3-4). Nothing else changes, and no free space is used. The app checks that the table is where the original game has it and that its unused bits are clear before writing.
 - **Veer:** Elevated v1.1.0-beta.6 and later give the Option and Power styles the Veer plays; the app recognizes them by their play-list jump at `0x079AAE`.
@@ -187,7 +209,9 @@ Every style uses Goal Line defense near the goal and short yardage, Dime on 4th 
 
 - 10 Node tests: the original ROM reads as the game's documented teams and styles; every style on every team on the original ROM, Rebalanced v1.0, Elevated beta.11 and its Tulane build reads back, changes only the style table (and the 3-4 flags on the original layout), and undoes exactly; damaged tables are refused; Team Swap builds without styles are unchanged, with styles only the style bytes change; style edits are tracked, named and carried to a new Team Swap result; the College Football 27 table gives the agreed totals, and every original team and every College Football USA 97 team but Idaho (not in College Football 27) finds its match.
 - In an emulator (Genesis Plus GX), the title screen's demo games (computer against computer, about 275 play calls per ROM, three matchups each) on test ROMs where every team has one style. Original ROM, every team Option and 4-3: only Wishbone, Flexbone and Goal Line plays, and only 4-3, Nickel, Dime and Goal Line defenses (Notre Dame and Oklahoma included, normally 3-4). Every team Shotgun and 3-4: only I-Form, Pro Form, Shotgun (39 calls), Near, Far and Goal Line plays, and only 3-4, Nickel, Dime and Goal Line defenses. Elevated beta.11, every team Option and Multiple: Veer 71 times besides Wishbone, Flexbone and Goal Line, and 4-3 (77) and 3-4 (69) fronts about half and half with a few 4-4 calls.
-- ROMs downloaded from the app are byte-identical to the same changes made with the command-line tools: a Team Swap with styles, style changes in the Styles and Rosters tabs on a Team Swap result, those changes kept after changing the swap, and Apply recommended styles on the original ROM and on a Team Swap result.
+- ROMs downloaded from the app are byte-identical to the same changes made with the command-line tools: a Team Swap with styles, style changes in the Teams and Rosters tabs on a Team Swap result, those changes kept after changing the swap, and Apply recommended styles on the original ROM and on a Team Swap result.
+- Ratings and weather, 7 Node tests (`npm run test:teams`): the original ROM's words and weather read as documented; OVRs 62-98 round-trip on ROMs without the OVR table, and only the team's group changes; on Elevated v1.1.0 a change writes the OVR table and the words and nothing else; on the Elevated 2026 Season Edition, the built-in Week 9 data gives all 36 teams' OVRs and words exactly as the ROM has them; Team Swap gives Tulane 74/75 and 9-1-0-0 by default, keeps edits, and builds swap files saved before this exactly as before; the CFB 27 conversion sets OFF and DEF and the change is tracked and kept by slot; bad values are refused.
+- In the browser, on Elevated v1.1.0: Pitt → Tulane with OFF 80 and Rain 3 in the edit screen, then Navy's DEF and weather in the Teams tab, then the built-in Week 9 rosters for all 36 teams: each download is byte-identical to `cli/build.ts`, `cli/teams.ts` and `cli/cfb27.ts`. In an emulator, that ROM's Game Setup shows "OFF 80 DEF 75" under Tulane.
 
 Not tested: real hardware.
 
@@ -211,12 +235,13 @@ Players in these games have no names, only numbers. Each rating is a step from 0
 
 ### CFB 27 rosters
 
-Bring in real rosters from EA Sports College Football 27: a CSV with one row per player and the column names of EA's ratings site (ea.com/games/ea-sports-college-football/ratings): Team, Name, Position, Overall, Jersey Number, Weight, EA Player ID, Speed, Acceleration, Agility, Strength, Awareness, Play Recognition, Catching, Carrying, Throw Power, Throw Accuracy Short, Mid and Deep, Break Tackle, Trucking, Run Block, Pass Block, Run Block Power, Pass Block Power, Power Moves, Block Shedding, Tackle, Hit Power, Pursuit, Kick Power, Kick Accuracy, Lead Block. Other columns are fine and ignored. The app doesn't come with the data.
+Bring in real rosters from EA Sports College Football 27. **CFB 27 rosters (2026, Week 9)** uses the ratings built into the app: EA's as of Week 9 of the 2026 season, the newest when this version was made. **Import spreadsheet** also takes another export: a CSV with one row per player and the column names of EA's ratings site (ea.com/games/ea-sports-college-football/ratings): Team, Name, Position, Overall, Jersey Number, Weight, EA Player ID, Speed, Acceleration, Agility, Strength, Awareness, Play Recognition, Catching, Carrying, Throw Power, Throw Accuracy Short, Mid and Deep, Break Tackle, Trucking, Run Block, Pass Block, Run Block Power, Pass Block Power, Power Moves, Block Shedding, Tackle, Hit Power, Pursuit, Kick Power, Kick Accuracy, Lead Block. Other columns are fine and ignored.
 
 - **Each team gets its own players.** The best CFB 27 players at each position fill the team's slots, with their real jersey numbers. If a school has nobody for a slot, a player from a nearby position fills it (most schools have no fullback, so the best blocking back or tight end plays FB; Air Force's punter also kicks).
 - **The game plays the same.** CFB 27 decides who is better than whom; the original game decides how many players get each rating. For every position and rating, the players are ranked and given the original game's own ratings in that order, so a team of elite linebackers gets elite linebackers, while the league as a whole keeps the original spread (as many 100-speed corners as before, and so on).
 - **Any number of schools.** The file can have one school or all of them; teams that aren't in it keep their rosters, and you pick which of the found teams to write before anything changes. Ratings are ranked among the players in the file. School names: the ROM's, plus CFB 27's Cal and Pittsburgh. A team-swapped slot takes its new school.
 - **Linemen's weight.** Today's offensive linemen are about 25 lb heavier than the original game's, but weight matters in line play, so the conversion keeps the original weights. By default it also makes the roster screen show offensive linemen 25 lb heavier (display only; the game plays the same). The editor and the CSV export show the same numbers as the screen.
+- **Team ratings.** By default the conversion also sets each converted team's [OFF and DEF](#off-and-def) from its new starters (the list of teams shows them first).
 - Works with the original ROM, Elevated (its DT1/DT2, MLB1/MLB2 defense) and Team Swap results. CF96 and CF97 are planned.
 
 ### Spreadsheets by position
@@ -303,17 +328,19 @@ npm run test:season -- BW95.md CF97.md [Elevated.md …]
 npx tsx cli/season.ts BW95.md out.md spec.json
 ```
 
-How the Styles tool works: [docs/styles.md](docs/styles.md). Its tests take the same ROMs as the Season tests; `cli/styles.ts` lists or changes a ROM's styles, and `cli/build.ts --style Pitt=Option,3-4` sets a swapped team's:
+How the Teams tab works: styles in [docs/styles.md](docs/styles.md), ratings and weather in [docs/teams.md](docs/teams.md). The style tests take the same ROMs as the Season tests; the ratings tests take the original ROM, CF97 and the two Elevated v1.1.0 editions. `cli/styles.ts` lists or changes a ROM's styles, `cli/teams.ts` its styles, OVRs and weather, and `cli/build.ts --style Pitt=Option,3-4` sets a swapped team's styles:
 
 ```sh
 npm run test:styles -- BW95.md CF97.md [Elevated.md …]
+npm run test:teams -- BW95.md CF97.md Elevated.md Elevated-2026.md
 npx tsx cli/styles.ts BW95.md out.md "Florida State=Option,3-4" "Navy=,Multiple"
+npx tsx cli/teams.ts BW95.md out.md --ovr "Navy=75,85" --weather "Navy=5,2,2,1" --style "Navy=Option,3-4"
 ```
 
 The CFB 27 conversion also runs from the command line, and the stock rating table can be rebuilt from the three original ROMs:
 
 ```sh
-npx tsx cli/cfb27.ts "Bill Walsh College Football 95 (USA).md" cfb27-ratings.csv rosters.md [--no-ol-tweak] [--teams "Texas,Ohio State"]
+npx tsx cli/cfb27.ts "Bill Walsh College Football 95 (USA).md" public/data/ea-cfb27-ratings-2026-week9.csv rosters.md [--no-ol-tweak] [--no-ratings] [--teams "Texas,Ohio State"]
 npx tsx cli/stockdists.ts src/core/rosterStockDists.json BW95.md CF96.md CF97.md
 ```
 

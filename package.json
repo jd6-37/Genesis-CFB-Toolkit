@@ -12,6 +12,7 @@
     "test:rosters": "tsx cli/rostertest.ts",
     "test:season": "tsx cli/seasontest.ts",
     "test:styles": "tsx cli/stylestest.ts",
+    "test:teams": "tsx cli/teamstest.ts",
     "test:patch": "tsx cli/patchtest.ts"
   },
   "dependencies": {

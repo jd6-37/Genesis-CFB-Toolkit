@@ -241,20 +241,21 @@ ok(`unchanged setup writes back byte-identical (${1 + extra.length} ROM${extra.l
   };
   const one = swap([['Pitt', 'Tulane']]);
   const work = new Uint8Array(one);
-  assert.deepEqual(editsSince(one, work, 'bw95'), { season: false, styles: false, rosters: false, any: false });
+  assert.deepEqual(editsSince(one, work, 'bw95'), { season: false, teams: false, rosters: false, any: false });
   writeSeason(work, setGame(lockTeam(readSeason(work), T('Pitt')), T('Pitt'), 0, { team: T('Alabama') }, names).season);
-  assert.deepEqual(editsSince(one, work, 'bw95'), { season: true, styles: false, rosters: false, any: true });
+  assert.deepEqual(editsSince(one, work, 'bw95'), { season: true, teams: false, rosters: false, any: true });
   const rom = openRosterRom(work, true);
   work[rom.teams[T('Texas')].rosterOffset + 1] ^= 0x11; // a roster edit
   installOlPatch(work);
-  assert.deepEqual(editsSince(one, work, 'bw95'), { season: true, styles: false, rosters: true, any: true });
+  assert.deepEqual(editsSince(one, work, 'bw95'), { season: true, teams: false, rosters: true, any: true });
   assert.equal(workFileName('X [Team Swap] [Season] [Rosters].md', { season: true, rosters: true }), 'X [Team Swap] [Season] [Rosters].md');
   assert.equal(workFileName('X [Rosters].md', { season: true, rosters: false }), 'X [Season].md');
   // A new swap (two teams) with the edits kept: same season and rosters by slot, the tweak too.
   const two = swap([['Pitt', 'Tulane'], ['Wisconsin', 'Idaho']]);
   const kept = new Uint8Array(two);
-  const res = carryEdits(work, kept);
-  assert.deepEqual(res, { rosters: 36, olTweak: true, season: true, styles: 0, skipped: [] });
+  // With the base the app passes (the ROM as loaded), Idaho's own ratings and weather from the new swap stay.
+  const res = carryEdits(work, kept, one);
+  assert.deepEqual(res, { rosters: 36, olTweak: true, season: true, teams: 0, skipped: [] });
   sameSeason(readSeason(kept), readSeason(work));
   const a = openRosterRom(work), b2 = openRosterRom(kept);
   for (let t = 0; t < 36; t++) {

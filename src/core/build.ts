@@ -11,6 +11,7 @@ import { buildGenericCelebration, CELEB_ADDR, CELEB_TABLE, defaultCelebration } 
 import { bbox, packTiles, Sprite, writeGroups } from './sprites';
 import { rewriteWalsh } from './walsh';
 import { parseStyle, readStyle, styleProblems, writeStyle } from './styles';
+import { ovrFromSim, ratingProblems, readRating, weatherFromWord, writeRating, writeWeather, type Weather } from './teamRatings';
 
 export interface SlotConfig {
   slot: number; // BW95 team index 0-35
@@ -25,6 +26,8 @@ export interface SlotConfig {
   celebration?: number[]; // [cards, skirts and pom-poms, tops] for the GO TEAM! card stunt
   offense?: string; // CPU offense style name (src/core/styles.ts OFFENSE); none = keep the slot's
   defense?: string; // CPU defense style name (DEFENSE); none = keep the slot's
+  ovr?: [number, number]; // team OVR [offense, defense] 0-99 (src/core/teamRatings.ts); none = keep the slot's
+  weather?: number[]; // home weather weights [Fair, Windy, Rain, Snow] 0-15; none = keep the slot's
 }
 
 export interface SwapFile {
@@ -70,6 +73,9 @@ export function defaultSlot(bw: BwTeam, cf: CfTeam): SlotConfig {
     away,
     endZone: fix?.endZone ?? defaultEndZone(home),
     celebration: defaultCelebration(home),
+    // The new team's own ratings and weather from CF97 (its 1996 ratings, on the same 0-100 scale).
+    ovr: [ovrFromSim(cf.offense), ovrFromSim(cf.defense)],
+    weather: weatherFromWord(cf.weather),
   };
 }
 
@@ -333,6 +339,18 @@ export function buildRom(base: Uint8Array, bwTeams: BwTeam[], cfTeams: CfTeam[],
         offense: sc.offense === undefined ? now.offense : parseStyle('offense', sc.offense),
         defense: sc.defense === undefined ? now.defense : parseStyle('defense', sc.defense),
       });
+    }
+  }
+  const rated = swaps.filter((sc) => sc.ovr !== undefined || sc.weather !== undefined);
+  if (rated.length) {
+    const p = ratingProblems(rom);
+    if (p.length) throw new Error(`Team ratings can't be changed in this ROM: ${p.join('; ')}.`);
+    for (const sc of rated) {
+      if (sc.ovr) {
+        const now = readRating(rom, sc.slot);
+        writeRating(rom, sc.slot, { off: sc.ovr[0] ?? now.off, def: sc.ovr[1] ?? now.def });
+      }
+      if (sc.weather) writeWeather(rom, sc.slot, sc.weather.slice(0, 4) as Weather);
     }
   }
   const order = menuOrder(finalNames, used);

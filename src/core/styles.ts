@@ -1,5 +1,5 @@
 // BW95 team styles: which CPU offense and defense each team runs. Pure functions, no DOM: used by
-// the Team Swap build, the Styles tab, the Rosters tab and the Node CLI.
+// the Team Swap build, the Teams tab, the Rosters tab and the Node CLI.
 //
 // The game keeps 8 team sets in one bit table (team t is in set s when bit t & 7 of byte
 // TABLE + 8·s + (t >> 3) is set). The CPU's play-calling rules test them:

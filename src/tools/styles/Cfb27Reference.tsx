@@ -1,4 +1,4 @@
-// The Styles tab's College Football 27 reference: every CFB 27 team's offense style and defensive
+// The Teams tab's College Football 27 reference: every CFB 27 team's offense style and defensive
 // playbook, and the Bill Walsh '95 styles recommended for it (src/core/cfb27Styles.ts).
 import { useMemo, useState } from 'react';
 import { CFB27, OFFENSE_FOR } from '../../core/cfb27Styles';

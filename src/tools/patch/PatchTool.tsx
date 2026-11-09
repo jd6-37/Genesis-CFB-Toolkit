@@ -1,6 +1,6 @@
 // The Patch tab, the first step: load a BW95 ROM; if it's the original game, add one of the mod's
 // released patches (read from the Elevated repo's patches.json) or a .bps file; then take the ROM on
-// to Team Swap, or to Season, Styles and Rosters.
+// to Team Swap, or to Season, Teams and Rosters.
 import { useEffect, useMemo, useState } from 'react';
 import { applyBps, BpsError } from '../../core/bps';
 import { sha1Hex } from '../../core/bytes';
@@ -179,7 +179,7 @@ export function PatchTool({ api, onSwap, onEdit }: { api: PatchApi; onSwap: () =
         <h2>Patch</h2>
         <p>
           Start here. Load your Bill Walsh College Football '95 ROM. If it's the original game, add one of the mod's
-          patches below. Then take the ROM on to Team Swap, Season, Styles and Rosters.
+          patches below. Then take the ROM on to Team Swap, Season, Teams and Rosters.
         </p>
       </section>
 
@@ -368,7 +368,7 @@ function NextSteps({ rom, onSwap, onEdit }: { rom: OpenedRom; onSwap: () => void
       <ul>
         {swapped ? (
           <li className="pat-step">
-            <p className="hint">This ROM's teams are already swapped, so it goes straight to Season, Styles and Rosters.</p>
+            <p className="hint">This ROM's teams are already swapped, so it goes straight to Season, Teams and Rosters.</p>
           </li>
         ) : problem ? (
           <li className="pat-step">
@@ -386,10 +386,10 @@ function NextSteps({ rom, onSwap, onEdit }: { rom: OpenedRom; onSwap: () => void
         )}
         <li className="pat-step">
           <button className="btn" onClick={onEdit}>
-            Edit season, styles and rosters
+            Edit season, teams and rosters
           </button>
           <p className="hint">
-            Opens this ROM in the Season, Styles and Rosters tabs.
+            Opens this ROM in the Season, Teams and Rosters tabs.
             {!swapped && !problem && ' If you also swap teams, do that first: those tabs can take the Team Swap result.'}
           </p>
         </li>

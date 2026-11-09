@@ -1,6 +1,6 @@
 # Patch tab
 
-The Patch tab is the toolkit's first step: the user loads a Bill Walsh College Football '95 ROM, adds one of the Elevated mod's released patches if it's the original game, and takes the ROM on to Team Swap, or to Season, Styles and Rosters.
+The Patch tab is the toolkit's first step: the user loads a Bill Walsh College Football '95 ROM, adds one of the Elevated mod's released patches if it's the original game, and takes the ROM on to Team Swap, or to Season, Teams and Rosters.
 
 Code: `src/core/bps.ts` (BPS patches), `src/core/patches.ts` (the patch list), `src/tools/patch/PatchTool.tsx` (the tab and the `usePatchRom` hook that `App.tsx` shares with Team Swap). Tests: `cli/patchtest.ts`.
 
@@ -86,9 +86,9 @@ The patched ROM is named after the patch file, with `.md` for `.bps` (`Bill_Wals
 - The original game (by SHA-1): the patch choices, plus **Use a .bps file**.
 - A ROM whose SHA-1 is in the list: "already has the latest release" or, for an older release, which newer release is out and that updating starts from the original ROM.
 - Any other BW95 ROM (by its header): used as it is.
-- `hasSwappedTeams` (`src/core/build.ts`: the menu-order area at `0x1F0000` is in use) decides the next step: a ROM with swapped teams goes straight to Season, Styles and Rosters, since Team Swap can't run twice. Otherwise `swapProblemText` says whether Team Swap can take it.
+- `hasSwappedTeams` (`src/core/build.ts`: the menu-order area at `0x1F0000` is in use) decides the next step: a ROM with swapped teams goes straight to Season, Teams and Rosters, since Team Swap can't run twice. Otherwise `swapProblemText` says whether Team Swap can take it.
 
-Team Swap uses the Patch tab's ROM: `App.tsx` passes every BW95 ROM loaded in the Team Swap tab to the hook (`open`), and builds on whatever ROM the hook holds. The team choices are kept when the new ROM has the same 36 teams (patching doesn't change them). **Edit season, styles and rosters** hands the ROM to the shared working ROM (`takeRom` in `src/tools/shared/WorkRom.tsx`), which asks first if the working ROM has unsaved changes.
+Team Swap uses the Patch tab's ROM: `App.tsx` passes every BW95 ROM loaded in the Team Swap tab to the hook (`open`), and builds on whatever ROM the hook holds. The team choices are kept when the new ROM has the same 36 teams (patching doesn't change them). **Edit season, teams and rosters** hands the ROM to the shared working ROM (`takeRom` in `src/tools/shared/WorkRom.tsx`), which asks first if the working ROM has unsaved changes.
 
 ## Tests
 

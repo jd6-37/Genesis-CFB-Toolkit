@@ -1,17 +1,17 @@
 # Styles: technical reference
 
-How the Styles tool (and the style selects in Team Swap and Rosters) reads and changes the computer's offense and defense styles in Bill Walsh College Football '95. User-facing description: [README, Styles](../README.md#styles).
+How the Teams tab's style selects (and the ones in Team Swap and Rosters) reads and changes the computer's offense and defense styles in Bill Walsh College Football '95. User-facing description: [README, Teams](../README.md#teams). Ratings and home weather, the tab's other columns: [docs/teams.md](teams.md).
 
 ## Files
 
 | File | What |
 |---|---|
 | `src/core/styles.ts` | Read, write and check styles; style names and hints. No DOM. |
-| `src/tools/styles/StylesTool.tsx`, `teamstyles.css` | The Styles tab: all 36 teams in a table, what each style calls beside it, undo, dock. |
-| `src/tools/styles/StylePicks.tsx` | The two selects, used by the Styles tab, the Team Swap edit screen and the Rosters bar. |
+| `src/tools/styles/TeamsTool.tsx`, `teamstyles.css` | The Teams tab (the Styles tab before it took ratings and weather): all 36 teams in a table, what each style calls under it, undo, dock. |
+| `src/tools/styles/StylePicks.tsx` | The two selects, used by the Teams tab, the Team Swap edit screen and the Rosters bar. |
 | `src/core/cfb27Styles.ts`, `src/tools/styles/Cfb27Reference.tsx` | The College Football 27 reference table: each team's offense style and defensive playbook, the recommended BW95 styles, name matching, and the table (search, "only teams on this ROM"). |
 | `src/core/build.ts` | `SlotConfig.offense` / `defense` (optional style names); `buildRom` writes them. |
-| `src/core/workRom.ts` | `editsSince` (`styles`), `workFileName` (`[Styles]`), `carryEdits` (changed styles). |
+| `src/core/workRom.ts` | `editsSince` (`teams`), `workFileName` (`[Teams]`; `[Styles]` before), `carryEdits` (changed styles). |
 | `cli/styles.ts` | Lists or changes a ROM's styles. |
 | `cli/stylestest.ts` | Tests (`npm run test:styles -- BW95 CF97 [more BW95 ROMs]`). |
 
@@ -44,7 +44,7 @@ No free space is used. The callers fix the checksums when saving.
 ## Where styles are edited
 
 - **Team Swap:** each swapped team's edit screen has the two selects, defaulting to the slot's own styles (marked with the original team's name). A changed select stores both style names in the slot's `SlotConfig` (`"offense": "Pro Style", "defense": "4-3"`), so they go into swap files. Swap files without them still load, and leave the slot's styles. `buildRom` writes them after the team blocks.
-- **Styles tab:** the working ROM's 36 teams in alphabetical order, with Undo per team and for all. Writes straight into the working ROM.
+- **Teams tab:** the working ROM's 36 teams in alphabetical order, with Undo per team and for all. Writes straight into the working ROM.
 - **Rosters tab:** the selects in the team bar, for the team on screen. On the original layout the 3-4 flags are re-read on every render (`refreshThreeFour`), so a change in either tab relabels the grid.
 
 ## College Football 27 reference
@@ -76,7 +76,7 @@ Emulator check (stable-retro, Genesis Plus GX): the title screen runs demo games
 
 Matchups included Notre Dame at Florida State, Florida State and Oklahoma, Air Force and Boston College (original), Auburn and Arizona, Georgia and USC, Clemson and BYU, North Carolina and California. No call fell outside its style. In the original game these teams run other styles (for example Notre Dame Power, with Trap and Tee, and a 3-4; Florida State Pro Style and a 4-3).
 
-Browser (Playwright on `vite preview`): Pitt → Tulane with Option and 3-4 in the edit screen downloads the same bytes as `cli/build.ts --pair Pitt=Tulane --style Pitt=Option,3-4`; the swap file holds the styles and loads back; on that result, Oklahoma changed in the Styles tab and Florida State's defense in the Rosters bar (the grid's slot 21 label turns from RDT to RILB) download the same bytes as `cli/styles.ts`; after adding Wisconsin → Idaho and keeping the edits, the download equals the new swap with the two changes; Undo; Elevated beta.11 shows Veer in the Option and Power hints; CF97 gets a message; phone layout; no console errors.
+Browser (Playwright on `vite preview`): Pitt → Tulane with Option and 3-4 in the edit screen downloads the same bytes as `cli/build.ts --pair Pitt=Tulane --style Pitt=Option,3-4`; the swap file holds the styles and loads back; on that result, Oklahoma changed in the Styles (now Teams) tab and Florida State's defense in the Rosters bar (the grid's slot 21 label turns from RDT to RILB) download the same bytes as `cli/styles.ts`; after adding Wisconsin → Idaho and keeping the edits, the download equals the new swap with the two changes; Undo; Elevated beta.11 shows Veer in the Option and Power hints; CF97 gets a message; phone layout; no console errors.
 
 Apply recommended styles in the browser: on the original ROM (28 teams changed) and on a Pitt → Tulane Team Swap result (29), the downloads equal applying `findCfb27` + `writeStyle` in Node; pressing it again reports nothing to change; beta.11 (28); no source names in the page; phone layout (the shared ROM card now drops to one column under 900 px, and long file names wrap).
 

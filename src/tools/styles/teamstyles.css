@@ -1,4 +1,4 @@
-/* Team styles: the selects (Team Swap edit screen, Rosters bar) and the Styles tab. Uses the app's
+/* Team styles: the selects (Team Swap edit screen, Rosters bar) and the Teams tab. Uses the app's
    tokens from src/styles.css (--night, --deep, --menu, --line …). */
 .sty-picks select {
   padding: 6px 8px;
@@ -16,8 +16,9 @@
 .sty-bar label { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--chalk-dim); }
 .sty-bar select { padding: 8px 10px; background: var(--deep); }
 
-/* Styles tab: the 36 teams in a table, what each style calls beside it. */
-.sty-layout { display: grid; grid-template-columns: minmax(0, 40rem) minmax(15rem, 24rem); gap: 32px; align-items: start; margin-bottom: 28px; }
+/* Teams tab: the 36 teams in a table, what the styles call under it. */
+.sty-layout { display: grid; grid-template-columns: minmax(0, 62rem); gap: 28px; margin-bottom: 28px; }
+.sty-scroll { position: relative; overflow-x: auto; } /* relative: keeps the sr-only header inside the scroll box */
 .sty-table { width: 100%; border-collapse: collapse; }
 .sty-table th {
   padding: 6px 8px;
@@ -37,17 +38,24 @@
 .sty-link:hover { color: var(--chalk); }
 .sty-table-foot { display: flex; justify-content: flex-end; padding-top: 8px; }
 
-.sty-legend { position: sticky; top: 12px; padding: 14px 16px; background: var(--night); border: 1px solid var(--line); border-radius: 6px; }
-.sty-legend h3 { margin: 14px 0 4px; font-family: var(--display); font-size: 24px; font-style: italic; font-weight: 800; }
-.sty-legend h3:first-child { margin-top: 0; }
+.sty-legend {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  gap: 4px 28px;
+  padding: 14px 16px;
+  background: var(--night);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.sty-legend h3 { margin: 0 0 4px; font-family: var(--display); font-size: 24px; font-style: italic; font-weight: 800; }
+.sty-legend p { margin: 8px 0 0; color: var(--chalk-dim); font-size: 14px; line-height: 1.4; }
+.sty-legend p b { color: var(--chalk); font-weight: 600; }
 .sty-legend dl { margin: 0; }
 .sty-legend dt { margin-top: 8px; color: var(--menu); font-weight: 600; }
 .sty-legend dd { margin: 2px 0 0; color: var(--chalk-dim); font-size: 14px; line-height: 1.4; }
 .sty-legend .hint { margin-top: 12px; }
 
 @media (max-width: 860px) {
-  .sty-layout { grid-template-columns: 1fr; }
-  .sty-legend { position: static; }
   .sty-team { white-space: normal; font-size: 15px; }
   .sty-table th, .sty-table td { padding-left: 4px; padding-right: 4px; }
   .sty-undo-cell { width: auto; }
@@ -88,3 +96,35 @@
 .cfb-table .cfb-bw { color: var(--menu); }
 .cfb-table thead .cfb-bw { color: var(--menu); }
 .cfb-on-rom th[scope='row']::after { content: ' ●'; color: var(--menu); font-size: 10px; vertical-align: middle; }
+
+/* Team OVR and home weather (Team Swap edit screen, Teams tab). */
+.rat-num {
+  width: 3.4em;
+  padding: 5px 4px;
+  background: var(--deep);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--chalk);
+  font: inherit;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+.rat-num::-webkit-inner-spin-button, .rat-num::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.rat-wnum { width: 2.6em; }
+.sty-changed .rat-num { border-color: rgba(246, 216, 74, 0.45); }
+.sty-table .rat-cell { width: 1%; text-align: center; }
+.sty-table .rat-wx-first { border-left: 1px solid var(--line); }
+.sty-table .rat-wx-head { border-left: 1px solid var(--line); text-align: center; }
+.sty-table .rat-sub { font-family: inherit; font-size: 13px; font-weight: 600; color: var(--chalk-dim); text-align: center; }
+.rat-picks { display: flex; flex-direction: column; gap: 12px; }
+.rat-field { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--chalk-dim); }
+.rat-field small { font-size: 13px; line-height: 1.35; max-width: 40ch; }
+.rat-head { color: var(--chalk-dim); }
+.rat-pair { display: flex; flex-wrap: wrap; gap: 6px 12px; }
+.rat-pair label { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--chalk-dim); }
+.rat-wx { display: grid; grid-template-columns: repeat(4, max-content); gap: 8px; }
+.rat-wx label { display: flex; flex-direction: column; gap: 3px; font-size: 13px; color: var(--chalk-dim); }
+.rat-picks .rat-num { padding: 7px 4px; font-size: 16px; }

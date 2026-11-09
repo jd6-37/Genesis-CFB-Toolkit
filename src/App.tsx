@@ -10,7 +10,9 @@ import { SpriteCanvas, Swatch, UniformEditor } from './components';
 import { RosterTool } from './tools/rosters/RosterTool';
 import { SeasonTool } from './tools/season/SeasonTool';
 import { useWorkRom, type TeamSwapSource } from './tools/shared/WorkRom';
-import { StylesTool } from './tools/styles/StylesTool';
+import { TeamsTool } from './tools/styles/TeamsTool';
+import { RatingPicks } from './tools/styles/RatingPicks';
+import { ovrFromSim, ratingProblems, readRating, readWeather, weatherFromWord, type TeamRating, type Weather } from './core/teamRatings';
 import { StylePicks } from './tools/styles/StylePicks';
 import { PatchTool, usePatchRom } from './tools/patch/PatchTool';
 import { DEFENSE, OFFENSE, parseStyle, readStyles, styleInfo, styleProblems, type StyleInfo, type TeamStyle } from './core/styles';
@@ -27,15 +29,17 @@ type Note = { kind: 'error' | 'ok'; text: string } | null;
 
 const EMPTY: (SlotConfig | null)[] = Array(36).fill(null);
 
-type Tab = 'patch' | 'swap' | 'season' | 'styles' | 'rosters';
+type Tab = 'patch' | 'swap' | 'season' | 'teams' | 'rosters';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'patch', label: 'Patch' },
   { id: 'swap', label: 'Team Swap' },
   { id: 'season', label: 'Season' },
-  { id: 'styles', label: 'Styles' },
+  { id: 'teams', label: 'Teams' },
   { id: 'rosters', label: 'Rosters' },
 ];
-const tabFromHash = (): Tab => TABS.find((t) => `#${t.id}` === window.location.hash)?.id ?? 'patch';
+// #styles is the Teams tab's address from before it took ratings and weather too.
+const tabFromHash = (): Tab =>
+  window.location.hash === '#styles' ? 'teams' : (TABS.find((t) => `#${t.id}` === window.location.hash)?.id ?? 'patch');
 
 function download(name: string, data: BlobPart, type: string) {
   const url = URL.createObjectURL(new Blob([data], { type }));
@@ -66,7 +70,7 @@ export default function App() {
   const [note, setNote] = useState<Note>(null);
   const [dragging, setDragging] = useState(false);
   const [tab, setTab] = useState<Tab>(tabFromHash);
-  const work = useWorkRom(); // the ROM the Season, Styles and Rosters tabs edit together
+  const work = useWorkRom(); // the ROM the Season, Teams and Rosters tabs edit together
   const start = usePatchRom(); // the BW95 ROM from the Patch tab, which Team Swap builds on
   const seasonDrop = useRef<((files: FileList | File[]) => void) | null>(null);
   const registerSeasonDrop = useCallback((fn: ((files: FileList | File[]) => void) | null) => {
@@ -129,6 +133,13 @@ export default function App() {
     () => (bw && !styleProblems(bw.rom.data).length ? { info: styleInfo(bw.rom.data), styles: readStyles(bw.rom.data) } : null),
     [bw],
   );
+  const teamRatings = useMemo(
+    () =>
+      bw && !ratingProblems(bw.rom.data).length
+        ? bw.teams.map((t) => ({ rating: readRating(bw.rom.data, t.index), weather: readWeather(bw.rom.data, t.index) }))
+        : null,
+    [bw],
+  );
   const swapped = slots.filter(Boolean) as SlotConfig[];
   const problems = useMemo(
     () => swapped.flatMap((s) => validateSlot(s).map((p) => `${bw?.teams[s.slot].school} → ${s.school || '(no name)'}: ${p}`)),
@@ -172,6 +183,11 @@ export default function App() {
         if (!(s.slot >= 0 && s.slot < 36) || s.home?.length !== 16 || s.away?.length !== 16) throw new Error('The swap file is damaged.');
         if (s.offense !== undefined) parseStyle('offense', s.offense);
         if (s.defense !== undefined) parseStyle('defense', s.defense);
+        const inRange = (a: unknown, n: number, max: number) =>
+          Array.isArray(a) && a.length === n && a.every((v) => Number.isInteger(v) && v >= 0 && v <= max);
+        if ((s.ovr !== undefined && !inRange(s.ovr, 2, 99)) || (s.weather !== undefined && !inRange(s.weather, 4, 15))) {
+          throw new Error('The swap file is damaged (team ratings or weather).');
+        }
         next[s.slot] = { ...s, celebration: s.celebration?.length === 3 ? s.celebration : defaultCelebration(s.home) };
       }
       setSlots(next);
@@ -193,7 +209,7 @@ export default function App() {
         e.preventDefault();
         setDragging(false);
         if (tab === 'patch') void start.loadFiles(e.dataTransfer.files);
-        else if (tab === 'rosters' || tab === 'styles') void work.loadFiles(e.dataTransfer.files);
+        else if (tab === 'rosters' || tab === 'teams') void work.loadFiles(e.dataTransfer.files);
         else if (tab === 'season') seasonDrop.current?.(e.dataTransfer.files);
         else onFiles(e.dataTransfer.files);
       }}
@@ -249,8 +265,8 @@ export default function App() {
         <SeasonTool api={work} teamSwap={teamSwap} registerDrop={registerSeasonDrop} />
       </div>
 
-      <div id="panel-styles" role="tabpanel" aria-labelledby="tab-styles" hidden={tab !== 'styles'}>
-        <StylesTool api={work} teamSwap={teamSwap} />
+      <div id="panel-teams" role="tabpanel" aria-labelledby="tab-teams" hidden={tab !== 'teams'}>
+        <TeamsTool api={work} teamSwap={teamSwap} />
       </div>
 
       <div id="panel-rosters" role="tabpanel" aria-labelledby="tab-rosters" hidden={tab !== 'rosters'}>
@@ -310,6 +326,7 @@ export default function App() {
                 cfTeams={cf.teams}
                 celeb={celeb}
                 styles={teamStyles && { info: teamStyles.info, was: teamStyles.styles[t.index] }}
+                ratings={teamRatings && teamRatings[t.index]}
                 slot={slots[t.index]}
                 open={open === t.index}
                 onToggle={() => setOpen(open === t.index ? null : t.index)}
@@ -326,7 +343,7 @@ export default function App() {
               </li>
               <li>
                 The computer's offense and defense styles stay the original team's unless you change them in the team's
-                edit screen (or later in the Styles tab).
+                edit screen (or later in the Teams tab).
               </li>
               <li>The Walsh Report keeps the original team's scouting text, with the names changed.</li>
               <li>
@@ -415,6 +432,7 @@ function TeamRow({
   cfTeams,
   celeb,
   styles,
+  ratings,
   slot,
   open,
   onToggle,
@@ -425,6 +443,8 @@ function TeamRow({
   celeb: CelebBlob | null;
   /** The ROM's style info and the slot's own styles; null if this ROM's styles can't be changed. */
   styles: { info: StyleInfo; was: TeamStyle } | null;
+  /** The slot's own OVRs and home weather; null if this ROM's can't be changed. */
+  ratings: { rating: TeamRating; weather: Weather } | null;
   slot: SlotConfig | null;
   open: boolean;
   onToggle: () => void;
@@ -532,6 +552,21 @@ function TeamRow({
                   defense: slot.defense === undefined ? styles.was.defense : parseStyle('defense', slot.defense),
                 }}
                 onChange={(st) => onChange({ ...slot, offense: OFFENSE[st.offense], defense: DEFENSE[st.defense] })}
+              />
+            )}
+            {ratings && (
+              <RatingPicks
+                team={slot.school}
+                rating={slot.ovr ? { off: slot.ovr[0], def: slot.ovr[1] } : ratings.rating}
+                weather={(slot.weather as Weather | undefined) ?? ratings.weather}
+                source={
+                  slot.ovr && cf && slot.ovr[0] === ovrFromSim(cf.offense) && slot.ovr[1] === ovrFromSim(cf.defense)
+                    ? `${cf.school} in College Football USA 97`
+                    : undefined
+                }
+                was={{ name: bw.school, rating: ratings.rating, weather: ratings.weather }}
+                onRating={(r) => onChange({ ...slot, ovr: [r.off, r.def] })}
+                onWeather={(w) => onChange({ ...slot, weather: [...w] })}
               />
             )}
           </div>

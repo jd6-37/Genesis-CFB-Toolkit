@@ -1,4 +1,4 @@
-// College Football 27 team schemes, for the Styles tab's reference table: each FBS team's offensive
+// College Football 27 team schemes, for the Teams tab's reference table: each FBS team's offensive
 // style and its default defensive playbook (as of November 2026), and the Bill Walsh '95 styles
 // recommended for them. No ROM data. Mapping and name matching: docs/styles.md.
 import { DEFENSE, OFFENSE, type TeamStyle } from './styles';
