@@ -86,7 +86,7 @@ The patched ROM is named after the patch file, with `.md` for `.bps` (`Bill_Wals
 - The original game (by SHA-1): the patch choices, plus **Use a .bps file**.
 - A ROM whose SHA-1 is in the list: "already has the latest release" or, for an older release, which newer release is out and that updating starts from the original ROM.
 - Any other BW95 ROM (by its header): used as it is.
-- `hasSwappedTeams` (`src/core/build.ts`: the menu-order area at `0x1F0000` is in use) decides the next step: a ROM with swapped teams goes straight to Season, Teams and Rosters, since Team Swap can't run twice. Otherwise `swapProblemText` says whether Team Swap can take it.
+- `hasSwappedTeams` (`src/core/build.ts`: the menu-order area at `0x1F0000` is in use) decides the next step: a ROM whose teams Team Swap swapped (`swappedByTeamSwap`) can be swapped again, one swapped with another tool goes straight to Season, Teams and Rosters. Otherwise `swapProblemText` says whether Team Swap can take it.
 
 Team Swap uses the Patch tab's ROM: `App.tsx` passes every BW95 ROM loaded in the Team Swap tab to the hook (`open`), and builds on whatever ROM the hook holds. The team choices are kept when the new ROM has the same 36 teams (patching doesn't change them). **Edit season, teams and rosters** hands the ROM to the shared working ROM (`takeRom` in `src/tools/shared/WorkRom.tsx`), which asks first if the working ROM has unsaved changes.
 
@@ -96,7 +96,7 @@ Team Swap uses the Patch tab's ROM: `App.tsx` passes every BW95 ROM loaded in th
 
 - BPS: a patch built in the test that uses all four commands (including a target copy that overlaps what it writes and a source copy going backward); the wrong ROM, a damaged patch, a result that fails its checksum, and a file that isn't BPS.
 - The repo's patch list is valid; broken lists (unknown version, unknown choice ids, missing `sha256`, bad SHA-1, a path outside the repo, two patches for one combination) are caught; an older release without files is fine.
-- Every offered patch, applied to the original ROM, gives the SHA-1 in the list; a changed byte in a patch file fails the list's check. A patched ROM whose teams are already swapped (the 2026 Season Edition) is refused by Team Swap with the "already has swapped teams" message; with CF97, every other patched ROM takes a team swap and the result counts as swapped.
+- Every offered patch, applied to the original ROM, gives the SHA-1 in the list; a changed byte in a patch file fails the list's check. Every patched ROM takes a team swap, the 2026 Season Edition too (Team Swap swapped its teams, so it can swap them again); with CF97, a swap builds on each, and the result takes another.
 - `?patches=` handling.
 
 Browser checks (Playwright against `vite preview`, with the list and patches served from a local copy of the repo, and once from GitHub itself) are listed in the README.

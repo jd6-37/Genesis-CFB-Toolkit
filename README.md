@@ -14,7 +14,7 @@ Everything runs in your browser. Your ROMs are opened on your own computer and a
 
 Each tool has its own tab. The app opens on Patch; `#swap`, `#season`, `#teams` or `#rosters` at the end of the address opens that tab directly (`#styles`, the Teams tab's old address, still works).
 
-**Season, Teams and Rosters edit the same ROM.** Load a ROM in any of them, or take the Team Swap result, then switch between them as often as you like. **Download ROM** in any of the three saves everything, named after the ROM with `[Season]`, `[Teams]` and/or `[Rosters]` added. Team Swap uses the ROM from the Patch tab and always starts from an unswapped ROM; if you change the swap and take its result again while you have changes, the app asks: **Keep my edits** puts every team's roster, the conferences and schedules, and the styles, ratings and weather you changed into the new ROM, by slot (a swapped team gets the edits made for its slot), or **Start fresh**. The same question comes up when you open another ROM file of the same game.
+**Season, Teams and Rosters edit the same ROM.** Load a ROM in any of them, or take the Team Swap result, then switch between them as often as you like. **Download ROM** in any of the three saves everything, named after the ROM with `[Season]`, `[Teams]` and/or `[Rosters]` added. Team Swap builds on the Patch tab's ROM, not on the one these tabs edit; if you change the swap and take its result again while you have changes, the app asks: **Keep my edits** puts every team's roster, the conferences and schedules, and the styles, ratings and weather you changed into the new ROM, by slot (a swapped team gets the edits made for its slot), or **Start fresh**. The same question comes up when you open another ROM file of the same game.
 
 ## Patch
 
@@ -24,7 +24,7 @@ Start here. Load your Bill Walsh College Football '95 ROM (`.md`, `.bin`, `.gen`
 - **A ROM with a released patch:** the app says which release it has, and whether a newer one is out. Patches go onto the original game only, so to update, load the original ROM and patch it here.
 - **Any other modded or edited ROM:** used as it is.
 
-Then **Swap teams** takes the ROM to the Team Swap tab, or **Edit season, teams and rosters** opens it in those tabs. A ROM whose teams are already swapped goes straight to Season, Teams and Rosters. Team Swap always uses the Patch tab's ROM: a Bill Walsh ROM you load in the Team Swap tab shows up in the Patch tab too.
+Then **Swap teams** takes the ROM to the Team Swap tab, or **Edit season, teams and rosters** opens it in those tabs. A ROM whose teams Team Swap already swapped, such as the 2026 Season Edition, can have them swapped again (see [Swapping a swapped ROM](#swapping-a-swapped-rom)). Team Swap always uses the Patch tab's ROM: a Bill Walsh ROM you load in the Team Swap tab shows up in the Patch tab too.
 
 ### How it works
 
@@ -32,7 +32,7 @@ The mod's GitHub repo has a patch list, `patches.json`: the latest release's pat
 
 ### Testing
 
-- `npm run test:patch` (see [Development](#development)): the BPS code with patches that use every BPS command, damaged patches and patches for another ROM; the repo's patch list and broken ones; each listed patch applied to the original ROM gives the SHA-1 in the list, and the patched ROM takes a team swap (the 2026 Season Edition, whose teams are already swapped, goes straight to Season, Teams and Rosters).
+- `npm run test:patch` (see [Development](#development)): the BPS code with patches that use every BPS command, damaged patches and patches for another ROM; the repo's patch list and broken ones; each listed patch applied to the original ROM gives the SHA-1 in the list, and the patched ROM takes a team swap (the 2026 Season Edition too: its teams were swapped with Team Swap, which can swap them again).
 - In the browser: both v1.0 patches downloaded from GitHub and applied (SHA-1s as in the list), the patched ROM taken to Team Swap (Pitt → Tulane, identical to the CLI build) and to Season, Teams and Rosters; v1.0, Elevated beta and already swapped ROMs loaded directly; the patch list unreachable (a `.bps` file still works); a damaged `.bps` file; phone layout.
 
 ## Team Swap
@@ -69,7 +69,11 @@ Pick any of BW95's 36 teams, choose a CF97 team to replace it with, adjust the n
 
 Files can be `.md`, `.bin` or `.gen`, or a `.zip` containing one. The Rebalanced ROMs are the Elevated mod's v1.0 release (released as Rebalanced; the [Patch](#patch) tab makes them from the original ROM); the swap keeps all of their changes.
 
-Other Bill Walsh '95 ROMs with a mod work too, such as Elevated v1.1 (checked with v1.1.0-beta.11): when you load one, the app checks that the code the swap patches is unchanged and the ROM space it uses is empty, and says what's in the way if not. The swap keeps all of the mod's changes, and the downloaded ROM is named after your file with `[Team Swap]` added. A ROM that already has swapped teams can't be swapped again; start from the ROM before the swap and load your swap file.
+Other Bill Walsh '95 ROMs with a mod work too, such as Elevated v1.1 (checked with v1.1.0-beta.11): when you load one, the app checks that the code the swap patches is unchanged and the ROM space it uses is empty, and says what's in the way if not. The swap keeps all of the mod's changes, and the downloaded ROM is named after your file with `[Team Swap]` added.
+
+### Swapping a swapped ROM
+
+A ROM that Team Swap swapped before, such as the Elevated 2026 Season Edition, can be swapped again. The Team Swap tab lists its teams as they are now and says which ones were swapped in. Pick a CF97 team for any slot, one swapped in before too; every other team stays exactly as it is (names, art, colors, end zone, card stunt colors, menu place, roster). Putting back one of the original 1994 teams isn't possible this way: start from the original ROM for that. A ROM swapped with another tool can't be swapped again; start from the ROM before that swap.
 
 ### Swap files
 
@@ -87,6 +91,7 @@ Other Bill Walsh '95 ROMs with a mod work too, such as Elevated v1.1 (checked wi
 - **Walsh Report:** the swapped teams' paragraphs get the new names, and the text block stays where it is: if it gets longer, some two-space sentence gaps become one space; if it gets shorter, the leftover bytes after the last paragraph are filled with spaces. Only if very long names still don't fit is the block moved to `0x1F8000` (its only reference is the pointer at `0x078FC0`).
 - **ROM space:** the swap uses about 4.4 KB of unused ROM (`0x1EEF00`-`0x1EFF17` and `0x1F0000`-`0x1F043B`), and checks that it's unused before writing. The Rosters tool's OL weight tweak uses `0x1EFF20`-`0x1EFF3D` (see [Rosters](#how-it-works-3)) and the Season tool's locked-team table `0x1EFF40`-`0x1EFF87` (see [Season](#how-it-works-1)).
 - **Celebration:** one "GO TEAM!" card stunt at `0x1EEF00`, built from your BW95 ROM: Pitt's "GO PITT!" card stunt with four cards re-lettered, using letters copied from Pitt's and Texas A&M's cards. Swapped teams' entries in the celebration table (`0x034A68`) point to it.
+- **Swapping again:** the app recognizes its own swap: the jumps at the patch sites and its helpers, apart from their tables. It keeps the tables' entries for the teams it doesn't change, keeps the card stunt already in the ROM, and reads the Walsh Report text from where the last swap left it (spaces left by shorter names are used first; a moved text goes back in place once it fits, and its copy at `0x1F8000` is freed).
 - **Checksums:** EA's boot check (the sum at `0x1E6430`) and the Genesis header checksum are recomputed.
 
 ### Testing
@@ -96,7 +101,8 @@ Other Bill Walsh '95 ROMs with a mod work too, such as Elevated v1.1 (checked wi
 - The menu, end zone, helmet and celebration helpers were run on their own in a 68000 emulator (every team; for the celebration: home win, visitor win and an unswapped team).
 - Celebration: test ROMs that play it at the title screen show "GO TEAM!" in Tulane's and Idaho's colors, Penn State's own "PENN STATE #1" unchanged, and the same on a Rebalanced ROM.
 - ROMs downloaded from the app are byte-identical to the CLI builds above.
-- Elevated v1.1.0-beta.11 (Fixed and No Fatigue): Pitt → Tulane and Wisconsin → Idaho, and all 36 teams swapped. Nothing outside the swap's own changes differs from the input, and every roster is kept. In the emulator: the Elevated title screen, Tulane on the setup screen and the pregame menu. The Tulane builds of beta.11 are refused because they already have a swap.
+- Elevated v1.1.0-beta.11 (Fixed and No Fatigue): Pitt → Tulane and Wisconsin → Idaho, and all 36 teams swapped. Nothing outside the swap's own changes differs from the input, and every roster is kept. In the emulator: the Elevated title screen, Tulane on the setup screen and the pregame menu. The Tulane builds of beta.11 are refused because another tool swapped them.
+- Swapping again, 6 Node tests (`npm run test:swap`): fresh swaps give the same bytes as before; a ROM Team Swap swapped takes another swap and one swapped by another tool is refused; adding teams to a swapped ROM, or giving a swapped slot another team, gives the same ROM as doing it in one go (apart from the Walsh Report's sentence gaps); the Walsh text moved and moved back; on the Elevated 2026 Season Edition, Iowa → Arizona State and Navy → Baylor change only those two teams and the menu, end zone and card stunt tables. In the emulator, that ROM shows the 2026 title screen and both new teams on the setup screen with their OFF and DEF.
 
 Not tested in a real game: a full season through the bowls with swapped teams (the celebration was only forced at the title screen), and real hardware.
 
@@ -346,12 +352,13 @@ npx tsx cli/stockdists.ts src/core/rosterStockDists.json BW95.md CF96.md CF97.md
 
 The 68000 helpers are in `asm/`; `asm/build.sh` reassembles them into `src/core/helpers68k.ts` (needs `binutils-m68k-linux-gnu`).
 
-A Node CLI builds ROMs with the same code, which is how builds were tested in an emulator:
+A Node CLI builds ROMs with the same code, which is how builds were tested in an emulator. The Team Swap tests take the original BW95 ROM, CF97 and optionally the Elevated 2026 Season Edition:
 
 ```sh
 npx tsx cli/build.ts --bw "Bill Walsh College Football 95 (USA).md" --cf "College Football USA 97 (USA).zip" \
   --pair Pitt=Tulane --out swapped.md --save-swaps swaps.json
 npx tsx cli/build.ts --bw ... --cf ... --swaps swaps.json --out swapped.md
+npm run test:swap -- BW95.md CF97.md [Elevated-2026.md]
 ```
 
 ## Credits
