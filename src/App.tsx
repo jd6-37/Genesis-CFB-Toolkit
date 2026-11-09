@@ -200,13 +200,17 @@ export default function App() {
     >
       <header className="masthead">
         <h1>
-          <span className="mast-1">Genesis</span>
-          <span className="mast-2">College Football</span>
-          <span className="mast-3">Toolkit</span>
+          <span className="mast-2">
+            Bill Walsh '95 <span className="mast-elev">ELEVATED</span>
+          </span>
+          <span className="mast-3">Mod Toolkit</span>
         </h1>
         <p className="lede">
-          Modding tools for EA's college football games on the Sega Genesis. Everything runs in your browser, and your
-          ROMs never leave your computer.
+          Modding tools for EA's college football games on the Sega Genesis. Made for the{' '}
+          <a href="https://github.com/jd6-37/Bill-Walsh-CFB-95-Elevated" target="_blank" rel="noreferrer">
+            BW95 Elevated mod
+          </a>
+          , but roster editing/importing in CFB'96 and '97 is also possible.
         </p>
       </header>
 
