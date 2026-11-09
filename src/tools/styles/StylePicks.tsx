@@ -1,4 +1,4 @@
-// Offense and defense style selects, shared by the Team Swap edit screen, the Styles tab and the
+// Offense and defense style selects, shared by the Team Swap edit screen, the Teams tab and the
 // Rosters tab.
 import { DEFENSE, OFFENSE, defensePlan, offenseFormations, type StyleInfo, type TeamStyle } from '../../core/styles';
 import './teamstyles.css';

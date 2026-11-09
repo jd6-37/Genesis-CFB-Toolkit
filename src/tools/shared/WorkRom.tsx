@@ -1,4 +1,4 @@
-// The working ROM shared by the Season, Styles and Rosters tabs: one buffer they all edit in place,
+// The working ROM shared by the Season, Teams and Rosters tabs: one buffer they all edit in place,
 // loaded from a file or from the Team Swap tab, downloaded from any of them with all edits in it.
 import { useCallback, useMemo, useState } from 'react';
 import { openRom } from '../../core/romfile';
@@ -19,7 +19,7 @@ export interface WorkRom {
   name: string;
   label: string;
   game: Game;
-  /** The bytes Season, Styles and Rosters edit in place. */
+  /** The bytes Season, Teams and Rosters edit in place. */
   data: Uint8Array;
   /** The bytes as loaded: change marks, undo and the "unsaved changes" check compare against these. */
   base: Uint8Array;
@@ -92,7 +92,7 @@ export function useWorkRom(): WorkApi {
   const edited = useCallback(() => setRev((r) => r + 1), []);
 
   const edits = useMemo(
-    () => (work ? editsSince(work.base, work.data, work.game) : { season: false, styles: false, rosters: false, any: false }),
+    () => (work ? editsSince(work.base, work.data, work.game) : { season: false, teams: false, rosters: false, any: false }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [work, rev],
   );
@@ -102,8 +102,8 @@ export function useWorkRom(): WorkApi {
     let msg = '';
     if (carryFrom) {
       const r = carryEdits(carryFrom.data, w.data, carryFrom.base);
-      const styles = r.styles && `the style${r.styles === 1 ? '' : 's'} of ${r.styles} team${r.styles === 1 ? '' : 's'}`;
-      msg = `Kept your edits: ${[r.season && 'conferences and schedules', styles, 'rosters', r.olTweak && 'the OL weight tweak'].filter(Boolean).join(', ')}.`;
+      const teams = r.teams && `the styles, ratings and weather of ${r.teams} team${r.teams === 1 ? '' : 's'}`;
+      msg = `Kept your edits: ${[r.season && 'conferences and schedules', teams, 'rosters', r.olTweak && 'the OL weight tweak'].filter(Boolean).join(', ')}.`;
       if (r.skipped.length) msg += ` Not carried: ${r.skipped.join('; ')}.`;
     }
     setWork(w);
@@ -164,7 +164,7 @@ export function useWorkRom(): WorkApi {
     const res = fixChecksums(out, work.game);
     const name = workFileName(work.name, edits);
     download(name, out as Uint8Array<ArrayBuffer>);
-    const parts = [edits.season && 'season', edits.styles && 'style', edits.rosters && 'roster'].filter(Boolean) as string[];
+    const parts = [edits.season && 'season', edits.teams && 'team', edits.rosters && 'roster'].filter(Boolean) as string[];
     const what = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0];
     return {
       kind: 'ok',
@@ -188,7 +188,7 @@ export function WorkRomCard({ api, teamSwap, hint }: { api: WorkApi; teamSwap: T
         {work ? (
           <span className="rom-status">
             {work.label}
-            <small>{work.name} · Season, Styles and Rosters all edit this ROM · choose another file to switch</small>
+            <small>{work.name} · Season, Teams and Rosters all edit this ROM · choose another file to switch</small>
           </span>
         ) : (
           <span className="rom-status rom-empty">
@@ -211,7 +211,7 @@ export function WorkRomCard({ api, teamSwap, hint }: { api: WorkApi; teamSwap: T
           <button className="btn btn-quiet" onClick={() => api.takeTeamSwap(teamSwap)}>
             Use the Team Swap result ({teamSwap.count} team{teamSwap.count === 1 ? '' : 's'} swapped)
           </button>
-          <p className="hint">Builds the ROM from the Team Swap tab and opens it here, for Season, Styles and Rosters.</p>
+          <p className="hint">Builds the ROM from the Team Swap tab and opens it here, for Season, Teams and Rosters.</p>
         </div>
       )}
       {pending && (
