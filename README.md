@@ -9,7 +9,7 @@ Everything runs in your browser. Your ROMs are opened on your own computer and a
 - **[Patch](#patch):** start here. Load your Bill Walsh College Football '95 ROM and, if it's the original game, add the latest release of the Elevated mod's patches.
 - **[Team Swap](#team-swap):** swap College Football USA 97 teams into Bill Walsh College Football '95.
 - **[Season](#season):** rename the four conferences, choose which teams play in each, and lock in schedules in Bill Walsh '95.
-- **[Teams](#teams):** for each Bill Walsh '95 team, choose the offense and defense the computer runs, the team's OFF and DEF ratings and the weather in its home games.
+- **[Teams](#teams):** for each Bill Walsh '95 team, choose the offense and defense the computer runs, the team's OFF and DEF ratings and the weather in its home games, and write its Walsh Report.
 - **[Rosters](#rosters):** edit the players of Bill Walsh '95, CF96 or CF97, team by team or from a spreadsheet (CSV or Excel), or bring in real College Football 27 rosters (built in: 2026 season, Week 9).
 
 Each tool has its own tab. The app opens on Patch; `#swap`, `#season`, `#teams` or `#rosters` at the end of the address opens that tab directly (`#styles`, the Teams tab's old address, still works).
@@ -49,13 +49,13 @@ Pick any of BW95's 36 teams, choose a CF97 team to replace it with, adjust the n
 - The team's OFF and DEF ratings and its home weather (see [Teams](#off-and-def)): by default the CF97 team's own (its 1996 ratings, and its weather, e.g. Tulane OFF 74 DEF 75, fair 90% of home games), editable in the team's edit screen. Simulated games, the preseason poll and Elevated's Game Setup use them. Converting the rosters to College Football 27 sets OFF and DEF from the new players. A swap file saved before this keeps the old team's.
 - The end-of-season celebration: swapped teams get a "GO TEAM!" card stunt in their own colors (cards, skirts and pom-poms, tops; editable, with a preview).
 - The team menus stay alphabetical with the new names.
-- The Walsh Report uses the new names.
+- The Walsh Report uses the new names, or a report you write in the team's edit screen (see [Walsh Report](#walsh-report)).
 
 ### What stays the same
 
 - Schedules, rankings, conferences and battery saves: the new team plays in the old team's slot (change conferences and schedules in the [Season](#season) tab).
 - Rosters (edit them in the [Rosters](#rosters) tab, which can open the swapped ROM directly; its **CFB 27 rosters (2026, Week 9)** button gives every team its current players).
-- The Walsh Report keeps the original team's scouting text, with the names changed.
+- Unless you write a new one, the Walsh Report keeps the original team's scouting text, with the names changed.
 - Teams you don't swap keep their own celebrations.
 
 ### Supported ROMs
@@ -77,7 +77,7 @@ A ROM that Team Swap swapped before, such as the Elevated 2026 Season Edition, c
 
 ### Swap files
 
-**Save swap file** writes your choices (teams, names, colors, styles) as a small JSON file with no ROM data in it. Load it later, or share it, to rebuild the same ROM from the same source ROMs.
+**Save swap file** writes your choices (teams, names, colors, styles, ratings, weather, Walsh Reports) as a small JSON file with no ROM data in it. Load it later, or share it, to rebuild the same ROM from the same source ROMs.
 
 ### How it works
 
@@ -88,10 +88,10 @@ A ROM that Team Swap swapped before, such as the Elevated 2026 Season Edition, c
   - `0x1F0280` end zone color per home team (the game normally darkens the home jersey's darkest shade).
   - `0x1F0300` helmet tile base on the setup screen, so helmets of up to 36 tiles fit (the stock layout leaves 32).
   - `0x1F0320` celebration colors: when the generic card stunt plays, palette entries 9, 10 and 13 are replaced with the winning team's colors.
-- **Walsh Report:** the swapped teams' paragraphs get the new names, and the text block stays where it is: if it gets longer, some two-space sentence gaps become one space; if it gets shorter, the leftover bytes after the last paragraph are filled with spaces. Only if very long names still don't fit is the block moved to `0x1F8000` (its only reference is the pointer at `0x078FC0`).
+- **Walsh Report:** the swapped teams' paragraphs get the new names (or the report written in the edit screen), and the text block always stays in its own space: if it gets longer, some two-space sentence gaps become one space; if it gets shorter, the leftover bytes after the last paragraph are filled with spaces. Only very long made-up names that still don't fit make the longest reports drop their last sentences. (Versions before the Walsh Report editor moved such a text to `0x1F8000`; the app reads it from there and puts it back.)
 - **ROM space:** the swap uses about 4.4 KB of unused ROM (`0x1EEF00`-`0x1EFF17` and `0x1F0000`-`0x1F043B`), and checks that it's unused before writing. The Rosters tool's OL weight tweak uses `0x1EFF20`-`0x1EFF3D` (see [Rosters](#how-it-works-3)) and the Season tool's locked-team table `0x1EFF40`-`0x1EFF87` (see [Season](#how-it-works-1)).
 - **Celebration:** one "GO TEAM!" card stunt at `0x1EEF00`, built from your BW95 ROM: Pitt's "GO PITT!" card stunt with four cards re-lettered, using letters copied from Pitt's and Texas A&M's cards. Swapped teams' entries in the celebration table (`0x034A68`) point to it.
-- **Swapping again:** the app recognizes its own swap: the jumps at the patch sites and its helpers, apart from their tables. It keeps the tables' entries for the teams it doesn't change, keeps the card stunt already in the ROM, and reads the Walsh Report text from where the last swap left it (spaces left by shorter names are used first; a moved text goes back in place once it fits, and its copy at `0x1F8000` is freed).
+- **Swapping again:** the app recognizes its own swap: the jumps at the patch sites and its helpers, apart from their tables. It keeps the tables' entries for the teams it doesn't change, keeps the card stunt already in the ROM, and reads the Walsh Report text from where the last swap left it (spaces left by shorter names are used first; a text an older version moved to `0x1F8000` goes back in place and its copy there is freed).
 - **Checksums:** EA's boot check (the sum at `0x1E6430`) and the Genesis header checksum are recomputed.
 
 ### Testing
@@ -148,7 +148,7 @@ Not tested: playing through a season with an edited schedule (the emulator used 
 
 ## Teams
 
-The Teams tab lists all 36 teams of a Bill Walsh '95 ROM with the settings that belong to a team rather than its players: the offense and defense the computer runs, the team's OFF and DEF ratings, and its home weather. Undo puts a team back as the ROM was loaded.
+The Teams tab lists all 36 teams of a Bill Walsh '95 ROM with the settings that belong to a team rather than its players: the offense and defense the computer runs, the team's OFF and DEF ratings, its home weather and its Walsh Report. Undo puts a team back as the ROM was loaded.
 
 <a id="styles"></a>
 ### Styles
@@ -173,7 +173,7 @@ Every style uses Goal Line defense near the goal and short yardage, Dime on 4th 
 
 - **Rosters:** Elevated v1.1.0-beta.7 and later use one roster layout for every team (LE, DT1, DT2, RE, LOLB, MLB1, MLB2, ROLB), so a new defense needs no roster changes.
   - Older ROMs (the original game, and Elevated up to beta.6) still have the original game's two layouts: slot 21 is a tackle (RDT) on 4-3 teams and an inside linebacker (RILB) on 3-4 teams. On those, switching a team between 3-4 and 4-3 switches its layout too (the Rosters tab and its imports follow), but the player in slot 21 is still the one picked for the old defense, so re-import the team's roster.
-- The Walsh Report's scouting text isn't changed (it describes some teams' offenses).
+- A style change doesn't change the Walsh Report's scouting text, which describes some teams' offenses; edit it in the [Walsh Report](#walsh-report) editor.
 
 ### OFF and DEF
 
@@ -187,6 +187,15 @@ The app shows and edits them as OVRs, 0-99. The game itself keeps a 0-100 rating
 ### Home weather
 
 Each team has four weights, 0-15, for how often a season home game is Fair, Windy, Rainy or Snowy (the original teams' add up to 10, e.g. Washington 1-2-7-0, Wisconsin 1-1-1-7, Texas 9-1-0-0). The tab shows the chances as percentages. Exhibition games use the weather picked on Game Setup. A swapped team gets its College Football USA 97 weather by default.
+
+### Walsh Report
+
+Before a game, Bill Walsh reads a scouting report on each team: a paragraph on its offense and one on its defense. **Edit** in the Teams tab (or **Edit Walsh Report** in Team Swap's edit screen) opens both paragraphs with a preview of the report box as the game shows it.
+
+- A report can have up to 650 characters for the offense and the defense together. All 36 reports share one block of text in the ROM, and 650 per team keeps every report in that space, with room left for longer names from a team swap.
+- 15 of EA's reports are longer (Ohio State's is 1,010 characters). The first report you save trims them to 650 by dropping their last sentences; the editor names them before you save. After that every report fits, so it doesn't happen again on that ROM. **Back to the loaded report** and Undo bring back a report as it was loaded, trimmed the same way.
+- The game shows 20 characters to a line and scrolls the box, so a word can be at most 20 characters. Its font draws letters, digits, spaces and `. , ! ? ' " - & ( ) / : ; % + = #`; other characters would show a symbol or a blank, so the editor doesn't take them. Curly quotes and dashes are turned into plain ones.
+- In Team Swap, a swapped team's report is the original team's with the new names until you edit it; the edited report goes into the swap file.
 
 ### College Football 27 reference
 
@@ -208,6 +217,7 @@ Below the teams, a searchable table lists every FBS team in College Football 27 
 - **Ratings and weather:** each team block has a 4-word group (header word 3): home weather (one nibble per kind, Fair to Snow), offense, defense, conference (the Season tab's). Team Swap keeps the group with the slot. Elevated v1.1.0's OVR table is at `0x10DFB0` ("OVR1", then OFF and DEF bytes for the 36 slots); the app writes it only when it's there.
 - **Team sets:** the computer's play-calling rules test a team's membership in 8 sets, kept as a bit table at `0x062D87` (8 bytes per set, team t = bit t & 7 of byte t >> 3; its offset is the 8th word of the rule table at `0x06106E`). Offense: sets 0-3 = Option, Pro Style, Multiple, Shotgun; a team in none of them runs Power. Defense: sets 5-7 = 3-4, 4-3, Multiple. Set 4 is tested by no rule and left alone.
 - **A style change** puts the team in exactly one offense set (none for Power) and exactly one defense set. On ROMs with the two original roster layouts (not Elevated beta.7+) it also sets the team's bit in the 3-4 roster flags (`0x061068`, clear = 3-4). Nothing else changes, and no free space is used. The app checks that the table is where the original game has it and that its unused bits are clear before writing.
+- **Walsh Report:** one CR-separated block at `0x05B2E0`-`0x061066` (23,943 bytes): six intro lines, then each team's offense and defense paragraph. The printer at `0x078FA4` finds a paragraph by counting CRs from the pointer at `0x078FC0` and prints it word by word in a box 20 characters wide and 6 lines high, scrolling as it goes. The app rewrites the block in place and fills what's left with spaces. Details: [docs/walsh.md](docs/walsh.md).
 - **Veer:** Elevated v1.1.0-beta.6 and later give the Option and Power styles the Veer plays; the app recognizes them by their play-list jump at `0x079AAE`.
 - **Checksums:** EA's boot check and the Genesis header checksum are recomputed.
 
@@ -217,6 +227,9 @@ Below the teams, a searchable table lists every FBS team in College Football 27 
 - In an emulator (Genesis Plus GX), the title screen's demo games (computer against computer, about 275 play calls per ROM, three matchups each) on test ROMs where every team has one style. Original ROM, every team Option and 4-3: only Wishbone, Flexbone and Goal Line plays, and only 4-3, Nickel, Dime and Goal Line defenses (Notre Dame and Oklahoma included, normally 3-4). Every team Shotgun and 3-4: only I-Form, Pro Form, Shotgun (39 calls), Near, Far and Goal Line plays, and only 3-4, Nickel, Dime and Goal Line defenses. Elevated beta.11, every team Option and Multiple: Veer 71 times besides Wishbone, Flexbone and Goal Line, and 4-3 (77) and 3-4 (69) fronts about half and half with a few 4-4 calls.
 - ROMs downloaded from the app are byte-identical to the same changes made with the command-line tools: a Team Swap with styles, style changes in the Teams and Rosters tabs on a Team Swap result, those changes kept after changing the swap, and Apply recommended styles on the original ROM and on a Team Swap result.
 - Ratings and weather, 7 Node tests (`npm run test:teams`): the original ROM's words and weather read as documented; OVRs 62-98 round-trip on ROMs without the OVR table, and only the team's group changes; on Elevated v1.1.0 a change writes the OVR table and the words and nothing else; on the Elevated 2026 Season Edition, the built-in Week 9 data gives all 36 teams' OVRs and words exactly as the ROM has them; Team Swap gives Tulane 74/75 and 9-1-0-0 by default, keeps edits, and builds swap files saved before this exactly as before; the CFB 27 conversion sets OFF and DEF and the change is tracked and kept by slot; bad values are refused.
+- Walsh Report, 8 Node tests (`npm run test:walsh`): EA's reports and the 15 long ones; trims end at a sentence and keep 450-650 characters; the editor's character, word and length checks; saving a report trims the other long ones once, keeps the text in its space and changes nothing else; undo of one report and of all of them (every byte back); a report in a Team Swap swap file, and the same ROM as writing it in the Teams tab; reports carried by slot to a new Team Swap result, skipped when the slot holds another team; a renamed conference isn't a report edit; the Elevated 2026 Season Edition.
+- In an emulator: test reports of 650 and 1,000 characters scroll through to their last word, every character was checked on the report screen, and a Team Swap download with an edited report shows it before the game.
+- In the browser: a report saved in the Teams tab on the original ROM and an edited report in a Team Swap swap file give ROMs byte-identical to `cli/walsh.ts` and `cli/build.ts`; phone layout.
 - In the browser, on Elevated v1.1.0: Pitt → Tulane with OFF 80 and Rain 3 in the edit screen, then Navy's DEF and weather in the Teams tab, then the built-in Week 9 rosters for all 36 teams: each download is byte-identical to `cli/build.ts`, `cli/teams.ts` and `cli/cfb27.ts`. In an emulator, that ROM's Game Setup shows "OFF 80 DEF 75" under Tulane.
 
 Not tested: real hardware.
@@ -341,6 +354,14 @@ npm run test:styles -- BW95.md CF97.md [Elevated.md …]
 npm run test:teams -- BW95.md CF97.md Elevated.md Elevated-2026.md
 npx tsx cli/styles.ts BW95.md out.md "Florida State=Option,3-4" "Navy=,Multiple"
 npx tsx cli/teams.ts BW95.md out.md --ovr "Navy=75,85" --weather "Navy=5,2,2,1" --style "Navy=Option,3-4"
+```
+
+How the Walsh Report editor works: [docs/walsh.md](docs/walsh.md). Its tests take the original ROM, CF97 and optionally the Elevated 2026 Season Edition; `cli/walsh.ts` lists a ROM's reports or sets one:
+
+```sh
+npm run test:walsh -- BW95.md CF97.md [Elevated-2026.md]
+npx tsx cli/walsh.ts BW95.md
+npx tsx cli/walsh.ts BW95.md out.md --team Pitt --offense "…" --defense "…"
 ```
 
 The CFB 27 conversion also runs from the command line, and the stock rating table can be rebuilt from the three original ROMs:
