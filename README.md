@@ -32,7 +32,7 @@ The mod's GitHub repo has a patch list, `patches.json`: the latest release's pat
 
 ### Testing
 
-- `npm run test:patch` (see [Development](#development)): the BPS code with patches that use every BPS command, damaged patches and patches for another ROM; the repo's patch list and broken ones; each listed patch applied to the original ROM gives the SHA-1 in the list, and the patched ROM takes a team swap.
+- `npm run test:patch` (see [Development](#development)): the BPS code with patches that use every BPS command, damaged patches and patches for another ROM; the repo's patch list and broken ones; each listed patch applied to the original ROM gives the SHA-1 in the list, and the patched ROM takes a team swap (the 2026 Season Edition, whose teams are already swapped, goes straight to Season, Styles and Rosters).
 - In the browser: both v1.0 patches downloaded from GitHub and applied (SHA-1s as in the list), the patched ROM taken to Team Swap (Pitt → Tulane, identical to the CLI build) and to Season, Styles and Rosters; v1.0, Elevated beta and already swapped ROMs loaded directly; the patch list unreachable (a `.bps` file still works); a damaged `.bps` file; phone layout.
 
 ## Team Swap
