@@ -14,7 +14,7 @@ Everything runs in your browser. Your ROMs are opened on your own computer and a
 
 Each tool has its own tab. The app opens on Patch; `#swap`, `#season`, `#teams` or `#rosters` at the end of the address opens that tab directly (`#styles`, the Teams tab's old address, still works).
 
-**Season, Teams and Rosters edit the same ROM.** Load a ROM in any of them, or take the Team Swap result, then switch between them as often as you like. **Download ROM** in any of the three saves everything, named after the ROM with `[Season]`, `[Teams]` and/or `[Rosters]` added. Team Swap builds on the Patch tab's ROM, not on the one these tabs edit; if you change the swap and take its result again while you have changes, the app asks: **Keep my edits** puts every team's roster, the conferences and schedules, and the styles, ratings and weather you changed into the new ROM, by slot (a swapped team gets the edits made for its slot), or **Start fresh**. The same question comes up when you open another ROM file of the same game.
+**Season, Teams and Rosters edit the same ROM.** They open the Patch tab's ROM on their own; you can also load a ROM in any of them, or take the Team Swap result, then switch between them as often as you like. **Download ROM** in any of the three saves everything, named after the ROM with `[Season]`, `[Teams]` and/or `[Rosters]` added. Team Swap builds on the Patch tab's ROM, not on the one these tabs edit; if you change the swap and take its result again while you have changes, the app asks: **Keep my edits** puts every team's roster, the conferences and schedules, and the styles, ratings and weather you changed into the new ROM, by slot (a swapped team gets the edits made for its slot), or **Start fresh**. The same question comes up when you open another ROM file of the same game.
 
 ## Patch
 
@@ -24,7 +24,7 @@ Start here. Load your Bill Walsh College Football '95 ROM (`.md`, `.bin`, `.gen`
 - **A ROM with a released patch:** the app says which release it has, and whether a newer one is out. Patches go onto the original game only, so to update, load the original ROM and patch it here.
 - **Any other modded or edited ROM:** used as it is.
 
-Then **Swap teams** takes the ROM to the Team Swap tab, or **Edit season, teams and rosters** opens it in those tabs. A ROM whose teams Team Swap already swapped, such as the 2026 Season Edition, can have them swapped again (see [Swapping a swapped ROM](#swapping-a-swapped-rom)). Team Swap always uses the Patch tab's ROM: a Bill Walsh ROM you load in the Team Swap tab shows up in the Patch tab too.
+The other tabs then use that ROM, patched or not: Team Swap builds on it, and Season, Teams and Rosters open it (if they already have changes in another ROM, they ask first). **Swap teams** and **Edit season, teams and rosters** under Next go to those tabs. A ROM whose teams Team Swap already swapped, such as the 2026 Season Edition, can have them swapped again (see [Swapping a swapped ROM](#swapping-a-swapped-rom)). Team Swap always uses the Patch tab's ROM: a Bill Walsh ROM you load in the Team Swap tab shows up in the Patch tab too.
 
 ### How it works
 

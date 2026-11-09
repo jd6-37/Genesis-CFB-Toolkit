@@ -158,7 +158,18 @@ export function usePatchRom(): PatchApi {
   return { list, original, rom, applied, busy, note, open, loadFiles, apply, undo };
 }
 
-export function PatchTool({ api, onSwap, onEdit }: { api: PatchApi; onSwap: () => void; onEdit: () => void }) {
+export function PatchTool({
+  api,
+  inWork,
+  onSwap,
+  onEdit,
+}: {
+  api: PatchApi;
+  /** Season, Teams and Rosters have this ROM open (they take it on their own unless they had other changes). */
+  inWork: boolean;
+  onSwap: () => void;
+  onEdit: () => void;
+}) {
   const { list, original, rom, applied, busy, note } = api;
   const okList = list.state === 'ok' ? list.list : null;
   const patches = okList ? offered(okList) : [];
@@ -294,6 +305,11 @@ export function PatchTool({ api, onSwap, onEdit }: { api: PatchApi; onSwap: () =
                 {applied.fromFile ? 'Patched with ' : 'Patched: '}
                 <b>{applied.name}</b>
               </p>
+              <p className="hint">
+                {inWork
+                  ? 'The other tabs now use this patched ROM, so you can go straight to any of them.'
+                  : 'Team Swap now uses this patched ROM. Season, Teams and Rosters have changes in another ROM, so they ask before opening it.'}
+              </p>
               <div className="pat-done-actions">
                 <button className="btn" onClick={() => download(rom.name, rom.data)}>
                   Download patched ROM
@@ -327,7 +343,7 @@ export function PatchTool({ api, onSwap, onEdit }: { api: PatchApi; onSwap: () =
         </section>
       )}
 
-      {rom && <NextSteps rom={rom} onSwap={onSwap} onEdit={onEdit} />}
+      {rom && <NextSteps rom={rom} inWork={inWork} onSwap={onSwap} onEdit={onEdit} />}
     </>
   );
 }
@@ -359,7 +375,17 @@ function Choices({
   );
 }
 
-function NextSteps({ rom, onSwap, onEdit }: { rom: OpenedRom; onSwap: () => void; onEdit: () => void }) {
+function NextSteps({
+  rom,
+  inWork,
+  onSwap,
+  onEdit,
+}: {
+  rom: OpenedRom;
+  inWork: boolean;
+  onSwap: () => void;
+  onEdit: () => void;
+}) {
   const problem = swapProblemText(rom.data);
   const again = !problem && hasSwappedTeams(rom.data); // swapped by Team Swap before, which can swap it again
   return (
@@ -387,7 +413,7 @@ function NextSteps({ rom, onSwap, onEdit }: { rom: OpenedRom; onSwap: () => void
             Edit season, teams and rosters
           </button>
           <p className="hint">
-            Opens this ROM in the Season, Teams and Rosters tabs.
+            {inWork ? 'This ROM is already open in the Season, Teams and Rosters tabs.' : 'Opens this ROM in the Season, Teams and Rosters tabs.'}
             {!problem && ' If you also swap teams, do that first: those tabs can take the Team Swap result.'}
           </p>
         </li>
