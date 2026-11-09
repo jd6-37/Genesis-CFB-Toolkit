@@ -16,6 +16,7 @@
 //   4. Jersey numbers straight from CFB 27.
 // Reference implementation and the decisions behind it: docs/rosters.md, "CFB 27 conversion".
 // BW95 only for now; the stock tables for CF96/97 are in rosterStockDists.json already.
+import { starterOvr, type StarterOvr } from './teamRatings';
 import { GROUP_ATTRS, type Attr, type Group, type SlotDef } from './rosterLayouts';
 import { jerseyByte, readPlayer, setRating, teamLayout, teamName, writePlayer, type RosterRom } from './rosterRom';
 import { teamMatcher } from './rosterImport';
@@ -93,6 +94,8 @@ export interface Cfb27Team {
   fills: Cfb27Fill[];
   /** Slots no CFB 27 player could fill (they keep their current player). */
   unfilled: string[];
+  /** Team OVRs from the team's CFB 27 starters (src/core/teamRatings.ts). */
+  ovr: StarterOvr;
 }
 
 export interface Cfb27Plan {
@@ -253,6 +256,7 @@ export function convertCfb27(rom: RosterRom, sheet: Sheet): Cfb27Plan {
       team: t, teamName: teamName(rom.teams[t]), sheetTeam: school,
       fills: [...got.values()].sort((a, b) => order.get(a.slot)! - order.get(b.slot)!),
       unfilled,
+      ovr: starterOvr(roster),
     });
   }
 

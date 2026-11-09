@@ -1,6 +1,8 @@
 // Converts raw CFB 27 ratings into a BW95 ROM's rosters, the same way the Rosters tab does
-// (distribution matching, OL weight display tweak, checksums fixed).
-//   npx tsx cli/cfb27.ts ROM CFB27.csv OUT.md [--no-ol-tweak] [--teams "Texas,Ohio State"]
+// (distribution matching, OL weight display tweak, each converted team's OFF/DEF from its CFB 27
+// starters, checksums fixed).
+//   npx tsx cli/cfb27.ts ROM CFB27.csv OUT.md [--no-ol-tweak] [--no-ratings] [--teams "Texas,Ohio State"]
+// CFB27.csv can be the built-in file, public/data/ea-cfb27-ratings-2026-week9.csv.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { openRom } from '../src/core/romfile';
@@ -9,15 +11,18 @@ import { readSheet } from '../src/core/rosterSheet';
 import { detectImport } from '../src/core/rosterImport';
 import { applyCfb27, convertCfb27 } from '../src/core/rosterCfb27';
 import { installOlPatch } from '../src/core/rosterOlPatch';
+import { writeRating } from '../src/core/teamRatings';
 
 const args = process.argv.slice(2);
 const flag = (name: string) => { const i = args.indexOf(name); if (i < 0) return undefined; const v = args[i + 1]; args.splice(i, 2); return v; };
 const noTweak = args.includes('--no-ol-tweak');
 if (noTweak) args.splice(args.indexOf('--no-ol-tweak'), 1);
+const noRatings = args.includes('--no-ratings');
+if (noRatings) args.splice(args.indexOf('--no-ratings'), 1);
 const teamsArg = flag('--teams');
 const [romPath, csvPath, outPath] = args;
 if (!outPath) {
-  console.error('usage: tsx cli/cfb27.ts ROM CFB27.csv OUT.md [--no-ol-tweak] [--teams "A,B"]');
+  console.error('usage: tsx cli/cfb27.ts ROM CFB27.csv OUT.md [--no-ol-tweak] [--no-ratings] [--teams "A,B"]');
   process.exit(2);
 }
 
@@ -34,6 +39,8 @@ const only = teamsArg
   : undefined;
 const written = applyCfb27(rom, plan, only);
 const tweak = noTweak ? 'skipped' : installOlPatch(rom.data);
+const rated = rom.game === 'bw95' && !noRatings ? plan.teams.filter((t) => !only || only.includes(t.team)) : [];
+for (const t of rated) writeRating(rom.data, t.team, t.ovr);
 const sums = fixChecksums(rom.data, rom.game);
 writeFileSync(outPath, rom.data);
 console.log(JSON.stringify({
@@ -47,5 +54,6 @@ console.log(JSON.stringify({
   unknownPositions: plan.unknownPositions,
   blankCells: plan.blankCells,
   olTweak: tweak,
+  ratings: rated.map((t) => `${t.teamName} ${t.ovr.off}/${t.ovr.def}`),
   checksums: sums,
 }, null, 1));

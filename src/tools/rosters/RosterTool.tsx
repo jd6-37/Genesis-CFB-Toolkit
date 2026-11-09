@@ -17,6 +17,8 @@ import { readSheet, type Sheet } from '../../core/rosterSheet';
 import { readStyle, styleInfo, styleProblems, writeStyle } from '../../core/styles';
 import { WorkRomCard, type TeamSwapSource, type WorkApi } from '../shared/WorkRom';
 import { StylePicks } from '../styles/StylePicks';
+import { CFB27_LATEST, fetchCfb27Latest } from '../../core/cfb27Latest';
+import { ratingProblems, writeRating } from '../../core/teamRatings';
 import './rosters.css';
 
 export type { TeamSwapSource };
@@ -104,7 +106,7 @@ export function RosterTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwap
           <p className="dock-count" aria-live="polite">
             {changed.length ? `${changed.length} team${changed.length === 1 ? '' : 's'} changed` : 'No roster changes yet'}
             {api.edits.season && <small className="dock-also">+ season changes</small>}
-            {api.edits.styles && <small className="dock-also">+ style changes</small>}
+            {api.edits.teams && <small className="dock-also">+ team changes</small>}
           </p>
           {note && (
             <p className={`note ${note.kind}`} role={note.kind === 'error' ? 'alert' : 'status'}>
@@ -137,7 +139,7 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
   };
 
   // Team styles (BW95): the defense also sets the 3-4 roster layout on the original layout, and the
-  // Styles tab can change it too, so the layouts are re-read from the bytes on every render.
+  // Teams tab can change it too, so the layouts are re-read from the bytes on every render.
   const sinfo = useMemo(() => (rom.game === 'bw95' && !styleProblems(rom.data).length ? styleInfo(rom.data) : null), [rom]);
   refreshThreeFour(rom);
   const t = rom.teams[team];
@@ -172,11 +174,28 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
     setConverted(null);
   };
 
-  const onImport = async (f: File) => {
+  const [fetching, setFetching] = useState(false);
+  const builtInName = `CFB 27 rosters, ${CFB27_LATEST.season} Week ${CFB27_LATEST.week} (built in)`;
+  const loadBuiltIn = async () => {
+    clearPanels();
+    setFetching(true);
+    try {
+      const bytes = await fetchCfb27Latest();
+      await onImportBytes(builtInName, bytes);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setFetching(false);
+    }
+  };
+
+  const onImport = async (f: File) => onImportBytes(f.name, new Uint8Array(await f.arrayBuffer()));
+  const onImportBytes = async (name: string, bytes: Uint8Array) => {
+    const f = { name };
     clearPanels();
     let sheet: Sheet;
     try {
-      sheet = await readSheet(f.name, new Uint8Array(await f.arrayBuffer()));
+      sheet = await readSheet(f.name, bytes);
     } catch (e) {
       return setError(`${f.name}: ${(e as Error).message}`);
     }
@@ -203,9 +222,11 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
     }
   };
 
-  const applyPlan = (teams: number[], tweak: boolean) => {
+  const applyPlan = (teams: number[], tweak: boolean, ratings: boolean) => {
     if (!plan) return;
     const slots = applyCfb27(rom, plan.plan, teams);
+    const rated = ratings ? plan.plan.teams.filter((t) => teams.includes(t.team)) : [];
+    for (const t of rated) writeRating(rom.data, t.team, t.ovr);
     let tweakNote: string | null = null;
     if (tweak && rom.game === 'bw95') {
       try {
@@ -214,7 +235,7 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
         tweakNote = (e as Error).message;
       }
     }
-    setConverted({ plan: plan.plan, file: plan.file, teams, slots, tweak: tweakNote });
+    setConverted({ plan: plan.plan, file: plan.file, teams, slots, tweak: tweakNote, ratings: rated.length });
     setPlan(null);
     if (teams.length && !teams.includes(team)) setTeam(teams[0]);
     bump();
@@ -267,6 +288,11 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
           </span>
         )}
         <div className="ros-actions">
+          {rom.game === 'bw95' && (
+            <button className="btn" onClick={() => void loadBuiltIn()} disabled={fetching} title={CFB27_LATEST.label}>
+              {fetching ? 'Loading CFB 27 rosters…' : `CFB 27 rosters (${CFB27_LATEST.season}, Week ${CFB27_LATEST.week})`}
+            </button>
+          )}
           <button className="btn" onClick={() => sheetRef.current?.click()}>
             Import spreadsheet
           </button>
@@ -517,6 +543,8 @@ interface ConvertedReport {
   slots: number;
   /** 'installed', 'already', an error message, or null when not asked for. */
   tweak: string | null;
+  /** Teams whose OFF/DEF were set from their CFB 27 starters. */
+  ratings: number;
 }
 
 /** CFB 27 data was found: shows what the conversion would do and which teams to write. */
@@ -526,11 +554,13 @@ function Cfb27Preview({
   rom: RosterRom;
   plan: Cfb27Plan;
   file: string;
-  onApply: (teams: number[], tweak: boolean) => void;
+  onApply: (teams: number[], tweak: boolean, ratings: boolean) => void;
   onCancel: () => void;
 }) {
   const [pick, setPick] = useState<Set<number>>(() => new Set(plan.teams.map((t) => t.team)));
   const [tweak, setTweak] = useState(rom.game === 'bw95' && olPatchState(rom.data) !== 'unknown');
+  const canRate = rom.game === 'bw95' && !ratingProblems(rom.data).length;
+  const [ratings, setRatings] = useState(canRate);
   const toggle = (i: number) => setPick((s) => {
     const n = new Set(s);
     if (n.has(i)) n.delete(i); else n.add(i);
@@ -569,6 +599,7 @@ function Cfb27Preview({
                 <input type="checkbox" checked={pick.has(t.team)} onChange={() => toggle(t.team)} />
                 {rom.teams[t.team].school}
                 {t.unfilled.length > 0 && <span className="ros-dim"> ({t.fills.length} of {t.fills.length + t.unfilled.length})</span>}
+                {canRate && <span className="ros-dim ros-ovr"> {t.ovr.off}/{t.ovr.def}</span>}
               </label>
             ))}
           </fieldset>
@@ -579,8 +610,16 @@ function Cfb27Preview({
               the original game's, and the conversion keeps the original weights so the line play stays the same.
             </label>
           )}
+          {canRate && (
+            <label className="ros-tweak">
+              <input type="checkbox" checked={ratings} onChange={(e) => setRatings(e.target.checked)} />
+              Set each team's OFF and DEF (shown after its name) from its CFB 27 starters: the best player at each starting
+              position, offense and defense, on an OVR scale of 0-99. Simulated games and the preseason poll use them; they
+              can be changed in the Teams tab.
+            </label>
+          )}
           <div className="ros-convert-actions">
-            <button className="btn btn-go" disabled={pick.size === 0} onClick={() => onApply([...pick].sort((a, b) => a - b), tweak)}>
+            <button className="btn btn-go" disabled={pick.size === 0} onClick={() => onApply([...pick].sort((a, b) => a - b), tweak, ratings)}>
               Convert {pick.size} team{pick.size === 1 ? '' : 's'}
             </button>
           </div>
@@ -619,6 +658,7 @@ function Cfb27Summary({ rom, report, onPick, onClose }: { rom: RosterRom; report
         {plan.teams.length === 1 ? '' : 's'} in the file). Jersey numbers are the real ones.
         {report.tweak === 'installed' && ' The roster screen now shows offensive linemen 25 lb heavier.'}
         {report.tweak === 'already' && ' The roster screen already showed offensive linemen 25 lb heavier.'}
+        {report.ratings > 0 && ` OFF and DEF set from the CFB 27 starters for ${report.ratings} team${report.ratings === 1 ? '' : 's'} (see the Teams tab).`}
       </p>
       {report.tweak && report.tweak !== 'installed' && report.tweak !== 'already' && <p className="ros-warn">{report.tweak}</p>}
       {plan.unmatchedRomTeams.length > 0 && (
