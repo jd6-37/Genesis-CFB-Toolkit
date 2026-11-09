@@ -360,17 +360,13 @@ function Choices({
 }
 
 function NextSteps({ rom, onSwap, onEdit }: { rom: OpenedRom; onSwap: () => void; onEdit: () => void }) {
-  const swapped = hasSwappedTeams(rom.data);
-  const problem = swapped ? null : swapProblemText(rom.data);
+  const problem = swapProblemText(rom.data);
+  const again = !problem && hasSwappedTeams(rom.data); // swapped by Team Swap before, which can swap it again
   return (
     <section className="pat-next" aria-labelledby="pat-next-h">
       <h3 id="pat-next-h">Next</h3>
       <ul>
-        {swapped ? (
-          <li className="pat-step">
-            <p className="hint">This ROM's teams are already swapped, so it goes straight to Season, Teams and Rosters.</p>
-          </li>
-        ) : problem ? (
+        {problem ? (
           <li className="pat-step">
             <p className="hint">{problem}</p>
           </li>
@@ -380,7 +376,9 @@ function NextSteps({ rom, onSwap, onEdit }: { rom: OpenedRom; onSwap: () => void
               Swap teams
             </button>
             <p className="hint">
-              Replace teams with ones from College Football USA 97. You'll load that ROM in the Team Swap tab.
+              {again
+                ? "Some of this ROM's teams are already swapped in. Replace any team, those too, with one from College Football USA 97. You'll load that ROM in the Team Swap tab."
+                : "Replace teams with ones from College Football USA 97. You'll load that ROM in the Team Swap tab."}
             </p>
           </li>
         )}
@@ -390,7 +388,7 @@ function NextSteps({ rom, onSwap, onEdit }: { rom: OpenedRom; onSwap: () => void
           </button>
           <p className="hint">
             Opens this ROM in the Season, Teams and Rosters tabs.
-            {!swapped && !problem && ' If you also swap teams, do that first: those tabs can take the Team Swap result.'}
+            {!problem && ' If you also swap teams, do that first: those tabs can take the Team Swap result.'}
           </p>
         </li>
       </ul>

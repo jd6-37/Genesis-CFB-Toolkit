@@ -13,7 +13,8 @@
     "test:season": "tsx cli/seasontest.ts",
     "test:styles": "tsx cli/stylestest.ts",
     "test:teams": "tsx cli/teamstest.ts",
-    "test:patch": "tsx cli/patchtest.ts"
+    "test:patch": "tsx cli/patchtest.ts",
+    "test:swap": "tsx cli/swaptest.ts"
   },
   "dependencies": {
     "@fontsource/barlow": "^5.3.0",

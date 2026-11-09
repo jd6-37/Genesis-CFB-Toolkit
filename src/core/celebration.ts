@@ -156,6 +156,13 @@ export function buildGenericCelebration(rom: Uint8Array): CelebBlob {
   return out;
 }
 
+/** The card stunt to show: the one an earlier swap put in the ROM, or a new one from its stock blobs
+ *  (which an earlier swap may have replaced, so they aren't read again then). */
+export function genericCelebration(rom: Uint8Array): CelebBlob {
+  if (rw(rom, CELEB_ADDR) === CELEB_CONTAINER_OFF) return parseBlob(rom.slice(CELEB_ADDR, CELEB_ADDR + PITT_LEN), CELEB_ADDR);
+  return buildGenericCelebration(rom);
+}
+
 const luma = (c: number) => {
   const [r, g, b] = toLevels(c);
   return 0.3 * r + 0.59 * g + 0.11 * b;
