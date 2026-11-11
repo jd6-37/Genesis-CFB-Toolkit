@@ -224,7 +224,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
           </a>
           <span className="dy-mast-teams">
             {ctx && d!.userTeams.map((t) => (
-              <Ctx.Provider key={t} value={ctx}><a href={href(`team/${t}`)} aria-label={d!.teams[t].school}><TeamMark team={t} size={32} /></a></Ctx.Provider>
+              <Ctx.Provider key={t} value={ctx}><a href={href(`team/${t}`)} aria-label={d!.teams[t].school}><TeamMark team={t} size={64} exact /></a></Ctx.Provider>
             ))}
           </span>
         </div>

@@ -210,7 +210,7 @@
 }
 @media (max-width: 600px) {
   .dy-art-big .dy-mark, .dy-art-big .dy-art-main .sprite { height: 96px !important; width: auto !important; }
-  .dy-art-big .dy-art-side .dy-mark, .dy-art-big .dy-art-side .sprite { height: 48px !important; width: auto !important; }
+  .dy-art-big .dy-art-side .dy-mark, .dy-art-big .dy-art-side .sprite { height: 64px !important; width: auto !important; }
 }
 .dy-bw { margin-bottom: 24px; }
 .dy-bw > p { margin: 0 0 14px; }

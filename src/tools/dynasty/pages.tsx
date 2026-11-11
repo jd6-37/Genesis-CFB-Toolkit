@@ -351,7 +351,7 @@ export function Team({ team }: { team: number }) {
             {v.save && v.rank[team] <= 25 && <span>No. {v.rank[team]}</span>}
           </p>
         </div>
-        <TeamMark team={team} size={64} kind="helmet" />
+        <TeamMark team={team} size={96} kind="helmet" />
       </header>
 
       <div className="dy-team-cols">

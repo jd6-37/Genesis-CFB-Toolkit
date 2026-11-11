@@ -42,12 +42,13 @@ export const rankText = (v: SeasonView, t: number) => (v.save && v.rank[t] <= 25
 const scaleFor = (pic: Picture, height: number) => Math.max(1, Math.floor(height / pic.height)) || 1;
 
 /** The team's logo from the ROM at an integer scale (or a color chip with initials without art). */
-export function TeamMark({ team, size = 24, kind = 'logo' }: { team: number; size?: number; kind?: 'logo' | 'helmet' }) {
+export function TeamMark({ team, size = 24, kind = 'logo', exact = false }: { team: number; size?: number; kind?: 'logo' | 'helmet'; exact?: boolean }) {
   const { d, art } = useDyn();
   const pic = art?.[team]?.[kind] ?? null;
   const t = d.teams[team];
   if (pic) {
-    const scale = size >= pic.height ? scaleFor(pic, size) : size / pic.height;
+    // Whole-number scales keep the pixels even; `exact` fills the size anyway.
+    const scale = size >= pic.height && !exact ? scaleFor(pic, size) : size / pic.height;
     return (
       <span className="dy-mark" style={{ height: size, minWidth: size }}>
         <SpriteCanvas pic={pic} scale={scale} label={`${t.school} ${kind}`} />
@@ -94,7 +95,7 @@ export function StoryArt({ teams, big = false }: { teams: number[]; big?: boolea
       ) : (
         <>
           <div className="dy-art-main"><TeamMark team={teams[0]} size={h} /></div>
-          {teams[1] !== undefined && <div className="dy-art-side"><TeamMark team={teams[1]} size={h / 2} kind="helmet" /></div>}
+          {teams[1] !== undefined && <div className="dy-art-side"><TeamMark team={teams[1]} size={big ? h * 0.58 : h / 2} kind="helmet" /></div>}
         </>
       )}
     </div>
