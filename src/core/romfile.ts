@@ -12,6 +12,9 @@ export interface KnownRom {
   /** A BW95 ROM recognized only by its header: a mod or an edit of the original. Team Swap checks
    *  that the code and ROM space it needs are still untouched (`swapProblems` in build.ts). */
   modded?: boolean;
+  /** A BW95 ROM over 2 MB: the 138-team 2026 Season Edition (Elevated v2.0.0 on). The tools here edit the
+   *  36-team game, so they leave it alone (Team Swap, Season, Teams and Rosters refuse it). */
+  wide?: boolean;
 }
 
 export const KNOWN: Record<string, KnownRom> = {
@@ -38,10 +41,22 @@ export function headerTitle(d: Uint8Array): string {
   return d.length < 0x180 ? '' : String.fromCharCode(...d.subarray(0x150, 0x180)).replace(/\s+/g, ' ').trim();
 }
 
-/** A known file by SHA-1, else any 2 MB ROM with BW95's header counts as a modded BW95 ROM. */
+/** True for a BW95 ROM over 2 MB: the 138-team 2026 Season Edition (see `KnownRom.wide`). */
+export const isWideBw95 = (d: Uint8Array) => d.length > 0x200000 && headerTitle(d) === BW95_TITLE;
+
+/** Why the 36-team tools don't open a wide ROM. */
+export const WIDE_ROM_TEXT =
+  "This is the 2026 Season Edition with all 138 FBS teams. Team Swap, Season, Teams and Rosters edit the game's 36 " +
+  'teams, so they can\'t open it. To edit teams, start from the original game or the Elevated edition with the original 36 teams.';
+
+/** A known file by SHA-1, else any 2 MB ROM with BW95's header counts as a modded BW95 ROM, and a
+ *  bigger one as the 138-team edition. */
 export function identifyRom(data: Uint8Array, sha1: string): KnownRom | undefined {
   const known = KNOWN[sha1];
   if (known) return known;
+  if (isWideBw95(data)) {
+    return { kind: 'bw95', label: "Bill Walsh College Football '95: 2026 Season Edition (138 teams)", modded: true, wide: true };
+  }
   if (data.length === 0x200000 && headerTitle(data) === BW95_TITLE) {
     return { kind: 'bw95', label: "Bill Walsh College Football '95 (modded)", modded: true };
   }

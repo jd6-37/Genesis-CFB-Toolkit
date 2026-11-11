@@ -55,3 +55,10 @@ Versions of the app before the editor moved a text that didn't fit to `0x1F8000`
 ## Swap files
 
 `SlotConfig.walsh` = `[offense, defense]`, optional. Without it a swapped team gets the original team's text with the new names, as before; swap files saved before the editor build exactly as before. Loading a swap file checks the report with `reportProblems`.
+
+## Built-in 2026 reports
+
+`public/data/walsh-reports-2026-week9.json` holds the Elevated mod's 2026 reports for all 138 teams of the built-in College Football 27 CSV (`{app: 'genesis-cfb-toolkit', tool: 'walsh-reports', version: 1, season, week, source, reports: {<CSV team>: {offense, defense}}}`). `src/core/walsh2026.ts` fetches and checks it (`walshDataProblems`: every report within the editor's rules) and maps converted teams to slots (`reportsForSlots`, by the CSV team the conversion matched). The Rosters tab offers them only with the built-in rosters, because the reports name players by those rosters' jersey numbers; they go in with `writeReports`, like reports saved in the editor.
+
+`cli/walshdata.ts` makes the file from the 138-team 2026 Season Edition (Elevated v2.0.0 on): it finds the team table (0x28DC, one pointer per team) and the Walsh paragraph table (the pointer to "Welcome to {c}." followed by increasing pointers: 6 intro lines, then offense and defense per team), maps the ROM's school names to the CSV's (App State → Appalachian State, Pitt → Pittsburgh, and 10 more), and refuses to write unless every CSV team has exactly one valid report.
+

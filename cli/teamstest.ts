@@ -2,11 +2,12 @@
 // (bring your own; .md/.bin/.gen or .zip): the original BW95, CF97, and the two Elevated v1.1.0
 // editions (the original game with the Elevated and the Elevated 2026 Season Edition patches):
 //   npx tsx cli/teamstest.ts BW95 CF97 ELEVATED ELEVATED_2026
+// (ELEVATED: the Elevated edition, v1.1.0 or later; ELEVATED_2026: the 2026 Season Edition v1.1.0, the 36-team one)
 // The CFB 27 data is the built-in file, public/data/ea-cfb27-ratings-2026-week9.csv.
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { strict as assert } from 'node:assert';
-import { openRom } from '../src/core/romfile';
+import { isWideBw95, openRom } from '../src/core/romfile';
 import { parseBw95 } from '../src/core/bw95';
 import { parseCf97 } from '../src/core/cf97';
 import { buildRom, defaultSlot, swapFile } from '../src/core/build';
@@ -31,6 +32,7 @@ const bw = await read(bwPath);
 const cf = await read(cfPath);
 const e94 = await read(e94Path);
 const e26 = await read(e26Path);
+if (isWideBw95(e26)) throw new Error('ELEVATED_2026 must be the 2026 Season Edition v1.1.0 (36 teams); the 138-team edition of v2.0.0 isn\'t edited by these tools.');
 const csvBytes = new Uint8Array(readFileSync(join(import.meta.dirname, '..', 'public', CFB27_LATEST.file)));
 let passed = 0;
 const ok = (name: string) => {

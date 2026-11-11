@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { strict as assert } from 'node:assert';
-import { openRom, KNOWN } from '../src/core/romfile';
+import { identifyRom, isWideBw95, openRom, KNOWN } from '../src/core/romfile';
 import { applyBps, bpsInfo, BpsError } from '../src/core/bps';
 import { crc32 } from '../src/core/bytes';
 import {
@@ -133,8 +133,16 @@ for (const p of offered(list)) {
   const changed = file.slice();
   changed[10] ^= 1;
   await assert.rejects(checkPatchFile(p, changed), /doesn't match the patch list/);
-  // Every patched ROM takes a team swap, the 2026 Season Edition too: Team Swap swapped its teams, so it
-  // can swap them again. With CF97 a swap builds on it (Pitt's slot → Tulane), and the result takes another.
+  // The 138-team 2026 Season Edition (v2.0.0 on, 4 MB) is recognized and kept out of the 36-team tools.
+  const known = identifyRom(out.data, out.sha1);
+  if (out.data.length > 0x200000) {
+    assert.ok(known?.kind === 'bw95' && known.wide && isWideBw95(out.data));
+    ok(`${p.name}: applies to the original ROM, SHA-1 ${p.rom.slice(0, 8)}…, the 138-team edition (the 36-team tools don't open it)`);
+    continue;
+  }
+  assert.ok(known?.kind === 'bw95' && !known.wide);
+  // Every other patched ROM takes a team swap (v1.1.0's 36-team 2026 Season Edition too: Team Swap swapped its
+  // teams, so it can swap them again). With CF97 a swap builds on it (Pitt's slot → Tulane), and the result takes another.
   const swappedAlready = hasSwappedTeams(out.data);
   const problem = swapProblemText(out.data);
   assert.equal(problem, null);

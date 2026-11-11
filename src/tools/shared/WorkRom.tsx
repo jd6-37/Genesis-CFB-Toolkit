@@ -1,7 +1,7 @@
 // The working ROM shared by the Season, Teams and Rosters tabs: one buffer they all edit in place,
 // loaded from a file or from the Team Swap tab, downloaded from any of them with all edits in it.
 import { useCallback, useMemo, useState } from 'react';
-import { openRom } from '../../core/romfile';
+import { isWideBw95, openRom, WIDE_ROM_TEXT } from '../../core/romfile';
 import { detectGame, findEaChecksum, fixChecksums } from '../../core/rosterRom';
 import { GAMES, type Game } from '../../core/rosterLayouts';
 import { canCarry, carryEdits, editsSince, workFileName, type Edits } from '../../core/workRom';
@@ -39,6 +39,7 @@ let nextId = 1;
 function makeWork(inc: Incoming): WorkRom {
   const game = detectGame(inc.data);
   if (!game) throw new Error("Not a Bill Walsh College Football '95, College Football USA '96 or '97 ROM.");
+  if (isWideBw95(inc.data)) throw new Error(WIDE_ROM_TEXT);
   const c = findEaChecksum(inc.data, game);
   return {
     id: nextId++,

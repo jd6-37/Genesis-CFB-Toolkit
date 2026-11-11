@@ -1,12 +1,12 @@
 // Team Swap tests, against real ROMs (bring your own; .md/.bin/.gen or .zip): the original BW95, CF97
 // and, optionally, the Elevated 2026 Season Edition (the original game with that patch):
-//   npx tsx cli/swaptest.ts BW95 CF97 [ELEVATED_2026]
+//   npx tsx cli/swaptest.ts BW95 CF97 [ELEVATED_2026]   (the 2026 Season Edition v1.1.0, the 36-team one Team Swap swapped)
 // Covers swapping a ROM that Team Swap swapped before: new slots, slots swapped before, the Walsh
 // Report text (always in its own space), and ROMs swapped by other tools.
 import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { strict as assert } from 'node:assert';
-import { openRom } from '../src/core/romfile';
+import { isWideBw95, openRom } from '../src/core/romfile';
 import { parseBw95 } from '../src/core/bw95';
 import { CfTeam, parseCf97 } from '../src/core/cf97';
 import { buildRom, defaultSlot, hasSwappedTeams, SlotConfig, swappedByTeamSwap, swappedSlots, swapProblemText } from '../src/core/build';
@@ -159,7 +159,9 @@ const one = swap(bw, [['Pitt', 'Tulane']]).rom;
 }
 
 // 6. The Elevated 2026 Season Edition: its 11 swapped teams stay, two more slots change.
-if (e26Path) {
+if (e26Path && isWideBw95(await read(e26Path))) {
+  console.log("skip - that is the 138-team 2026 Season Edition (v2.0.0 on), which Team Swap doesn't take; this test takes v1.1.0's 36-team edition");
+} else if (e26Path) {
   const e26 = await read(e26Path);
   assert.equal(swappedByTeamSwap(e26), true);
   assert.equal(swapProblemText(e26), null);

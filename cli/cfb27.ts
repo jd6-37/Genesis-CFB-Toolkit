@@ -1,8 +1,9 @@
 // Converts raw CFB 27 ratings into a BW95 ROM's rosters, the same way the Rosters tab does
 // (distribution matching, OL weight display tweak, each converted team's OFF/DEF from its CFB 27
-// starters, checksums fixed).
-//   npx tsx cli/cfb27.ts ROM CFB27.csv OUT.md [--no-ol-tweak] [--no-ratings] [--teams "Texas,Ohio State"]
-// CFB27.csv can be the built-in file, public/data/ea-cfb27-ratings-2026-week9.csv.
+// starters, checksums fixed; with --walsh, each converted team's Walsh Report from a report file).
+//   npx tsx cli/cfb27.ts ROM CFB27.csv OUT.md [--no-ol-tweak] [--no-ratings] [--teams "Texas,Ohio State"] [--walsh FILE]
+// CFB27.csv can be the built-in file, public/data/ea-cfb27-ratings-2026-week9.csv, and --walsh its reports,
+// public/data/walsh-reports-2026-week9.json (the Rosters tab adds them only with the built-in rosters).
 import { readFileSync, writeFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { openRom } from '../src/core/romfile';
@@ -12,6 +13,8 @@ import { detectImport } from '../src/core/rosterImport';
 import { applyCfb27, convertCfb27 } from '../src/core/rosterCfb27';
 import { installOlPatch } from '../src/core/rosterOlPatch';
 import { writeRating } from '../src/core/teamRatings';
+import { reportsForSlots, walshDataProblems, type WalshData } from '../src/core/walsh2026';
+import { writeReports } from '../src/core/walshReports';
 
 const args = process.argv.slice(2);
 const flag = (name: string) => { const i = args.indexOf(name); if (i < 0) return undefined; const v = args[i + 1]; args.splice(i, 2); return v; };
@@ -20,9 +23,10 @@ if (noTweak) args.splice(args.indexOf('--no-ol-tweak'), 1);
 const noRatings = args.includes('--no-ratings');
 if (noRatings) args.splice(args.indexOf('--no-ratings'), 1);
 const teamsArg = flag('--teams');
+const walshPath = flag('--walsh');
 const [romPath, csvPath, outPath] = args;
 if (!outPath) {
-  console.error('usage: tsx cli/cfb27.ts ROM CFB27.csv OUT.md [--no-ol-tweak] [--no-ratings] [--teams "A,B"]');
+  console.error('usage: tsx cli/cfb27.ts ROM CFB27.csv OUT.md [--no-ol-tweak] [--no-ratings] [--teams "A,B"] [--walsh FILE]');
   process.exit(2);
 }
 
@@ -41,6 +45,14 @@ const written = applyCfb27(rom, plan, only);
 const tweak = noTweak ? 'skipped' : installOlPatch(rom.data);
 const rated = rom.game === 'bw95' && !noRatings ? plan.teams.filter((t) => !only || only.includes(t.team)) : [];
 for (const t of rated) writeRating(rom.data, t.team, t.ovr);
+let walsh: { teams: string[]; trimmed: number } | undefined;
+if (walshPath && rom.game === 'bw95') {
+  const data = JSON.parse(readFileSync(walshPath, 'utf8')) as WalshData;
+  const p = walshDataProblems(data);
+  if (p.length) throw new Error(`${walshPath}: ${p.join('; ')}`);
+  const picked = reportsForSlots(data, plan.teams.filter((t) => !only || only.includes(t.team)));
+  walsh = { teams: [...picked.keys()].map((s) => teamName(rom.teams[s])), trimmed: writeReports(rom.data, picked).length };
+}
 const sums = fixChecksums(rom.data, rom.game);
 writeFileSync(outPath, rom.data);
 console.log(JSON.stringify({
@@ -55,5 +67,6 @@ console.log(JSON.stringify({
   blankCells: plan.blankCells,
   olTweak: tweak,
   ratings: rated.map((t) => `${t.teamName} ${t.ovr.off}/${t.ovr.def}`),
+  walsh,
   checksums: sums,
 }, null, 1));
