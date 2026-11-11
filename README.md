@@ -344,7 +344,7 @@ The pages:
 
 - **Home:** a score ticker for the latest week and the stories of the week, written from the results (upsets, Top 25 games, routs, your games, a new No. 1, unbeaten teams, the playoff field, the national leaders, champions), with headlines, your teams and the Top 25.
 - **Scores** by week, **Standings** by conference, the **Top 25** with movement.
-- **Teams:** each team's schedule and results, history, season stats and full roster (the players marked "In game" are on the ROM's 32-man roster). Each **player** has a page with his stats and his Bill Walsh '95 ratings as the game's roster screen shows them (players who aren't among the team's 32 in the game have none).
+- **Teams:** each team's schedule and results, history, season stats and full roster (the players marked "In game" are on the ROM's 32-man roster). Each **player** has a page with his stats and his Bill Walsh '95 ratings: the numbers the game shows, a meter of the game's 15 steps, his rank among the starters at the same spot on every team, and a shape of his ratings against their average. Players who aren't among their team's 32 in the ROM have no ratings.
 - **Stats:** the national leaders. **History:** national champions, single-season records and your teams by season.
 - **Manage:** import saves, choose your teams, download the dynasty file (a backup, or to move it to another computer; it has no game art, so load your ROM again there for the logos), and open, rename or delete dynasties.
 

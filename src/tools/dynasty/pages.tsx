@@ -436,8 +436,8 @@ export function Player({ id }: { id: number }) {
   }, [d, v, p]);
   if (!p) return <Empty><p>There's no such player.</p></Empty>;
   const team = p.team;
-  // His slots on the game's roster this season (a kicker can also be the punter).
-  const bwSlots = team === null ? [] : v.season.slots[team].flatMap((id, slot) => (id === p.id && v.season.bw?.[team]?.[slot] ? [v.season.bw[team][slot]!] : []));
+  // His roster slots in the ROM this season (a kicker can also be the punter).
+  const bwSlots = team === null ? [] : v.season.slots[team].flatMap((id, slot) => (id === p.id && v.season.bw?.[team]?.[slot] ? [slot] : []));
   const c = team !== null ? mainColor(d, team) : 0;
   return (
     <section>
@@ -462,29 +462,89 @@ export function Player({ id }: { id: number }) {
         </div>
       ))}
       <h3 className="dy-sub">Bill Walsh '95 ratings</h3>
-      {bwSlots.length ? bwSlots.map((b) => (
-        <div key={b.label} className="dy-bw">
-          {bwSlots.length > 1 && <p className="dy-dim dy-small">As {b.label}</p>}
-          <div className="dy-ratings">
-            {b.attrs.map((a, i) => {
-              const weight = a === 'Weight';
-              const shown = weight ? nibbleToWeight(b.steps[i]) + b.weightPlus : nibbleToRating(b.steps[i]);
-              return (
-                <div key={a} className="dy-rating">
-                  <span>{a}</span>
-                  <span className="dy-bar"><span style={{ width: `${(b.steps[i] / 15) * 100}%` }} /></span>
-                  <span className="dy-strong">{weight ? `${shown} lb` : shown}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )) : (
+      {bwSlots.length ? bwSlots.map((slot) => <BwRatings key={slot} team={team!} slot={slot} name={playerName(p)} />) : (
         <p className="dy-dim">
-          {v.season.bw ? "He isn't on the game's 32-man roster this season, so he has no ratings in the game." : 'Start this dynasty again to see the ratings (it was made before the app kept them).'}
+          {v.season.bw ? `He isn't one of ${team !== null ? d.teams[team].school : 'his team'}'s 32 players in Bill Walsh '95 this season, so he has no ratings.` : 'Start this dynasty again to see the ratings (it was made before the app kept them).'}
         </p>
       )}
     </section>
+  );
+}
+
+// ---- the game's ratings: a shape against the league average and a tile per rating
+
+const ordinal = (n: number) => {
+  const t = n % 100, u = n % 10;
+  return `${n}${t >= 11 && t <= 13 ? 'th' : u === 1 ? 'st' : u === 2 ? 'nd' : u === 3 ? 'rd' : 'th'}`;
+};
+
+function BwRatings({ team, slot, name }: { team: number; slot: number; name: string }) {
+  const { d, v } = useDyn();
+  const b = v.season.bw![team][slot]!;
+  // The same slot on every team this season.
+  const league = v.season.bw!.map((t) => t[slot]).filter((x): x is NonNullable<typeof x> => !!x && x.group === b.group);
+  const n = league.length;
+  const avg = b.attrs.map((_, i) => league.reduce((a, x) => a + x.steps[i], 0) / n);
+  const rank = b.attrs.map((_, i) => 1 + league.filter((x) => x.steps[i] > b.steps[i]).length);
+  // Weight: the share of starters he outweighs, counting those at his step as half.
+  const heavier = b.attrs.map((_, i) => league.reduce((a, x) => a + (x.steps[i] < b.steps[i] ? 1 : x.steps[i] === b.steps[i] ? 0.5 : 0), 0) - 0.5);
+  const c = mainColor(d, team);
+  const color = onColor(c) === '#000' ? 'var(--indigo)' : teamCss(c); // a light team color wouldn't show on white
+  const who = `${b.label}s`;
+
+  // Shape: the five ratings other than weight, step 15 at the rim.
+  const axes = b.attrs.map((a, i) => ({ a, i })).filter((x) => x.a !== 'Weight');
+  const C = 150, CY = 130, R = 96;
+  const pt = (k: number, r: number) => {
+    const ang = (-90 + (360 / axes.length) * k) * (Math.PI / 180);
+    return [C + r * Math.cos(ang), CY + r * Math.sin(ang)];
+  };
+  const poly = (f: (i: number) => number) => axes.map((x, k) => pt(k, (f(x.i) / 15) * R).map((z) => z.toFixed(1)).join(',')).join(' ');
+  // A kicker's or punter's Quick is his kick distance in the game.
+  const label = (a: string) => (b.group === 'KP' && a === 'Quickness' ? 'Kick distance' : a);
+  const tiles = b.attrs.map((a, i) => ({ a, i })).sort((x, y) => Number(x.a === 'Weight') - Number(y.a === 'Weight') || rank[x.i] - rank[y.i]);
+
+  return (
+    <div className="dy-bw">
+      <p className="dy-dim">{d.teams[team].school}'s {b.label}, compared with the {n} starting {who}.</p>
+      <div className="dy-bw-grid">
+        <figure className="dy-shape">
+          <svg viewBox="0 0 300 250" role="img" aria-label={`${name}'s ratings against the average ${b.label}`}>
+            <polygon points={poly(() => 15)} className="dy-shape-rim" />
+            <polygon points={poly(() => 7.5)} className="dy-shape-mid" />
+            {axes.map((x, k) => { const [px, py] = pt(k, R); return <line key={x.a} x1={C} y1={CY} x2={px} y2={py} className="dy-shape-mid" />; })}
+            <polygon points={poly((i) => avg[i])} className="dy-shape-avg" />
+            <polygon points={poly((i) => b.steps[i])} style={{ fill: color, stroke: color }} className="dy-shape-him" />
+            {axes.map((x, k) => {
+              const [px, py] = pt(k, R + 18);
+              return <text key={x.a} x={px} y={py + 4} textAnchor={Math.abs(px - C) < 5 ? 'middle' : px > C ? 'start' : 'end'}>{label(x.a)}</text>;
+            })}
+          </svg>
+          <figcaption>
+            <span><i style={{ background: color }} /> {name}</span>
+            <span><i className="dy-key-avg" /> Average {b.label}</span>
+          </figcaption>
+        </figure>
+        <div className="dy-tiles">
+          {tiles.map(({ a, i }) => {
+            const weight = a === 'Weight';
+            const shown = weight ? `${nibbleToWeight(b.steps[i]) + b.weightPlus} lb` : nibbleToRating(b.steps[i]);
+            return (
+              <div key={a} className="dy-tile">
+                <div className="dy-tile-top"><span>{label(a)}</span><strong>{shown}</strong></div>
+                <div className="dy-pips" role="img" aria-label={`Step ${b.steps[i]} of 15; average ${b.label} ${avg[i].toFixed(1)}`}>
+                  {Array.from({ length: 15 }, (_, k) => <span key={k} style={k < b.steps[i] ? { background: color } : undefined} />)}
+                  <i style={{ left: `calc(${(avg[i] / 15) * 100}% - 1px)` }} title={`Average ${b.label}`} />
+                </div>
+                <div className="dy-tile-note">
+                  {weight ? `Heavier than ${Math.round((heavier[i] / Math.max(1, n - 1)) * 100)}% of ${who}` : <><strong>{ordinal(rank[i])}</strong> of {n} {who}</>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 
