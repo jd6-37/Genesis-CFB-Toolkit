@@ -19,6 +19,8 @@ import { WorkRomCard, type TeamSwapSource, type WorkApi } from '../shared/WorkRo
 import { StylePicks } from '../styles/StylePicks';
 import { CFB27_LATEST, fetchCfb27Latest } from '../../core/cfb27Latest';
 import { ratingProblems, writeRating } from '../../core/teamRatings';
+import { fetchWalsh2026, reportsForSlots, type WalshData } from '../../core/walsh2026';
+import { writeReports } from '../../core/walshReports';
 import './rosters.css';
 
 export type { TeamSwapSource };
@@ -129,7 +131,8 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
   const [team, setTeam] = useState(0);
   const [rev, setRev] = useState(0);
   const [report, setReport] = useState<(ImportReport & { file: string; olOffer: boolean }) | null>(null);
-  const [plan, setPlan] = useState<{ plan: Cfb27Plan; file: string } | null>(null);
+  // A plan from the built-in CFB 27 rosters comes with the built-in 2026 Walsh Reports (or why they didn't load).
+  const [plan, setPlan] = useState<{ plan: Cfb27Plan; file: string; walsh: { data: WalshData | null; error: string | null } | null } | null>(null);
   const [converted, setConverted] = useState<ConvertedReport | null>(null);
   const [error, setError] = useState<string | string[] | null>(null);
   const sheetRef = useRef<HTMLInputElement>(null);
@@ -180,8 +183,14 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
     clearPanels();
     setFetching(true);
     try {
-      const bytes = await fetchCfb27Latest();
-      await onImportBytes(builtInName, bytes);
+      const [bytes, walsh] = await Promise.all([
+        fetchCfb27Latest(),
+        fetchWalsh2026().then(
+          (data) => ({ data, error: null }),
+          (e: Error) => ({ data: null, error: e.message }),
+        ),
+      ]);
+      await onImportBytes(builtInName, bytes, walsh);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -190,7 +199,7 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
   };
 
   const onImport = async (f: File) => onImportBytes(f.name, new Uint8Array(await f.arrayBuffer()));
-  const onImportBytes = async (name: string, bytes: Uint8Array) => {
+  const onImportBytes = async (name: string, bytes: Uint8Array, walsh: { data: WalshData | null; error: string | null } | null = null) => {
     const f = { name };
     clearPanels();
     let sheet: Sheet;
@@ -203,7 +212,8 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
     if (kind.path === 'refused') return setError([`${f.name} doesn't fit this ROM:`, ...kind.problems]);
     if (kind.path === 'cfb27') {
       try {
-        setPlan({ plan: convertCfb27(rom, sheet), file: f.name });
+        // The 138-team edition already has these reports (they were written for it), so they aren't offered there.
+        setPlan({ plan: convertCfb27(rom, sheet), file: f.name, walsh: rom.game === 'bw95' && !rom.wide ? walsh : null });
       } catch (e) {
         setError(`${f.name}: ${(e as Error).message}`);
       }
@@ -222,11 +232,20 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
     }
   };
 
-  const applyPlan = (teams: number[], tweak: boolean, ratings: boolean) => {
+  const applyPlan = (teams: number[], tweak: boolean, ratings: boolean, walsh: boolean) => {
     if (!plan) return;
     const slots = applyCfb27(rom, plan.plan, teams);
     const rated = ratings ? plan.plan.teams.filter((t) => teams.includes(t.team)) : [];
     for (const t of rated) writeRating(rom.data, t.team, t.ovr);
+    let reports = { teams: 0, trimmed: 0, error: null as string | null };
+    if (walsh && plan.walsh?.data) {
+      const picked = reportsForSlots(plan.walsh.data, plan.plan.teams.filter((t) => teams.includes(t.team)));
+      try {
+        reports = { teams: picked.size, trimmed: writeReports(rom.data, picked).length, error: null };
+      } catch (e) {
+        reports = { teams: 0, trimmed: 0, error: `The Walsh Reports weren't written: ${(e as Error).message}` };
+      }
+    }
     let tweakNote: string | null = null;
     if (tweak && rom.game === 'bw95') {
       try {
@@ -235,7 +254,7 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
         tweakNote = (e as Error).message;
       }
     }
-    setConverted({ plan: plan.plan, file: plan.file, teams, slots, tweak: tweakNote, ratings: rated.length });
+    setConverted({ plan: plan.plan, file: plan.file, teams, slots, tweak: tweakNote, ratings: rated.length, reports });
     setPlan(null);
     if (teams.length && !teams.includes(team)) setTeam(teams[0]);
     bump();
@@ -346,7 +365,7 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
           )}
         </div>
       )}
-      {plan && <Cfb27Preview rom={rom} plan={plan.plan} file={plan.file} onApply={applyPlan} onCancel={() => setPlan(null)} />}
+      {plan && <Cfb27Preview rom={rom} plan={plan.plan} file={plan.file} walsh={plan.walsh} onApply={applyPlan} onCancel={() => setPlan(null)} />}
       {converted && <Cfb27Summary rom={rom} report={converted} onPick={setTeam} onClose={() => setConverted(null)} />}
       {report && <ImportSummary report={report} onPick={setTeam} onClose={() => setReport(null)} onTweak={addTweak} />}
 
@@ -545,18 +564,23 @@ interface ConvertedReport {
   tweak: string | null;
   /** Teams whose OFF/DEF were set from their CFB 27 starters. */
   ratings: number;
+  /** 2026 Walsh Reports written, other long reports trimmed, or why they weren't written. */
+  reports: { teams: number; trimmed: number; error: string | null };
 }
 
 /** CFB 27 data was found: shows what the conversion would do and which teams to write. */
 function Cfb27Preview({
-  rom, plan, file, onApply, onCancel,
+  rom, plan, file, walsh, onApply, onCancel,
 }: {
   rom: RosterRom;
   plan: Cfb27Plan;
   file: string;
-  onApply: (teams: number[], tweak: boolean, ratings: boolean) => void;
+  /** The built-in 2026 Walsh Reports, offered with the built-in rosters only (their jersey numbers match). */
+  walsh: { data: WalshData | null; error: string | null } | null;
+  onApply: (teams: number[], tweak: boolean, ratings: boolean, walsh: boolean) => void;
   onCancel: () => void;
 }) {
+  const [useWalsh, setUseWalsh] = useState(!!walsh?.data);
   const [pick, setPick] = useState<Set<number>>(() => new Set(plan.teams.map((t) => t.team)));
   const [tweak, setTweak] = useState(rom.game === 'bw95' && olPatchState(rom.data) !== 'unknown');
   const canRate = rom.game === 'bw95' && !ratingProblems(rom.data).length;
@@ -618,8 +642,17 @@ function Cfb27Preview({
               can be changed in the Teams tab.
             </label>
           )}
+          {walsh && (
+            <label className="ros-tweak">
+              <input type="checkbox" checked={useWalsh} disabled={!walsh.data} onChange={(e) => setUseWalsh(e.target.checked)} />
+              Use the {CFB27_LATEST.season} Walsh Reports for these teams. They name players by their jersey numbers in
+              these rosters. Longer reports of teams you leave out are trimmed to 650 characters; edit any report in the
+              Teams tab.
+              {walsh.error && <span className="ros-warn"> {walsh.error}</span>}
+            </label>
+          )}
           <div className="ros-convert-actions">
-            <button className="btn btn-go" disabled={pick.size === 0} onClick={() => onApply([...pick].sort((a, b) => a - b), tweak, ratings)}>
+            <button className="btn btn-go" disabled={pick.size === 0} onClick={() => onApply([...pick].sort((a, b) => a - b), tweak, ratings, useWalsh && !!walsh?.data)}>
               Convert {pick.size} team{pick.size === 1 ? '' : 's'}
             </button>
           </div>
@@ -659,7 +692,13 @@ function Cfb27Summary({ rom, report, onPick, onClose }: { rom: RosterRom; report
         {report.tweak === 'installed' && ' The roster screen now shows offensive linemen 25 lb heavier.'}
         {report.tweak === 'already' && ' The roster screen already showed offensive linemen 25 lb heavier.'}
         {report.ratings > 0 && ` OFF and DEF set from the CFB 27 starters for ${report.ratings} team${report.ratings === 1 ? '' : 's'} (see the Teams tab).`}
+        {report.reports.teams > 0 &&
+          ` New Walsh Reports for ${report.reports.teams} team${report.reports.teams === 1 ? '' : 's'} (see the Teams tab)` +
+            (report.reports.trimmed > 0
+              ? `; ${report.reports.trimmed} other report${report.reports.trimmed === 1 ? ' was' : 's were'} trimmed to 650 characters.`
+              : '.')}
       </p>
+      {report.reports.error && <p className="ros-warn">{report.reports.error}</p>}
       {report.tweak && report.tweak !== 'installed' && report.tweak !== 'already' && <p className="ros-warn">{report.tweak}</p>}
       {plan.unmatchedRomTeams.length > 0 && (
         <p className="ros-dim">Not in the file, rosters kept: {names(plan.unmatchedRomTeams)}</p>

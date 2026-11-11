@@ -212,6 +212,13 @@ const ALIASES: Record<string, string> = {
   'washington st': 'Washington State',
   wmu: 'Western Michigan',
   cal: 'California',
+  // The 138-team 2026 Season Edition's names.
+  'south florida': 'USF',
+  'app state': 'Appalachian State',
+  coastal: 'Coastal Carolina',
+  fiu: 'Florida International',
+  'jax state': 'Jacksonville State',
+  'north dakota st': 'North Dakota State',
 };
 
 const key = (s: string) => s.toLowerCase().replace(/[.']/g, '').replace(/\s+/g, ' ').trim();

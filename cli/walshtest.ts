@@ -1,10 +1,16 @@
 // Walsh Report editor tests, against real ROMs (bring your own; .md/.bin/.gen or .zip): the original
-// BW95, CF97 and, optionally, the Elevated 2026 Season Edition:
-//   npx tsx cli/walshtest.ts BW95 CF97 [ELEVATED_2026]
+// BW95, CF97 and, optionally, the Elevated 2026 Season Edition v1.1.0 (the 36-team one; the 138-team
+// edition of v2.0.0 isn't edited by these tools):
+//   npx tsx cli/walshtest.ts BW95 CF97 [ELEVATED_2026_v1.1.0]
 import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { strict as assert } from 'node:assert';
-import { openRom } from '../src/core/romfile';
+import { isWideBw95, openRom } from '../src/core/romfile';
+import { openRosterRom } from '../src/core/rosterRom';
+import { readSheet } from '../src/core/rosterSheet';
+import { applyCfb27, convertCfb27 } from '../src/core/rosterCfb27';
+import { CFB27_LATEST } from '../src/core/cfb27Latest';
+import { reportsForSlots, walshDataProblems, WALSH_DATA, type WalshData } from '../src/core/walsh2026';
 import { parseBw95 } from '../src/core/bw95';
 import { parseCf97 } from '../src/core/cf97';
 import { buildRom, defaultSlot, swapFile, validateSlot } from '../src/core/build';
@@ -192,10 +198,12 @@ const mine = { offense: 'Pitt runs the ball. They pass when they must.', defense
 }
 
 // 8. The Elevated 2026 Season Edition.
-if (e26Path) {
+if (e26Path && isWideBw95(await read(e26Path))) {
+  console.log('skip - 8: that is the 138-team 2026 Season Edition (v2.0.0 on); this test takes v1.1.0\'s 36-team edition');
+} else if (e26Path) {
   const e26 = await read(e26Path);
   const n26 = parseBw95(e26).map((t) => t.school);
-  assert.equal(longReports(e26).length, 15);
+  const longBefore = longReports(e26).length; // 15 in the first build; 0 since its own 2026 reports (v1.1.0 as released)
   const rom = e26.slice();
   const tulane = n26.indexOf('Oklahoma');
   assert.ok(tulane >= 0);
@@ -204,7 +212,43 @@ if (e26Path) {
   assert.deepEqual(longReports(rom), []);
   assert.deepEqual(outside(e26, rom), []);
   assert.equal(rom.subarray(WALSH_RELOC, 0x200000).every((b) => b === 0xff), true);
-  ok('Elevated 2026 Season Edition: a report saved, its 15 long ones trimmed, nothing else changed');
+  ok(`Elevated 2026 Season Edition: a report saved, ${longBefore ? `its ${longBefore} long ones trimmed, ` : ''}nothing else changed`);
+}
+
+// 9. The built-in 2026 Walsh Reports: one per team of the built-in CFB 27 rosters, all valid, and the
+// Rosters tab's import puts them in the converted teams' slots.
+{
+  const data = JSON.parse(readFileSync(`public/${WALSH_DATA.file}`, 'utf8')) as WalshData;
+  assert.deepEqual(walshDataProblems(data), []);
+  assert.equal(data.season, CFB27_LATEST.season);
+  assert.equal(data.week, CFB27_LATEST.week);
+  const csvBytes = new Uint8Array(readFileSync(`public/${CFB27_LATEST.file}`));
+  const sheet = await readSheet('week9.csv', csvBytes);
+  const teamCol = sheet.headers.indexOf('Team');
+  const csvTeams = new Set(sheet.rows.map((r) => r[teamCol]));
+  assert.deepEqual(Object.keys(data.reports).sort(), [...csvTeams].sort());
+  assert.deepEqual(walshDataProblems({ ...data, version: 2 }), ['version 2 isn\'t supported']);
+  assert.ok(walshDataProblems({ ...data, reports: { X: { offense: 'a {c}', defense: 'b' } } }).length > 0);
+
+  const rom = openRosterRom(bw.slice());
+  const plan = convertCfb27(rom, sheet);
+  assert.equal(plan.teams.length, 36);
+  applyCfb27(rom, plan);
+  const picked = reportsForSlots(data, plan.teams);
+  assert.equal(picked.size, 36);
+  assert.deepEqual(writeReports(rom.data, picked), []);
+  assert.ok(textFits(rom.data));
+  for (const t of plan.teams) assert.deepEqual(readReport(rom.data, t.team), data.reports[t.sheetTeam]);
+  assert.deepEqual(readReport(rom.data, T('Pitt')), data.reports.Pittsburgh);
+  assert.deepEqual(longReports(rom.data), []);
+  // Some teams only: theirs replaced, the long EA reports of the others trimmed, the rest kept.
+  const some = openRosterRom(bw.slice());
+  const two = plan.teams.filter((t) => ['Pittsburgh', 'Ohio State'].includes(t.sheetTeam));
+  const trimmed = writeReports(some.data, reportsForSlots(data, two));
+  assert.ok(trimmed.length > 0 && !trimmed.includes(T('Ohio State')));
+  assert.deepEqual(readReport(some.data, T('Ohio State')), data.reports['Ohio State']);
+  assert.deepEqual(readReport(some.data, T('Miami')), readReport(bw, T('Miami')));
+  ok(`built-in ${data.season} Walsh Reports: ${Object.keys(data.reports).length} teams = the CFB 27 CSV's, valid; all 36 written with the conversion, or some with the long others trimmed`);
 }
 
 console.log(`${passed} passed`);

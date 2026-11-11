@@ -1,10 +1,15 @@
 // Season tool tests against real ROMs (bring your own; .md/.bin/.gen or .zip):
 //   npx tsx cli/seasontest.ts BW95 CF97 [more BW95 ROMs, e.g. Elevated builds]
+// A 138-team 2026 Season Edition among the extra ROMs gets the 138-team test instead (its own season settings).
 // The emulator checks (the game's own deal and schedule) are described in docs/season.md.
 import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { strict as assert } from 'node:assert';
-import { openRom } from '../src/core/romfile';
+import { isWideBw95, openRom } from '../src/core/romfile';
+import {
+  confSizes, playedGames, readWideSeason, restoreWideSeason, wideSeasonIssues, wideSeasonProblems, wideSeasonRanges,
+  wideSeasonTables, writeWideSeason,
+} from '../src/core/seasonWide';
 import { eaChecksumOk, fixChecksums, openRosterRom } from '../src/core/rosterRom';
 import { parseBw95 } from '../src/core/bw95';
 import { parseCf97 } from '../src/core/cf97';
@@ -25,7 +30,9 @@ if (paths.length < 2) {
 const read = async (p: string) => (await openRom(basename(p), new Uint8Array(readFileSync(p)))).data;
 const bw = await read(paths[0]);
 const cf = await read(paths[1]);
-const extra = await Promise.all(paths.slice(2).map(read));
+const all = await Promise.all(paths.slice(2).map(read));
+const extra = all.filter((d) => !isWideBw95(d));
+const wides = all.filter((d) => isWideBw95(d));
 let passed = 0;
 const ok = (name: string) => {
   passed++;
@@ -270,6 +277,61 @@ ok(`unchanged setup writes back byte-identical (${1 + extra.length} ROM${extra.l
   assert.ok(!canCarry(bw, cf));
   assert.throws(() => carryEdits(bw, new Uint8Array(cf)), /same game/);
   ok('working ROM: edits detected per tool, download names, edits carried to a new Team Swap result by slot');
+}
+
+// The 138-team 2026 Season Edition: conference names, members and weeks in its own tables.
+for (const wide of wides) {
+  assert.deepEqual(wideSeasonProblems(wide), []);
+  const s = readWideSeason(wide);
+  const tn = openRosterRom(wide).teams.map((t) => t.school);
+  const W = (n: string) => tn.indexOf(n);
+  assert.deepEqual(s.names, ['SEC', 'Big Ten', 'ACC', 'Big 12', 'American', 'Sun Belt', 'MAC', 'Mountain West', 'C-USA', 'PAC 12', 'Independents']);
+  assert.deepEqual(confSizes(s), [16, 18, 17, 16, 14, 14, 13, 10, 10, 8, 2]);
+  assert.deepEqual(s.start, [3, 3, 4, 3, 4, 4, 3, 3, 3, 4]);
+  assert.deepEqual(s.games, [9, 9, 8, 9, 8, 8, 8, 8, 8, 7]);
+  assert.equal(s.conf[W('Notre Dame')], 10);
+  assert.equal(playedGames(s, 9), 7);
+  const same = wide.slice();
+  writeWideSeason(same, s);
+  assert.ok(same.every((b, i) => b === wide[i]), 'unchanged settings write back the same bytes');
+  // An edit: names (centered as the game's), a move, weeks; only the season's bytes change.
+  const d = wide.slice();
+  const e = readWideSeason(d);
+  e.names[0] = 'Southeastern';
+  e.names[9] = "Old Pac & Co.";
+  e.conf[W('Tulane')] = 0;
+  e.conf[W('Notre Dame')] = 1;
+  e.start[1] = 0;
+  e.games[1] = 11;
+  writeWideSeason(d, e);
+  const back = readWideSeason(d);
+  assert.deepEqual(back, e);
+  const t = wideSeasonTables(d);
+  assert.equal(String.fromCharCode(...d.subarray(t.names + 24 + 2, t.names + 48)), '     Southeastern     ');
+  const ranges = wideSeasonRanges(wide);
+  for (let k = 0; k < d.length; k++) if (d[k] !== wide[k]) assert.ok(ranges.some(([a, z]) => k >= a && k < z), `byte 0x${k.toString(16)}`);
+  assert.deepEqual(editsSince(wide, d, 'bw95'), { season: true, teams: false, rosters: false, any: true });
+  const to = wide.slice();
+  assert.equal(carryEdits(d, to, wide).season, true);
+  assert.ok(to.every((b, i) => b === d[i]), 'carried to a fresh copy = the same bytes');
+  restoreWideSeason(d, wide);
+  assert.ok(d.every((b, i) => b === wide[i]), 'undo puts every byte back');
+  // Settings the engine can't play are refused, nothing written.
+  const bad = (f: (x: typeof s) => void, re: RegExp) => {
+    const x = readWideSeason(wide);
+    f(x);
+    assert.match(wideSeasonIssues(x).join(' '), re);
+    const y = wide.slice();
+    assert.throws(() => writeWideSeason(y, x));
+    assert.ok(y.every((b, i) => b === wide[i]));
+  };
+  bad((x) => tn.forEach((_, k) => x.conf[k] === 9 && k !== tn.indexOf('Boise State') && (x.conf[k] = 4)), /PAC 12 needs at least 2 teams/);
+  bad((x) => tn.forEach((_, k) => k < 25 && (x.conf[k] = 0)), /at most 24/);
+  bad((x) => ((x.start[0] = 8), (x.games[0] = 5)), /run past week 12/);
+  bad((x) => (x.names[2] = 'A'.repeat(23)), /at most 22/);
+  bad((x) => (x.names[2] = 'ACC!'), /can only show/);
+  bad((x) => (x.names[2] = ' '), /needs a name/);
+  ok('138-team 2026 Season Edition: conference names, members and weeks read, written in place, tracked, carried, undone; bad settings refused');
 }
 
 console.log(`\n${passed} passed`);

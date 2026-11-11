@@ -18,7 +18,7 @@ import {
   type Patch,
   type PatchList,
 } from '../../core/patches';
-import { describeUnknown, identifyRom, KNOWN, openRom, type OpenedRom } from '../../core/romfile';
+import { describeUnknown, identifyRom, KNOWN, openRom, WIDE_ROM_TEXT, WIDE_TABS_TEXT, type OpenedRom } from '../../core/romfile';
 import './patch.css';
 
 type Note = { kind: 'error' | 'ok'; text: string } | null;
@@ -306,7 +306,9 @@ export function PatchTool({
                 <b>{applied.name}</b>
               </p>
               <p className="hint">
-                {inWork
+                {rom.known?.wide
+                  ? `It already has all 138 FBS teams with 2026 rosters and Walsh Reports. ${WIDE_TABS_TEXT}`
+                  : inWork
                   ? 'The other tabs now use this patched ROM, so you can go straight to any of them.'
                   : 'Team Swap now uses this patched ROM. Season, Teams and Rosters have changes in another ROM, so they ask before opening it.'}
               </p>
@@ -386,6 +388,24 @@ function NextSteps({
   onSwap: () => void;
   onEdit: () => void;
 }) {
+  if (rom.known?.wide) {
+    return (
+      <section className="pat-next" aria-labelledby="pat-next-h">
+        <h3 id="pat-next-h">Next</h3>
+        <ul>
+          <li className="pat-step">
+            <button className="btn" onClick={onEdit}>
+              Edit season, teams and rosters
+            </button>
+            <p className="hint">{WIDE_TABS_TEXT}</p>
+          </li>
+          <li className="pat-step">
+            <p className="hint">{WIDE_ROM_TEXT}</p>
+          </li>
+        </ul>
+      </section>
+    );
+  }
   const problem = swapProblemText(rom.data);
   const again = !problem && hasSwappedTeams(rom.data); // swapped by Team Swap before, which can swap it again
   return (

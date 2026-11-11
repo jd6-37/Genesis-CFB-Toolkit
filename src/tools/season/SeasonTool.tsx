@@ -7,6 +7,9 @@ import {
   type EditResult, type Opponent, type Season,
 } from '../../core/season';
 import { openRosterRom } from '../../core/rosterRom';
+import { isWideBw95 } from '../../core/romfile';
+import { readWideSeason, wideSeasonIssues, writeWideSeason, type WideSeason } from '../../core/seasonWide';
+import { SeasonWide } from './SeasonWide';
 import { WorkRomCard, type TeamSwapSource, type WorkApi } from '../shared/WorkRom';
 import './season.css';
 
@@ -45,6 +48,8 @@ export function SeasonTool({
   const [season, setSeason] = useState<Season | null>(null);
   const [teams, setTeams] = useState<string[]>([]);
   const [romProblem, setRomProblem] = useState<string | null>(null);
+  // The 138-team edition: its own settings (as loaded, and now).
+  const [wide, setWide] = useState<{ loaded: WideSeason; now: WideSeason } | null>(null);
   const [note, setNote] = useState<Note>(null);
 
   // A new working ROM: read its season (Bill Walsh '95 only).
@@ -52,9 +57,19 @@ export function SeasonTool({
     setNote(null);
     setSeason(null);
     setRomProblem(null);
+    setWide(null);
     if (!work) return;
     if (work.game !== 'bw95') {
       setRomProblem("The Season tab works on Bill Walsh College Football '95 ROMs; this one is for the Rosters tab only.");
+      return;
+    }
+    if (isWideBw95(work.data)) {
+      try {
+        setTeams(openRosterRom(work.data).teams.map((t) => t.school));
+        setWide({ loaded: readWideSeason(work.base), now: readWideSeason(work.data) });
+      } catch (e) {
+        setRomProblem((e as Error).message);
+      }
       return;
     }
     try {
@@ -82,6 +97,28 @@ export function SeasonTool({
     } catch (e) {
       api.setBlocker((e as Error).message);
     }
+  };
+
+  const changeWide = (s: WideSeason) => {
+    if (!wide || !work) return;
+    setWide({ ...wide, now: s });
+    setNote(null);
+    const issues = wideSeasonIssues(s);
+    if (issues.length) {
+      api.setBlocker(issues[0]);
+      return;
+    }
+    try {
+      writeWideSeason(work.data, s);
+      api.setBlocker(null);
+      api.edited();
+    } catch (e) {
+      api.setBlocker((e as Error).message);
+    }
+  };
+  const undoWide = () => {
+    if (!wide || !work) return;
+    changeWide(wide.loaded);
   };
 
   const loadSeasonFile = async (f: File) => {
@@ -125,10 +162,17 @@ export function SeasonTool({
     <>
       <section className="tool-head" aria-label="Season">
         <h2>Season</h2>
-        <p>
-          Rename Bill Walsh '95's four conferences, choose which teams play in each, and set schedules. Teams you lock
-          play the opponents you pick every season; the others keep the game's random schedules.
-        </p>
+        {wide ? (
+          <p>
+            Rename the 2026 Season Edition's conferences, choose which of the 138 teams play in each, and set when each
+            conference plays its conference games in random seasons.
+          </p>
+        ) : (
+          <p>
+            Rename Bill Walsh '95's four conferences, choose which teams play in each, and set schedules. Teams you lock
+            play the opponents you pick every season; the others keep the game's random schedules.
+          </p>
+        )}
       </section>
 
       <WorkRomCard
@@ -137,12 +181,43 @@ export function SeasonTool({
         hint="Bill Walsh College Football '95: original, Elevated, a Team Swap result or an earlier edit. .md, .bin, .gen or .zip."
       />
 
-      {work && season ? (
+      {work && wide ? (
+        <SeasonWide key={work.id} teams={teams} season={wide.now} loaded={wide.loaded} onChange={changeWide} />
+      ) : work && season ? (
         <SeasonEditor key={work.id} teams={teams} season={season} onChange={change} />
       ) : (
         <section className="waiting">
           <p>{romProblem ?? 'Load a ROM to see its conferences and schedules. You can drop the file anywhere on this page.'}</p>
         </section>
+      )}
+
+      {work && wide && (
+        <footer className="dock">
+          <p className="dock-count" aria-live="polite">
+            {wideChanges(wide) ? `${wideChanges(wide)} conference${wideChanges(wide) === 1 ? '' : 's'} changed` : 'No season changes yet'}
+            {api.edits.teams && <small className="dock-also">+ team changes</small>}
+            {api.edits.rosters && <small className="dock-also">+ roster changes</small>}
+          </p>
+          {note && (
+            <p className={`note ${note.kind}`} role={note.kind === 'error' ? 'alert' : 'status'}>
+              {note.text}
+            </p>
+          )}
+          <div className="dock-actions">
+            {wideChanges(wide) > 0 && (
+              <button className="btn" onClick={undoWide}>
+                Undo season changes
+              </button>
+            )}
+            <button
+              className="btn btn-go"
+              onClick={() => setNote(api.save())}
+              disabled={(!api.edits.any && !work.checkOff) || wideSeasonIssues(wide.now).length > 0}
+            >
+              Download ROM
+            </button>
+          </div>
+        </footer>
       )}
 
       {work && season && (
@@ -191,6 +266,16 @@ export function SeasonTool({
       )}
     </>
   );
+}
+
+/** Conferences whose name, members or weeks differ from the loaded ROM. */
+function wideChanges(w: { loaded: WideSeason; now: WideSeason }): number {
+  const { loaded, now } = w;
+  return now.names.filter((n, c) => {
+    if (n !== loaded.names[c]) return true;
+    if (now.conf.some((x, t) => (x === c) !== (loaded.conf[t] === c))) return true;
+    return c < now.start.length && (now.start[c] !== loaded.start[c] || now.games[c] !== loaded.games[c]);
+  }).length;
 }
 
 function SeasonEditor({ teams, season, onChange }: { teams: string[]; season: Season; onChange: (s: Season) => void }) {

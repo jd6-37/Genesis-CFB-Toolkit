@@ -41,6 +41,10 @@ No free space is used. The callers fix the checksums when saving.
 
 `restoreStyle(rom, base, team)` copies a team's bits (all 8 sets and its 3-4 flag) back from the loaded bytes (the tab's Undo).
 
+## The 138-team 2026 Season Edition
+
+Elevated v2.0.0's 2026 Season Edition keeps the 8 sets in a table of its own at `0x218200`, 32 bytes per set (team t = bit t & 7 of byte t >> 3, teams 0-137). Its set lookup at `0x079A82` reads it there: `asl.w #5,d2 ; lea $218200.l,a0` where the original has `asl.w #3,d2 ; lea $6106E.l,a0 ; adda.w 14(a0),a0`. `styleProblems` checks the layout (`src/core/wide.ts`), that code and that the bits past the last team are clear; `styleTable(rom)` gives the table, its set size and team count. The edition uses Elevated's single roster layout, so there's no 3-4 roster flag to set. As released, every team has the styles College Football 27 recommends for it.
+
 ## Where styles are edited
 
 - **Team Swap:** each swapped team's edit screen has the two selects, defaulting to the slot's own styles (marked with the original team's name). A changed select stores both style names in the slot's `SlotConfig` (`"offense": "Pro Style", "defense": "4-3"`), so they go into swap files. Swap files without them still load, and leave the slot's styles. `buildRom` writes them after the team blocks.

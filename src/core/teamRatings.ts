@@ -13,6 +13,7 @@
 // shows the OVR the words stand for. Details: docs/teams.md.
 
 import { rl, rw, ww } from './bytes';
+import { isWide, teamsOf, WIDE } from './wide';
 
 export const TEAMS = 36;
 export const BW_TABLE = 0x0028dc;
@@ -42,13 +43,15 @@ export function groupAt(d: Uint8Array, t: number): number {
   return b + rw(d, b + 6);
 }
 
+/** Where the OVR table is: 0x10DFB0, or in the 138-team edition 0x218000 (one entry per team). */
+const ovrAt = (d: Uint8Array) => (isWide(d) ? WIDE.ovr : OVR_TABLE);
 /** Whether the ROM has Elevated's OVR table (Game Setup shows these numbers). */
-export const hasOvrTable = (d: Uint8Array) => OVR_MAGIC.every((b, k) => d[OVR_TABLE + k] === b);
+export const hasOvrTable = (d: Uint8Array) => OVR_MAGIC.every((b, k) => d[ovrAt(d) + k] === b);
 
 /** Why this ROM's ratings and weather can't be read or changed. Empty if they can. */
 export function ratingProblems(d: Uint8Array): string[] {
   const out: string[] = [];
-  for (let t = 0; t < TEAMS; t++) {
+  for (let t = 0; t < teamsOf(d); t++) {
     const b = rl(d, BW_TABLE + 4 * t);
     const g = b + rw(d, b + 6);
     if (b < 0x200 || b >= d.length || g + 8 > d.length) {
@@ -64,7 +67,7 @@ export function ratingProblems(d: Uint8Array): string[] {
 }
 
 export function readRating(d: Uint8Array, t: number): TeamRating {
-  if (hasOvrTable(d)) return { off: d[OVR_TABLE + 4 + 2 * t], def: d[OVR_TABLE + 5 + 2 * t] };
+  if (hasOvrTable(d)) return { off: d[ovrAt(d) + 4 + 2 * t], def: d[ovrAt(d) + 5 + 2 * t] };
   const g = groupAt(d, t);
   return { off: ovrFromSim(rw(d, g + 2)), def: ovrFromSim(rw(d, g + 4)) };
 }
@@ -83,8 +86,8 @@ export function writeRating(d: Uint8Array, t: number, r: TeamRating): void {
   ww(d, g + 2, simFromOvr(off));
   ww(d, g + 4, simFromOvr(def));
   if (hasOvrTable(d)) {
-    d[OVR_TABLE + 4 + 2 * t] = off;
-    d[OVR_TABLE + 5 + 2 * t] = def;
+    d[ovrAt(d) + 4 + 2 * t] = off;
+    d[ovrAt(d) + 5 + 2 * t] = def;
   }
 }
 
@@ -106,19 +109,20 @@ export function weatherChances(w: Weather): number[] {
 export function restoreTeam(d: Uint8Array, base: Uint8Array, t: number): void {
   const g = groupAt(d, t);
   d.set(base.subarray(g, g + 6), g);
-  if (hasOvrTable(d) && hasOvrTable(base)) d.set(base.subarray(OVR_TABLE + 4 + 2 * t, OVR_TABLE + 6 + 2 * t), OVR_TABLE + 4 + 2 * t);
+  const o = ovrAt(d);
+  if (hasOvrTable(d) && hasOvrTable(base)) d.set(base.subarray(o + 4 + 2 * t, o + 6 + 2 * t), o + 4 + 2 * t);
 }
 
 /** Teams whose ratings or weather differ between two ROMs with the same team blocks. */
 export function ratingChanges(a: Uint8Array, b: Uint8Array): number[] {
   const out: number[] = [];
   const tables = hasOvrTable(a) && hasOvrTable(b);
-  for (let t = 0; t < TEAMS; t++) {
+  for (let t = 0; t < Math.min(teamsOf(a), teamsOf(b)); t++) {
     const ga = groupAt(a, t);
     const gb = groupAt(b, t);
     let diff = false;
     for (let k = 0; k < 6 && !diff; k++) diff = a[ga + k] !== b[gb + k];
-    if (!diff && tables) diff = rw(a, OVR_TABLE + 4 + 2 * t) !== rw(b, OVR_TABLE + 4 + 2 * t);
+    if (!diff && tables) diff = rw(a, ovrAt(a) + 4 + 2 * t) !== rw(b, ovrAt(b) + 4 + 2 * t);
     if (diff) out.push(t);
   }
   return out;
@@ -127,11 +131,11 @@ export function ratingChanges(a: Uint8Array, b: Uint8Array): number[] {
 /** Bytes the ratings and weather live in, as [start, end) ranges (for "what changed" checks). */
 export function ratingRanges(d: Uint8Array): [number, number][] {
   const r: [number, number][] = [];
-  for (let t = 0; t < TEAMS; t++) {
+  for (let t = 0; t < teamsOf(d); t++) {
     const g = groupAt(d, t);
     r.push([g, g + 6]);
   }
-  if (hasOvrTable(d)) r.push([OVR_TABLE + 4, OVR_TABLE + OVR_TABLE_SIZE]);
+  if (hasOvrTable(d)) r.push([ovrAt(d) + 4, ovrAt(d) + 4 + 2 * teamsOf(d)]);
   return r;
 }
 

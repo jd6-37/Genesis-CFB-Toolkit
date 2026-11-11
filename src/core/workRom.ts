@@ -1,7 +1,7 @@
 // The working ROM that the Season, Teams and Rosters tabs edit together. Pure helpers, no DOM.
 //
 // The three tabs write different bytes (Season: conference names and words, the schedule template
-// and its tables; Teams: the CPU's team set table and the 3-4 roster flags, each team's ratings and
+// and its tables, or the 138-team edition's conference names, words and week tables; Teams: the CPU's team set table and the 3-4 roster flags, each team's ratings and
 // home weather (group +0 to +5), Elevated's OVR table and the Walsh Report text; Rosters: roster records
 // and the OL display tweak; a CFB 27 conversion can set ratings too), so all edit the same buffer in place. Team Swap keeps every
 // roster and ratings group per slot, so edits can be carried from one ROM to another of the same
@@ -10,12 +10,14 @@
 import { detectGame, openRosterRom } from './rosterRom';
 import { installOlPatch, olPatchState, OL_PATCH } from './rosterOlPatch';
 import { dealMode, LOCK_TABLE_SIZE, readSeason, SEASON_AREAS, SLOTS, WEEKS, writeSeason } from './season';
-import { readStyle, STYLE_RANGES, styleChanges, styleProblems, writeStyle } from './styles';
+import { readStyle, styleChanges, styleProblems, styleRanges, writeStyle } from './styles';
 import { ratingChanges, ratingProblems, ratingRanges, readRating, readWeather, writeRating, writeWeather } from './teamRatings';
 import { rl, rw } from './bytes';
-import { parseBw95 } from './bw95';
 import { editedReports, readReport, reportLength, REPORT_LIMIT, writeReports, type Report } from './walshReports';
 import type { Game } from './rosterLayouts';
+import { isWideBw95 } from './romfile';
+import { teamsOf } from './wide';
+import { readWideSeason, wideSeasonProblems, wideSeasonRanges, writeWideSeason } from './seasonWide';
 
 export interface CarryResult {
   rosters: number;
@@ -73,10 +75,10 @@ export function editsSince(base: Uint8Array, data: Uint8Array, game: Game): Edit
   const rosterRanges: [number, number][] = rom.teams.map((t) => [t.rosterOffset, t.rosterOffset + len]);
   if (game === 'bw95') rosterRanges.push([OL_PATCH.site, OL_PATCH.site + 8], [OL_PATCH.hook, OL_PATCH.hook + OL_PATCH.hookCode.length]);
   return {
-    season: game === 'bw95' && differs(base, data, seasonRanges(base)),
+    season: game === 'bw95' && differs(base, data, rom.wide ? wideSeasonRanges(base) : seasonRanges(base)),
     teams:
       game === 'bw95' &&
-      (differs(base, data, STYLE_RANGES) ||
+      (differs(base, data, styleRanges(base)) ||
         (!ratingProblems(base).length && differs(base, data, ratingRanges(base))) ||
         reportsDiffer(base, data)),
     rosters: differs(base, data, rosterRanges),
@@ -95,7 +97,7 @@ function reportsDiffer(base: Uint8Array, data: Uint8Array): boolean {
 
 /** The trim the first edit makes to every long report, when that's all that changed. */
 function longTrimmed(base: Uint8Array, data: Uint8Array): boolean {
-  for (let s = 0; s < 36; s++) {
+  for (let s = 0; s < teamsOf(base); s++) {
     if (reportLength(readReport(base, s)) > REPORT_LIMIT && reportLength(readReport(data, s)) <= REPORT_LIMIT) return true;
   }
   return false;
@@ -115,7 +117,7 @@ export function workFileName(name: string, edits: { season: boolean; teams?: boo
 /** Whether edits from one ROM can be carried into another (same game, same teams). */
 export function canCarry(from: Uint8Array, to: Uint8Array): boolean {
   const g = detectGame(from);
-  return !!g && g === detectGame(to);
+  return !!g && g === detectGame(to) && isWideBw95(from) === isWideBw95(to) && (g !== 'bw95' || teamsOf(from) === teamsOf(to));
 }
 
 /**
@@ -137,7 +139,17 @@ export function carryEdits(from: Uint8Array, to: Uint8Array, fromBase?: Uint8Arr
   }
   const res: CarryResult = { rosters: a.teams.length, olTweak: false, season: false, teams: 0, skipped: [] };
   if (a.game !== 'bw95') return res;
-  if (olPatchState(from) === 'installed' && olPatchState(to) !== 'installed') {
+  // The 138-team edition comes with the OL tweak; its season settings are its own.
+  if (a.wide) {
+    try {
+      if (!wideSeasonProblems(from).length && differs(fromBase ?? to, from, wideSeasonRanges(from))) {
+        writeWideSeason(to, readWideSeason(from));
+        res.season = true;
+      }
+    } catch (e) {
+      res.skipped.push(`Season: ${(e as Error).message}`);
+    }
+  } else if (olPatchState(from) === 'installed' && olPatchState(to) !== 'installed') {
     try {
       installOlPatch(to);
       res.olTweak = true;
@@ -145,7 +157,7 @@ export function carryEdits(from: Uint8Array, to: Uint8Array, fromBase?: Uint8Arr
       res.skipped.push(`OL weight tweak: ${(e as Error).message}`);
     }
   }
-  if (dealMode(from) !== 'unknown') {
+  if (!a.wide && dealMode(from) !== 'unknown') {
     try {
       writeSeason(to, readSeason(from));
       res.season = true;
@@ -184,8 +196,8 @@ export function carryEdits(from: Uint8Array, to: Uint8Array, fromBase?: Uint8Arr
     const base = fromBase ?? to;
     const edited = editedReports(base, from);
     if (edited.length) {
-      const fromNames = parseBw95(from).map((t) => t.school);
-      const toNames = parseBw95(to).map((t) => t.school);
+      const fromNames = a.teams.map((t) => t.school);
+      const toNames = b.teams.map((t) => t.school);
       const reports = new Map<number, Report>();
       for (const t of edited) {
         if (fromNames[t] === toNames[t]) reports.set(t, readReport(from, t));

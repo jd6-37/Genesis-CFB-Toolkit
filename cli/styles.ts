@@ -22,7 +22,7 @@ async function main() {
   for (const c of changes) {
     const [who, both = ''] = c.split('=');
     const t = /^\d+$/.test(who) ? +who : names.indexOf(who);
-    if (!(t >= 0 && t < 36)) throw new Error(`No team ${who}`);
+    if (!(t >= 0 && t < names.length)) throw new Error(`No team ${who}`);
     const [o, d] = both.split(',');
     const now = readStyle(data, t);
     const flag = writeStyle(data, t, {
@@ -37,7 +37,7 @@ async function main() {
   }
   const info = styleInfo(data);
   console.log(JSON.stringify({ out: out ?? null, sha1: out ? await sha1Hex(data) : undefined, veer: info.veer, elevated: info.elevated }));
-  for (let t = 0; t < 36; t++) {
+  for (let t = 0; t < names.length; t++) {
     const st = readStyle(data, t);
     console.log(`${String(t).padStart(2)} ${names[t].padEnd(16)} ${OFFENSE[st.offense].padEnd(10)} ${DEFENSE[st.defense]}`);
   }

@@ -4,6 +4,8 @@ import {
   BW95_DEFENSE_BITS, BW95_LABELS_43, GAMES, GROUP_ATTRS, rosterLayout,
   type Attr, type Game, type GameInfo, type SlotDef,
 } from './rosterLayouts';
+import { isWideBw95 } from './romfile';
+import { wideLayoutProblems, wideTeamCount } from './wide';
 
 export interface Player {
   /** Jersey number byte as stored (BCD). Use jerseyNumber() to read it. */
@@ -31,6 +33,8 @@ export interface RosterRom {
   teams: RosterTeam[];
   /** BW95 only: Bill Walsh '95 Elevated's defensive layout (DT1/DT2, MLB1/MLB2 for every team). */
   elevated: boolean;
+  /** BW95 only: the 138-team 2026 Season Edition (src/core/wide.ts). */
+  wide: boolean;
 }
 
 /** BW95: the roster screen's 4-3 labels read DT1 (Elevated, v1.1.0-beta.7 and later) instead of DLT. */
@@ -71,7 +75,13 @@ export function openRosterRom(input: Uint8Array, inPlace = false): RosterRom {
   const info = GAMES[game];
   const data = inPlace ? input : new Uint8Array(input);
   const teams: RosterTeam[] = [];
-  for (let i = 0; i < info.teamCount; i++) {
+  const wide = game === 'bw95' && isWideBw95(data);
+  if (wide) {
+    const p = wideLayoutProblems(data);
+    if (p.length) throw new Error(`This 4 MB Bill Walsh '95 ROM isn't laid out like the 138-team 2026 Season Edition: ${p.join('; ')}.`);
+  }
+  const count = wide ? wideTeamCount(data) : info.teamCount;
+  for (let i = 0; i < count; i++) {
     const block = u32(data, info.teamTable + 4 * i);
     if (block < 0x200 || block + 0x20 > data.length) throw new Error(`Team table entry ${i} is invalid.`);
     const rosterOffset = block + u16(data, block);
@@ -88,7 +98,7 @@ export function openRosterRom(input: Uint8Array, inPlace = false): RosterRom {
   if (game === 'bw95' && !elevated) {
     for (const t of teams) t.threeFour = ((data[BW95_DEFENSE_BITS + (t.index >> 3)] >> (t.index & 7)) & 1) === 0;
   }
-  return { game, info, data, teams, elevated };
+  return { game, info, data, teams, elevated, wide };
 }
 
 /** BW95, original layout: re-reads the 3-4 flags, which follow a team's defense when its style

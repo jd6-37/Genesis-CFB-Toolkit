@@ -87,6 +87,7 @@ button, input, select { font: inherit; color: inherit; }
 }
 .tab:hover { color: var(--chalk); }
 .tab-on, .tab-on:hover { color: var(--menu); border-bottom-color: var(--menu); }
+.tab-off, .tab-off:hover { opacity: 0.45; }
 
 /* ROM files */
 .roms {

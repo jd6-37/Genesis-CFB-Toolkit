@@ -55,7 +55,7 @@ The patches live in the mod's repo, [jd6-37/Bill-Walsh-CFB-95-Elevated](https://
 | `app`, `tool`, `version` | Identify the file. `tool` must be `"patches"`; the app reads `version` 1 only (a change it can't read gets a new version number). |
 | `original` | The ROM every patch applies to: its name and SHA-1. Loading this ROM shows the patch choices. |
 | `contents` | The "What to add" choices (`id`, `label`, optional `about`), in the order shown. The app shows the choice only when the current release offers more than one. |
-| `fatigue` | The "Fatigue" choices, same fields. The app shows only those the picked content has, and the choice only when that's more than one (in v1.1.0, only under Fatigue only). |
+| `fatigue` | The "Fatigue" choices, same fields. The app shows only those the picked content has, and the choice only when that's more than one (in v1.1.0 and v2.0.0, only under Fatigue only). |
 | `releases` | Newest first. **The first release is the current one**: only its patches with a `file` are offered. |
 | `releases[].version`, `name`, `date` | Version (`v1.1.0`), the name shown as "Latest release" and in messages, and the release date. |
 | `patches[].content`, `fatigue` | The choice ids the patch belongs to. One patch per combination in the current release. |
@@ -96,7 +96,7 @@ Team Swap uses the Patch tab's ROM: `App.tsx` passes every BW95 ROM loaded in th
 
 - BPS: a patch built in the test that uses all four commands (including a target copy that overlaps what it writes and a source copy going backward); the wrong ROM, a damaged patch, a result that fails its checksum, and a file that isn't BPS.
 - The repo's patch list is valid; broken lists (unknown version, unknown choice ids, missing `sha256`, bad SHA-1, a path outside the repo, two patches for one combination) are caught; an older release without files is fine.
-- Every offered patch, applied to the original ROM, gives the SHA-1 in the list; a changed byte in a patch file fails the list's check. Every patched ROM takes a team swap, the 2026 Season Edition too (Team Swap swapped its teams, so it can swap them again); with CF97, a swap builds on each, and the result takes another.
+- Every offered patch, applied to the original ROM, gives the SHA-1 in the list; a changed byte in a patch file fails the list's check. Every patched ROM takes a team swap (v1.1.0's 36-team 2026 Season Edition too: Team Swap swapped its teams, so it can swap them again); with CF97, a swap builds on each, and the result takes another. The 138-team 2026 Season Edition of v2.0.0 (4 MB) is recognized as such (`identifyRom` gives `wide`) and kept out of the 36-team tools.
 - `?patches=` handling.
 
 Browser checks (Playwright against `vite preview`, with the list and patches served from a local copy of the repo, and once from GitHub itself) are listed in the README.

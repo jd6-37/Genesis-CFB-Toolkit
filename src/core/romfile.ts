@@ -12,6 +12,9 @@ export interface KnownRom {
   /** A BW95 ROM recognized only by its header: a mod or an edit of the original. Team Swap checks
    *  that the code and ROM space it needs are still untouched (`swapProblems` in build.ts). */
   modded?: boolean;
+  /** A BW95 ROM over 2 MB: the 138-team 2026 Season Edition (Elevated v2.0.0 on; layout in wide.ts).
+   *  Season, Teams and Rosters edit it; Team Swap doesn't (yet). */
+  wide?: boolean;
 }
 
 export const KNOWN: Record<string, KnownRom> = {
@@ -38,10 +41,26 @@ export function headerTitle(d: Uint8Array): string {
   return d.length < 0x180 ? '' : String.fromCharCode(...d.subarray(0x150, 0x180)).replace(/\s+/g, ' ').trim();
 }
 
-/** A known file by SHA-1, else any 2 MB ROM with BW95's header counts as a modded BW95 ROM. */
+/** True for a BW95 ROM over 2 MB: the 138-team 2026 Season Edition (see `KnownRom.wide`). */
+export const isWideBw95 = (d: Uint8Array) => d.length > 0x200000 && headerTitle(d) === BW95_TITLE;
+
+/** Why Team Swap doesn't take a wide ROM. */
+export const WIDE_ROM_TEXT =
+  'This is the 2026 Season Edition with all 138 FBS teams, so Team Swap (College Football USA 97 teams into the 36 ' +
+  "original slots) doesn't take it. To swap in CF97 teams, start from the original game or the Elevated edition with the original 36 teams.";
+/** What the other tabs do with a wide ROM so far. */
+export const WIDE_TABS_TEXT =
+  "Season, Teams and Rosters edit it: conferences and their schedule weeks; every team's styles, OFF and DEF, home " +
+  "weather and Walsh Report; and all 138 rosters, with the built-in CFB 27 rosters too.";
+
+/** A known file by SHA-1, else any 2 MB ROM with BW95's header counts as a modded BW95 ROM, and a
+ *  bigger one as the 138-team edition. */
 export function identifyRom(data: Uint8Array, sha1: string): KnownRom | undefined {
   const known = KNOWN[sha1];
   if (known) return known;
+  if (isWideBw95(data)) {
+    return { kind: 'bw95', label: "Bill Walsh College Football '95: 2026 Season Edition (138 teams)", modded: true, wide: true };
+  }
   if (data.length === 0x200000 && headerTitle(data) === BW95_TITLE) {
     return { kind: 'bw95', label: "Bill Walsh College Football '95 (modded)", modded: true };
   }

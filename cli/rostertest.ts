@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { strict as assert } from 'node:assert';
 import {
-  openRosterRom, readPlayer, teamLayout, fixChecksums, eaChecksumOk, findEaChecksum, jerseyNumber, getRating,
+  openRosterRom, readPlayer, writePlayer, jerseyByte, teamLayout, fixChecksums, eaChecksumOk, findEaChecksum, jerseyNumber, getRating,
 } from '../src/core/rosterRom';
 import { exportRostersCsv } from '../src/core/rosterExport';
 import { detectImport, importSheet, teamMatcher } from '../src/core/rosterImport';
@@ -17,10 +17,13 @@ import { installOlPatch, OL_PATCH, olPatchState, restoreOlPatch } from '../src/c
 import { stockDistributionsJson } from './stockdists';
 import STOCK from '../src/core/rosterStockDists.json';
 import { createHash } from 'node:crypto';
+import { writeRating, readRating } from '../src/core/teamRatings';
+import { canCarry, carryEdits, editsSince } from '../src/core/workRom';
 
 const paths = process.argv.slice(2);
+const widePath = paths.length === 4 ? paths.pop()! : undefined; // optional: the 138-team 2026 Season Edition (v2.0.0)
 if (paths.length !== 3) {
-  console.error('usage: tsx cli/rostertest.ts BW95 CF96 CF97');
+  console.error('usage: tsx cli/rostertest.ts BW95 CF96 CF97 [ELEVATED_2026_v2]');
   process.exit(2);
 }
 const raw: Record<string, Uint8Array> = {};
@@ -384,6 +387,46 @@ const FULL = ['QB', 'QB', 'HB', 'HB', 'HB', 'FB', 'WR', 'WR', 'WR', 'WR', 'WR', 
   assert.equal(olPatchState(other), 'unknown');
   assert.throws(() => installOlPatch(other), /not the original/);
   ok('OL weight tweak: install, idempotent, export/import +25, restore, refuses busy space');
+}
+
+// The 138-team 2026 Season Edition (Elevated v2.0.0): all 138 teams open, the built-in CFB 27 rosters
+// rebuild its rosters and OVRs byte for byte, edits are tracked and carried, and the 36-team ROMs don't mix.
+if (widePath) {
+  const wide = (await openRom(basename(widePath), new Uint8Array(readFileSync(widePath)))).data;
+  const rom = openRosterRom(wide);
+  assert.equal(rom.wide, true);
+  assert.equal(rom.teams.length, 138);
+  assert.equal(rom.elevated, true);
+  assert.deepEqual(['Air Force', 'Miami of Ohio', 'Western Kentucky'].map((n) => rom.teams.some((t) => t.school === n)), [true, true, true]);
+  const sheet = await readSheet('week9.csv', new Uint8Array(readFileSync('public/data/ea-cfb27-ratings-2026-week9.csv')));
+  const again = openRosterRom(wide);
+  const plan = convertCfb27(again, sheet);
+  assert.equal(plan.teams.length, 138);
+  assert.deepEqual(plan.unmatchedRomTeams, []);
+  applyCfb27(again, plan);
+  for (const t of plan.teams) writeRating(again.data, t.team, t.ovr);
+  assert.ok(again.data.every((b, i) => b === wide[i]), 'the conversion rebuilds the release byte for byte');
+  // An edit of the last team: only its roster changes; tracked as a roster edit; Sega checksum fixed, EA's unchanged.
+  const ed = openRosterRom(wide);
+  const last = ed.teams.length - 1;
+  const p = readPlayer(ed, last, 0);
+  writePlayer(ed, last, 0, { ...p, numberByte: jerseyByte(77) });
+  const sums = fixChecksums(ed.data, 'bw95');
+  const diff = [...ed.data.keys()].filter((i) => ed.data[i] !== wide[i]);
+  assert.ok(diff.every((i) => (i >= ed.teams[last].rosterOffset && i < ed.teams[last].rosterOffset + 128) || i === 0x18e || i === 0x18f));
+  assert.ok(eaChecksumOk(ed.data, 'bw95') && sums.ea !== null);
+  assert.deepEqual(editsSince(wide, ed.data, 'bw95'), { season: false, teams: false, rosters: true, any: true });
+  const carried = wide.slice();
+  carryEdits(ed.data, carried, wide);
+  assert.equal(readPlayer(openRosterRom(carried), last, 0).numberByte, jerseyByte(77));
+  assert.equal(canCarry(wide, load('bw95')), false);
+  // OVRs live in the edition's own table (one entry per team), not the 36-team one at 0x10DFB0.
+  const rr = wide.slice();
+  writeRating(rr, 137, { off: 70, def: 71 });
+  assert.deepEqual(readRating(rr, 137), { off: 70, def: 71 });
+  assert.deepEqual(editsSince(wide, rr, 'bw95'), { season: false, teams: true, rosters: false, any: true });
+  assert.ok(rr.subarray(0x10dfb0, 0x10e000).every((b, i) => b === wide[0x10dfb0 + i]));
+  ok('138-team 2026 Season Edition: 138 teams, the built-in CFB 27 rosters rebuild it byte for byte, edits tracked and carried');
 }
 
 console.log(`\n${passed} passed`);

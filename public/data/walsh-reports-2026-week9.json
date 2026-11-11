@@ -1,0 +1,562 @@
+{
+ "app": "genesis-cfb-toolkit",
+ "tool": "walsh-reports",
+ "version": 1,
+ "season": 2026,
+ "week": 9,
+ "source": "Bill Walsh College Football '95 Elevated: 2026 Season Edition v2.0.0",
+ "reports": {
+  "Air Force": {
+   "offense": "Troy Calhoun's Falcons still live on the triple option. #9 Liam Szarka pulls the trigger at quarterback, #2 Owen Allen carries the load at fullback, and #55 Luke Vonderhaar anchors a line that wins with angles. Air Force beat UConn 35-26 in 2026. Ball control is the whole identity.",
+   "defense": "The Falcons went 6-2 through eight games in 2026. #6 Blake Fletcher and #30 Isaac Hubert play outside linebacker, and #36 Max Mustell patrols the back end. Their job is to get the ball back for the option."
+  },
+  "Akron": {
+   "offense": "Akron leaned on #22 Jordan Gant, who ran 28 times for 162 yards and 2 touchdowns in a 35-20 loss at Kent State on Oct. 24. #6 Brayden Roggow threw for 275 yards that day, and #3 Kyan Mason caught 7 passes for 129 yards. #2 Marcel Williams scored 2 touchdowns against Eastern Michigan on Oct. 10. The Zips stood 1-7 and had an Oct. 31 bye.",
+   "defense": "Akron allowed 35 points at Kent State on Oct. 24 and 34 at Miami on Oct. 17. #5 Ronald Hull anchored the line, with #29 Tairan Davis at strong safety and #15 Terrence Thomas at corner. Eastern Michigan won 25-23 at InfoCision Stadium on Oct. 10, and the Zips lost 7 of their first 8 games."
+  },
+  "Alabama": {
+   "offense": "Kalen DeBoer's Crimson Tide opened 2026 with a 48-10 win, then lost to Georgia and Tennessee before beating Texas A&M 31-20. #12 Keelon Russell won the starting job and threw for 311 yards and three scores in that win. #7 Rico Scott stretches the field, and #81 Kaleb Edwards and #4 Daniel Hill both caught touchdowns.",
+   "defense": "Alabama's strength is a secondary that returned four starters from a top-10 pass defense. #18 Bray Hubbard tied for the SEC lead with four interceptions in 2025, #2 Zabien Brown is a preseason All-SEC corner and #3 Keon Sabb patrols deep. #0 Yhonzae Pierre rushes from the edge. The secondary is the clear strength of this unit."
+  },
+  "Appalachian State": {
+   "offense": "Dowell Loggains's Pro Tempo offense at App State ran through transfer quarterback #3 Malachi Singleton, who threw for 331 yards in a 26-21 win over Charlotte on Sept. 19. #22 Jaquari Lewis led the ground game, and #84 Sam Pickett III caught 2 touchdowns against Maine. A 19-3 loss at Georgia Southern on Oct. 31 left the Mountaineers 5-3.",
+   "defense": "Coordinator D.J. Smith's defense used #41 Caleb Sandstrom at end, #69 Jehchys Brown at tackle and #6 Ja'Cari Henderson at corner. It held Old Dominion to 10 points on Oct. 10 but allowed 41 at NC State on Sept. 26 and 32 at Coastal Carolina on Oct. 16."
+  },
+  "Arizona": {
+   "offense": "Brent Brennan's Wildcats run a spread attack behind senior quarterback #1 Noah Fifita, who threw an Arizona-record 29 touchdowns in 2025. #3 Kedrick Reescano carries the ball, and #12 Tre Spivey and #17 Isaiah Mizell catch it. Arizona scored 52 at West Virginia and 34 against Cincinnati in 2026.",
+   "defense": "Danny Gonzales runs a 3-3-5, with #6 Taye Brown in the middle and #8 Jay'Vion Cole at corner. The Wildcats held Iowa State to a field goal in a 39-3 win on Oct. 24. They also gave up 31 at West Virginia and 28 at BYU."
+  },
+  "Arizona State": {
+   "offense": "Kenny Dillingham's Sun Devils run a pistol attack with Kentucky transfer #8 Cutter Boley, who threw six touchdowns in a 70-7 opener. #3 Reed Harris had eight touchdown catches through October, and #25 Cardae Mack carries the ball. Arizona State lost 27-20 at BYU on Oct. 31.",
+   "defense": "Brian Ward's defense is built around #22 Owen Long in the middle and #99 C.J. Fite at tackle, with #1 Ashton Stamps at corner. The Sun Devils beat Kansas State 28-17 on Oct. 24, then rallied to tie BYU at 17 in the third quarter before falling 27-20."
+  },
+  "Arkansas": {
+   "offense": "Ryan Silverfield, who spent more than five seasons at Memphis, runs a pro spread under coordinator Tim Cramsey. Left-hander #7 KJ Jackson is the quarterback, with #0 Braylen Russell at halfback and #6 Chris Marshall at receiver. Arkansas scored 31 at Vanderbilt on Oct. 17 and managed 10 points against Missouri on Oct. 31.",
+   "defense": "Ron Roberts runs a 3-3-5, with #97 Quincy Rhodes Jr. at end and #7 Bradley Shaw in the middle. The Razorbacks snapped a 14-game SEC losing streak with a 31-21 win at Vanderbilt on Oct. 17. They gave up 24 to Tennessee on Oct. 10 and 34 to Missouri on Oct. 31, when three fumbles and an interception led to 24 Tigers points."
+  },
+  "Arkansas State": {
+   "offense": "Arkansas State beat Georgia State 38-32 on Oct. 24 to reach 4-4. #9 Trey Owens and #6 Ethan Crawford were the quarterbacks on the roster, with #2 Chauncy Cobb and #3 Hunter Summers at receiver and #5 Kenyon Clay and #23 Solomon Baggett at halfback. #68 Tristian Smith anchored the line. The Red Wolves averaged 27 points per game through Oct. 17.",
+   "defense": "The defense gave up 56 to South Alabama on Oct. 8 and ranked 94th in the FBS at 26.6 points per game through Oct. 17. #5 Five Hamilton at strong safety, #0 Dontrae Henderson at corner and #54 Ryan Reese at tackle were the top names. Arkansas State held Southern Miss to 13 on Oct. 17."
+  },
+  "Army": {
+   "offense": "Jeff Monken's Black Knights run the triple option behind QB #3 Cale Hellums, who had 840 rushing yards and 16 TDs entering Oct. 31. #27 Samari Howard and #7 Godspower Nwawuihe share the carries, and Howard ran for 158 yards in a 31-29 loss at Louisiana Tech on Oct. 3. C #51 Brady Small leads a senior line.",
+   "defense": "Daryl Dixon, in his first year as coordinator, runs a 3-4. #99 Jack Bousum plays end, #52 Kody Harris-Miller plays tackle, #3 Stephen Nnadozie plays free safety and #7 Jaydan Mayes plays corner. Army allowed 22.1 points per game entering Oct. 31, beat Tulsa 38-35 on Oct. 23 and lost 49-22 at Memphis on Oct. 31 to stand 5-3."
+  },
+  "Auburn": {
+   "offense": "Alex Golesh brought QB #17 Byrum Brown and a dozen USF teammates to the Plains. Brown ran for 115 yards and threw for 150 in a 27-24 win at No. 1 Georgia, and #38 Alex McPherson kicked the winner as time expired. #23 Jeremiah Cobb is the power back. Brown threw three interceptions in the opener, so ball security is a concern.",
+   "defense": "DJ Durkin's defense won at Georgia by holding the Bulldogs to 113 rushing yards and forcing two late turnovers. #9 Elijah Melendez picked off Georgia QB Gunner Stockton and #41 Jared Smith blocked a field goal. The secondary gave up 44 points to Florida and 387 passing yards to LSU, so it is the weak spot."
+  },
+  "Ball State": {
+   "offense": "Mike Uremovich's Ball State rode #6 Keldric Luster, who ran 17 times for 125 yards in a 32-31 win at Bowling Green on Oct. 17. Luster threw for 234 yards and 2 touchdowns in a 34-17 win over Sacramento State on Oct. 24, including a 65-yard score to #11 Isaiah Thacker. #4 TJ Horton ran for 125 yards on Sept. 12.",
+   "defense": "The 3-4 defense gave up 31 points at Bowling Green but held Sacramento State to 17. #33 Quentavius Scandrett patrolled at strong safety, #56 Ameir Glenn played tackle, and #4 Willizhuan Yates and #6 Cincear Lewis added corner and outside linebacker. Ball State won back-to-back games to reach 3-5 before an Oct. 31 bye."
+  },
+  "Baylor": {
+   "offense": "Baylor runs a Bear Raid offense under coordinator Jake Spavital, with Florida transfer #2 DJ Lagway at quarterback. #6 Gavin Freeman is the top receiver, and #10 Tony Livingston is a tight end target. Lagway threw for 319 yards and four touchdowns in a 41-9 win at UCF on Oct. 30.",
+   "defense": "Defensive coordinator Joe Klanderman runs a 4-2-5 and became interim coach when Dave Aranda was fired on Oct. 25. #7 Devon Jordan had four interceptions through Oct. 30, and #5 Travion Barnes plays the middle. The Bears lost 17-6 to TCU and 25-24 at Kansas."
+  },
+  "Boise State": {
+   "offense": "Boise State, under Spencer Danielson, ran on #0 Dylan Riley, who led the FBS with 685 rushing yards through Oct. 10, and #26 Sire Gaines. #4 Maddux Madsen went 17 of 21 for 244 yards and 2 touchdowns in the 37-18 win over Utah State on Oct. 3, throwing to tight end #88 Matt Wagner. #62 Roger Carreon anchored the line.",
+   "defense": "Ends #5 Jayden Virgin-Morgan and #95 Max Stege rushed the passer, and #1 Boen Phelps intercepted a pass in the 31-10 win at Washington State on Oct. 24. Boise beat Fresno State 38-31 on Oct. 10 and Texas State 46-45 on Oct. 31."
+  },
+  "Boston College": {
+   "offense": "Boston College is Bill O'Brien's spread, built on the read-option, and he calls the plays himself. QB #10 Mason McKenzie ran for 170 yards and two TDs and threw for another in the Oct. 24 win at Georgia Tech, while HB #24 Bo MacCormack ran for 155 yards and three TDs. The Eagles piled up 399 rushing yards that day.",
+   "defense": "Ted Roof is in his first year as coordinator and runs a base 4-3. SS #2 KP Price, SS #5 Marcus Upton and FS #7 Carter Davis anchor the back end. The Eagles allowed 27 points at Georgia Tech, then 47 at Duke, where they were flagged 15 times. Boston College was 4-4 after that game."
+  },
+  "Bowling Green": {
+   "offense": "Eddie George's Bowling Green leaned on #17 Jay Kastantin and #1 Austyn Dendy. Kastantin threw for 217 yards and 3 touchdowns at Buffalo on Oct. 24 but also threw 2 interceptions in the 31-24 loss. Dendy ran for 86 yards and 2 scores in a 38-10 win over Sacramento State on Oct. 10. The Falcons lost 23-10 at Western Michigan on Oct. 31 and stood 2-7.",
+   "defense": "Coordinator Joe Bowden's defense had #23 Myles Bradley at end, #5 Eriq George inside and #2 JoJo Johnson at corner. It allowed 32 points to Ball State on Oct. 17 and 31 at Buffalo on Oct. 24 but held Western Michigan to 23 on Oct. 31. Three of the seven losses came by 7 points or fewer."
+  },
+  "Buffalo": {
+   "offense": "Pete Lembo's Buffalo leaned on #4 Messiah Burch, who ran 33 times for 184 yards and 3 touchdowns in a 31-24 win over Bowling Green on Oct. 24. #7 Jason Wright threw for 171 yards in a 23-8 win at Toledo on Oct. 10. #6 Chance Morrow caught 11 passes for 170 yards at FIU on Sept. 12. The Bulls stood 5-3 with an Oct. 31 bye.",
+   "defense": "#97 Christopher Climes and #99 Cornell Evans anchored the tackle spots, with #6 Miles Greer at free safety and #0 Kobi Blackwell at corner. The Bulls held Toledo to 8 points on Oct. 10 and UMass to 18 on Oct. 17 but allowed 55 at Penn State on Sept. 19 and 33 at FIU on Sept. 12."
+  },
+  "BYU": {
+   "offense": "Kalani Sitake's Cougars ran out to a 7-1 start in 2026. #47 Bear Bachmeier leads the offense, #4 LJ Martin is the halfback, and #3 Kyler Kasper is a steady target. #63 Bruce Mitchell anchors the line at center. Bachmeier and Martin form the core of this offense.",
+   "defense": "#16 Isaiah Glasker and #4 Cade Uluave lead the linebackers, with #0 Evan Johnson at corner and #11 Faletau Satuala at strong safety. BYU beat Notre Dame in 2026 and held Arizona State to 20 in a 27-20 win. The back end is the strength of this defense."
+  },
+  "Cal": {
+   "offense": "Cal runs a pro-style offense under first-year coach Tosh Lupoi and coordinator Jordan Somerville. QB #3 Jaron-Keawe Sagapolutele is the starter, with WR #7 Chase Hendricks and TE #85 Mason Mini as his targets. The Bears scored 20 in the 59-20 loss at SMU and 10 in the 31-10 loss at NC State, level or ahead at halftime in both.",
+   "defense": "Lupoi is a defensive coach by trade, and he leaves the unit to coordinator Michael Hutchings. The second half was the problem lately. SMU scored 42 straight points after the break, and NC State outscored the Bears 21-0 after a 10-10 halftime. Cal was 3-6 and 2-4 in the ACC."
+  },
+  "Central Michigan": {
+   "offense": "Matt Drinkall's Central Michigan ran through quarterback #7 Angel Flores, who carried 28 times for 163 yards against Wyoming on Sept. 19 and 18 times for 154 against Akron on Oct. 3. He ran 31 times for 117 yards in a 21-14 loss to Western Michigan on Oct. 17. #20 Langston Lewis caught 4 passes for 74 yards in that game.",
+   "defense": "A 28-27 home loss to Miami (Ohio) on Oct. 24 left the Chippewas 3-5 before an Oct. 31 bye. #4 Jaion Jackson played corner, #14 Justin Taylor and #19 Darrell Bryant safety, and #96 Quavion Bird tackle. The defense held Wyoming to 10 points and Akron to 17 but allowed 31 at Ohio on Oct. 10."
+  },
+  "Charlotte": {
+   "offense": "Tim Albin's spread option offense started #9 Cole Gonzales for 5 games before #15 Conner Harrell took over, and the 49ers stood 1-7. Harrell threw for 281 yards and 2 touchdowns in a 38-31 win at Temple on Oct. 17. #21 Henry Rutledge ran 22 times for 121 yards in a 38-31 loss to Tulane on Oct. 30. #1 Jaden Barnes caught 9 passes for 94 yards at North Texas on Oct. 10.",
+   "defense": "Charlotte ran a 4-2-5 under coordinator Nate Faanes, with #95 Devin Ancrum at tackle, #1 Jameel Croft Jr. at corner and #0 Collin Gill at free safety. It allowed 59 to Memphis on Oct. 3, 50 at North Texas on Oct. 10 and 38 to Tulane on Oct. 30."
+  },
+  "Cincinnati": {
+   "offense": "Scott Satterfield's Bearcats are led by quarterback #4 JC French IV, who threw four touchdown passes in a 37-24 win over No. 8 Texas Tech on Oct. 24. #3 Cole Tabb carries the ball, #11 JV Gibson catches it, and #50 Evan Tengesdahl anchors the line at left guard.",
+   "defense": "Nate Woody, who ran Army's defense for six seasons, is the new coordinator. #0 Jacob Finley covers at corner, #22 Jonathan Thompson rushes from outside linebacker, and #3 Antwan Peek plays safety. The Bearcats gave up 45 at West Virginia and 49 to Utah, and stood 5-3 on Oct. 31."
+  },
+  "Clemson": {
+   "offense": "Dabo Swinney's offense leans on freshman QB #2 Tait Reynolds, who broke a 79-yard touchdown run, the longest ever by a Clemson QB, in a 36-24 win at Florida State. #8 Gideon Davidson is the lead back and #1 T.J. Moore the top target. The Tigers managed just 10 points at LSU and 13 against Miami in 2026.",
+   "defense": "Tom Allen's 4-2-5 defense had 20 sacks and four interceptions through seven games in 2026. #13 Will Heldt is the pass rusher, #22 Corey Myrick the leading tackler, and #3 Elliot Washington II picked off two passes at Florida State. The Tigers shut out Charleston Southern 37-0 but gave up 51 at LSU. The pass rush is the strength."
+  },
+  "Coastal Carolina": {
+   "offense": "First-year coach Ryan Beard's Coastal offense, under coordinator Nick Petrino, centered on #2 Deuce Bailey, who threw for 307 yards and 3 touchdowns in a 31-20 win at Georgia State on Oct. 31. #23 Dominic Knicely ran 25 times for 169 yards at Marshall on Oct. 10. #1 Robby Washington caught 5 passes for 118 yards in a 35-32 loss to App State on Oct. 16.",
+   "defense": "L.D. Scott's defense had #1 Ibrahim Diawara at end, #2 Ja'Marion Wayne at corner and #14 Myles Woods at free safety. It allowed 35 to App State on Oct. 16, 34 to Liberty on Sept. 24 and 31 to Georgia Southern on Oct. 3. Coastal held Georgia State to 20 on Oct. 31 and stood 3-5."
+  },
+  "Colorado": {
+   "offense": "Deion Sanders' Buffaloes stood 3-5 in 2026. #10 Julian Lewis runs the offense, throwing to #8 Joseph Williams, #18 Danny Scudero and #3 DeAndre Moore Jr. Colorado beat Kansas State 27-24 in overtime. The receivers are the strength of this offense.",
+   "defense": "#44 Gideon Lampron leads at middle linebacker, #97 Santana Hopper clogs the middle, #6 Boo Carter covers at corner, and #7 Randon Fontenette plays strong safety. Colorado was 3-5 through eight games."
+  },
+  "Colorado State": {
+   "offense": "Colorado State, in Jim Mora's first year and its Pac-12 debut, was led by #8 Hauss Hejny, who threw 5 touchdowns in the 35-13 win over Wyoming. #0 RJ Vick caught 3 of them, and #1 Mel Brown led the backs. The first Pac-12 win was 56-49 over San Diego State on Oct. 24.",
+   "defense": "Kenny McClendon coordinated a base 3-3-5. #2 Oumar Diomande and end #56 Kenyon Agurs led it, and #15 Tre'Shawn Moore returned an interception for a touchdown. The Rams allowed 56 at Oregon State and 66 at Texas State, then lost 31-14 at Utah State on Oct. 31 to fall to 3-5."
+  },
+  "Connecticut": {
+   "offense": "First-year coach Jason Candle's UConn leaned on #7 Kalieb Osborne, who threw for 314 yards and 3 touchdowns in a 42-41 loss to Syracuse on Oct. 3. #23 Cyncir Bowers ran 16 times for 163 yards and 2 touchdowns in that game. #5 Shamar Porter caught a touchdown against Maryland. UConn lost 35-26 at Air Force on Oct. 31 and stood 4-4.",
+   "defense": "#0 K'Von Sherman at outside linebacker, #3 Esean Carter at tackle and #15 Anas Luqman at end led the defense. UConn allowed 38 to Maryland on Sept. 12 and 42 to Syracuse on Oct. 3 but held UMass to 16 on Oct. 23. Air Force scored 35 on Oct. 31."
+  },
+  "Delaware": {
+   "offense": "Ryan Carty's Delaware ran through #4 Nick Minicucci, who threw for 414 yards and 4 touchdowns in a 35-21 win at Western Kentucky on Oct. 27. #18 Sean Wilson caught 9 passes for 183 yards and 2 scores in that game, and #27 Jo Silver ran for 101 yards against Missouri State on Oct. 20. The Blue Hens snapped a 7-game road losing streak and stood 4-4.",
+   "defense": "#7 KT Seay at free safety, #13 Noah Matthews at end and #33 Trace Scott III at tackle led the defense. It allowed 42 at Virginia on Sept. 26 and 38 to Missouri State on Oct. 20, then held Western Kentucky to 21 on Oct. 27."
+  },
+  "Duke": {
+   "offense": "Duke's offense runs through HB #20 Nate Sheppard, who rushed for a school-record five TDs in the 47-2 win over Boston College and had 18 TDs on the season, also a school record. QB #2 Walker Eget threw for 201 yards in that game, including a TD to TE #85 Jeremiah Hasley. The Blue Devils started the year 4-0.",
+   "defense": "Manny Diaz is a defensive coach, and his Duke defense is aggressive under coordinator Jonathan Patke. Pass rushers #12 Bryce Davis and #10 Tyshon Reed Jr. lead the front. Against Boston College, Duke had six sacks and 11 tackles for loss and held the Eagles to 2 of 13 on third down. Duke was 6-2 and the defending ACC champion."
+  },
+  "East Carolina": {
+   "offense": "Blake Harrell's Pirates changed quarterbacks early. #12 Mitch Griffis, a Texas Tech transfer, started the opener, and #9 Emory Williams, a Miami transfer, took over in the Sept. 26 win over N.C. Central and had 716 yards and seven TDs through Oct. 22. #4 TJ Engleman Jr. and #3 Ashton Gray share the backfield, and #10 Brock Spalding leads the receivers.",
+   "defense": "Jordon Hankins, in his first year as coordinator, has #11 DJ Johnson Jr. in the middle, #0 Jasiyah Robinson at end and #44 Preston Carr at tackle. East Carolina lost 30-17 in overtime at UAB on Oct. 15 and 41-34 in overtime at Memphis on Oct. 22. They beat Temple 17-9 on Oct. 31 to stand 4-4."
+  },
+  "Eastern Michigan": {
+   "offense": "Eastern Michigan leaned on #1 Noah Kim, who threw for 277 yards in a 25-23 win at Akron on Oct. 10. #10 Brogan McCaughey threw 39 passes in a 24-20 loss at Ohio on Oct. 24. #81 Nick Devereaux and #5 Harold Mack headed the receiver group. The Eagles stood 4-5 with an Oct. 31 bye.",
+   "defense": "#6 Bryce Llewellyn led the secondary at free safety, with #17 Caleb Dobbs and #25 Rayquan Adkins at corner and #85 Jefferson Adam at end. The Eagles held Lindenwood to 3 points on Sept. 26 and UMass to 14 on Oct. 3 but allowed 54 at Wisconsin on Sept. 19 and 34 to Toledo on Oct. 17. They dropped their last 2 games before the bye."
+  },
+  "FAU": {
+   "offense": "Zach Kittley's Air Raid offense revolved around #10 Caden Veltkamp, who threw for 452 yards and 5 touchdowns in a 48-41 loss at North Texas on Oct. 29 and for 339 yards and 3 touchdowns in a 51-49 win over Rice on Oct. 24. #8 Easton Messer caught 16 passes for 189 yards and 3 touchdowns at North Texas. #5 Leonard Farrow ran 17 times for 86 yards against Rice. The Owls stood 5-3.",
+   "defense": "The multiple 4-2-5 under coordinator Brett Dewhurst had #1 CJ Doggette Jr. and #98 Blake Burris at tackle, #12 Jay Crable at end and #4 Damarius McGhee at corner. It allowed 49 to Rice on Oct. 24, 48 at North Texas on Oct. 29 and 56 at Army on Oct. 17."
+  },
+  "FIU": {
+   "offense": "Willie Simmons's FIU leaned on #17 JJ Kohl at quarterback, #3 Devonte Lyons at running back and #2 Maguire Anderson, who led the team with 534 receiving yards through Oct. 13. The offense scored 22 against New Mexico State on Oct. 7 and 20 against Long Island on Sept. 26, then managed 10 points in a 49-10 loss at Liberty on Oct. 31.",
+   "defense": "#5 Kenton Simmons at end, #7 Jai-Ayviauynn Celestine at corner and #3 Demetrius Hill at strong safety backed a defense that ranked ninth nationally in scoring through Oct. 13. It held New Mexico State and Long Island to 3 points each. Liberty scored 49 on Oct. 31, and FIU stood 3-5."
+  },
+  "Florida": {
+   "offense": "Jon Sumrall's first Gators team opened 2026 at 4-0, climbed to No. 8 and averaged about 42 points a game through six games. #13 Jadan Baugh, an early Heisman hopeful, stayed in Gainesville and is the engine, #6 Dallas Wilson is the big-play receiver, and #12 Aaron Philo is the quarterback. A backup threw two touchdowns to beat Texas.",
+   "defense": "The Florida defense gave up 83 points in back-to-back losses to Missouri and South Carolina, then held Texas to 272 yards in a 27-24 win. #5 Myles Graham leads the linebackers and #0 Jayden Woods is a returning end. Georgia ran for 217 yards on it, so stopping the run is a concern."
+  },
+  "Florida State": {
+   "offense": "Mike Norvell's Seminoles turned to QB #14 Ashton Daniels, who set a school record with five rushing touchdowns in a 38-7 win over Virginia. #0 Duce Robinson is the big-play receiver, and #8 Micahi Danzy had catches of 22 and 33 yards in it. FSU ran for just 65 yards in a 36-24 loss to Clemson. #32 Ousmane Kromah and #5 Quintrevion Wisner are the backs.",
+   "defense": "Tony White's defense piled up 10 sacks and 12 tackles for loss against Virginia, one shy of the school record. #15 Rylan Kennedy had two sacks and #10 Chris Jones 1.5. The Seminoles also gave up 44 at Louisville and 36 to Clemson, so this unit can be beaten deep. Pass rush is its strength."
+  },
+  "Fresno State": {
+   "offense": "Fresno State, in Matt Entz's second year, ran through halfbacks #2 Rayshon Luke and #6 Bryson Donelson. #7 Jayden Mandal started at quarterback, with #5 Josiah Freeman as the top receiver and #71 Rolan Fullwood at right tackle. It lost 38-31 at home to Boise State on Oct. 10.",
+   "defense": "Adam Breske coordinated a base 4-2-5 led by corner #5 Simeon Harris and end #6 Jahzon Jacks. #11 Dylan Hampsten strip-sacked Oregon State's quarterback in the 38-22 win on Oct. 31, which ended the Beavers' five-game win streak and left Fresno State 5-3."
+  },
+  "Georgia": {
+   "offense": "Kirby Smart's Bulldogs held the No. 1 ranking in 2026 before losing 27-24 at home to Auburn. #3 Nate Frazier ran for three touchdowns in the 63-3 opener, and he scored again in a 27-8 win over Florida in Atlanta. #14 Gunner Stockton manages the game and threw for just 101 yards in that win.",
+   "defense": "This defense forced four turnovers and four sacks against Florida, Georgia's sixth straight win in the series. #4 KJ Bolden and #1 Ellis Robinson IV lead the secondary, #5 Raylen Wilson plays the middle and #0 Gabe Harris Jr. anchors the line. Auburn's QB ran for 115 yards, so mobile quarterbacks can give it trouble."
+  },
+  "Georgia Southern": {
+   "offense": "Clay Helton's multiple-look offense at Georgia Southern ran through #7 Max Johnson, who threw for 323 yards in a 19-3 win over App State on Oct. 31 and 3 touchdowns at Coastal Carolina on Oct. 3. #19 Josh Dallas and #2 Ashton Hollins led the receivers, #87 River Helms caught a touchdown at Coastal, and #6 David Mbadinga ran for 103 yards at Jacksonville State. The Eagles stood 4-4.",
+   "defense": "Helton's 4-2-5 defense used #4 Anthony Bynum at end, #57 Latrell Bullard at tackle, #31 Chance Gamble at corner and #6 Jakyri Jones at free safety. It held App State to 3 points on Oct. 31 and Old Dominion to 15 on Oct. 15 but allowed 42 to Houston on Sept. 26."
+  },
+  "Georgia State": {
+   "offense": "Dell McGee's multiple offense at Georgia State ran through quarterback #8 Cameran Brown, who threw a school-record 6 touchdown passes in a 42-10 win over Old Dominion on Oct. 3. #5 Lanear McCrary Jr. led the ground game, and #83 Rodshaun Dorsey and #85 Grant Hollier were among the top targets. A 31-20 loss to Coastal Carolina on Oct. 31 left the Panthers 4-4.",
+   "defense": "McGee's 3-3-5 defense used #1 Jabriel Rhodes-Nelson and #58 Kelze Howard up front, #4 Xavier Esqillion at linebacker and #7 Deuce Walker at corner. It held Old Dominion to 10 points on Oct. 3 but allowed 49 at James Madison on Oct. 17 and 38 at Arkansas State on Oct. 24."
+  },
+  "Georgia Tech": {
+   "offense": "Georgia Tech runs a pro spread under coordinator George Godsey and co-coordinator Chris Weinke. QB #15 Alberto Mendoza threw for 249 yards and three TDs in the 44-11 win over Mercer. WR #4 Jordan Allen had 312 yards and 28 catches through six games. Tech scored 27 in the loss to Boston College and 11 in a 34-11 loss at Pitt.",
+   "defense": "Jason Semore's defense lines up in a multiple 4-2-5, and it was the weak side of the team. The Jackets gave up 399 rushing yards to Boston College on Oct. 24 and 34 points at Pitt. MLB #44 Kyle Efford leads the middle, and RE #24 Noah Carter had a sack and a forced fumble against Mercer. Georgia Tech was 2-6."
+  },
+  "Hawaii": {
+   "offense": "Hawaii, in Timmy Chang's fifth year, entered 2026 as a Mountain West title dark horse behind #12 Micah Alejado at quarterback, with #5 Pofele Ashlock at receiver and #1 DeVon Rice at halfback. Alejado threw 3 touchdown passes and Rice ran for 3 scores in the 56-21 win at Northern Illinois on Oct. 24. #81 Frank Abreu led the team in receiving touchdowns.",
+   "defense": "#4 Elijah Palmer and #0 Jeremiah Hughes played corner, and #51 Lesterlaisene Lagafuaina played end. The defense gave up about 26 points per game through Oct. 17. Hawaii lost six of its first seven, then won 56-21 at Northern Illinois to stand 2-6 on Oct. 31."
+  },
+  "Houston": {
+   "offense": "Willie Fritz's Cougars have a deep receiver room. #1 Conner Weigman is the quarterback, #0 Amare Thomas and #4 Trent Walker are the stars, #2 Koby Young is another target, and #21 Makhi Hughes carries the ball. #56 Shadre Hurst anchors the line. Houston beat Oklahoma State 35-32 in 2026.",
+   "defense": "#4 Brandon Mack II rushes from end, #12 Sione Fotu plays middle linebacker and #5 Will James covers at corner. Houston was 6-2 in 2026, with a 21-13 loss at Utah."
+  },
+  "Illinois": {
+   "offense": "Bret Bielema's Illini ride QB #4 Katin Houser, an East Carolina transfer who led the 20-17 win at Maryland on Oct. 31. Illinois won on a 26-yard field goal as time expired. #21 Aidan Laughery and #24 Javari Barnett carry the ball, and WR #17 Collin Dixon is a top receiver.",
+   "defense": "Bobby Hauck, the former Montana coach, installed a 3-3-5 built on a deep secondary led by #7 Matthew Bailey at safety and #1 Xavier Scott at corner. Illinois beat Michigan State 38-37 in overtime on Oct. 10 but lost 24-17 to Purdue on Oct. 3, and stood 5-3 on Oct. 31."
+  },
+  "Indiana": {
+   "offense": "The champs have a new quarterback in #10 Josh Hoover, but this offense runs through #1 Turbo Richard, who averaged close to seven yards a carry early in 2026, with #29 Lee Beebe Jr. behind him. #80 Charlie Becker is the big-play receiver. The big plays come from Richard on the ground and Becker through the air.",
+   "defense": "This defense is why Indiana jumped out to an 8-1 start in 2026. It gave up about 12 points a game and won back-to-back overtime games, including the first win at Michigan since 1967. #12 Tobi Osunsanmi had nine sacks in his first eight games and #5 Rolijah Hardy flies to the ball. Points will be hard to find."
+  },
+  "Iowa": {
+   "offense": "Iowa's formula is still defense, a run game and a line anchored by #58 Kade Pieper. QB #9 Hank Brown led a 91-yard drive to beat Michigan at the horn and threw for 222 yards and two TDs in a 30-0 win over Wisconsin. #28 Kamari Moulton is the lead back, and #81 DJ Vonnahme is a big target at tight end.",
+   "defense": "Iowa's defense ranked eighth nationally in scoring through Oct. 31 and posted three shutouts, including 30-0 over No. 25 Wisconsin, the second straight year it blanked the Badgers. #6 Zach Lutmer at safety and #33 Cam Buffington at middle linebacker lead the unit. This is one of the best scoring defenses in the country."
+  },
+  "Iowa State": {
+   "offense": "Jimmy Rogers is in his first year with the Cyclones, and Arkansas State transfer #1 Jaylen Raynor runs the offense. #21 Aiden Flora is the halfback, and #9 Omari Hayes is the receiver. Iowa State beat No. 24 Oklahoma State 51-49 on Oct. 31 on a 34-yard field goal by #97 Kyle Konrardy as time expired.",
+   "defense": "Rogers rebuilt the roster after Matt Campbell left for Penn State. #88 Isaac Terrell rushes from end and had three sacks in a 38-10 opening win over Southeast Missouri. The Cyclones gave up 39 points at Arizona on Oct. 24 and 49 to Oklahoma State on Oct. 31."
+  },
+  "Jacksonville State": {
+   "offense": "Charles Kelly's spread option at Jacksonville State ran through dual-threat quarterback #12 Caden Creel, who ran for 213 yards in a 24-0 win at New Mexico State on Oct. 28. #11 Deondre Johnson led the receivers, #17 Jamill Williams caught 4 touchdowns against Eastern Kentucky, and #7 Khristian Lando and #6 Jalen Likely handled the carries. The Gamecocks stood 6-2 after a 33-7 loss at North Dakota State.",
+   "defense": "Brian Williams's 4-3 defense used #93 Jawaun Campbell at tackle, #40 Walker O'Steen at linebacker, #3 Tre'Quon Fegans at corner and #1 Caleb Nix at free safety. It shut out New Mexico State on Oct. 28 and allowed 29 at Ohio on Sept. 12."
+  },
+  "James Madison": {
+   "offense": "Billy Napier's spread offense at James Madison ran through quarterback #7 Camden Coleman, who threw 4 touchdowns in a 46-20 win at Old Dominion on Sept. 26. #6 George Pettaway ran for 206 yards against Marshall, #10 Braeden Wisloski and #3 Corey Scott caught the passes, and #0 Cole Keller had 108 yards at Georgia Southern. A 24-21 loss to Troy on Oct. 29 left the Dukes 7-2.",
+   "defense": "Coordinator Robert Bala's 3-3-5 defense used #8 Amar Thomas at end, #88 Kells Bush at tackle, #3 Gannon Weathersby at linebacker and #6 DJ Kelly at corner. It allowed 3 points to Wagner and 17 to Marshall but gave up 34 at App State on Oct. 22 and 24 to Troy on Oct. 29."
+  },
+  "Kansas": {
+   "offense": "Lance Leipold's Jayhawks run a pro spread under coordinator Andy Kotelnicki, with #8 Isaiah Marshall at quarterback. Marshall accounted for three touchdowns in a 25-24 win over Baylor on Oct. 24. #5 Nik McMillan leads the receivers, and #1 Dylan Edwards runs the ball.",
+   "defense": "D.K. McDonald runs a 4-2-5, with #33 Leroy Harris III rushing from end and #4 Trey Lathan in the middle. Kansas blocked a late field goal to beat Baylor and outgained TCU 451-286 in a loss. The Jayhawks gave up 41 at Utah and 35 at Kansas State, and stood 3-5 on Oct. 31."
+  },
+  "Kansas State": {
+   "offense": "Collin Klein, a former Wildcats quarterback, is in his first year as head coach after running Texas A&M's offense. #2 Avery Johnson leads the attack, #4 Joe Jackson carries the ball, and #86 Garrett Oakley is the tight end. Kansas State opened with a 71-3 win over Nicholls and beat Kansas 35-24 on Oct. 17.",
+   "defense": "Jordan Peterson's defense uses three safeties in an odd stack, with #1 Wendell Gregory up front and #3 Ja'Son Prevard at corner. The Wildcats gave up 28 at Arizona State on Oct. 24, then lost 27-24 in overtime at Colorado on Oct. 31."
+  },
+  "Kennesaw State": {
+   "offense": "Jerry Mack's offense at Kennesaw State ran through #1 Rickie Collins, who threw for 293 yards in a one-point loss to Jacksonville State on Oct. 7 and for 3 touchdowns in a 44-28 win at Middle Tennessee on Oct. 28. #24 Boogie Woods III ran for 2 touchdowns there, and #4 Zion Booker and #11 Brayden Munroe led the receivers. The reigning conference champions stood 2-6.",
+   "defense": "The defense used #44 Baron Hopson at middle linebacker, #1 Donovan Westmoreland at end, #96 Jaiden Grimes at tackle and #9 Isaac Paul at strong safety. It shut out West Georgia 47-0 on Sept. 3 but allowed 42 at Tennessee on Sept. 19 and 34 to Liberty on Oct. 22."
+  },
+  "Kent State": {
+   "offense": "Kent State rode quarterback #12 Dru DeShields and #6 Wayne Harris. DeShields threw 4 touchdowns in a 35-20 win over Akron on Oct. 24, and Harris caught 9 passes for 156 yards and 3 scores. Harris also took a 92-yard pass for the opening score at Sacramento State on Oct. 30, but the Flashes lost 31-10 and stood 3-6.",
+   "defense": "The defense had 19 sacks through 8 games and allowed more than 30 points a game. #4 Rocco Nicholl played middle linebacker, #5 Thomas Aden tackle, and #2 Joel Cordoba and #3 Derrick Jackson safety. Sacramento State scored 31 on Oct. 30 for its first MAC win. Kent State held Ball State to 13 on Sept. 26."
+  },
+  "Kentucky": {
+   "offense": "Will Stein brought a tempo attack to Lexington, and the Wildcats won six straight after losing to Alabama in Week 2. Notre Dame transfer #3 Kenny Minchey ran in the two-point play that beat LSU in overtime. #1 CJ Baxter ran for 123 yards and two scores in that win, and freshman #19 Kenny Darby is a favorite target.",
+   "defense": "Jay Bateman's defense takes the ball away and held Oklahoma to 13 points at Norman. #5 Jordan Castell was the SEC's defensive player of the week after that win, #14 Ty Bryant picked off Vanderbilt and #90 Mi'Quise Humphrey-Grace brings pressure. Kentucky rallied from behind in six wins, so slow starts are a concern."
+  },
+  "Liberty": {
+   "offense": "Jamey Chadwell's spread offense at Liberty ran through #5 Deshawn Purdie, who threw 9 touchdowns without an interception through Oct. 28 and went 16 of 19 for 227 yards in a 49-10 win over FIU on Oct. 31. #4 Kam Davis ran for 147 yards at Delaware, and #2 Makai Jackson led the receivers. The Flames stood 7-1 after a 20-13 loss at James Madison in the opener.",
+   "defense": "Coordinator Shawn Quinn's multiple 4-2-5 defense used #97 Mike Jarvis and #94 Nathan Pirolli at tackle, #1 Derrell Farrar at linebacker and #0 D-Icey Hopkins at safety. It held FIU to 210 yards on Oct. 31 and Sam Houston to 3 points on Oct. 8 during a 7-game winning streak."
+  },
+  "Louisiana": {
+   "offense": "Louisiana fell 35-31 at Southern Miss on Oct. 24 to drop to 5-3. #7 Lunch Winfield threw for 299 yards in that game, and #22 Anthony Reagan Jr. caught a 31-yard touchdown. The Cajuns scored about 30 points per game through Oct. 10 and beat Troy 33-6 on Oct. 17. #75 Kaden Moreau and #71 George Jackson started on the line.",
+   "defense": "#11 Brent Gordon Jr. and #10 Avery Demery played corner, with #68 Fitzgerald West Jr. at tackle and #8 Kody Jackson at strong safety. Through Oct. 17 Louisiana allowed 19 points per game and was 5-0 when it held opponents under 24. Louisiana Tech scored 32 on Oct. 10 and Southern Miss 35 on Oct. 24."
+  },
+  "Louisiana Tech": {
+   "offense": "Sonny Cumbie's Louisiana Tech won 35-20 at South Alabama on Oct. 31 to reach 6-2 and 4-0 in the Sun Belt. #5 Blake Baker led the quarterbacks, with #2 Trey Kukuk behind him. #84 Eli Finley at tight end, #11 Jalen Mickens at receiver and #26 Dylone Brooks at halfback led the skill group, and #72 Hayden Christman protected the left side.",
+   "defense": "The defense threw back-to-back shutouts: 24-0 at ULM on Oct. 17 and 26-0 over Old Dominion on Oct. 24. #10 Kolbe Fields at outside linebacker and #0 Jordan McRae at strong safety led it. Louisiana Tech beat Louisiana 32-31 on Oct. 10 and Army 31-29 on Oct. 3, but allowed 45 at LSU on Sept. 12."
+  },
+  "Louisville": {
+   "offense": "Jeff Brohm's offense scored at least 28 points in each of its first seven games of 2026, then ran for 296 yards in a 52-24 win over Stanford. #1 Isaac Brown scored three TDs on nine carries in that game, and #5 Keyjuan Brown averaged 8.2 yards a carry through six games. QB #3 Lincoln Kienholz threw for 310 yards at Syracuse. #7 Lawayne McCoy is a receiver.",
+   "defense": "The defense was the weak side in 2026, allowing 27.4 points a game through seven games and 41 to Ole Miss in the opener. #6 Stanquan Clark patrols the middle and #13 Tayon Holloway leads the secondary, and Holloway recovered a botched lateral that turned the Stanford game."
+  },
+  "LSU": {
+   "offense": "Lane Kiffin rebuilt LSU with 41 transfers, led by Arizona State QB #10 Sam Leavitt, who threw for 387 yards and three scores and ran for another in a 38-17 win at Auburn. #4 Jackson Harris had nine catches for 178 yards and two touchdowns, and #7 Trey'Dez Green is a big target at tight end. #77 Jordan Seaton anchors the line.",
+   "defense": "Blake Baker's defense had seven sacks and 12 tackles for loss against Auburn, holding it to a season-low 270 yards. #29 Jordan Ross had two sacks and was the SEC's top lineman that week, and #2 Ty Benefield anchors the secondary. The Tigers lost to Ole Miss and Kentucky in 2026."
+  },
+  "Marshall": {
+   "offense": "Tony Gibson's Marshall offense ran through preseason Sun Belt offensive player of the year #7 Carlos Del Rio-Wilson, who threw for 413 yards and 3 touchdowns in a 36-35 win over Gardner-Webb on Sept. 26. #5 Xayvion Turner-Bradshaw caught 2 touchdowns in that game, and #6 Jo'shon Barbie ran for one at Missouri State. A 36-23 win at Old Dominion on Oct. 31 left the Herd 5-3.",
+   "defense": "Coordinator Brad Lambert's defense used #5 Javae Gilmore at linebacker and #44 Kenyatta Hardge at tackle, with #17 Daytione Smith at free safety. It held South Alabama to 13 points on Oct. 20 but allowed 45 at James Madison on Oct. 3."
+  },
+  "Maryland": {
+   "offense": "Sophomore QB #7 Malik Washington, from Severn, Md., threw for 190 yards and ran for an 8-yard TD in the 20-17 loss to Illinois on Oct. 31. He was 34 of 41 for 347 yards in a 38-14 win over UConn. Clint Trickett runs the up-tempo offense, with #0 DeJuan Williams at back and #13 Chris Durr Jr. at receiver.",
+   "defense": "Ted Monachino coordinates the defense, with #1 Daniel Wingate in the middle and #0 Zion Elee at end. Maryland gave up 35 to Virginia Tech on Sept. 19. Oct. 31 was its first game under interim coach Aazaar Abdul-Rahim after the school parted ways with Mike Locksley, and it stood 2-6 with six straight losses."
+  },
+  "Memphis": {
+   "offense": "Charles Huff's first Memphis team runs through QB #2 Marcus Stokes, who went 29 of 35 for 371 yards and four TDs in a 49-22 win over Army on Oct. 31. #6 Jaylin Carter is the lead back, #13 Jemyri Davis caught two TDs against Army, and #0 Hunter Tipton is the tight end.",
+   "defense": "Lance Guidry, in his first year as coordinator, runs a base 4-2-5. #14 J'Mond Tapp plays end, #9 Michael Montgomery plays outside linebacker and had nine tackles against Army, and #5 Ahmere Foster plays safety. Army ran for 320 yards on the Tigers, who lost 31-17 at Tulane on Oct. 16, beat East Carolina 41-34 in overtime on Oct. 22 and stood 7-2."
+  },
+  "Miami": {
+   "offense": "The Hurricanes opened 2026 at 8-0 and ranked No. 1, and Duke transfer #10 Darian Mensah was nearly flawless. #1 Malachi Toney is a Heisman-caliber receiver and #18 Cooper Barkate gives Mensah a second 1,000-yard target. #4 Mark Fletcher Jr. punishes you on the ground. An all-new line was the big worry, and it held up.",
+   "defense": "Miami lost both star ends to the NFL but still gets after the quarterback, with six sacks at Clemson. #99 Ahmad Moten anchors the middle and #1 Mohamed Toure, back for an eighth year, leads the linebackers. The secondary can give up the big play."
+  },
+  "Miami (Ohio)": {
+   "offense": "Chuck Martin's Miami ran its offense through #5 Rodney Nelson, who carried 13 times for 142 yards and 2 touchdowns in a 34-14 win over Akron on Oct. 17. #6 Caleb Heavner led the passing in each October game, with #16 David McComb the early starter, and threw for 221 yards in a 28-27 win at Central Michigan on Oct. 24. The RedHawks stood 5-3 with an Oct. 31 bye.",
+   "defense": "#15 Blayne Myrick played outside linebacker, with #22 Bai Jobe at end, #3 Malcolm McCain inside and #24 Mychal Yharbrough at corner. The defense held Akron to 14 on Oct. 17 and UMass to 19 on Oct. 10, and Miami won 3 straight before the bye. Cincinnati scored 35 on Sept. 19."
+  },
+  "Michigan": {
+   "offense": "Kyle Whittingham's first Wolverines team runs a power spread and went 5-3 through eight games in 2026. It beat No. 11 Oklahoma 17-10 and Penn State 21-18, but lost 20-19 to Iowa. #23 Jordan Marshall is the lead back and #6 JJ Buchanan the top receiver. #19 Bryce Underwood opened at quarterback, and #14 Tommy Carr started against Indiana on Oct. 24.",
+   "defense": "Jay Hill's 4-2-5 defense held Oklahoma to 10 points and Indiana to 13 in an overtime loss. #90 John Henry Daley rushes from the end, and #0 Jyaire Hill and #1 Rod Moore lead the secondary. Michigan gave up 20 points at Minnesota. The secondary is the strength of this defense."
+  },
+  "Michigan State": {
+   "offense": "Pat Fitzgerald's Spartans opened with a 30-20 win over Toledo. QB #11 Alessio Milivojevic had 1,263 yards, seven TDs and three interceptions through seven games. #0 Cam Edwards is the lead back, #4 Jaziun Patterson backs him up, and #13 Chrishon McCray is a top receiver. Michigan State lost 38-37 to Illinois in overtime on Oct. 10 and 24-21 to Northwestern on Oct. 17.",
+   "defense": "Joe Rossi runs a multiple 4-2-5. #5 Jordan Hall plays middle linebacker, #18 Dion Crawford plays outside and #55 Ben Roberts plays tackle. The Spartans gave up 31 to Nebraska on Sept. 26 and 31 at Wisconsin on Oct. 3, and stood 2-5 on Oct. 17."
+  },
+  "Middle Tennessee State": {
+   "offense": "Derek Mason's Middle Tennessee offense ran through #16 Roman Gagliano, who threw for 3 touchdowns in a 33-30 win over Delaware on Oct. 13. #3 Cam'ron Lacy led the receivers, #6 AJ Jones was the second target, and #8 Antonio Martin ran for 103 yards against Murray State. The Blue Raiders stood 4-4 after a 44-28 loss to Kennesaw State on Oct. 28.",
+   "defense": "Mason's defense, rebuilt up front for 2026, used #46 Reggie Johnson at end, #91 Felix Hixon at tackle, #2 Jackson Lowe at corner and #18 Kalen Woods at free safety. It allowed 55 at Kansas on Oct. 3 and 44 to Kennesaw State on Oct. 28 but held Nevada to 20 on Sept. 19."
+  },
+  "Minnesota": {
+   "offense": "P.J. Fleck's Gophers run a pass-first offense for QB #5 Drake Lindsey, who had nine TD passes against five interceptions before the Oct. 24 game with Iowa. #1 Darius Taylor is the lead back, #11 Javon Tracy and #8 Jalen Smith are the starting receivers, and #65 Greg Johnson anchors the line at left guard. Minnesota beat Michigan on Oct. 3 and lost 38-13 at Mississippi State on Sept. 12.",
+   "defense": "#0 Anthony Smith is one of the Big Ten's best pass rushers, with #3 TJ Bush Jr. on the other side and #6 Maverick Baranowski in the middle. The Gophers lost in overtime at No. 4 Indiana on Oct. 31."
+  },
+  "Mississippi State": {
+   "offense": "Jeff Lebby's Bulldogs opened 4-0 behind QB #1 KaMario Taylor, who threw for 354 yards and four TDs in a 62-13 win over UL Monroe and had 17 TD passes this season. #24 Fluff Bothwell carries the ball, and #3 Anthony Evans III is a top receiver. The offense was shut out 31-0 at LSU on Oct. 17 and managed only a field goal in a 31-3 loss at Texas on Oct. 31.",
+   "defense": "Zach Arnett, a disciple of the 3-3-5, returned as coordinator. #1 Kelley Jones plays corner, #35 Kalvin Dinkins plays tackle, and #43 Will Whitson plays end. Mississippi State gave up 56 to Alabama on Oct. 3 and 23 to Oklahoma on Oct. 24, and stood 4-4 on Oct. 31."
+  },
+  "Missouri": {
+   "offense": "Eli Drinkwitz's Tigers run a spread offense under first-year coordinator Chip Lindsey, with #13 Austin Simmons at quarterback. Simmons threw four touchdown passes in a 54-14 opener and had 179 yards and two scores in a 34-10 win at Arkansas on Oct. 31. #20 Jamal Roberts had 158 total yards that night, and #29 Ahmad Hardy is the other back.",
+   "defense": "Corey Batoon runs a 4-2-5 and had to replace 10 of 11 starters from 2025. #19 Darris Smith recovered a fumble in the end zone for a touchdown at Arkansas, and #0 Robert Woodyard Jr. plays the middle. Missouri turned three Arkansas fumbles and an interception into 24 points and stood 6-2 on Oct. 31."
+  },
+  "Missouri State": {
+   "offense": "Casey Woods's first Missouri State team ran a multiple up-tempo offense under coordinator Mark Cala. #9 Skyler Locklear opened at quarterback, and #2 Henry Belin IV took over on Oct. 8, throwing for 300 yards in a 24-21 win over Kennesaw State on Oct. 14. #13 Isaiah Myers caught 11 passes for 242 yards at Delaware on Oct. 20, and #0 Jmariyae Robinson and #1 Breezy Dubar were the other weapons. The Bears stood 3-5.",
+   "defense": "Coordinator Jack Curtis ran a 4-2-5 defense with #92 Josh Lukusa at end and #8 Joel Kpassou at corner. It allowed 50 at Texas A&M and 61 at Delaware but held Sam Houston to 3 points on Oct. 27."
+  },
+  "Navy": {
+   "offense": "Navy's hybrid option-spread offense runs through QB #8 Jackson Gutierrez, who ran for 12 touchdowns in the first seven games of 2026, with 232 yards against Tulsa and 228 against North Texas. He also threw for 692 yards and seven TDs in that span. Navy led Notre Dame 13-7 in the second quarter of a 35-13 loss.",
+   "defense": "First-year coordinator Eric Lewis runs a 4-2-5 that gave up 49 points to North Texas and 38 to both FAU and UTSA in 2026. Through seven games Navy allowed 9.9 yards per pass attempt, 137th in the nation. #58 Coleman Cauley and #56 MarcAnthony Parker man the middle, with #16 Giuseppe Sessi at safety. Pass defense is the weakness."
+  },
+  "NC State": {
+   "offense": "Todd Goebbel took over as interim coach after Dave Doeren was fired on Oct. 24, and NC State beat Cal 31-10. QB #11 CJ Bailey was 13 of 25 for 192 yards and two TDs, and HB #7 Davion Gause ran for 104 yards and a TD. Bailey had 53 career TD passes. The Wolfpack was 4-4.",
+   "defense": "D.J. Eliot's defense is a 3-3-5 with a JACK linebacker, and assistant Charlton Warren took over the play-calling after the coaching change. MLB #0 Popo Aguirre is the tackler in the middle. The Wolfpack held Cal to 10 points and outscored the Bears 21-0 after a 10-10 halftime."
+  },
+  "Nebraska": {
+   "offense": "Matt Rhule's Huskers opened 2026 at 5-0 behind transfer QB #10 Anthony Colandrea, who threw four TDs against Bowling Green. #2 Jacory Barney Jr. and #1 Nyziah Hunter are the top targets, and #8 Luke Lindenmeyer is a big tight end. Three straight losses followed, two by three points. Closing out games became the problem.",
+   "defense": "Nebraska's defense held No. 4 Indiana to 20 points and led Oregon until the Ducks scored in the final 40 seconds. #0 Owen Chambliss rushes from outside linebacker, #10 Vincent Shavers Jr. plays the middle and #96 Williams Nwaneri anchors the line. This unit kept Nebraska in close games."
+  },
+  "Nevada": {
+   "offense": "Nevada's offense ran through its line, with #76 Zach Cochnauer at left guard and #55 Jack Foster at left tackle, and through halfbacks #0 Dominic Kelley and #1 Herschel Turner. #10 AJ Bianco led the quarterbacks. The Wolf Pack beat San Jose State 28-13 on Oct. 24, then were shut out 27-0 at UCLA on Oct. 31.",
+   "defense": "End #32 Dylan Labarbera was the top-rated defender, with #8 Larry Turner-Gooden at strong safety and #7 Selman Bridges and #18 Aiden Walker at corner. Nevada lost 31-17 at North Dakota State on Oct. 17, then held San Jose State to 13 points. UCLA scored 27 on Oct. 31."
+  },
+  "New Mexico": {
+   "offense": "New Mexico, under Jason Eck, ran the ball: #22 Scottre Humphrey and #16 Kiefer Sibley led the backs, #59 Kaden Robnett anchored the line at center, and #2 Jack Layne and #13 Toa Fa'avae were the quarterbacks. #88 Cade Keith was the tight end and #5 Troy Omeire the top receiver. Through Oct. 17 the Lobos averaged 43.4 points per game, fifth in the FBS.",
+   "defense": "#6 Jaxton Eck at middle linebacker, #0 Austin Brawley at free safety and #10 Darren Agu at end led the nation's third-ranked scoring defense, 10.6 points per game through Oct. 17. New Mexico won 21-10 at Hawaii that day and 21-16 at San Jose State on Oct. 31."
+  },
+  "New Mexico State": {
+   "offense": "Tony Sanchez's New Mexico State team was shut out 24-0 by Jacksonville State on Oct. 28 and fell to 3-5. #2 James Jones ran for 112 yards at halfback in that game. #1 TK King and #7 TJ Pride led the receivers, and #3 Trey Hedden and #14 Adam Damante topped the quarterback list. The Aggies had won 30-24 at Sam Houston on Oct. 21.",
+   "defense": "Jacksonville State ran for 324 yards on Oct. 28, 211 by quarterback Caden Creel, against a defense that had allowed about 109 rushing yards per game. #9 Bernock Iya and #5 Nick Session led at safety, #14 Sone Aupiu at middle linebacker and #6 Tory Gethers outside. The Aggies allowed 42 to New Mexico on Sept. 26."
+  },
+  "North Carolina": {
+   "offense": "Bill Belichick's second Tar Heels team runs Bobby Petrino's veer-and-shoot offense behind QB #9 Billy Edwards Jr., who threw four TDs in a 38-35 loss to No. 1 Miami. #45 Jelani Thurman caught two of them, and #1 Jordan Shipp is the lead receiver. #7 Benjamin Hall ran for 130 yards at Clemson.",
+   "defense": "Belichick's multiple 4-2-5 defense won at No. 25 Pitt 21-17 and at Duke 24-20, but gave up 31 to Syracuse in overtime and 38 to Miami. Through seven games UNC ranked 117th nationally in third-down defense. #15 Derek McDonald anchors the linebackers and #2 Kaleb Cost the secondary. Third-down defense is the weak spot."
+  },
+  "North Dakota State": {
+   "offense": "Tim Polasek's multiple pro-style offense, in the Bison's first FBS season, ran through #2 Nathan Hayes, who threw for 240 yards in a 31-7 win over UTEP on Oct. 31. #7 DJ Scott led the backs, and #18 Jackson Williams caught 10 passes in that game. The Bison stood 7-2 but scored only 7 at UNLV on Oct. 10, when Hayes threw 3 interceptions.",
+   "defense": "Coordinator Grant Olson's multiple 4-3 defense used #11 Matthew Stenbroten and #9 Kelton McCaslin at end, #8 Keenan Wilson at tackle and #29 Darius Givance at safety. It shut out Fordham on Sept. 5 and Wyoming on Oct. 3 but allowed 32 at Air Force on Sept. 12."
+  },
+  "North Texas": {
+   "offense": "Neal Brown's Mean Green throw first. QB #2 Tayven Jackson, a UCF transfer, threw five TD passes against Charlotte on Oct. 10 and went 17 of 23 for 305 yards and three TDs in a 49-39 win at Navy on Oct. 24. #1 Jahiem White, a West Virginia transfer, is the lead back, and #13 Justin Stevenson caught a 53-yard TD at Navy.",
+   "defense": "Matt Powledge, in his first year as coordinator, runs a multiple 3-4. #6 Udoka Ezeani plays end, #7 Aaron Alexander plays outside linebacker, and #3 Zakye Barker plays middle linebacker and returned a fumble 63 yards for a TD at Navy. North Texas gave up 39 there and stood 6-2 (4-0 American) on Oct. 31."
+  },
+  "Northern Illinois": {
+   "offense": "Northern Illinois, a Mountain West member, leaned on #45 Telly Johnson Jr. at halfback and #1 DeAree Rogers at receiver, with #7 Cam Thompson, #63 Landon Hron at center and #14 Jalen Macon leading the quarterbacks. The Huskies averaged 15.1 points per game before Oct. 31 and lost 31-24 at UNLV that night.",
+   "defense": "#18 Jay'shon Thomas at end, #11 Amari Washington at tackle and #5 Yassine Falke at corner led a defense that allowed 38.6 points per game before Oct. 31, 133rd in the FBS. Hawaii scored 56 on Oct. 24. Northern Illinois was 0-8 after the UNLV game."
+  },
+  "Northwestern": {
+   "offense": "David Braun's Wildcats run Chip Kelly's first-year offense behind QB #0 Aidan Chiles, who had 12 TD passes and nine rushing TDs through the 42-14 win over Rutgers on Oct. 24. #17 Griffin Wilde had 133 receiving yards in that game. #5 Caleb Komolafe and #6 Joseph Himon II combined for 350 rushing yards in a 34-13 win over Penn State on Oct. 2.",
+   "defense": "#47 Michael Kilbane is the top pass rusher, with #6 Robert Fitzgerald at safety. Northwestern held Penn State to 13 and Colorado to 7, and beat Michigan State 24-21 on a last-second field goal on Oct. 17. It lost at Oregon on Oct. 31 and stood 6-2."
+  },
+  "Notre Dame": {
+   "offense": "QB #13 CJ Carr threw 16 touchdowns and one interception in the first seven games of 2026, then threw for 210 yards and two TDs in a 35-13 win over Navy. A deep backfield led by #22 Aneyas Williams adds balance, and #6 Jordan Faison is the top receiver. A 28-24 loss at BYU ended a 16-game win streak.",
+   "defense": "Marcus Freeman's defense led the nation in yards allowed (235 a game) through seven games, giving up just 13.4 points and 67.3 rushing yards a game. #15 Leonard Moore and #5 Boubacar Traore, who had 3.5 sacks through seven games, headline the front. Navy's QB ran for 110 yards, the rare crack. This front is very hard to run on."
+  },
+  "Ohio": {
+   "offense": "First-year coach John Hauser's Ohio won 4 straight to reach 6-2 before an Oct. 31 bye. #9 Matt Vezza and #8 Nick Poulos both took snaps at quarterback, and Poulos threw for 278 yards in a 24-20 win over Eastern Michigan on Oct. 24, with #19 Dom Dorwart catching 4 passes for 142 yards. #6 Duncan Brune ran 16 times for 91 yards in a 31-14 win over Central Michigan on Oct. 10.",
+   "defense": "#25 Michael Molnar led at middle linebacker, with #27 Jack Fries outside, #2 DJ Walker at strong safety and #0 Nehemiah Dukes at tackle. Ohio held Central Michigan to 14 on Oct. 10 and Sacramento State to 7 on Oct. 17. Eastern Michigan scored 20 on Oct. 24."
+  },
+  "Ohio State": {
+   "offense": "Ryan Day's offense runs through QB #10 Julian Sayin and #4 Jeremiah Smith, who had back-to-back 200-yard receiving games early in 2026. #25 Bo Jackson ran for two scores against Maryland, and #51 Luke Montgomery and #67 Austin Siereveld anchor a big line. The Buckeyes lost 24-23 at Texas and 30-18 at USC.",
+   "defense": "Matt Patricia rebuilt this defense after Caleb Downs left for the NFL. #8 Jaylen McClain and #11 Terry Moore lead the safeties, #7 Jermaine Mathews Jr. covers the corner and #2 Kenyatta Jackson Jr. rushes from the end. Ohio State won at Indiana to end the Hoosiers' 22-game win streak. The safeties are the backbone of this unit."
+  },
+  "Oklahoma": {
+   "offense": "Oklahoma's offense is the question mark again. #10 John Mateer and the Sooners started 2026 just 2-2, then beat Texas when #29 Tate Sandell hit a 47-yard field goal as time expired. #1 Isaiah Sategna III is the speed threat, and #56 Michael Fasusi anchors the left side.",
+   "defense": "Brent Venables' defense was among the nation's best until South Carolina scored 42 on Oct. 31. #0 David Stone anchors the tackles, #10 Kip Lewis is the playmaking linebacker who scored on a pick that day, and #22 Peyton Bowen and #23 Eli Bowen patrol the secondary. Stone makes this front a tough matchup."
+  },
+  "Oklahoma State": {
+   "offense": "Eric Morris is in his first year with the Cowboys, and #17 Drew Mestemaker runs his offense. #24 Caleb Hawkins is the halfback, and #10 Wyatt Young and #0 Justin Bowick are the targets. Oklahoma State beat Oregon 39-31 in 2026. Mestemaker and the receivers carry this offense.",
+   "defense": "#32 Ethan Wesloski rushes from outside linebacker, #2 Isaiah Chisom plays the middle, and #4 Mo Horn covers at corner. The Cowboys were 5-3 after a 51-49 loss at Iowa State on Oct. 31 and a 35-32 loss to Houston. Games with this defense tend to turn into shootouts."
+  },
+  "Old Dominion": {
+   "offense": "Ricky Rahne's offense, under first-year coordinator Kody Cook, shuffled quarterbacks. #10 Quinn Henicle opened the year, and #2 Jaxon Potter threw for 329 yards and 3 interceptions in a 36-23 loss to Marshall on Oct. 31. #3 Devin Roche ran for 101 yards in a 10-3 win at App State on Oct. 10. The Monarchs stood 2-7 after a 26-0 loss at Louisiana Tech.",
+   "defense": "Coordinator Blake Seiler's defense used #3 Mario Easterly and #2 Daevon Iles at safety, #5 Brandon Crutchfield at corner and #90 Chris Forbes at tackle. It held App State to 3 points on Oct. 10 but allowed 46 to James Madison and 42 at Georgia State."
+  },
+  "Ole Miss": {
+   "offense": "Lane Kiffin left for LSU, but QB #6 Trinidad Chambliss won his eligibility fight to return and still runs this offense, with 263 yards and a TD run in a 45-15 win over Auburn. #5 Kewan Lacy set school records with 1,567 yards and 24 TDs in 2025, and #1 Deuce Alexander is the top target. The Rebels were 6-2 through eight games.",
+   "defense": "Pete Golding went from defensive coordinator to head coach when Kiffin left for LSU, and he still calls the defense. The Rebels led the nation in sacks in 2025, and pressure is still the plan. #4 Suntarine Perkins rushes from linebacker, with #52 Will Echoles and #96 Jamarious Brown up front."
+  },
+  "Oregon": {
+   "offense": "Oregon opened 2026 ranked No. 2, then lost to Oklahoma State, UCLA and Illinois, and Dan Lanning changed offensive coordinators in October. QB #5 Dante Moore throws to big-play receiver #1 Dakorien Moore and #9 Jamari Johnson. #72 Iapani Laloulu anchors the line, and #6 Dierre Hill Jr. is the halfback. The Ducks beat No. 20 Northwestern 34-26 on Oct. 31.",
+   "defense": "Oregon's defense held Nebraska to 14 points and UCLA to 17, but gave up 39 at Oklahoma State. #52 A'Mauri Washington and #1 Bear Alexander anchor the tackles, #10 Matayo Uiagalelei rushes from the edge and #3 Koi Perich leads the secondary. The interior line is the strength of this defense."
+  },
+  "Oregon State": {
+   "offense": "Oregon State, in JaMarcus Shephard's first year, threw the ball better than anyone through seven games: #2 Braden Atkinson, a Mercer transfer, led the nation with 2,604 yards and 24 touchdowns. Freshman #12 Jesse Legree led with 1,040 receiving yards. #23 AJ Newberry ran for 105 yards and caught 5 passes for 120 against Washington State.",
+   "defense": "#44 Takari Hickle led the Pac-12 in sacks, and #2 Aiden Sullivan anchored the middle. The Beavers won five straight after losing to Houston and Texas Tech, then lost 38-22 at Fresno State on Oct. 31 to fall to 5-3."
+  },
+  "Penn State": {
+   "offense": "Matt Campbell's first Nittany Lions team opened 2026 with three easy wins, then lost four straight before beating Purdue 31-17 on Oct. 31 for his first Big Ten win. QB #3 Rocco Becht followed him from Iowa State. #21 Carson Hansen is the lead back, and #0 Chase Sowell had 11 catches for 151 yards against Michigan. Hansen and Sowell are the top weapons.",
+   "defense": "D'Anton Lynn's defense gave up 21 points to Michigan and 31 to USC during the losing streak. #13 Tony Rojas leads the linebackers, #4 Jeremiah Cooper and #31 Marcus Neal Jr. patrol the secondary, and #10 Caleb Bacon rushes from outside. Penn State held Purdue to 17."
+  },
+  "Pittsburgh": {
+   "offense": "Pat Narduzzi's Pitt opened 5-0 behind QB #6 Mason Heintschel, who threw an ACC-record seven TD passes against Miami (Ohio) and 403 yards against Bucknell. QB #15 Holden Geriner started the last three games. Freshman HB #26 Damon Ferguson Jr. ran for a career-high 185 yards and two TDs in the 34-11 win over Georgia Tech, and WR #3 Cataurus Hicks caught a 30-yard TD.",
+   "defense": "Cory Sanders is in his first year as coordinator with a base 4-3. It held Georgia Tech to 11 points, though Pitt gave up 52 at Miami on Oct. 24. The Panthers opened 5-0 and reached bowl eligibility at 6-3."
+  },
+  "Purdue": {
+   "offense": "Barry Odom's Boilermakers lean on QB #15 Ryan Browne, who threw an 8-yard TD pass and two interceptions in a 38-26 loss to Washington on Oct. 16. #2 Fame Ijeboi is the lead back and caught a 10-yard TD in that game. #19 Asaad Waseem is the top receiver, and #81 George Burhenn is the tight end.",
+   "defense": "Kevin Kane runs a multiple front. #18 Elo Modozie plays end, #5 Charles Correa plays outside linebacker, and #4 Hudauri Hines and #2 Jaden Mangham work in the secondary. Purdue gave up 52 at UCLA and 49 to Notre Dame, snapped an 18-game Big Ten losing streak by beating Illinois 24-17 on Oct. 3 and stood 3-4 after the Washington loss."
+  },
+  "Rice": {
+   "offense": "Scott Abell's Owls win on the ground. QB #11 Jacurri Brown, a UCF transfer, had 668 rushing yards and six rushing TDs through seven games against 478 passing yards. #10 Quinton Jackson, #26 Tyvonn Byars and #28 D'Andre Hardeman Jr. are the backs, with Byars at 372 yards and Hardeman at 238 through Oct. 17.",
+   "defense": "Jon Kay's defense gave up 52 to Notre Dame, 38 to Tulsa and 51 in a 51-49 loss at Florida Atlantic on Oct. 24. #99 Jesus Machado Jr. plays middle linebacker, #16 Chibby Nwajuaku plays end, and #0 Daveon Hook and #12 Jamir Benjamin work in the secondary. Rice's only win came against Houston Christian, 31-3, and it stood 1-7 on Oct. 31."
+  },
+  "Rutgers": {
+   "offense": "Greg Schiano's Scarlet Knights run through RB #3 Antwan Raymond, who ran for 140 yards and three TDs in a 58-7 win over Howard. WR #8 KJ Duff caught two TDs in a 37-30 win at Maryland on Oct. 17. #12 Dylan Lonergan is the QB, and #69 Kwabena Asamoah anchors the line at guard.",
+   "defense": "Travis Johansen, in his first year as coordinator, runs a multiple front. #94 J'Dan Burnett plays end, #99 Rondarius Porter plays tackle, #10 Ty Morris plays middle linebacker and #1 Kaj Sanders plays strong safety. The Scarlet Knights gave up 47 to Indiana and 42 to USC, and stood 2-6 after a 28-21 loss to Michigan on Oct. 31."
+  },
+  "Sacramento State": {
+   "offense": "Alonzo Carter's first Sacramento State team ran a spread offense under coordinator Eric Kiesau in its first FBS season. #8 Jackson Sharman took most snaps at quarterback, and #2 Matthew Coleman caught 3 touchdowns in a 52-0 win over Mississippi Valley State on Sept. 5. The Hornets stood 2-7 after a 31-10 win over Kent State on Oct. 30 but scored 10 or fewer points in 5 losses.",
+   "defense": "Coordinator Adam Clark's 3-3-5 defense used #9 Malik Tullis and #5 Nick Dimitris inside, #45 Xavier Williams and #18 Fata Puloka on the edges and #1 Boogsie Silvera at safety. It allowed 49 at Fresno State and 48 to Ohio but held Kent State to 10."
+  },
+  "Sam Houston": {
+   "offense": "Phil Longo's spread offense at Sam Houston ran through #8 Landyn Locke, who threw for 335 yards at Troy on Sept. 5 and 322 yards in a 59-0 win over Nicholls on Sept. 19. #2 Chris Reed and #7 Grady O'Neill led the receivers. The Bearkats scored just 3 points in 3 of 4 conference games and stood 1-7 when Longo was fired on Oct. 28.",
+   "defense": "Freddie Aughtry-Lindsay's 3-3-5 defense used #98 Justin Terrell and #97 Dylan Frazier up front, #8 Tyler Bailey at safety and #4 Ishmel Atkins and #7 Caesar Magee at corner. It shut out Nicholls but allowed 49 at Texas Tech. He became interim co-head coach with Eric Raisbeck on Oct. 28."
+  },
+  "San Diego State": {
+   "offense": "San Diego State, under Sean Lewis, leaned on #7 Lucky Sutton, who scored 3 touchdowns in the 53-20 opener against Portland State. #4 Jayden Denegal started at quarterback, with #2 Jordan Napier and #13 Nathan Acevedo at receiver and #76 Kalan Ellis at left guard.",
+   "defense": "Demetrius Sumler coordinated a base 4-2-5 in his first year. #21 Tano Letuli, #56 Sione Hala and safety #30 Jalen Thomeson led it. The Aztecs allowed 66 at Oregon State and 56 at Colorado State, then beat Washington State 26-20 on Oct. 31 to reach 4-5."
+  },
+  "San Jose State": {
+   "offense": "San Jose State was led by #3 Luke Weaver at quarterback, with #10 Anthony Ivey and #1 Carson Clark at receiver and #6 Jabari Bates at halfback. The Spartans beat Hawaii 20-16 on Oct. 3 and UTEP 24-11 on Oct. 17 but managed 13 points in both a 16-13 loss to Wyoming and a 28-13 loss at Nevada.",
+   "defense": "#6 Ethan Powell led the defense at outside linebacker, with #39 Tuli Tagovailoa-Amosa at free safety and #51 Solomone Langi at tackle. San Jose State allowed 28 at Nevada on Oct. 24 and lost 21-16 to New Mexico on Oct. 31 to fall to 4-5."
+  },
+  "SMU": {
+   "offense": "SMU runs Rhett Lashlee's Bear Raid. QB #7 Kevin Jennings set the school career record for TD passes on Oct. 24, and HB #6 Kendrick Raphael and WR #8 Yamir Knight score off him. Raphael had a 14-yard TD run and Knight a 14-yard TD catch in the 30-27 loss at Syracuse. The Mustangs scored 59 on Cal.",
+   "defense": "Co-coordinators Maurice Crum Jr., who calls the plays, and Rickey Hunley Jr. run a base 4-2-5. FS #21 Jimmy Wyrick had eight tackles at Syracuse. SMU held Cal to 20 and ran off 42 straight points, but Syracuse scored a 2-yard TD with 17 seconds left. SMU was 6-2."
+  },
+  "South Alabama": {
+   "offense": "Major Applewhite's multiple spread offense leaned on the run, with #3 Keenan Phillips in the backfield, while quarterbacks #7 Jared Hollins and #4 Bishop Davenport shared the passing. #1 Anthony Eager and #6 Micah Woods were the top targets. South Alabama scored 56 against Arkansas State on Oct. 8 but only 13 at Marshall on Oct. 20 and stood 4-4 after a 35-20 loss to Louisiana Tech.",
+   "defense": "The multiple 4-2-5 defense used #20 Tirrell Johnson and #9 Emmanuel Waller at end, #2 Jayvon Henderson at corner and #8 Dallas Young at safety. It held Southeastern Louisiana to 14 points on Sept. 5 but allowed 45 at Kentucky and 49 to Arkansas State."
+  },
+  "South Carolina": {
+   "offense": "Shane Beamer's Gamecocks are built around #16 LaNorris Sellers, who threw for 301 yards and three touchdowns and ran for 96 yards and two more in a 42-25 win at Oklahoma on Oct. 31. Sellers also accounted for five touchdowns in a 38-19 win at Florida on Oct. 10, and #6 Donovan Murph and #8 Nyck Harbor are receivers. #28 Matt Fuller is a back.",
+   "defense": "#6 Dylan Stewart rushes from end and forced the strip-sack that beat No. 11 Tennessee 27-24 on Oct. 24, with #13 Tomiwa Durojaiye recovering the fumble. #4 Vicari Swain and #8 Judge Collier play corner. The Gamecocks held Oklahoma to 118 yards through three quarters and stood 5-3 on Oct. 31."
+  },
+  "Southern Miss": {
+   "offense": "First-year coach Blake Anderson's Southern Miss beat Louisiana 35-31 on Oct. 24 for its first Sun Belt win and stood 2-5. #6 Jamarice Wilder ran for 154 yards and the 16-yard winning score with 58 seconds left, and #14 Steven Robinson ran for 3 first-half touchdowns. #1 Mario Sanders II led the receivers. #18 Landry Lyddy and #5 Ethan Hampton topped the quarterback list.",
+   "defense": "#22 Kobi Albert at corner and #12 Laquan Robinson at strong safety led a defense on a roster that added 75 newcomers. Southern Miss gave up 55 at Troy on Oct. 6, 48 to UConn on Sept. 19 and 31 to Louisiana on Oct. 24."
+  },
+  "Stanford": {
+   "offense": "First-year coach Tavita Pritchard, a former Cardinal QB, leans on QB #8 Davis Warren, a sixth-year Michigan transfer who threw for 303 yards and four TDs against NC State and 270 yards and three TDs at Louisville. HB #20 Micah Ford had 679 rushing yards and eight TDs through eight games, and WR #23 Nico Brown caught six for 109 yards at Louisville.",
+   "defense": "Kris Richard, the ex-Seahawks coach, runs a physical 4-3. MLB #35 Matt Rose, FS #5 Jay Green and CB #9 Brandon Nicholson lead it. Louisville scored 28 straight in a 52-24 win, and Stanford lost its 15th straight road game. Stanford was 4-5."
+  },
+  "Syracuse": {
+   "offense": "Fran Brown's Orange lean on QB #9 Steve Angeli, who was 21 of 34 for 200 yards in the 30-27 win over No. 19 SMU on Oct. 31. He hit TE #81 Noah Meyers for a 2-yard TD with 17 seconds left after Syracuse trailed 27-23, a week after a 31-30 overtime win at North Carolina. #22 Ahmad Miller is the featured back.",
+   "defense": "Vince Kehres, in his first year as coordinator, runs a base 4-2-5. #1 Demetres Samuel Jr. and #12 Chris Peal play corner, and #30 Tunmise Adeleye plays end. The Orange sacked SMU QB Kevin Jennings four times for 52 yards and stood 4-4 (2-4 ACC) on Oct. 31."
+  },
+  "TCU": {
+   "offense": "Sonny Dykes' Horned Frogs run a spread offense with Harvard transfer #1 Jaden Craig at quarterback. He threw for 391 yards and four touchdowns in a 63-7 win over Grambling and ran 17 yards for the go-ahead score against Kansas. #26 Jeremy Payne is the lead back, and #7 Jordan Dwyer and #18 Ed Small are the top receivers.",
+   "defense": "Andy Avalos runs a 4-2-5 with #2 Jamel Johnson at strong safety, #97 Paul Oyewale at end and #3 Max Carroll, who returned an interception 60 yards for a touchdown against Kansas. TCU allowed only 17 plays of 20-plus yards through seven games and stood 4-4 after the 22-16 win."
+  },
+  "Temple": {
+   "offense": "Temple, under second-year coach K.C. Keeler, leaned on #13 Ajani Sheppard at quarterback, #88 Peter Clarke at tight end and #17 JoJo Bermudez at receiver, with #26 Keveun Mason carrying the ball. Sheppard threw 3 interceptions in the 17-9 loss at East Carolina on Oct. 31.",
+   "defense": "Tackles #58 Kaleb Artis and #93 Kevin Hornbeak Jr. and outside linebacker #33 Curly Ordonez led the defense. It gave up 72 points combined to UConn and Charlotte in back-to-back losses on Oct. 10 and Oct. 17, then held East Carolina to 17. Temple was 2-6 after Oct. 31."
+  },
+  "Tennessee": {
+   "offense": "Josh Heupel's tempo spread still leans on the run. Walk-on turned star #18 DeSean Bishop ran for 220 yards against Auburn, while the QB job swung to #12 George MacIntyre. #4 Mike Matthews adds a wildcat package. Bishop is the engine, and the passing game is still settling in.",
+   "defense": "New coordinator Jim Knowles, the Penn State and Ohio State defensive mind, replaced Tim Banks after a 2025 slide. Penn State transfers #0 Amare Campbell, #2 Xavier Gilliam and #10 Dejuan Lane lead the rebuild. It held No. 6 Alabama to 10 points in a 26-10 win Oct. 17. Knowles has made it a tougher group than last year's."
+  },
+  "Texas": {
+   "offense": "Texas opened 2026 as a national favorite, but #16 Arch Manning struggled through back-to-back losses to Oklahoma and Florida, getting sacked five times by the Gators. He bounced back with three TDs in a 31-3 win over Mississippi State, one to #0 Raleek Brown. #8 Cam Coleman is the top target.",
+   "defense": "The Longhorns lean on a deep front. #1 Colin Simmons rushes from the edge, and #3 Rasheem Biles sacked Mississippi State's QB and forced a fumble that became a TD in that win. Texas beat Tennessee 20-17 in September but let a 21-point lead shrink against Ole Miss before holding on 34-27. Holding big leads has been a problem."
+  },
+  "Texas A&M": {
+   "offense": "Texas A&M won its first 11 games in 2025 and reached the playoff, but the Aggies started 2026 at 4-4 and 1-4 in the SEC. #10 Marcel Reed threw two picks in a 31-20 loss at Alabama, yet coach Mike Elko stuck with him. #1 Mario Craver is the top target, and #7 Isaiah Horton adds size. Reed has to cut down on interceptions.",
+   "defense": "Mike Elko's defense lost 10 players to the NFL Draft after the 2025 playoff run and leaked big plays in SEC losses, including two fourth-quarter touchdowns at Alabama. #14 Anto Saka rushes from the edge, with #3 Marcus Ratcliffe and #7 Dalton Brooks at safety. Replacing 10 draft picks has been a challenge."
+  },
+  "Texas State": {
+   "offense": "G.J. Kinne's run-and-gun offense in Texas State's first Pac-12 season ran through #8 Brad Jackson, who threw 5 touchdowns against Incarnate Word on Sept. 26 and 4 for 327 yards in a 46-45 loss at Boise State on Oct. 31. #4 Torrance Burgess Jr. ran for 224 yards against Colorado State, and #11 Beau Sparks and #1 Chris Dawn Jr. led the receivers. The Bobcats stood 4-4.",
+   "defense": "Coordinator Will Windham, hired from South Alabama, ran a multiple 4-2-5 defense with #5 DonTerry Russell and #6 Jo'Laison Landry at end and #7 Ryan Nolan at safety. It allowed 59 at Texas and 46 at Boise State but held Utah State to 17 on Oct. 24."
+  },
+  "Texas Tech": {
+   "offense": "Joey McGuire's Red Raiders opened 2026 at 6-0. #4 Tommy Castellanos leads the offense, throwing to #4 Kenny Johnson and #7 Terrance Carter Jr., with #20 J'koby Williams at halfback. #72 Sheridan Wilson anchors the line. Castellanos led a 34-26 win over Arizona.",
+   "defense": "#10 A.J. Holmes Jr. is the force up front, #13 Ben Roberts plays middle linebacker, and #14 Brice Pollock covers at corner. Texas Tech lost to Cincinnati after that 6-0 start. The front is the strength of this unit."
+  },
+  "Toledo": {
+   "offense": "Toledo ran Mike Jacobs's spread through #6 John Alan Richter, who threw for 391 yards and 3 touchdowns in a 45-38 win over Western Michigan on Oct. 24. #22 CJ Miller carried 33 times for 183 yards in that game, and #3 Adjatay Dabbs caught 8 passes for 124 yards and 2 scores. The Rockets stood 6-2 with an Oct. 31 bye.",
+   "defense": "#0 Andrew Zock led the line at end, with #10 Julian Fox at middle linebacker, #7 Amorion Smith at strong safety and #23 Israel Petite at corner. The defense held San Diego State to 16 on Sept. 26 and Eastern Michigan to 14 on Oct. 17. Western Michigan scored 38 on Oct. 24, and Buffalo won 23-8 on Oct. 10."
+  },
+  "Troy": {
+   "offense": "Gerad Parker's offense, run by first-year coordinator Adam Austin, centered on #9 Goose Crowder, who passed for 225 yards and ran for 145 in a 55-34 win over Southern Miss on Oct. 6. #0 Gavin Griffin led the backs, and #8 TK Keyes led the receivers. Troy scored 6 at Louisiana on Oct. 17, then beat James Madison 24-21 in overtime on Oct. 29 to stand 4-4.",
+   "defense": "Coordinator Dontae Wright's defense used #22 Donnie Smith at end, #6 Justin Powe at safety and Boston College transfers #11 Ty Clemons and #2 Bryce Steele. It forced 5 turnovers at James Madison, ending the Dukes' 11-game home winning streak, but allowed 34 to Southern Miss."
+  },
+  "Tulane": {
+   "offense": "New coach Will Hall wants a West Coast attack, but the Green Wave shuffled quarterbacks through the first half of 2026 and scored about 20 points a game. Their best weapon is the run game. Florida State transfer #12 Jaylin Lucas can break one any time, and LSU transfer #2 Destyn Hill is the top receiver. Turnovers were a problem, including six against UTSA.",
+   "defense": "The Tulane defense plays a 3-3-5 and hunts the football. It forced six turnovers against Memphis and returned interceptions for scores in back-to-back games, keeping Hall's first team afloat through a 4-4 start. The defense creates turnovers, and the offense has to cash them in."
+  },
+  "Tulsa": {
+   "offense": "Tulsa ran its offense through #10 Baylor Hayes, who threw for about 250 yards and 3 touchdowns in the 38-17 win over Rice on Oct. 17. #3 Trequan Jones led the backs with 77 yards and a touchdown, and #2 Oran Singleton Jr. caught a touchdown in that game. #7 Jimmy Calloway was the other top receiver.",
+   "defense": "End #0 Kyran Duhon, tackle #99 Tai Newhouse, safety #1 Zach Williams and #7 Elijah Green, the top-rated corner, anchored the defense. It allowed 38 points in a 38-35 loss to Army on Oct. 23, leaving Tulsa 4-4."
+  },
+  "UAB": {
+   "offense": "UAB, in Alex Mortensen's first full year, was led by #5 Ryder Burton at quarterback, with #3 Braylon McReynolds and #2 Roderick Robinson II sharing the carries and #0 Tiaquelin Mims at receiver. Burton went 10 of 20 for 131 yards and an interception in the 38-13 loss at Memphis on Oct. 10.",
+   "defense": "End #4 Marlin Dean was the top-rated defender, with #8 Nigel Tate inside. UAB beat East Carolina in overtime on Oct. 15, then lost 30-10 at South Florida on Oct. 31. #39 Jonah Delange was a top-rated kicker."
+  },
+  "UCF": {
+   "offense": "Scott Frost's Knights run a no-huddle spread option under coordinator Steve Cooper, with Florida International transfer #12 Keyone Jenkins and #14 Alonza Barnett III at quarterback. Jenkins threw the touchdown pass in the second overtime of a 39-31 win over No. 2 BYU on Oct. 24. #26 Duke Watson carries the ball, and #2 Tyren Hornes had six catches for 137 yards against the Cougars. #7 Duane Thomas Jr. is a top receiver.",
+   "defense": "Alex Grinch runs a 3-4 front, with #8 Demari Henderson at strong safety and #0 Horace Lockett at tackle. The Knights beat BYU in two overtimes on Oct. 24, then gave up 41 points to Baylor at home on Oct. 30."
+  },
+  "UCLA": {
+   "offense": "Bob Chesney's first Bruins team opened 2026 at 8-0, its best start since 2005, behind a strong rushing attack. QB #9 Nico Iamaleava runs it, #3 Wayne Knight ran for 627 yards and 12 TDs through seven games, and #4 Semaj Morgan is the top receiver. UCLA beat Oregon 17-15 and Michigan State 28-10.",
+   "defense": "This defense is why UCLA jumped out to an 8-0 start in 2026. It held Oregon to 15 points and shut out Nevada 27-0 with three first-quarter interceptions. #10 Sammy Omosigho leads the linebackers, #15 Sahir West rushes from the end, and #6 Tao Johnson and #2 Rodrick Pleasant cover the back end. This unit takes the ball away."
+  },
+  "UL Monroe": {
+   "offense": "Bryant Vincent's ULM stood 1-6 after a 21-14 win at Troy on Oct. 24. #10 Aidan Armenta was the quarterback, with #12 Austin Carlisle behind him. #3 Derrick Jameson led the backs, and #7 Nic Trujillo and #13 Parker Fulghum led the receivers. #67 AJ Vinson, a preseason first-team All-Sun Belt lineman, anchored the line. Louisiana Tech shut ULM out 24-0 on Oct. 17.",
+   "defense": "#3 Noah Flemmings, a preseason second-team All-Sun Belt linebacker, led ULM with 66 tackles through seven games. #8 Carl Fauntroy led the secondary at free safety. ULM allowed 62 at Mississippi State on Sept. 5 and 52 at South Alabama on Oct. 3 but held Troy to 14 on Oct. 24."
+  },
+  "UMass": {
+   "offense": "Joe Harasymiak's second UMass team ran a pro spread under first-year coordinator Max Warner and opened 4-0, beating Rutgers 37-21 on Sept. 3. #5 William Watson III threw 3 touchdowns in that opener, and #14 Curtis Kimmons IV led the backs. #1 Joseph Griffin Jr. and #2 T.Y. Harding were the top receivers. The Minutemen then lost four straight and stood 4-4 after a 35-16 loss at UConn on Oct. 23.",
+   "defense": "Coordinator Jared Keyte ran a multiple 4-2-5 defense with #42 Andrew Depaepe at end, #5 Tyler Martin at outside linebacker, #0 Isaiah Reed at corner and #38 Zeraun Daniel at safety. It allowed 38 to Eastern Michigan on Oct. 3."
+  },
+  "UNLV": {
+   "offense": "UNLV, in Dan Mullen's second year, ran through #9 Jai'Den Thomas, who had 114 yards and a touchdown in the 31-24 win over Northern Illinois on Oct. 31, and #0 Jaylon Glover. #11 Jackson Arnold threw 3 touchdown passes in that game. #2 Taz Reddicks and #84 Keyan Burnett were the top targets.",
+   "defense": "#94 Lucas Conti at tackle, #7 Jake Pope at strong safety and #2 Denver Harris at corner led the defense. UNLV allowed 41 in a 41-31 loss at Air Force on Oct. 17, then beat Northern Illinois for the first time to reach 5-3."
+  },
+  "USC": {
+   "offense": "Lincoln Riley's Trojans went 7-2 through nine games in 2026 and stunned No. 2 Ohio State 30-18. #14 Jayden Maiava threw for 349 yards against Fresno State, and freshman #4 Trent Mosley opened the Ohio State game with a 69-yard TD. #8 King Miller and #2 Waymond Jordan both ran for scores in that win. Mosley is a big-play threat.",
+   "defense": "Gary Patterson's defense held Ohio State to 18 points and Penn State to 23, but gave up 41 to Oregon. #94 Luke Wafle and #1 Kameryn Crawford rush from the ends, #97 Jide Abasiri plugs the middle and #0 Jontez Williams covers the corner. USC lost at Wisconsin 24-7, so it can be beaten."
+  },
+  "USF": {
+   "offense": "Brian Hartline's first USF team ran a power spread under coordinator Tim Beck. #3 Michael Van Buren Jr. started at quarterback, and #17 Luke Kromenhoek played quarterback in a 30-10 win over UAB on Oct. 31. #5 D.J. Crowther ran for 143 yards at Bowling Green and 101 with 3 touchdowns against Delaware State. #18 Kenny Odom led the receivers. The Bulls stood 6-2.",
+   "defense": "Coordinator Josh Aldridge, hired from East Carolina, ran a multiple 3-4 defense with #1 C.J. Hicks and #4 Michael Williams II at end, #11 Asani Redwood at tackle and #5 Ayden Jackson and #2 Tavin Ward at safety. It allowed 31 to UTSA but held Kent State to 2 points on Oct. 17."
+  },
+  "Utah": {
+   "offense": "Morgan Scalley's Utes opened 2026 at 8-0. #4 Devon Dampier runs the show, with #1 Wayshawn Parker and #5 Daniel Bray at halfback and #7 Braden Pegan at receiver. Utah won 49-25 at Cincinnati. Dampier is the engine of this offense.",
+   "defense": "#15 Lance Holtzclaw rushes from end, #6 Nate Ritchie plays strong safety, and #1 Rabbit Evans plays free safety. The Utes beat Houston 21-13 in 2026 and scored 49 at Cincinnati. This defense helped get Utah to 8-0."
+  },
+  "Utah State": {
+   "offense": "Utah State, in Bronco Mendenhall's second year and its Pac-12 debut, ran its offense through #3 McCae Hillstead, who threw a touchdown and ran for another in the 31-14 win over Colorado State on Oct. 31. #8 Javen Jacobs led the backs, with #5 Javon Robinson and #82 Eli Wood at receiver. The Aggies scored 17 points in both the 17-16 win over Washington State and the 20-17 loss at Texas State.",
+   "defense": "A base 3-3-5 defense, led by #4 Brevin Hamblin, a strong safety with 57 tackles, and #8 Harrison Taggart at middle linebacker, dominated the first half against Colorado State on Oct. 31. Utah State stood 3-5 after the win."
+  },
+  "UTEP": {
+   "offense": "UTEP's first Mountain West season stood at 1-7 after a 31-7 loss at North Dakota State on Oct. 31. #12 Raymond Moore III and #1 EJ Colson both played quarterback in that game. #3 Jaden Smith was the top receiver, with 8 catches for 62 yards against Oregon State on Sept. 26. UTEP scored exactly 7 points in three of its last six games.",
+   "defense": "Kyle Beyer's first year as coordinator brought a 4-2-5 base, with Kelvin Sigler as co-coordinator. #2 Xavier Smith led the group at strong safety, and #47 Brady Braun, the punter, ranked among the roster's best. UTEP allowed 61 at New Mexico on Oct. 3 and 52 at Michigan on Sept. 19."
+  },
+  "UTSA": {
+   "offense": "Jeff Traylor's seventh UTSA team ran an up-tempo spread under first-year coordinator Rick Bowie. #2 Owen McCown threw for 359 yards in a 38-34 win over Navy on Oct. 17. #1 Will Henderson III ran for 102 yards at Tulane, and #0 David Amador II led the receivers. The Roadrunners stood 7-1 after winning five straight.",
+   "defense": "Coordinator Jess Loepp's base 3-4 defense used #99 Tai Leonard and #0 Jeremiah Bailey up front, #1 Camron Cooper at end, #2 Owen Pewee at linebacker and #25 Nate Robinson Jr. at safety. It allowed 34 to Navy but held Tulane to 19 on Oct. 24."
+  },
+  "Vanderbilt": {
+   "offense": "Clark Lea's Commodores are led by five-star freshman #2 Jared Curtis, a Nashville native who threw three touchdown passes in a 35-31 win over NC State. #0 Junior Sherrill had six catches for 108 yards and two scores in that game, and #28 Sedrick Alexander carries the ball. Vanderbilt scored 21 against Arkansas and 17 at Kentucky.",
+   "defense": "Steve Gregory is the coordinator, with #5 Issa Ouattara at nose tackle and #53 Glenn Seabrooks III beside him. #4 Martel Hight and #6 Jordan Matthews play corner. The Commodores gave up 52 to Ole Miss on Oct. 10 and 34 at Kentucky on Oct. 24, and stood 3-5 on Oct. 31."
+  },
+  "Virginia": {
+   "offense": "Tony Elliott's Cavaliers rely on QB #7 Beau Pribula, a Missouri transfer who threw four TD passes in a 42-3 win over Delaware on Sept. 26. WR #18 Da'Shawn Martin had career highs of nine catches and 119 yards at Wake Forest on Oct. 31, with a 47-yard TD. #21 Jekail Middlebrook started in the 34-8 opener over NC State, when Virginia ran for 258 yards.",
+   "defense": "#5 Kam Robinson anchors the middle, with #6 Brandyn Hillman and #30 Ethan Minter at safety. Virginia gave up 51 at No. 14 Wake Forest on Oct. 31 and 38 at Florida State on Oct. 3. The Cavaliers beat Syracuse 28-25 on Oct. 10 but lost 19-16 to Duke and 23-13 at SMU, and stood 4-5 on Oct. 31."
+  },
+  "Virginia Tech": {
+   "offense": "James Franklin's first Hokies team opened with a 73-3 win over VMI. QB #17 Ethan Grunkemeyer, a Penn State transfer, threw for 434 yards against Pitt and two TD passes to TE #85 Luke Reynolds in the 20-16 win at Clemson on Oct. 24. #16 Jeffrey Overton Jr. and #27 Marcellous Hawkins Jr. share the carries, and WR #3 Que'Sean Brown caught a 51-yard TD against VMI.",
+   "defense": "Brent Pry, the former head coach, is the coordinator. The Hokies had 18 tackles for loss against VMI. #13 Kemari Copeland plays tackle and #2 Jaquez White plays corner. Virginia Tech lost 35-33 to Pitt and 25-20 at Cal, and stood 6-2 on Oct. 31."
+  },
+  "Wake Forest": {
+   "offense": "Jake Dickert's spread offense, led by QB #3 Gio Lopez, scored 187 points over a four-game stretch and routed Virginia 51-7 to improve to 7-1 in 2026. #8 Carlos Hernandez caught eight of nine targets for 136 yards and a TD in that game, and #4 Ty Clark III scored three short TD runs. Kicker #90 Connor Calvert added three field goals.",
+   "defense": "Scottie Hazelton's 4-2-5 defense allowed just four touchdowns over those same four games. It stuffed Virginia on a fourth-and-1 at the 6 before halftime. #5 Davaughn Patterson is the safety to watch, and #2 Deuce Blades II is the top corner. This is a very hard defense to score on."
+  },
+  "Washington": {
+   "offense": "Jedd Fisch calls the plays for this Huskies offense, which opened 2026 at 3-0 before dropping three straight Big Ten games. #1 Demond Williams Jr. threw four TDs against Eastern Washington and hit #8 Chris Lawson for the go-ahead score at Nebraska. #2 Dezmen Roebuck is the top receiver.",
+   "defense": "Ryan Walters' defense sealed a 17-10 win at Nebraska when #7 Alex McLaughlin returned an interception 48 yards for a score. #9 Jacob Manu leads the linebackers and #4 Rylon Dillard-Allen patrols deep. Washington gave up 41 points to Iowa in October."
+  },
+  "Washington State": {
+   "offense": "Washington State, under first-year coach Kirby Moore, was led by #12 Caden Pinnick, a UC Davis transfer, at quarterback, with #0 Tony Freeman and #4 Darrius Clemons at receiver and #9 Kirby Vorhees at halfback. #71 Ashton Tripp anchored the line at left tackle. Through Oct. 17 the Cougars averaged 20.1 points per game, 120th in the FBS.",
+   "defense": "#6 Linus Zunk led the front at end, with #22 Jalil Tucker, #3 Jaylen Thomas and #13 Khamari Terrell in the secondary. The Cougars gave up 48 at Oregon State and 31 to Boise State, then lost 26-20 at San Diego State on Oct. 31 to fall to 1-8. Their lone win was 48-7 over Duquesne."
+  },
+  "West Virginia": {
+   "offense": "Rich Rodriguez's Mountaineers are led by Oklahoma transfer #3 Michael Hawkins Jr. at quarterback and #4 Cam Cook at halfback, who combined for more than 1,500 rushing yards through Oct. 17. Hawkins ran for 87 yards and two touchdowns in a 24-20 win at TCU on Oct. 24, and Cook rushed for 90 yards and caught a 13-yard touchdown.",
+   "defense": "Zac Alley's defense changes its looks from week to week. #15 Ben Cutter plays middle linebacker and recovered a fumble with 34 seconds left to seal the win at TCU, and #8 Kamari Wilson plays strong safety. The Mountaineers gave up 52 to Arizona on Oct. 10 and 42 to Cincinnati, and stood 5-3 on Oct. 31."
+  },
+  "Western Kentucky": {
+   "offense": "Tyson Helton's Air Raid offense, run by first-year coordinator Bodie Reeder, split time at quarterback between #16 Rodney Tisdale Jr. and #11 Brock Glenn. Tisdale threw 4 touchdowns against Mercyhurst, and Glenn threw for 224 yards in a 35-21 loss to Delaware on Oct. 27. #2 K.D. Hutchinson and #3 Ajay Allen were the top skill players. The Hilltoppers stood 3-5.",
+   "defense": "Coordinator Davis Merritt ran a 3-3-5 defense with #33 Zeiqui Lawton and #99 Eric Etienne up front, #7 Jaylen Lewis and #17 Dave Herard at safety and #21 Tony Newsome Jr. at corner. It allowed 70 at Georgia and 49 at Nevada but held Sam Houston to 3 points on Oct. 14."
+  },
+  "Western Michigan": {
+   "offense": "Lance Taylor's Western Michigan, the defending MAC champion, centered its offense on #12 Broc Lowry and #6 Jalen Buckley. The Broncos scored 38 on Kent State on Oct. 10, 21 at Central Michigan on Oct. 17 and 38 in a 45-38 loss at Toledo on Oct. 24. A 23-10 win over Bowling Green on Oct. 31 included three second-half field goals.",
+   "defense": "The 4-3 defense held Bowling Green to 10 points on Oct. 31 and Kent State to 7 on Oct. 10. #2 Scoop Gardner and #31 DeJuan Echoles rushed from the ends, #6 Joey Pope played strong safety, and #1 Joshua Franklin and #8 Jarvarius Sims covered at corner. Toledo scored 45 on Oct. 24, and the Broncos stood 6-3."
+  },
+  "Wisconsin": {
+   "offense": "Luke Fickell's Badgers run behind dual-threat QB #1 Colton Joseph, an Old Dominion transfer who led the team in rushing with 365 yards through Oct. 24. #3 Abu Sama III is the lead back, and #0 Tyrell Henry and #2 Chris Brooks Jr. are the receivers. Iowa shut Wisconsin out 30-0 on Oct. 31, with Joseph 5 of 14 for 90 yards.",
+   "defense": "The defense, led by #8 Mason Posa at outside linebacker, #44 Cooper Catalano in the middle and #15 Sebastian Cheeks at end, allowed 15.3 points per game before Iowa. It held USC to minus-17 rushing yards in a 24-7 win on Oct. 24. #2 Javan Robinson leads the secondary, and the Badgers stood 5-3 after Iowa."
+  },
+  "Wyoming": {
+   "offense": "Wyoming won three straight before its Oct. 31 open date to reach 5-3. #6 Tyler Hughes drove a run-first offense: 27 carries for 92 yards in the 16-13 win at San Jose State on Oct. 9, and 314 team rushing yards in a 41-23 win over Northern Illinois on Oct. 17. #1 Samuel Harris, #22 Diore Hubbard and #8 Markell Holman gave the backfield depth. The passing game ranked 133rd in the FBS through Oct. 21.",
+   "defense": "Second-year coach Jay Sawvel's defense held Air Force, second in the nation in rushing, to 14 points in a 28-14 win on Oct. 23. #98 Jayden Williams anchored the line at tackle, with #1 Desman Hearns and #23 Jones Thomas at safety."
+  }
+ }
+}

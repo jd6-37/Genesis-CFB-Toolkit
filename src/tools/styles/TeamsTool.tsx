@@ -1,10 +1,10 @@
-// Teams tab: for each of Bill Walsh '95's 36 teams, the offense and defense style the CPU uses, the
+// Teams tab: for each of Bill Walsh '95's 36 teams (or the 2026 Season Edition's 138), the offense and defense style the CPU uses, the
 // team OVRs (offense, defense) and the home weather, on the working ROM that Season and Rosters edit
 // too (src/tools/shared/WorkRom.tsx).
 import { useEffect, useMemo, useState } from 'react';
 import { openRosterRom } from '../../core/rosterRom';
 import {
-  DEFENSE, OFFENSE, TEAMS, defensePlan, offenseFormations, readStyle, readStyles, restoreStyle, styleInfo, styleProblems, writeStyle,
+  DEFENSE, OFFENSE, defensePlan, offenseFormations, readStyle, readStyles, restoreStyle, styleInfo, styleProblems, writeStyle,
   type StyleInfo, type TeamStyle,
 } from '../../core/styles';
 import { WorkRomCard, type TeamSwapSource, type WorkApi } from '../shared/WorkRom';
@@ -15,6 +15,7 @@ import {
   type TeamRating, type Weather,
 } from '../../core/teamRatings';
 import { Cfb27Reference } from './Cfb27Reference';
+import { isWide } from '../../core/wide';
 import { findCfb27 } from '../../core/cfb27Styles';
 import {
   REPORT_LIMIT, editedReports, longReports, readReports, reportLength, restoreAllReports, restoreReport, showReport, trimReport,
@@ -24,7 +25,7 @@ import { WalshEditor } from '../walsh/WalshEditor';
 import './teamstyles.css';
 
 type Note = { kind: 'error' | 'ok'; text: string } | null;
-type Ctx = { problem: string } | { names: string[]; info: StyleInfo; ovrShown: boolean };
+type Ctx = { problem: string } | { names: string[]; info: StyleInfo; ovrShown: boolean; wide: boolean };
 
 export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapSource | null }) {
   const { work, rev } = api;
@@ -43,12 +44,13 @@ export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapS
     const p = [...styleProblems(work.data), ...ratingProblems(work.data)];
     if (p.length) return { problem: `This ROM's team settings can't be changed: ${p.join('; ')}.` };
     try {
-      return { names: openRosterRom(work.data).teams.map((t) => t.school), info: styleInfo(work.data), ovrShown: hasOvrTable(work.data) };
+      return { names: openRosterRom(work.data).teams.map((t) => t.school), info: styleInfo(work.data), ovrShown: hasOvrTable(work.data), wide: isWide(work.data) };
     } catch (e) {
       return { problem: (e as Error).message };
     }
   }, [work]);
   const ok = ctx && 'names' in ctx ? ctx : null;
+  const TEAMS = ok?.names.length ?? 0;
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const styles = useMemo(() => (work && ok ? readStyles(work.data) : []), [work, ok, rev]);
@@ -148,15 +150,15 @@ export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapS
       <section className="tool-head" aria-label="Teams">
         <h2>Teams</h2>
         <p>
-          Set up each of Bill Walsh '95's 36 teams: the offense and defense the computer runs, the team's OFF and DEF
-          ratings, and the weather in its home games.
+          Set up each of Bill Walsh '95's teams (36, or 138 in the 2026 Season Edition): the offense and defense the
+          computer runs, the team's OFF and DEF ratings, the weather in its home games and its Walsh Report.
         </p>
       </section>
 
       <WorkRomCard
         api={api}
         teamSwap={teamSwap}
-        hint="Bill Walsh College Football '95: original, Elevated, a Team Swap result or an earlier edit. .md, .bin, .gen or .zip."
+        hint="Bill Walsh College Football '95: original, Elevated (also the 138-team 2026 Season Edition), a Team Swap result or an earlier edit. .md, .bin, .gen or .zip."
       />
 
       {work && ok ? (
@@ -239,7 +241,7 @@ export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapS
               </div>
             )}
           </section>
-          <StyleLegend info={ok.info} ovrShown={ok.ovrShown} />
+          <StyleLegend info={ok.info} ovrShown={ok.ovrShown} wide={ok.wide} />
         </div>
       ) : (
         <section className="waiting">
@@ -288,7 +290,7 @@ export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapS
   );
 }
 
-function StyleLegend({ info, ovrShown }: { info: StyleInfo; ovrShown: boolean }) {
+function StyleLegend({ info, ovrShown, wide }: { info: StyleInfo; ovrShown: boolean; wide: boolean }) {
   return (
     <aside className="sty-legend" aria-label="What the settings do">
       <div>
@@ -324,9 +326,10 @@ function StyleLegend({ info, ovrShown }: { info: StyleInfo; ovrShown: boolean })
         </p>
         <p>
           <b>Walsh Report</b> is Bill Walsh's scouting report before the team's games: up to {REPORT_LIMIT} characters for
-          the offense and the defense together. The number next to Edit is the report's length. Some of EA's reports are
-          longer, so the first report you save trims those to {REPORT_LIMIT}, dropping their last sentences, to keep every
-          report in the game's text space.
+          the offense and the defense together. The number next to Edit is the report's length.{' '}
+          {wide
+            ? 'This edition keeps its reports in a bigger space of their own, so every team can have the full length.'
+            : `Some of EA's reports are longer, so the first report you save trims those to ${REPORT_LIMIT}, dropping their last sentences, to keep every report in the game's text space.`}
         </p>
         <p>
           <b>Home weather</b> is how often each kind of weather comes up in the team's home games in a season, as

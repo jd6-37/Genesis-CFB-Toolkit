@@ -1,12 +1,14 @@
 // Team ratings and home weather tests (Teams tab, Team Swap, CFB 27 conversion), against real ROMs
 // (bring your own; .md/.bin/.gen or .zip): the original BW95, CF97, and the two Elevated v1.1.0
 // editions (the original game with the Elevated and the Elevated 2026 Season Edition patches):
-//   npx tsx cli/teamstest.ts BW95 CF97 ELEVATED ELEVATED_2026
+//   npx tsx cli/teamstest.ts BW95 CF97 ELEVATED ELEVATED_2026 [ELEVATED_2026_138]
+// (ELEVATED: the Elevated edition, v1.1.0 or later; ELEVATED_2026: the 2026 Season Edition v1.1.0, the 36-team one;
+// ELEVATED_2026_138, optional: the 138-team 2026 Season Edition of v2.0.0 on, for the whole Teams tab on it)
 // The CFB 27 data is the built-in file, public/data/ea-cfb27-ratings-2026-week9.csv.
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { strict as assert } from 'node:assert';
-import { openRom } from '../src/core/romfile';
+import { isWideBw95, openRom } from '../src/core/romfile';
 import { parseBw95 } from '../src/core/bw95';
 import { parseCf97 } from '../src/core/cf97';
 import { buildRom, defaultSlot, swapFile } from '../src/core/build';
@@ -16,14 +18,18 @@ import { applyCfb27, convertCfb27 } from '../src/core/rosterCfb27';
 import { carryEdits, editsSince } from '../src/core/workRom';
 import { CFB27_LATEST } from '../src/core/cfb27Latest';
 import {
-  OVR_TABLE, groupAt, hasOvrTable, ovrFromSim, ratingChanges, ratingProblems, readRating, readSim, readWeather, restoreTeam,
+  OVR_TABLE, groupAt, hasOvrTable, ovrFromSim, ratingChanges, ratingProblems, ratingRanges, readRating, readSim, readWeather, restoreTeam,
   simFromOvr, starterOvr, weatherChances, weatherWord, writeRating, writeWeather,
 } from '../src/core/teamRatings';
 import { rw } from '../src/core/bytes';
+import { readStyle, readStyles, restoreStyle, styleProblems, styleRanges, writeStyle } from '../src/core/styles';
+import { findCfb27 } from '../src/core/cfb27Styles';
+import { editedReports, readReports, reportLength, restoreReport, writeReports } from '../src/core/walshReports';
+import { readWideWalsh, wideWalshRanges, writeWideWalsh } from '../src/core/walshWide';
 
-const [bwPath, cfPath, e94Path, e26Path] = process.argv.slice(2);
+const [bwPath, cfPath, e94Path, e26Path, widePath] = process.argv.slice(2);
 if (!e26Path) {
-  console.error('usage: tsx cli/teamstest.ts BW95 CF97 ELEVATED ELEVATED_2026');
+  console.error('usage: tsx cli/teamstest.ts BW95 CF97 ELEVATED ELEVATED_2026 [ELEVATED_2026_138]');
   process.exit(2);
 }
 const read = async (p: string) => (await openRom(basename(p), new Uint8Array(readFileSync(p)))).data;
@@ -31,6 +37,7 @@ const bw = await read(bwPath);
 const cf = await read(cfPath);
 const e94 = await read(e94Path);
 const e26 = await read(e26Path);
+if (isWideBw95(e26)) throw new Error('ELEVATED_2026 must be the 2026 Season Edition v1.1.0 (36 teams); give the 138-team edition as the 5th path.');
 const csvBytes = new Uint8Array(readFileSync(join(import.meta.dirname, '..', 'public', CFB27_LATEST.file)));
 let passed = 0;
 const ok = (name: string) => {
@@ -194,6 +201,69 @@ const cfOf = (n: string) => cfT.find((c) => c.school === n)!;
   d[groupAt(d, 0) + 3] = 200;
   assert.ok(ratingProblems(d).length);
   ok('ratings outside 0-100 refused');
+}
+
+// 8. The 138-team 2026 Season Edition: styles in its own table, OFF/DEF in its OVR table, weather, Walsh
+// Reports through its paragraph table; only those bytes change, edits are tracked, carried and undone.
+if (widePath) {
+  const wide = await read(widePath);
+  assert.ok(isWideBw95(wide), 'the 5th path must be the 138-team edition');
+  const names = openRosterRom(wide).teams.map((t) => t.school);
+  assert.equal(names.length, 138);
+  assert.deepEqual([...styleProblems(wide), ...ratingProblems(wide)], []);
+  assert.equal(readStyles(wide).length, 138);
+  assert.ok(names.every((n) => findCfb27(n)), 'every team has a CFB 27 match');
+  assert.equal(new Set(names.map((n) => findCfb27(n)!.school)).size, 138);
+  // The released ROM's styles are the CFB 27 recommendations, apart from the build's own choices.
+  const same = names.filter((n, t) => {
+    const r = findCfb27(n)!.recommended;
+    const s = readStyle(wide, t);
+    return r.offense === s.offense && r.defense === s.defense;
+  }).length;
+  assert.ok(same >= 100, `${same} teams have the recommended styles`);
+  // Unchanged Walsh text written back = the same bytes.
+  const rt = wide.slice();
+  writeWideWalsh(rt, readWideWalsh(rt));
+  assert.ok(rt.every((b, i) => b === wide[i]), 'Walsh text round trip');
+
+  const d = wide.slice();
+  const wku = names.indexOf('Western Kentucky');
+  const last = wku === 137 ? 136 : 137; // a team past the 36-team range, not WKU
+  const af = names.indexOf('Air Force');
+  writeStyle(d, last, { offense: 0, defense: 2 });
+  writeRating(d, af, { off: 70, def: 95 });
+  writeWeather(d, af, [1, 2, 3, 4]);
+  const report = { offense: 'The offense runs the ball.', defense: 'The defense plays a lot of zone.' };
+  assert.deepEqual(writeReports(d, new Map([[wku, report]])), []);
+  assert.deepEqual(readStyle(d, last), { offense: 0, defense: 2 });
+  assert.deepEqual(readRating(d, af), { off: 70, def: 95 });
+  assert.deepEqual(readWeather(d, af), [1, 2, 3, 4]);
+  assert.deepEqual(readReports(d)[wku], report);
+  assert.ok(readReports(d).every((r, t) => t === wku || JSON.stringify(r) === JSON.stringify(readReports(wide)[t])), 'other reports kept');
+  assert.deepEqual(editedReports(wide, d), [wku]);
+  const allowed: [number, number][] = [...styleRanges(wide), ...ratingRanges(wide), ...wideWalshRanges(wide)];
+  for (let k = 0; k < d.length; k++) {
+    if (d[k] !== wide[k]) assert.ok(allowed.some(([s, e]) => k >= s && k < e), `byte 0x${k.toString(16)} changed`);
+  }
+  assert.ok(d.subarray(0x10dfb0, 0x10e000).every((b, i) => b === wide[0x10dfb0 + i]), 'the old 36-team OVR table is left alone');
+  assert.deepEqual(editsSince(wide, d, 'bw95'), { season: false, teams: true, rosters: false, any: true });
+  const to = wide.slice();
+  assert.equal(carryEdits(d, to, wide).teams, 3);
+  assert.ok(to.every((b, i) => b === d[i]), 'carried to a fresh copy = the same bytes');
+  for (const t of [last, af, wku]) {
+    restoreStyle(d, wide, t);
+    restoreTeam(d, wide, t);
+    restoreReport(d, wide, t);
+  }
+  assert.ok(d.every((b, i) => b === wide[i]), 'undo puts every byte back');
+  // Every team at the editor's limit still fits the edition's text space.
+  const big = wide.slice();
+  const long = { offense: 'word '.repeat(64).trim() + '.', defense: 'more '.repeat(64).trim() + '.' };
+  const all = new Map(names.map((_, t) => [t, long] as [number, typeof long]));
+  assert.ok(reportLength(long) <= 650);
+  writeReports(big, all);
+  assert.deepEqual(readReports(big)[last], long);
+  ok(`138-team 2026 Season Edition: styles (${same} of 138 as recommended), OFF/DEF, weather and Walsh Reports edited in its own tables, tracked, carried and undone`);
 }
 
 console.log(`${passed} passed`);
