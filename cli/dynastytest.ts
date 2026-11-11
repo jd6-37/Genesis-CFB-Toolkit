@@ -92,6 +92,17 @@ for (const [t, sl] of first.slots.entries()) {
   for (const id of sl) if (id !== null) assert.equal(d0.players[id - 1].team, t, 'a slot holds a player of the team');
 }
 assert.ok(first.slots.every((sl) => sl[0] !== null && d0.players[sl[0]! - 1].pos === 'QB'), 'every team has a QB in slot 0');
+// Every filled slot has the game's ratings: six 0-15 steps in the roster screen's order, Weight and Speed first.
+for (const [t, sl] of first.slots.entries()) {
+  sl.forEach((id, slot) => {
+    const b = first.bw![t][slot];
+    assert.equal(b !== null, id !== null, 'ratings exactly for the filled slots');
+    if (!b) return;
+    assert.equal(b.steps.length, 6);
+    assert.deepEqual(b.attrs.slice(0, 2), ['Weight', 'Speed']);
+    assert.ok(b.steps.every((x) => Number.isInteger(x) && x >= 0 && x <= 15));
+  });
+}
 // Same inputs, same dynasty.
 assert.deepEqual(createDynasty(rom, csv, { name: 'Test', seed: 1, id: 'test', created: '2026-01-01T00:00:00.000Z' }), d0);
 ok(`dynasty created in ${took} ms: ${d0.players.length} players, ${CLASSES.map((c) => `${c} ${d0.players.filter((p) => p.cls === c).length}`).join(', ')}`);

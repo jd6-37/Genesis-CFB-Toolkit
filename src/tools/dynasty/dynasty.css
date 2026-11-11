@@ -165,7 +165,7 @@
 .dy-stat-tables { display: grid; gap: 24px; }
 .dy-boards { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 32px 40px; }
 .dy-ratings { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 4px 32px; }
-.dy-rating { display: grid; grid-template-columns: 1fr 90px 28px; gap: 10px; align-items: center; font-size: 14px; padding: 3px 0; border-bottom: 1px solid var(--rule); }
+.dy-rating { display: grid; grid-template-columns: 1fr 90px 56px; gap: 10px; align-items: center; font-size: 14px; padding: 3px 0; border-bottom: 1px solid var(--rule); }
 .dy-rating > span:last-child { text-align: right; font-variant-numeric: tabular-nums; }
 .dy-bar { height: 6px; background: var(--wash); border-radius: 3px; overflow: hidden; }
 .dy-bar span { display: block; height: 100%; background: var(--indigo); }
@@ -212,3 +212,4 @@
   .dy-art-big .dy-mark, .dy-art-big .dy-art-main .sprite { height: 96px !important; width: auto !important; }
   .dy-art-big .dy-art-side .dy-mark, .dy-art-big .dy-art-side .sprite { height: 48px !important; width: auto !important; }
 }
+.dy-bw .dy-ratings { max-width: 900px; }

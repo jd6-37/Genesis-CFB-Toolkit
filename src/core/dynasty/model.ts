@@ -9,6 +9,8 @@ import { convertCfb27 } from '../rosterCfb27';
 import { readWideSeason, wideSeasonProblems } from '../seasonWide';
 import { parseBw95 } from '../bw95';
 import { teamsOf } from '../wide';
+import { GROUP_COLUMNS, type Attr, type Group } from '../rosterLayouts';
+import { hasOlPatch, OL_PATCH } from '../rosterOlPatch';
 import { readDynastySave, type DynastySave } from './save';
 
 export const DYNASTY_FILE = { app: 'genesis-cfb-toolkit', tool: 'dynasty', version: 1 } as const;
@@ -69,8 +71,21 @@ export interface DSeason {
   confNames: string[];
   /** Per team, the dynasty player in each of the 32 roster slots (null = nobody known). */
   slots: (number | null)[][];
+  /** Per team and slot, the Bill Walsh '95 ratings the slot's player has in the game this season. */
+  bw?: (BwSlot | null)[][];
   /** Imports of this season's save, oldest first; one per number of completed weeks (the newest kept). */
   imports: SaveImport[];
+}
+
+/** A roster slot's ratings in the game: 0-15 steps, in the roster screen's column order. */
+export interface BwSlot {
+  /** The slot's label on the game's roster screen (QB, HB1, LT, LDE …). */
+  label: string;
+  group: Group;
+  attrs: Attr[];
+  steps: number[];
+  /** Pounds the ROM adds to the shown weight (the OL weight tweak). */
+  weightPlus: number;
 }
 
 export interface Dynasty {
@@ -194,7 +209,15 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
     });
   });
   const slots: (number | null)[][] = Array.from({ length: n }, () => new Array<number | null>(32).fill(null));
-  for (const t of plan.teams) for (const f of t.fills) slots[t.team][f.slot] = idOfRow.get(f.player.row) ?? null;
+  const bw: (BwSlot | null)[][] = Array.from({ length: n }, () => new Array<BwSlot | null>(32).fill(null));
+  const olPlus = hasOlPatch(roster) ? OL_PATCH.pounds : 0;
+  for (const t of plan.teams) {
+    for (const f of t.fills) {
+      slots[t.team][f.slot] = idOfRow.get(f.player.row) ?? null;
+      const attrs = GROUP_COLUMNS[f.group];
+      bw[t.team][f.slot] = { label: f.label, group: f.group, attrs, steps: attrs.map((a) => f.steps[a] ?? 0), weightPlus: f.group === 'OL' ? olPlus : 0 };
+    }
+  }
 
   const season = readWideSeason(rom);
   const startYear = opt.startYear ?? 2026;
@@ -208,7 +231,7 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
     teams,
     attrKeys,
     players,
-    seasons: [{ index: 0, year: startYear, conf: season.conf, confNames: season.names, slots, imports: [] }],
+    seasons: [{ index: 0, year: startYear, conf: season.conf, confNames: season.names, slots, bw, imports: [] }],
   };
 }
 

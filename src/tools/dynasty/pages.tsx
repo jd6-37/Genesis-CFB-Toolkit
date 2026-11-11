@@ -7,6 +7,7 @@ import {
 } from '../../core/dynasty/derive';
 import { stories } from '../../core/dynasty/news';
 import type { SaveGame } from '../../core/dynasty/save';
+import { nibbleToRating, nibbleToWeight } from '../../core/rosterLayouts';
 import { Empty, StoryArt, TeamLink, TeamMark, href, heightText, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
 
 // ---- front page
@@ -435,6 +436,8 @@ export function Player({ id }: { id: number }) {
   }, [d, v, p]);
   if (!p) return <Empty><p>There's no such player.</p></Empty>;
   const team = p.team;
+  // His slots on the game's roster this season (a kicker can also be the punter).
+  const bwSlots = team === null ? [] : v.season.slots[team].flatMap((id, slot) => (id === p.id && v.season.bw?.[team]?.[slot] ? [v.season.bw[team][slot]!] : []));
   const c = team !== null ? mainColor(d, team) : 0;
   return (
     <section>
@@ -458,16 +461,29 @@ export function Player({ id }: { id: number }) {
           <StatTables lines={s.lines} />
         </div>
       ))}
-      <h3 className="dy-sub">Ratings</h3>
-      <div className="dy-ratings">
-        {d.attrKeys.map((k, i) => (
-          <div key={k} className="dy-rating">
-            <span>{k}</span>
-            <span className="dy-bar"><span style={{ width: `${p.attrs[i]}%` }} /></span>
-            <span className="dy-strong">{p.attrs[i]}</span>
+      <h3 className="dy-sub">Bill Walsh '95 ratings</h3>
+      {bwSlots.length ? bwSlots.map((b) => (
+        <div key={b.label} className="dy-bw">
+          {bwSlots.length > 1 && <p className="dy-dim dy-small">As {b.label}</p>}
+          <div className="dy-ratings">
+            {b.attrs.map((a, i) => {
+              const weight = a === 'Weight';
+              const shown = weight ? nibbleToWeight(b.steps[i]) + b.weightPlus : nibbleToRating(b.steps[i]);
+              return (
+                <div key={a} className="dy-rating">
+                  <span>{a}</span>
+                  <span className="dy-bar"><span style={{ width: `${(b.steps[i] / 15) * 100}%` }} /></span>
+                  <span className="dy-strong">{weight ? `${shown} lb` : shown}</span>
+                </div>
+              );
+            })}
           </div>
-        ))}
-      </div>
+        </div>
+      )) : (
+        <p className="dy-dim">
+          {v.season.bw ? "He isn't on the game's 32-man roster this season, so he has no ratings in the game." : 'Start this dynasty again to see the ratings (it was made before the app kept them).'}
+        </p>
+      )}
     </section>
   );
 }
