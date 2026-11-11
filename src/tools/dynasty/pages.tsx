@@ -8,6 +8,7 @@ import {
 import { stories } from '../../core/dynasty/news';
 import type { SaveGame } from '../../core/dynasty/save';
 import { nibbleToRating, nibbleToWeight, rosterLayout } from '../../core/rosterLayouts';
+import { playerOvr } from '../../core/dynasty/ovr';
 import { Empty, StoryArt, TeamLink, TeamMark, href, heightText, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
 
 // ---- front page
@@ -336,24 +337,34 @@ export function Team({ team }: { team: number }) {
   // The team's 32 in the ROM, in the game's roster order (the kicker can also be the punter).
   const roster = SLOT_ORDER.flatMap((def) => {
     const p = playerOf(d, v.season.slots[team][def.slot]);
-    return p ? [{ def, p, label: v.season.bw?.[team]?.[def.slot]?.label ?? def.label }] : [];
+    const bw = v.season.bw?.[team]?.[def.slot] ?? null;
+    return p ? [{ def, p, bw, label: bw?.label ?? def.label }] : [];
   });
   const games = v.games.filter((g) => g.visitor === team || g.home === team);
+  const ovr = v.season.teamOvr?.[team];
   const conf = v.season.conf[team];
   const hist = teamHistory(d, team);
   return (
     <section>
       <header className="dy-teamhead" style={{ background: teamCss(c), color: onColor(c) }}>
-        <TeamMark team={team} size={96} />
-        <div>
-          <h2>{t.school} {t.nickname}</h2>
-          <p>
-            <span>{conf === INDEPENDENT ? 'Independent' : v.season.confNames[conf]}</span>
-            {v.save && <span>{recordText(r)}, {r.cw}-{r.cl} in conference</span>}
-            {v.save && v.rank[team] <= 25 && <span>No. {v.rank[team]}</span>}
-          </p>
+        <div className="dy-teamhead-id">
+          <TeamMark team={team} size={96} />
+          <div>
+            <h2>{t.school} {t.nickname}</h2>
+            <p>
+              <span>{conf === INDEPENDENT ? 'Independent' : v.season.confNames[conf]}</span>
+              {v.save && <span>{recordText(r)}, {r.cw}-{r.cl} in conference</span>}
+              {v.save && v.rank[team] <= 25 && <span>No. {v.rank[team]}</span>}
+            </p>
+          </div>
         </div>
-        <TeamMark team={team} size={96} kind="helmet" />
+        {ovr && (
+          <dl className={`dy-teamovr${onColor(c) === '#000' ? ' dy-on-light' : ''}`}>
+            <div><dt>Offense</dt><dd>{ovr.off}</dd></div>
+            <div><dt>Defense</dt><dd>{ovr.def}</dd></div>
+          </dl>
+        )}
+        <span className="dy-teamhead-helmet"><TeamMark team={team} size={96} kind="helmet" /></span>
       </header>
 
       <div className="dy-team-cols">
@@ -403,18 +414,19 @@ export function Team({ team }: { team: number }) {
       <div className="dy-scroll">
         <table className="dy-table dy-roster">
           <thead>
-            <tr><th className="dy-left">Pos</th><th>#</th><th className="dy-left">Name</th><th>Class</th><th>Ht</th><th>Wt</th><th className="dy-left">Hometown</th></tr>
+            <tr><th className="dy-left">Pos</th><th>#</th><th className="dy-left">Name</th><th>OVR</th><th>Class</th><th className="dy-wide">Ht</th><th className="dy-wide">Wt</th><th className="dy-left dy-wide">Hometown</th></tr>
           </thead>
           <tbody>
-            {roster.map(({ def, p, label }) => (
+            {roster.map(({ def, p, bw, label }) => (
               <tr key={def.slot}>
                 <td className="dy-left dy-strong">{label}</td>
                 <td>{p.jersey}</td>
                 <td className="dy-left"><a href={href(`player/${p.id}`)}>{playerName(p)}</a></td>
+                <td className="dy-strong">{bw ? playerOvr(def.slot, bw) : ''}</td>
                 <td>{p.cls}</td>
-                <td>{heightText(p.heightIn)}</td>
-                <td>{p.weight || ''}</td>
-                <td className="dy-left dy-dim">{[p.hometown, p.state].filter(Boolean).join(', ')}</td>
+                <td className="dy-wide">{heightText(p.heightIn)}</td>
+                <td className="dy-wide">{p.weight || ''}</td>
+                <td className="dy-left dy-dim dy-wide">{[p.hometown, p.state].filter(Boolean).join(', ')}</td>
               </tr>
             ))}
           </tbody>
@@ -441,6 +453,7 @@ export function Player({ id }: { id: number }) {
   return (
     <section>
       <header className="dy-teamhead" style={team !== null ? { background: teamCss(c), color: onColor(c) } : undefined}>
+        <div className="dy-teamhead-id">
         {team !== null && <TeamMark team={team} size={64} />}
         <div>
           <h2>{playerName(p)}</h2>
@@ -452,6 +465,12 @@ export function Player({ id }: { id: number }) {
             {p.hometown && <span>{p.hometown}{p.state ? `, ${p.state}` : ''}</span>}
           </p>
         </div>
+        </div>
+        {bwSlots.length > 0 && (
+          <dl className={`dy-teamovr${team !== null && onColor(c) === '#000' ? ' dy-on-light' : ''}`}>
+            <div><dt>OVR</dt><dd>{playerOvr(bwSlots[0], v.season.bw![team!][bwSlots[0]]!)}</dd></div>
+          </dl>
+        )}
       </header>
       {seasons.map((s) => s.lines.length > 0 && (
         <div key={s.year}>

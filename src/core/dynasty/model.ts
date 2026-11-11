@@ -11,6 +11,7 @@ import { parseBw95 } from '../bw95';
 import { teamsOf } from '../wide';
 import { GROUP_COLUMNS, type Attr, type Group } from '../rosterLayouts';
 import { hasOlPatch, OL_PATCH } from '../rosterOlPatch';
+import { ratingProblems, readRating, type TeamRating } from '../teamRatings';
 import { readDynastySave, type DynastySave } from './save';
 
 export const DYNASTY_FILE = { app: 'genesis-cfb-toolkit', tool: 'dynasty', version: 1 } as const;
@@ -73,6 +74,8 @@ export interface DSeason {
   slots: (number | null)[][];
   /** Per team and slot, the Bill Walsh '95 ratings the slot's player has in the game this season. */
   bw?: (BwSlot | null)[][];
+  /** Each team's offense and defense OVR in the ROM this season (what Game Setup shows). */
+  teamOvr?: TeamRating[];
   /** Imports of this season's save, oldest first; one per number of completed weeks (the newest kept). */
   imports: SaveImport[];
 }
@@ -220,6 +223,7 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
   }
 
   const season = readWideSeason(rom);
+  const teamOvr = ratingProblems(rom).length ? undefined : Array.from({ length: n }, (_, t) => readRating(rom, t));
   const startYear = opt.startYear ?? 2026;
   return {
     ...DYNASTY_FILE,
@@ -231,7 +235,7 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
     teams,
     attrKeys,
     players,
-    seasons: [{ index: 0, year: startYear, conf: season.conf, confNames: season.names, slots, bw, imports: [] }],
+    seasons: [{ index: 0, year: startYear, conf: season.conf, confNames: season.names, slots, bw, teamOvr, imports: [] }],
   };
 }
 

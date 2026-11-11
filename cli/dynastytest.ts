@@ -13,6 +13,8 @@ import { stories } from '../src/core/dynasty/news';
 import { teamArt } from '../src/core/dynasty/art';
 import { dynastyFileName, dynastyFileText, readDynastyFile } from '../src/core/dynasty/storage';
 import { CFB27_LATEST } from '../src/core/cfb27Latest';
+import { OVR_FORMULAS, playerOvr, roleOfSlot } from '../src/core/dynasty/ovr';
+import { readRating } from '../src/core/teamRatings';
 
 const [romPath, savePath] = process.argv.slice(2);
 if (!romPath || !savePath) {
@@ -105,6 +107,23 @@ for (const [t, sl] of first.slots.entries()) {
 }
 // Same inputs, same dynasty.
 assert.deepEqual(createDynasty(rom, csv, { name: 'Test', seed: 1, id: 'test', created: '2026-01-01T00:00:00.000Z' }), d0);
+// Team OVRs are the ROM's.
+assert.equal(first.teamOvr!.length, 138);
+first.teamOvr!.forEach((r, t) => assert.deepEqual(r, readRating(rom, t)));
+// Player OVRs from the game ratings: every formula's shares add up to 100, and the OVRs land near CFB 27's.
+for (const f of Object.values(OVR_FORMULAS)) assert.equal(Object.values(f.weights).reduce((a, b) => a + b!, 0), 100);
+const misses = new Map<string, number[]>();
+first.slots.forEach((sl, t) => sl.forEach((id, slot) => {
+  if (id === null) return;
+  const o = playerOvr(slot, first.bw![t][slot]!);
+  assert.ok(o >= 0 && o <= 99);
+  const role = roleOfSlot(slot);
+  misses.set(role, [...(misses.get(role) ?? []), Math.abs(o - d0.players[id - 1].ovr)]);
+}));
+const allMiss = [...misses.values()].flat();
+const mean = (a: number[]) => a.reduce((x, y) => x + y, 0) / a.length;
+for (const [role, m] of misses) assert.ok(mean(m) < 2.5, `${role} OVR is ${mean(m).toFixed(1)} off CFB 27 on average`);
+ok(`player OVRs: average miss ${mean(allMiss).toFixed(2)} from CFB 27, ${((allMiss.filter((x) => x <= 3).length / allMiss.length) * 100).toFixed(0)}% within 3`);
 ok(`dynasty created in ${took} ms: ${d0.players.length} players, ${CLASSES.map((c) => `${c} ${d0.players.filter((p) => p.cls === c).length}`).join(', ')}`);
 
 // ---- importing saves

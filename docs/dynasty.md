@@ -48,6 +48,29 @@ Week names follow the game: with the Real 2026 schedule the first week is Week 0
 - Each import keeps the save's data bytes (base64). One import per number of completed weeks, the newest kept. An import with fewer results than the last is refused unless allowed; one whose games differ from the last import's is refused as another season. Teams the save marks as the user's are added.
 - Everything shown (records, standings, ranks, leaders, records, champions, stories) is derived from the imports (`derive.ts`, `news.ts`), so the same saves always give the same pages.
 
+### Team and player OVRs
+
+- Team OFF and DEF are the ROM's own (what Game Setup shows), read when the dynasty is created.
+- A player's OVR comes from his six Bill Walsh '95 ratings: OVR = base + scale × the weighted average of the ratings as the game shows them (0-100), by roster role, capped at 0-99 (`src/core/dynasty/ovr.ts`). Only ratings the game uses at that position count: Weight is mass, not quality; kickers' and punters' Range isn't used for kicks (their Quick is kick distance); linemen's Block barely matters in play. The shares, base and scale were fitted to the CFB 27 Overall of the 4,416 starters of v2.0.0:
+
+| Slots | OVR | Average miss | Within 3 |
+|---|---|---|---|
+| QB | 56 + 0.41 × (Quickness 30%, Awareness 50%, Range 15%, Power 5%) | 2.0 | 84% |
+| HB1, HB2 | 48 + 0.51 × (Speed 35%, Quickness 30%, Awareness 15%, Hands 5%, Power 15%) | 1.3 | 96% |
+| FB | 46 + 0.4 × (Speed 40%, Awareness 20%, Hands 15%, Power 25%) | 2.2 | 80% |
+| SE, FL, WR1, WR2 | 52 + 0.5 × (Speed 15%, Quickness 25%, Awareness 25%, Hands 15%, Power 20%) | 1.4 | 95% |
+| TE1, TE2 | 55 + 0.51 × (Speed 20%, Quickness 25%, Awareness 20%, Hands 25%, Power 10%) | 1.6 | 89% |
+| LT, LG, C, RG, RT | 50 + 0.54 × (Power 55%, Speed 25%, Awareness 20%) | 1.5 | 94% |
+| LDE, RDE | 48 + 0.52 × (Power 15%, Speed 35%, Awareness 20%, Tackling 30%) | 1.2 | 97% |
+| DT1, DT2 | 56 + 0.38 × (Power 60%, Speed 10%, Awareness 15%, Tackling 15%) | 1.0 | 97% |
+| LOLB, MLB1, ROLB, MLB2 | 35 + 0.55 × (Speed 10%, Quickness 15%, Awareness 35%, Tackling 40%) | 1.4 | 96% |
+| LCB1, RCB1, LCB2, RCB2 | 38 + 0.55 × (Speed 30%, Quickness 25%, Awareness 30%, Hands 5%, Tackling 10%) | 1.5 | 93% |
+| SS, FS, FS2 | 43 + 0.51 × (Speed 20%, Quickness 20%, Awareness 40%, Hands 5%, Tackling 15%) | 1.1 | 99% |
+| K | 65 + 0.22 × (Quick (kick distance) 50%, Accuracy 50%) | 1.6 | 93% |
+| P | 62 + 0.24 × (Quick (kick distance) 55%, Accuracy 45%) | 1.5 | 91% |
+
+- All starters: average miss 1.4 from CFB 27, 94% within 3 (`test:dynasty` checks every role stays under 2.5).
+
 ### Storage and the dynasty file
 
 IndexedDB database `genesis-cfb-dynasty`: store `dynasties` (the dynasty and when it changed) and store `art` (each team's logo, helmet and wordmark drawn from the user's ROM). The dynasty file is the dynasty as JSON with `app: "genesis-cfb-toolkit"`, `tool: "dynasty"`, `version: 1`; it never carries the art. A file from a newer version is refused.
