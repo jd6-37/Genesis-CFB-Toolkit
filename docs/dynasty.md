@@ -71,6 +71,10 @@ Week names follow the game: with the Real 2026 schedule the first week is Week 0
 
 - All starters: average miss 1.4 from CFB 27, 94% within 3 (`test:dynasty` checks every role stays under 2.5).
 
+### Team colors
+
+The pages use each school's official primary and secondary colors (`src/core/dynasty/schoolColors.ts`, all 138 schools by the ROM's school name); a school missing there falls back to the ROM's team color (the jersey when that is near black or white). The ROM's colors are tuned for the Genesis palette and the uniforms, so they often read wrong on a page (LSU too blue, Iowa blue, Georgia too dark). Marks, meters and charts on white use the primary, or the secondary when the primary is too light (Iowa's gold → black). A game's split picture uses the second team's secondary when both primaries are close (Louisiana and USC reds).
+
 ### Storage and the dynasty file
 
 IndexedDB database `genesis-cfb-dynasty`: store `dynasties` (the dynasty and when it changed) and store `art` (each team's logo, helmet and wordmark drawn from the user's ROM). The dynasty file is the dynasty as JSON with `app: "genesis-cfb-toolkit"`, `tool: "dynasty"`, `version: 1`; it never carries the art. A file from a newer version is refused.

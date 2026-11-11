@@ -9,7 +9,7 @@ import { stories } from '../../core/dynasty/news';
 import type { SaveGame } from '../../core/dynasty/save';
 import { nibbleToRating, nibbleToWeight, rosterLayout } from '../../core/rosterLayouts';
 import { playerOvr } from '../../core/dynasty/ovr';
-import { Empty, StoryArt, TeamLink, TeamMark, href, heightText, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
+import { Empty, StoryArt, TeamLink, TeamMark, href, heightText, inkColor, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
 
 // ---- front page
 
@@ -449,7 +449,7 @@ export function Player({ id }: { id: number }) {
   const team = p.team;
   // His roster slots in the ROM this season (a kicker can also be the punter).
   const bwSlots = team === null ? [] : v.season.slots[team].flatMap((id, slot) => (id === p.id && v.season.bw?.[team]?.[slot] ? [slot] : []));
-  const c = team !== null ? mainColor(d, team) : 0;
+  const c = team !== null ? mainColor(d, team) : '#ffffff';
   return (
     <section>
       <header className="dy-teamhead" style={team !== null ? { background: teamCss(c), color: onColor(c) } : undefined}>
@@ -505,8 +505,7 @@ function BwRatings({ team, slot, name }: { team: number; slot: number; name: str
   const rank = b.attrs.map((_, i) => 1 + league.filter((x) => x.steps[i] > b.steps[i]).length);
   // Weight: the share of starters he outweighs, counting those at his step as half.
   const heavier = b.attrs.map((_, i) => league.reduce((a, x) => a + (x.steps[i] < b.steps[i] ? 1 : x.steps[i] === b.steps[i] ? 0.5 : 0), 0) - 0.5);
-  const c = mainColor(d, team);
-  const color = onColor(c) === '#000' ? 'var(--gray)' : teamCss(c); // a light team color wouldn't show on white
+  const color = inkColor(d, team); // a light primary wouldn't show on white
   const who = `${b.label}s`;
 
   // Shape: the five ratings other than weight, step 15 at the rim.

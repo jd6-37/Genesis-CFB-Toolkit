@@ -3,6 +3,7 @@ import { createContext, useContext } from 'react';
 import { SpriteCanvas } from '../../components';
 import { toLevels, LEVELS } from '../../core/colors';
 import type { Dynasty, DPlayer } from '../../core/dynasty/model';
+import { SCHOOL_COLORS } from '../../core/dynasty/schoolColors';
 import type { SeasonView } from '../../core/dynasty/derive';
 import type { TeamArt } from '../../core/dynasty/storage';
 import type { Picture } from '../../core/render';
@@ -19,19 +20,31 @@ export const useDyn = () => useContext(Ctx)!;
 
 export const href = (path: string) => `#dynasty/${path}`;
 
-const rgb = (c: number) => toLevels(c).map((x) => LEVELS[x]);
-export const teamCss = (c: number) => `rgb(${rgb(c).join(' ')})`;
-/** Black or white, whichever reads on the color. */
-export const onColor = (c: number) => {
-  const [r, g, b] = rgb(c);
-  return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? '#000' : '#fff';
+const css = (c: number) => `#${toLevels(c).map((x) => LEVELS[x].toString(16).padStart(2, '0')).join('')}`;
+const lum = (hex: string) => {
+  const n = parseInt(hex.slice(1), 16);
+  return 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255);
 };
-/** The team's main color: its team color, unless that is near black or white (then the jersey). */
-export function mainColor(d: Dynasty, t: number): number {
+const rgbOf = (hex: string) => { const n = parseInt(hex.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
+const near = (a: string, b: string) => { const x = rgbOf(a), y = rgbOf(b); return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]) < 90; };
+/** Colors are CSS hex strings. */
+export const teamCss = (c: string) => c;
+/** Black or white, whichever reads on the color. */
+export const onColor = (c: string) => (lum(c) > 150 ? '#000' : '#fff');
+/** The school's primary color: its official one, or the ROM's team color (the jersey when that is near black or white). */
+export function mainColor(d: Dynasty, t: number): string {
+  const official = SCHOOL_COLORS[d.teams[t].school];
+  if (official) return official[0];
   const [team, , jersey] = d.teams[t].colors;
-  const [r, g, b] = rgb(team);
-  const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-  return lum < 24 || lum > 235 ? jersey : team;
+  const l = lum(css(team));
+  return css(l < 24 || l > 235 ? jersey : team);
+}
+/** A school color that shows on white (for marks, meters and charts): primary, else secondary, else gray. */
+export function inkColor(d: Dynasty, t: number): string {
+  const main = mainColor(d, t);
+  if (lum(main) <= 150) return main;
+  const second = SCHOOL_COLORS[d.teams[t].school]?.[1];
+  return second && lum(second) <= 150 ? second : 'var(--gray)';
 }
 
 export const playerOf = (d: Dynasty, id: number | null): DPlayer | undefined => (id ? d.players[id - 1] : undefined);
@@ -81,7 +94,12 @@ export function StoryArt({ teams, big = false }: { teams: number[]; big?: boolea
   const { d } = useDyn();
   if (!teams.length) return null;
   const c1 = mainColor(d, teams[0]);
-  const c2 = teams[1] !== undefined ? mainColor(d, teams[1]) : null;
+  let c2 = teams[1] !== undefined ? mainColor(d, teams[1]) : null;
+  // Two similar colors (Louisiana and USC reds) don't show a split: the second team's other color does.
+  if (c2 !== null && near(c1, c2)) {
+    const alt = SCHOOL_COLORS[d.teams[teams[1]].school]?.[1];
+    if (alt && !near(c1, alt)) c2 = alt;
+  }
   const bg = c2 === null || teams.length > 2
     ? teamCss(c1)
     : `linear-gradient(112deg, ${teamCss(c1)} 0 62%, ${teamCss(c2)} 62% 100%)`;
