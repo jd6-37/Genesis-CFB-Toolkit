@@ -7,7 +7,7 @@ import {
 } from '../../core/dynasty/derive';
 import { stories } from '../../core/dynasty/news';
 import type { SaveGame } from '../../core/dynasty/save';
-import { nibbleToRating, nibbleToWeight } from '../../core/rosterLayouts';
+import { nibbleToRating, nibbleToWeight, rosterLayout } from '../../core/rosterLayouts';
 import { Empty, StoryArt, TeamLink, TeamMark, href, heightText, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
 
 // ---- front page
@@ -267,7 +267,7 @@ const STAT_TABLES: { cat: StatCategory; title: string; sort: string; cols: [stri
 function PlayerCell({ line }: { line: PlayerLine }) {
   const { d } = useDyn();
   const p = playerOf(d, line.player);
-  return p ? <a href={href(`player/${p.id}`)}>{playerName(p)}</a> : <span className="dy-dim">Unknown player</span>;
+  return p ? <a href={href(`player/${p.id}`)}>#{p.jersey} {playerName(p)}</a> : <span className="dy-dim">Unknown player</span>;
 }
 
 function StatTables({ lines }: { lines: PlayerLine[] }) {
@@ -300,7 +300,8 @@ function StatTables({ lines }: { lines: PlayerLine[] }) {
 
 // ---- teams
 
-const POS_ORDER = ['QB', 'HB', 'FB', 'WR', 'TE', 'LT', 'LG', 'C', 'RG', 'RT', 'LE', 'DT', 'RE', 'LOLB', 'MLB', 'ROLB', 'CB', 'FS', 'SS', 'K', 'P'];
+/** The 138-team edition's 32 roster slots in the game's order (every team plays the 4-3). */
+const SLOT_ORDER = rosterLayout('bw95', false, true);
 
 export function Teams() {
   const { d, v } = useDyn();
@@ -332,10 +333,11 @@ export function Team({ team }: { team: number }) {
   if (!t) return <Empty><p>There's no such team.</p></Empty>;
   const c = mainColor(d, team);
   const r = v.records[team];
-  const inGame = new Set(v.season.slots[team].filter((x): x is number => x !== null));
-  const roster = d.players
-    .filter((p) => p.team === team && p.status === 'active')
-    .sort((a, b) => POS_ORDER.indexOf(a.pos) - POS_ORDER.indexOf(b.pos) || b.ovr - a.ovr);
+  // The team's 32 in the ROM, in the game's roster order (the kicker can also be the punter).
+  const roster = SLOT_ORDER.flatMap((def) => {
+    const p = playerOf(d, v.season.slots[team][def.slot]);
+    return p ? [{ def, p, label: v.season.bw?.[team]?.[def.slot]?.label ?? def.label }] : [];
+  });
   const games = v.games.filter((g) => g.visitor === team || g.home === team);
   const conf = v.season.conf[team];
   const hist = teamHistory(d, team);
@@ -398,24 +400,21 @@ export function Team({ team }: { team: number }) {
       </div>
 
       <h3 className="dy-sub">Roster</h3>
-      <p className="dy-dim dy-small">{roster.length} players. The {inGame.size} marked "In game" are on the team's roster in the ROM.</p>
       <div className="dy-scroll">
         <table className="dy-table dy-roster">
           <thead>
-            <tr><th>#</th><th className="dy-left">Name</th><th>Pos</th><th>Class</th><th>Ht</th><th>Wt</th><th>OVR</th><th className="dy-left">Hometown</th><th>In game</th></tr>
+            <tr><th className="dy-left">Pos</th><th>#</th><th className="dy-left">Name</th><th>Class</th><th>Ht</th><th>Wt</th><th className="dy-left">Hometown</th></tr>
           </thead>
           <tbody>
-            {roster.map((p) => (
-              <tr key={p.id}>
+            {roster.map(({ def, p, label }) => (
+              <tr key={def.slot}>
+                <td className="dy-left dy-strong">{label}</td>
                 <td>{p.jersey}</td>
                 <td className="dy-left"><a href={href(`player/${p.id}`)}>{playerName(p)}</a></td>
-                <td>{p.pos}</td>
                 <td>{p.cls}</td>
                 <td>{heightText(p.heightIn)}</td>
                 <td>{p.weight || ''}</td>
-                <td className="dy-strong">{p.ovr}</td>
                 <td className="dy-left dy-dim">{[p.hometown, p.state].filter(Boolean).join(', ')}</td>
-                <td>{inGame.has(p.id) ? <span className="dy-dot" title="On the ROM's roster">In game</span> : ''}</td>
               </tr>
             ))}
           </tbody>
@@ -446,14 +445,13 @@ export function Player({ id }: { id: number }) {
         <div>
           <h2>{playerName(p)}</h2>
           <p>
-            <span>#{p.jersey} {p.pos}</span>
+            <span>#{p.jersey} {bwSlots.length ? bwSlots.map((x) => v.season.bw![team!][x]!.label).join(', ') : p.pos}</span>
             <span>{p.cls}</span>
             <span>{heightText(p.heightIn)}, {p.weight} lb</span>
             {team !== null && <a href={href(`team/${team}`)}>{d.teams[team].school}</a>}
             {p.hometown && <span>{p.hometown}{p.state ? `, ${p.state}` : ''}</span>}
           </p>
         </div>
-        <div className="dy-ovr"><span>{p.ovr}</span>OVR</div>
       </header>
       {seasons.map((s) => s.lines.length > 0 && (
         <div key={s.year}>
@@ -642,7 +640,7 @@ export function History() {
                 return (
                   <tr key={i}>
                     <td className="dy-dim">{i + 1}</td>
-                    <td className="dy-left">{p ? <a href={href(`player/${p.id}`)}>{playerName(p)}</a> : 'Unknown player'} <span className="dy-dim dy-small">{d.teams[r.team].school}</span></td>
+                    <td className="dy-left">{p ? <a href={href(`player/${p.id}`)}>#{p.jersey} {playerName(p)}</a> : 'Unknown player'} <span className="dy-dim dy-small">{d.teams[r.team].school}</span></td>
                     <td>{r.year}</td>
                     <td className="dy-strong">{r.value.toLocaleString('en-US')}</td>
                   </tr>
