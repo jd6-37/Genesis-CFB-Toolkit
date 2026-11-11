@@ -174,3 +174,8 @@ The exe ("Genesis College Football Editor v2.0", Python 3.7 + PyQt5 + pandas, pa
 - The CF96/97 roster screens (display scale, labels).
 - A full game or season with imported rosters, and real hardware.
 - Ranked imports of real spreadsheets: only made-up sheets were tested. Newer EA position names (EDGE, SAM, MIKE, WILL …) aren't mapped. (EA's CFB 27 ratings go through the conversion, which knows its positions.)
+
+## The 138-team 2026 Season Edition
+
+Elevated v2.0.0's 2026 Season Edition is a 4 MB ROM whose team table at 0x28DC has 138 pointers; its team blocks have the original format, so the roster records are read and written the same way (`src/core/wide.ts` checks the layout: the table, the "OVR1" table at 0x218000 and the Walsh paragraph table at 0x218800). `openRosterRom` reads all 138 teams (`RosterRom.wide`), the CFB 27 conversion matches all 138 (CSV names such as Appalachian State, Miami (Ohio) and USF map to the ROM's App State, Miami of Ohio and South Florida), and OFF/DEF go to its own OVR table (one entry per team) and the teams' rating words. Converting the built-in Week 9 CSV rebuilds the released ROM byte for byte. The Sega header checksum covers the whole 4 MB; EA's boot check covers only the first 0x1E6414 bytes, which roster edits above 2 MB don't touch.
+

@@ -16,6 +16,8 @@ import { rl, rw } from './bytes';
 import { parseBw95 } from './bw95';
 import { editedReports, readReport, reportLength, REPORT_LIMIT, writeReports, type Report } from './walshReports';
 import type { Game } from './rosterLayouts';
+import { isWideBw95 } from './romfile';
+import { teamsOf } from './wide';
 
 export interface CarryResult {
   rosters: number;
@@ -72,6 +74,10 @@ export function editsSince(base: Uint8Array, data: Uint8Array, game: Game): Edit
   const len = rom.info.players * rom.info.stride;
   const rosterRanges: [number, number][] = rom.teams.map((t) => [t.rosterOffset, t.rosterOffset + len]);
   if (game === 'bw95') rosterRanges.push([OL_PATCH.site, OL_PATCH.site + 8], [OL_PATCH.hook, OL_PATCH.hook + OL_PATCH.hookCode.length]);
+  if (rom.wide) {
+    // The 138-team edition: the Rosters tab and its CFB 27 conversion (rosters, OL tweak, OFF/DEF).
+    return { season: false, teams: differs(base, data, ratingRanges(base)), rosters: differs(base, data, rosterRanges), any };
+  }
   return {
     season: game === 'bw95' && differs(base, data, seasonRanges(base)),
     teams:
@@ -115,7 +121,7 @@ export function workFileName(name: string, edits: { season: boolean; teams?: boo
 /** Whether edits from one ROM can be carried into another (same game, same teams). */
 export function canCarry(from: Uint8Array, to: Uint8Array): boolean {
   const g = detectGame(from);
-  return !!g && g === detectGame(to);
+  return !!g && g === detectGame(to) && isWideBw95(from) === isWideBw95(to) && (g !== 'bw95' || teamsOf(from) === teamsOf(to));
 }
 
 /**
@@ -137,6 +143,16 @@ export function carryEdits(from: Uint8Array, to: Uint8Array, fromBase?: Uint8Arr
   }
   const res: CarryResult = { rosters: a.teams.length, olTweak: false, season: false, teams: 0, skipped: [] };
   if (a.game !== 'bw95') return res;
+  if (a.wide) {
+    // The 138-team edition: rosters (above), OFF/DEF and weather; its other tables aren't edited here.
+    const teams = fromBase ? ratingChanges(fromBase, from) : ratingChanges(to, from);
+    for (const t of teams) {
+      writeRating(to, t, readRating(from, t));
+      writeWeather(to, t, readWeather(from, t));
+    }
+    res.teams = teams.length;
+    return res;
+  }
   if (olPatchState(from) === 'installed' && olPatchState(to) !== 'installed') {
     try {
       installOlPatch(to);

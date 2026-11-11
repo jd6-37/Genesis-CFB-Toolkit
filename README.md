@@ -23,7 +23,7 @@ Start here. Load your Bill Walsh College Football '95 ROM (`.md`, `.bin`, `.gen`
 - **The original game:** pick a patch and choose **Apply patch**. The app downloads the patch from the [Elevated](https://github.com/jd6-37/Bill-Walsh-CFB-95-Elevated) mod's GitHub page, applies it in your browser and checks the result, so it always offers the latest release. **Download patched ROM** saves the patched ROM, and **Back to the original game** undoes the patch. **Use a .bps file** applies a patch you downloaded yourself, for example if GitHub can't be reached.
 - **A ROM with a released patch:** the app says which release it has, and whether a newer one is out. Patches go onto the original game only, so to update, load the original ROM and patch it here.
 - **Any other modded or edited ROM:** used as it is.
-- **The 2026 Season Edition of Elevated v2.0.0 and later** (a 4 MB ROM with all 138 FBS teams): the Patch tab makes it and recognizes it, but the other tabs edit the game's 36 teams, so they don't open it. Team Swap is grayed out, and so are Season, Teams and Rosters while they have no other ROM. It already has 2026 rosters and Walsh Reports for every team; to bring in CF97 teams or edit teams yourself, start from the original game or the Elevated edition with the original 36 teams.
+- **The 2026 Season Edition of Elevated v2.0.0 and later** (a 4 MB ROM with all 138 FBS teams): the Patch tab makes it and recognizes it, and the Rosters tab edits all 138 teams' players (**Edit rosters** under Next). Season and Teams don't edit it yet, and Team Swap doesn't take it (it already has every FBS team); those tabs are grayed out. To bring in CF97 teams, start from the original game or the Elevated edition with the original 36 teams.
 
 The other tabs then use that ROM, patched or not: Team Swap builds on it, and Season, Teams and Rosters open it (if they already have changes in another ROM, they ask first). **Swap teams** and **Edit season, teams and rosters** under Next go to those tabs. A ROM whose teams Team Swap already swapped, such as the 36-team 2026 Season Edition of Elevated v1.1.0, can have them swapped again (see [Swapping a swapped ROM](#swapping-a-swapped-rom)). Team Swap always uses the Patch tab's ROM: a Bill Walsh ROM you load in the Team Swap tab shows up in the Patch tab too.
 
@@ -238,7 +238,7 @@ Not tested: real hardware.
 
 ## Rosters
 
-Load a Bill Walsh College Football '95, College Football USA 96 or College Football USA 97 ROM, pick a team, and change its players' jersey numbers and ratings, or import a spreadsheet for many teams at once. Then download the ROM. Original and modified ROMs both work (Bill Walsh '95 Elevated, formerly Rebalanced; Team Swap output; an earlier roster edit; a ROM saved by CFB-Walsh.exe). **Use the Team Swap result** opens the ROM you set up in the Team Swap tab, so swaps, season and roster edits end up in one file (the Season tab edits the same ROM).
+Load a Bill Walsh College Football '95, College Football USA 96 or College Football USA 97 ROM, pick a team, and change its players' jersey numbers and ratings, or import a spreadsheet for many teams at once. Then download the ROM. Original and modified ROMs both work (Bill Walsh '95 Elevated, formerly Rebalanced, including the 138-team 2026 Season Edition; Team Swap output; an earlier roster edit; a ROM saved by CFB-Walsh.exe). **Use the Team Swap result** opens the ROM you set up in the Team Swap tab, so swaps, season and roster edits end up in one file (the Season tab edits the same ROM).
 
 For a Bill Walsh '95 team, the bar above the roster also has the team's offense and defense [styles](#styles).
 
@@ -264,7 +264,7 @@ Bring in real rosters from EA Sports College Football 27. **CFB 27 rosters (2026
 - **Linemen's weight.** Today's offensive linemen are about 25 lb heavier than the original game's, but weight matters in line play, so the conversion keeps the original weights. By default it also makes the roster screen show offensive linemen 25 lb heavier (display only; the game plays the same). The editor and the CSV export show the same numbers as the screen.
 - **Team ratings.** By default the conversion also sets each converted team's [OFF and DEF](#off-and-def) from its new starters (the list of teams shows them first).
 - **Walsh Reports.** With the built-in rosters (not with another file), the conversion also gives each converted team the Elevated mod's 2026 [Walsh Report](#walsh-report), on by default. The reports name players by their jersey numbers in those rosters. If you leave teams out, their reports stay, and any of theirs longer than 650 characters are trimmed. Edit any report afterwards in the Teams tab.
-- Works with the original ROM, Elevated (its DT1/DT2, MLB1/MLB2 defense) and Team Swap results. CF96 and CF97 are planned.
+- Works with the original ROM, Elevated (its DT1/DT2, MLB1/MLB2 defense), Team Swap results and the 138-team 2026 Season Edition (all 138 teams; the built-in rosters rebuild its own rosters exactly, so you can start over from them after your edits). CF96 and CF97 are planned.
 
 ### Spreadsheets by position
 
@@ -334,7 +334,7 @@ How the Rosters tool reads and writes the games (formats, checksums, import rule
 Roster engine tests need your own ROMs (`.md`, `.bin`, `.gen` or `.zip`):
 
 ```sh
-npm run test:rosters -- BW95.md CF96.md CF97.md
+npm run test:rosters -- BW95.md CF96.md CF97.md [Elevated-2026-v2.0.0.md]
 ```
 
 How the Patch tab works, the patch list format and the steps for a new release: [docs/patches.md](docs/patches.md). Its tests take the original BW95 ROM, a local copy of the [Elevated repo](https://github.com/jd6-37/Bill-Walsh-CFB-95-Elevated) and optionally CF97 (to check that each patched ROM takes a team swap):

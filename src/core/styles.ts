@@ -9,6 +9,7 @@
 // (no free space used). Details: docs/styles.md.
 
 import { rw } from './bytes';
+import { isWideBw95 } from './romfile';
 import { BW95_DEFENSE_BITS } from './rosterLayouts';
 import { hasElevatedLayout } from './rosterRom';
 
@@ -79,6 +80,7 @@ function put(d: Uint8Array, set: number, t: number, on: boolean) {
 /** Why this ROM's styles can't be read or changed. Empty if they can. */
 export function styleProblems(d: Uint8Array): string[] {
   if (d.length < 0x100000) return ['this is not a Bill Walsh College Football 95 ROM'];
+  if (isWideBw95(d)) return ["the 138-team 2026 Season Edition keeps the CPU's styles in its own table, which this tool doesn't edit yet"];
   if (RULE_TABLE + rw(d, RULE_TABLE + 14) !== STYLE_TABLE) return ["the CPU's team table isn't where the original game has it"];
   for (let s = 0; s < 8; s++) {
     const row = d.subarray(STYLE_TABLE + 8 * s, STYLE_TABLE + 8 * s + 8);

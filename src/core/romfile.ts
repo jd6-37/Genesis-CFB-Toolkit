@@ -12,8 +12,8 @@ export interface KnownRom {
   /** A BW95 ROM recognized only by its header: a mod or an edit of the original. Team Swap checks
    *  that the code and ROM space it needs are still untouched (`swapProblems` in build.ts). */
   modded?: boolean;
-  /** A BW95 ROM over 2 MB: the 138-team 2026 Season Edition (Elevated v2.0.0 on). The tools here edit the
-   *  36-team game, so they leave it alone (Team Swap, Season, Teams and Rosters refuse it). */
+  /** A BW95 ROM over 2 MB: the 138-team 2026 Season Edition (Elevated v2.0.0 on; layout in wide.ts).
+   *  Rosters edits it; Team Swap, Season and Teams don't (yet). */
   wide?: boolean;
 }
 
@@ -44,10 +44,13 @@ export function headerTitle(d: Uint8Array): string {
 /** True for a BW95 ROM over 2 MB: the 138-team 2026 Season Edition (see `KnownRom.wide`). */
 export const isWideBw95 = (d: Uint8Array) => d.length > 0x200000 && headerTitle(d) === BW95_TITLE;
 
-/** Why the 36-team tools don't open a wide ROM. */
+/** Why Team Swap doesn't take a wide ROM. */
 export const WIDE_ROM_TEXT =
-  "This is the 2026 Season Edition with all 138 FBS teams. Team Swap, Season, Teams and Rosters edit the game's 36 " +
-  'teams, so they can\'t open it. To edit teams, start from the original game or the Elevated edition with the original 36 teams.';
+  'This is the 2026 Season Edition with all 138 FBS teams, so Team Swap (College Football USA 97 teams into the 36 ' +
+  "original slots) doesn't take it. To swap in CF97 teams, start from the original game or the Elevated edition with the original 36 teams.";
+/** What the other tabs do with a wide ROM so far. */
+export const WIDE_TABS_TEXT =
+  "Rosters edits all 138 teams' players and can bring in the built-in CFB 27 rosters. Season and Teams don't edit the 138-team edition yet.";
 
 /** A known file by SHA-1, else any 2 MB ROM with BW95's header counts as a modded BW95 ROM, and a
  *  bigger one as the 138-team edition. */

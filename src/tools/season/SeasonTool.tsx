@@ -7,6 +7,7 @@ import {
   type EditResult, type Opponent, type Season,
 } from '../../core/season';
 import { openRosterRom } from '../../core/rosterRom';
+import { isWideBw95 } from '../../core/romfile';
 import { WorkRomCard, type TeamSwapSource, type WorkApi } from '../shared/WorkRom';
 import './season.css';
 
@@ -55,6 +56,10 @@ export function SeasonTool({
     if (!work) return;
     if (work.game !== 'bw95') {
       setRomProblem("The Season tab works on Bill Walsh College Football '95 ROMs; this one is for the Rosters tab only.");
+      return;
+    }
+    if (isWideBw95(work.data)) {
+      setRomProblem("The Season tab doesn't edit the 138-team 2026 Season Edition yet: its season mode (conferences, the real 2026 schedule, the playoff) is new. Rosters works on it.");
       return;
     }
     try {

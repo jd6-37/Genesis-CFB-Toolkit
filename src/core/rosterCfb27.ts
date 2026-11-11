@@ -62,7 +62,22 @@ const POSITIONS = new Set(['QB', 'HB', 'FB', 'WR', 'TE', 'LT', 'LG', 'C', 'RG', 
   'CB', 'FS', 'SS', 'K', 'P']);
 const POSITION_ALIASES: Record<string, string> = { LEDG: 'LE', REDG: 'RE' };
 /** CFB 27 school names that differ from the ROM's. */
-const TEAM_ALIASES: Record<string, string> = { Cal: 'California', Pittsburgh: 'Pitt' };
+const TEAM_ALIASES: Record<string, string> = {
+  Cal: 'California',
+  Pittsburgh: 'Pitt',
+  // The 138-team 2026 Season Edition's (and CF97's) names for these schools.
+  'Appalachian State': 'App State',
+  'Coastal Carolina': 'Coastal',
+  FAU: 'Florida Atlantic',
+  'Jacksonville State': 'Jax State',
+  'Miami (Ohio)': 'Miami of Ohio',
+  'Middle Tennessee State': 'Middle Tennessee',
+  'Mississippi State': 'Mississippi St.',
+  'Northern Illinois': 'NIU',
+  'North Dakota State': 'North Dakota St.',
+  USF: 'South Florida',
+  Connecticut: 'UConn',
+};
 
 interface Cfb27Player {
   row: number;

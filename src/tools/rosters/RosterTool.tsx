@@ -212,7 +212,8 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
     if (kind.path === 'refused') return setError([`${f.name} doesn't fit this ROM:`, ...kind.problems]);
     if (kind.path === 'cfb27') {
       try {
-        setPlan({ plan: convertCfb27(rom, sheet), file: f.name, walsh: rom.game === 'bw95' ? walsh : null });
+        // The 138-team edition already has these reports (they were written for it), so they aren't offered there.
+        setPlan({ plan: convertCfb27(rom, sheet), file: f.name, walsh: rom.game === 'bw95' && !rom.wide ? walsh : null });
       } catch (e) {
         setError(`${f.name}: ${(e as Error).message}`);
       }

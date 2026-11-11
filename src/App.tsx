@@ -4,7 +4,7 @@ import { CfTeam, parseCf97 } from './core/cf97';
 import { buildRom, defaultSlot, isSwapFile, SlotConfig, swapFile, swappedSlots, swapProblemText, validateSlot } from './core/build';
 import { MAX_LEN } from './core/defaults';
 import { renderSprites } from './core/render';
-import { describeUnknown, OpenedRom, openRom, WIDE_ROM_TEXT } from './core/romfile';
+import { describeUnknown, isWideBw95, OpenedRom, openRom, WIDE_ROM_TEXT } from './core/romfile';
 import { CelebBlob, defaultCelebration, genericCelebration, PREVIEW_FRAME } from './core/celebration';
 import { SpriteCanvas, Swatch, UniformEditor } from './components';
 import { RosterTool } from './tools/rosters/RosterTool';
@@ -129,9 +129,11 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startRom]);
 
-  // The 138-team edition: Team Swap is grayed out, and so are Season, Teams and Rosters while they have no other ROM.
+  // The 138-team edition: Team Swap is grayed out when it's the Patch tab's ROM, Season and Teams when it's
+  // the working ROM (Rosters edits it).
   const wideStart = !!startRom?.known?.wide;
-  const tabOff = (t: Tab) => wideStart && (t === 'swap' || (t !== 'patch' && !work.work));
+  const wideWork = !!work.work && isWideBw95(work.work.data);
+  const tabOff = (t: Tab) => (t === 'swap' && wideStart) || ((t === 'season' || t === 'teams') && wideWork);
 
   const workHasStart = useMemo(() => !!startRom && sameBytes(work.work?.base, startRom.data), [work.work, startRom]);
 
@@ -294,7 +296,7 @@ export default function App() {
             aria-controls={`panel-${t.id}`}
             tabIndex={tab === t.id ? 0 : -1}
             className={`tab${tab === t.id ? ' tab-on' : ''}${tabOff(t.id) ? ' tab-off' : ''}`}
-            title={tabOff(t.id) ? "Not for the 138-team 2026 Season Edition" : undefined}
+            title={tabOff(t.id) ? 'Not for the 138-team 2026 Season Edition yet' : undefined}
             onClick={() => pickTab(t.id)}
             onKeyDown={(e) => {
               if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
@@ -318,7 +320,7 @@ export default function App() {
             if (!sameBytes(work.work?.base, start.rom.data)) {
               work.takeRom({ name: start.rom.name, label: start.rom.known?.label ?? start.rom.name, data: start.rom.data });
             }
-            pickTab('season');
+            pickTab(start.rom.known?.wide ? 'rosters' : 'season');
           }}
         />
       </div>
