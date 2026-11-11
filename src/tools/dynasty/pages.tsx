@@ -8,7 +8,7 @@ import {
 import { stories } from '../../core/dynasty/news';
 import type { SaveGame } from '../../core/dynasty/save';
 import { nibbleToRating, nibbleToWeight, rosterLayout } from '../../core/rosterLayouts';
-import { playerOvr } from '../../core/dynasty/ovr';
+import { playerOvr, roleOfSlot } from '../../core/dynasty/ovr';
 import { Empty, StoryArt, TeamLink, TeamMark, href, heightText, inkColor, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
 
 // ---- front page
@@ -490,6 +490,13 @@ export function Player({ id }: { id: number }) {
 
 // ---- the game's ratings: a shape against the league average and a tile per rating
 
+/** What each position group is called (singular, plural). */
+const ROLE_NAMES: Record<string, [string, string]> = {
+  QB: ['QB', 'QBs'], HB: ['HB', 'HBs'], FB: ['FB', 'FBs'], WR: ['WR', 'WRs'], TE: ['TE', 'TEs'],
+  OL: ['offensive lineman', 'offensive linemen'], DE: ['DE', 'DEs'], DT: ['DT', 'DTs'], LB: ['LB', 'LBs'],
+  CB: ['CB', 'CBs'], S: ['safety', 'safeties'], K: ['kicker', 'kickers'], P: ['punter', 'punters'],
+};
+
 const ordinal = (n: number) => {
   const t = n % 100, u = n % 10;
   return `${n}${t >= 11 && t <= 13 ? 'th' : u === 1 ? 'st' : u === 2 ? 'nd' : u === 3 ? 'rd' : 'th'}`;
@@ -499,17 +506,21 @@ function BwRatings({ team, slot, name }: { team: number; slot: number; name: str
   const { d, v } = useDyn();
   const b = v.season.bw![team][slot]!;
   // The same slot on every team this season.
-  const league = v.season.bw!.map((t) => t[slot]).filter((x): x is NonNullable<typeof x> => !!x && x.group === b.group);
+  // Everyone at his position on every team (the OVR's groups): HB1 and HB2 together, all five linemen …
+  const role = roleOfSlot(slot);
+  const league = v.season.bw!.flatMap((t) => t.filter((x, k): x is NonNullable<typeof x> => !!x && roleOfSlot(k) === role));
   const n = league.length;
   const avg = b.attrs.map((_, i) => league.reduce((a, x) => a + x.steps[i], 0) / n);
   const rank = b.attrs.map((_, i) => 1 + league.filter((x) => x.steps[i] > b.steps[i]).length);
   // Weight: the share of starters he outweighs, counting those at his step as half.
   const heavier = b.attrs.map((_, i) => league.reduce((a, x) => a + (x.steps[i] < b.steps[i] ? 1 : x.steps[i] === b.steps[i] ? 0.5 : 0), 0) - 0.5);
   const color = inkColor(d, team); // a light primary wouldn't show on white
-  const who = `${b.label}s`;
+  const [one, who] = ROLE_NAMES[role] ?? [b.label, `${b.label}s`];
 
   // Shape: the five ratings other than weight, step 15 at the rim.
-  const axes = b.attrs.map((a, i) => ({ a, i })).filter((x) => x.a !== 'Weight');
+  // A rating everyone in the group has at the same step (linemen's Hands: 0) says nothing: no rank, not in the shape.
+  const flat = b.attrs.map((_, i) => league.every((x) => x.steps[i] === league[0].steps[i]));
+  const axes = b.attrs.map((a, i) => ({ a, i })).filter((x) => x.a !== 'Weight' && !flat[x.i]);
   const C = 150, CY = 130, R = 96;
   const pt = (k: number, r: number) => {
     const ang = (-90 + (360 / axes.length) * k) * (Math.PI / 180);
@@ -518,14 +529,14 @@ function BwRatings({ team, slot, name }: { team: number; slot: number; name: str
   const poly = (f: (i: number) => number) => axes.map((x, k) => pt(k, (f(x.i) / 15) * R).map((z) => z.toFixed(1)).join(',')).join(' ');
   // A kicker's or punter's Quick is his kick distance in the game.
   const label = (a: string) => (b.group === 'KP' && a === 'Quickness' ? 'Kick distance' : a);
-  const tiles = b.attrs.map((a, i) => ({ a, i })).sort((x, y) => Number(x.a === 'Weight') - Number(y.a === 'Weight') || rank[x.i] - rank[y.i]);
+  const tiles = b.attrs.map((a, i) => ({ a, i })).sort((x, y) => Number(x.a === 'Weight' || flat[x.i]) - Number(y.a === 'Weight' || flat[y.i]) || rank[x.i] - rank[y.i]);
 
   return (
     <div className="dy-bw">
-      <p className="dy-dim">{d.teams[team].school}'s {b.label}, compared with the {n} starting {who}.</p>
+      <p className="dy-dim">{d.teams[team].school}'s {b.label}, ranked among all {n} {who}.</p>
       <div className="dy-bw-grid">
         <figure className="dy-shape">
-          <svg viewBox="0 0 300 250" role="img" aria-label={`${name}'s ratings against the average ${b.label}`}>
+          <svg viewBox="0 0 300 250" role="img" aria-label={`${name}'s ratings against the average ${one}`}>
             <polygon points={poly(() => 15)} className="dy-shape-rim" />
             <polygon points={poly(() => 7.5)} className="dy-shape-mid" />
             {axes.map((x, k) => { const [px, py] = pt(k, R); return <line key={x.a} x1={C} y1={CY} x2={px} y2={py} className="dy-shape-mid" />; })}
@@ -538,7 +549,7 @@ function BwRatings({ team, slot, name }: { team: number; slot: number; name: str
           </svg>
           <figcaption>
             <span><i style={{ background: color }} /> {name}</span>
-            <span><i className="dy-key-avg" /> Average {b.label}</span>
+            <span><i className="dy-key-avg" /> Average {one}</span>
           </figcaption>
         </figure>
         <div className="dy-tiles">
@@ -548,12 +559,12 @@ function BwRatings({ team, slot, name }: { team: number; slot: number; name: str
             return (
               <div key={a} className="dy-tile">
                 <div className="dy-tile-top"><span>{label(a)}</span><strong>{shown}</strong></div>
-                <div className="dy-pips" role="img" aria-label={`Step ${b.steps[i]} of 15; average ${b.label} ${avg[i].toFixed(1)}`}>
+                <div className="dy-pips" role="img" aria-label={`Step ${b.steps[i]} of 15; average ${one} ${avg[i].toFixed(1)}`}>
                   {Array.from({ length: 15 }, (_, k) => <span key={k} style={k < b.steps[i] ? { background: color } : undefined} />)}
-                  <i style={{ left: `calc(${(avg[i] / 15) * 100}% - 1px)` }} title={`Average ${b.label}`} />
+                  <i style={{ left: `calc(${(avg[i] / 15) * 100}% - 1px)` }} title={`Average ${one}`} />
                 </div>
                 <div className="dy-tile-note">
-                  {weight ? `Heavier than ${Math.round((heavier[i] / Math.max(1, n - 1)) * 100)}% of ${who}` : <><strong>{ordinal(rank[i])}</strong> of {n} {who}</>}
+                  {flat[i] ? `The same for all ${n} ${who}` : weight ? `Heavier than ${Math.round((heavier[i] / Math.max(1, n - 1)) * 100)}% of ${who}` : <><strong>{ordinal(rank[i])}</strong> of {n} {who}</>}
                 </div>
               </div>
             );
