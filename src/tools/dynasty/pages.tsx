@@ -512,6 +512,8 @@ function BwRatings({ team, slot, name }: { team: number; slot: number; name: str
   const n = league.length;
   const avg = b.attrs.map((_, i) => league.reduce((a, x) => a + x.steps[i], 0) / n);
   const rank = b.attrs.map((_, i) => 1 + league.filter((x) => x.steps[i] > b.steps[i]).length);
+  // Others at his step (ratings come in 16 steps, so ties are common).
+  const tied = b.attrs.map((_, i) => league.filter((x) => x.steps[i] === b.steps[i]).length - 1);
   // Weight: the share of starters he outweighs, counting those at his step as half.
   const heavier = b.attrs.map((_, i) => league.reduce((a, x) => a + (x.steps[i] < b.steps[i] ? 1 : x.steps[i] === b.steps[i] ? 0.5 : 0), 0) - 0.5);
   const color = inkColor(d, team); // a light primary wouldn't show on white
@@ -564,7 +566,7 @@ function BwRatings({ team, slot, name }: { team: number; slot: number; name: str
                   <i style={{ left: `calc(${(avg[i] / 15) * 100}% - 1px)` }} title={`Average ${one}`} />
                 </div>
                 <div className="dy-tile-note">
-                  {flat[i] ? `The same for all ${n} ${who}` : weight ? `Heavier than ${Math.round((heavier[i] / Math.max(1, n - 1)) * 100)}% of ${who}` : <><strong>{ordinal(rank[i])}</strong> of {n} {who}</>}
+                  {flat[i] ? `The same for all ${n} ${who}` : weight ? `Heavier than ${Math.round((heavier[i] / Math.max(1, n - 1)) * 100)}% of ${who}` : tied[i] > 0 ? <><strong>Tied for {ordinal(rank[i])}</strong> of {n} {who}, with {tied[i]} {tied[i] === 1 ? 'other' : 'others'}</> : <><strong>{ordinal(rank[i])}</strong> of {n} {who}</>}
                 </div>
               </div>
             );
