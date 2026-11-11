@@ -8,9 +8,12 @@
 
 import { readSeason } from './season';
 import { readWalsh, reportLength, reportParas, rewriteWalsh, REPORT_LIMIT, trimReport, WALSH_BASE, WALSH_END, WALSH_PTR, type Report } from './walsh';
+import { readWideWalsh, wideWalshRanges, writeWideWalsh } from './walshWide';
+import { isWide, teamsOf } from './wide';
 
 export { REPORT_LIMIT, reportLength, trimReport, type Report };
 
+/** Teams in the 36-team game (the 138-team edition: teamsOf). */
 export const TEAMS = 36;
 /** The report box is 20 characters wide; a longer word doesn't fit on a line. */
 export const REPORT_WORD = 20;
@@ -29,15 +32,34 @@ export const cleanText = (s: string) =>
     .replace(/[–—]/g, '-')
     .replace(/[\r\n\t]/g, ' ');
 
+// The 138-team edition has its own paragraph table (src/core/walshWide.ts); same paragraph order.
+const paragraphs = (rom: Uint8Array) => (isWide(rom) ? readWideWalsh(rom) : readWalsh(rom));
+
+/** Sets reports in the text: the 36-team game's block in place (renames and trims as rewriteWalsh
+ *  does them), or the 138-team edition's table. */
+function putReports(rom: Uint8Array, reports: Map<number, Report>): void {
+  if (!isWide(rom)) {
+    rewriteWalsh(rom, [], reports);
+    return;
+  }
+  const paras = readWideWalsh(rom);
+  for (const [slot, r] of reports) {
+    const [o, d] = reportParas(slot);
+    paras[o] = r.offense;
+    paras[d] = r.defense;
+  }
+  writeWideWalsh(rom, paras);
+}
+
 export function readReport(rom: Uint8Array, slot: number): Report {
-  const paras = readWalsh(rom);
+  const paras = paragraphs(rom);
   const [o, d] = reportParas(slot);
   return { offense: paras[o], defense: paras[d] };
 }
 
 export function readReports(rom: Uint8Array): Report[] {
-  const paras = readWalsh(rom);
-  return Array.from({ length: TEAMS }, (_, s) => {
+  const paras = paragraphs(rom);
+  return Array.from({ length: teamsOf(rom) }, (_, s) => {
     const [o, d] = reportParas(s);
     return { offense: paras[o], defense: paras[d] };
   });
@@ -88,7 +110,12 @@ export function writeReports(rom: Uint8Array, reports: Map<number, Report>): num
     if (p.length) throw new Error(`Walsh Report ${slot + 1}: ${p.join(' ')}`);
   }
   const long = longReports(rom).filter((s) => !reports.has(s));
-  rewriteWalsh(rom, [], reports);
+  if (isWide(rom)) {
+    // The 36-team block trims the long reports itself (rewriteWalsh); here it's done before packing.
+    const all = new Map(reports);
+    for (const s of long) all.set(s, trimReport(readReport(rom, s)));
+    putReports(rom, all);
+  } else rewriteWalsh(rom, [], reports);
   return long;
 }
 
@@ -129,11 +156,15 @@ export function restoreReport(data: Uint8Array, base: Uint8Array, slot: number):
     (r, s) => s !== slot && reportLength(r) > REPORT_LIMIT && reportLength(readReport(data, s)) <= REPORT_LIMIT,
   );
   const r = trimmedRom ? trimReport(was) : was;
-  if (!same(readReport(data, slot), r)) rewriteWalsh(data, [], new Map([[slot, r]]));
+  if (!same(readReport(data, slot), r)) putReports(data, new Map([[slot, r]]));
 }
 
 /** Puts the whole Walsh text back as `base` has it (undo of every report change, the trims too). */
 export function restoreAllReports(data: Uint8Array, base: Uint8Array): void {
+  if (isWide(data)) {
+    for (const [s, e] of wideWalshRanges(base)) data.set(base.subarray(s, e), s);
+    return;
+  }
   data.set(base.subarray(WALSH_BASE, WALSH_END), WALSH_BASE);
   data.set(base.subarray(WALSH_PTR, WALSH_PTR + 4), WALSH_PTR);
 }

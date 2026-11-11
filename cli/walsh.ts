@@ -5,7 +5,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { openRom } from '../src/core/romfile';
-import { parseBw95 } from '../src/core/bw95';
+import { openRosterRom } from '../src/core/rosterRom';
 import { fixChecksums } from '../src/core/build';
 import { sha1Hex } from '../src/core/bytes';
 import { readReports, reportLength, REPORT_LIMIT, showReport, writeReports } from '../src/core/walshReports';
@@ -21,7 +21,7 @@ async function main() {
   const file = await openRom(basename(inPath), new Uint8Array(readFileSync(inPath)));
   if (file.known?.kind !== 'bw95') throw new Error('not a BW95 ROM');
   const rom = file.data;
-  const names = parseBw95(rom).map((t) => t.school);
+  const names = openRosterRom(rom).teams.map((t) => t.school);
   if (!outPath) {
     readReports(rom).forEach((r, s) => {
       const n = reportLength(r);

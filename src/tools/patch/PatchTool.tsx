@@ -395,7 +395,7 @@ function NextSteps({
         <ul>
           <li className="pat-step">
             <button className="btn" onClick={onEdit}>
-              Edit rosters
+              Edit teams and rosters
             </button>
             <p className="hint">{WIDE_TABS_TEXT}</p>
           </li>

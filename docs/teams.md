@@ -40,15 +40,19 @@ The method the Elevated 2026 Season Edition used (`claude/tools/teamratings.mts`
 
 `public/data/ea-cfb27-ratings-2026-week9.csv` is EA's ratings export as of Week 9 of the 2026 season (SHA-1 1d6ba079…, the file the Elevated 2026 Season Edition was built with). Vite copies it to the site as a static file, and the Rosters tab fetches it only when its button is used. To update: add the newer file, point `CFB27_LATEST` at it, and change the README's "2026 season, Week 9" mentions.
 
+## The 138-team 2026 Season Edition
+
+Elevated v2.0.0's 2026 Season Edition (4 MB, 138 teams; layout checked by `src/core/wide.ts`) keeps the same group in every team block, so ratings and weather are read and written the same way for all 138. Its OVR table is at `0x218000` ("OVR1", then 138 × {OFF, DEF}); `teamRatings.ts` writes that one. The ROM still has a stale 36-entry "OVR1" table at `0x10DFB0` from the 36-team edition, which nothing reads and the app leaves alone. Styles: [docs/styles.md](styles.md#the-138-team-2026-season-edition). Walsh Reports: [docs/walsh.md](walsh.md#the-138-team-2026-season-edition).
+
 ## Undo, tracking, carrying
 
 - Undo puts back the group's first 6 bytes and the team's table bytes from the ROM as loaded (`restoreTeam`), along with its styles.
 - `editsSince` counts a change in any team's first 6 group bytes or in the table as a Teams edit (`[Teams]` in the file name; files named `[Styles]` by earlier versions are recognized).
-- `carryEdits(from, to, fromBase)` writes the teams whose ratings or weather changed since loading into the new ROM by slot (`readRating` → `writeRating`, `readWeather` → `writeWeather`), so a new Team Swap result keeps edits made for other slots and its own defaults for the swapped ones.
+- `carryEdits(from, to, fromBase)` writes the teams whose ratings or weather changed since loading into the new ROM by slot (`readRating` → `writeRating`, `readWeather` → `writeWeather`), so a new Team Swap result keeps edits made for other slots and its own defaults for the swapped ones. A 138-team ROM's edits carry only into another 138-team ROM.
 
 ## Tests
 
-`npm run test:teams -- BW95 CF97 ELEVATED ELEVATED_2026` (7 tests; the two Elevated v1.1.0 ROMs are the original game with the release's `elevated` and `elevated-2026` patches):
+`npm run test:teams -- BW95 CF97 ELEVATED ELEVATED_2026 [ELEVATED_2026_138]` (8 tests; the two Elevated v1.1.0 ROMs are the original game with the release's `elevated` and `elevated-2026` patches):
 
 - The original ROM: EA's offense and defense words (the 36 sorted values), BYU 55/0 = OVR 82/62, Washington 1-2-7-0, Wisconsin 1-1-1-7, Texas 9-1-0-0; no table.
 - Writing without a table: OVR 62-98 round-trips, 50 and 99 clamp to words 0 and 100; only the group's bytes change (the conference word stays); undo; weather words and chances.
@@ -59,3 +63,4 @@ The method the Elevated 2026 Season Edition used (`claude/tools/teamratings.mts`
 - Values outside 0-100 refused.
 
 Browser (Playwright on `vite preview`): Team Swap on Elevated v1.1.0, Pitt → Tulane with OFF 80 and Rain 3 = `cli/build.ts --swaps` with the saved swap file; then Navy's DEF 85 and Snow 4 in the Teams tab = `cli/teams.ts`; then the built-in Week 9 rosters for all 36 teams = `cli/cfb27.ts` with the built-in file. Emulator: that ROM's Game Setup shows "OFF 80 DEF 75" under Tulane.
+- With the optional 138-team 2026 Season Edition: all 138 teams read; each matches a College Football 27 team and has the styles recommended for it (the release set them that way); a style, OFF/DEF, weather and Walsh Report edit change only the style table, the groups, the OVR table at `0x218000` and the Walsh text and its table (the old table at `0x10DFB0` untouched); the edit is a Teams edit, carries into a fresh copy byte for byte and Undo puts every byte back; the unchanged text written back gives the same bytes; 650 characters for every one of the 138 teams fits.

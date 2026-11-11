@@ -20,6 +20,7 @@ export const WIDE = {
   songs: 0x218700,
   walshTable: 0x218800,
   walsh: 0x219000,
+  blocks: 0x230000,
 } as const;
 
 /** Teams in a wide ROM's team table (pointers to blocks, up to the first entry that isn't one). */
@@ -44,8 +45,22 @@ export function wideLayoutProblems(d: Uint8Array): string[] {
   return [];
 }
 
+// The tools ask this for every team and bit, and no tool rewrites the team table or the tables checked
+// above, so the answer is kept per buffer.
+const known = new WeakMap<Uint8Array, number>();
+
+/** How many teams a BW95 ROM has: 36, or the wide ROM's count (0 for a wide ROM with another layout). */
+function count(d: Uint8Array): number {
+  let n = known.get(d);
+  if (n === undefined) {
+    n = !isWideBw95(d) ? 36 : wideLayoutProblems(d).length ? 0 : wideTeamCount(d);
+    known.set(d, n);
+  }
+  return n;
+}
+
 /** True for a wide ROM with the known layout. */
-export const isWide = (d: Uint8Array) => isWideBw95(d) && !wideLayoutProblems(d).length;
+export const isWide = (d: Uint8Array) => count(d) > 36;
 
 /** How many teams a BW95 ROM has: 36, or the wide ROM's count. */
-export const teamsOf = (d: Uint8Array) => (isWide(d) ? wideTeamCount(d) : 36);
+export const teamsOf = (d: Uint8Array) => (isWide(d) ? count(d) : 36);

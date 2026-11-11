@@ -56,6 +56,12 @@ Versions of the app before the editor moved a text that didn't fit to `0x1F8000`
 
 `SlotConfig.walsh` = `[offense, defense]`, optional. Without it a swapped team gets the original team's text with the new names, as before; swap files saved before the editor build exactly as before. Loading a swap file checks the report with `reportProblems`.
 
+## The 138-team 2026 Season Edition
+
+Elevated v2.0.0's 2026 Season Edition doesn't count CRs: its printer (`0x078FBE` → `jsr $2100DC`, and `0x210108` for the next paragraph) takes a paragraph's address from a table at `0x218800` (6 intro lines, then offense = 6 + 2 × team and defense = 7 + 2 × team, 282 longs) and keeps the word offset in `$C408` from that paragraph's start. The release packs the text from `0x219000` to `0x22D433`; the team blocks start at `0x230000`, and the bytes between are `0xFF`.
+
+`src/core/walshWide.ts` reads the paragraphs through the table and writes them all again, packed from `0x219000`, pointing the table at each one. The text may grow over the `0xFF` bytes after it (checked first) up to `0x230000`, 94,208 bytes in all; bytes it no longer uses go back to `0xFF`. 138 reports of 650 characters plus the intro lines take about 90,200 bytes, so every report can use the editor's limit and nothing is ever trimmed (the release's reports are 444-647 characters). `walshReports.ts` picks this path for a 138-team ROM, so the editor, undo, tracking and carrying work the same; carrying goes by school name.
+
 ## Built-in 2026 reports
 
 `public/data/walsh-reports-2026-week9.json` holds the Elevated mod's 2026 reports for all 138 teams of the built-in College Football 27 CSV (`{app: 'genesis-cfb-toolkit', tool: 'walsh-reports', version: 1, season, week, source, reports: {<CSV team>: {offense, defense}}}`). `src/core/walsh2026.ts` fetches and checks it (`walshDataProblems`: every report within the editor's rules) and maps converted teams to slots (`reportsForSlots`, by the CSV team the conversion matched). The Rosters tab offers them only with the built-in rosters, because the reports name players by those rosters' jersey numbers; they go in with `writeReports`, like reports saved in the editor.

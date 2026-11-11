@@ -129,11 +129,11 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startRom]);
 
-  // The 138-team edition: Team Swap is grayed out when it's the Patch tab's ROM, Season and Teams when it's
-  // the working ROM (Rosters edits it).
+  // The 138-team edition: Team Swap is grayed out when it's the Patch tab's ROM, Season when it's the
+  // working ROM (Teams and Rosters edit it).
   const wideStart = !!startRom?.known?.wide;
   const wideWork = !!work.work && isWideBw95(work.work.data);
-  const tabOff = (t: Tab) => (t === 'swap' && wideStart) || ((t === 'season' || t === 'teams') && wideWork);
+  const tabOff = (t: Tab) => (t === 'swap' && wideStart) || (t === 'season' && wideWork);
 
   const workHasStart = useMemo(() => !!startRom && sameBytes(work.work?.base, startRom.data), [work.work, startRom]);
 
@@ -320,7 +320,7 @@ export default function App() {
             if (!sameBytes(work.work?.base, start.rom.data)) {
               work.takeRom({ name: start.rom.name, label: start.rom.known?.label ?? start.rom.name, data: start.rom.data });
             }
-            pickTab(start.rom.known?.wide ? 'rosters' : 'season');
+            pickTab(start.rom.known?.wide ? 'teams' : 'season');
           }}
         />
       </div>

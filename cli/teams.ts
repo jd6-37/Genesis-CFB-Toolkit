@@ -35,7 +35,7 @@ async function main() {
   const team = (c: string) => {
     const [who, rest = ''] = c.split('=');
     const t = /^\d+$/.test(who) ? +who : names.indexOf(who);
-    if (!(t >= 0 && t < 36)) throw new Error(`No team ${who}`);
+    if (!(t >= 0 && t < names.length)) throw new Error(`No team ${who}`);
     return { t, parts: rest.split(',') };
   };
   const int = (v: string, max: number) => {
@@ -63,7 +63,7 @@ async function main() {
     writeFileSync(out, data);
   }
   console.log(JSON.stringify({ out: out ?? null, sha1: out ? await sha1Hex(data) : undefined, ovrTable: hasOvrTable(data) }));
-  for (let t = 0; t < 36; t++) {
+  for (let t = 0; t < names.length; t++) {
     const st = readStyle(data, t);
     const r = readRating(data, t);
     const s = readSim(data, t);

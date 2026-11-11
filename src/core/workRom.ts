@@ -10,10 +10,9 @@
 import { detectGame, openRosterRom } from './rosterRom';
 import { installOlPatch, olPatchState, OL_PATCH } from './rosterOlPatch';
 import { dealMode, LOCK_TABLE_SIZE, readSeason, SEASON_AREAS, SLOTS, WEEKS, writeSeason } from './season';
-import { readStyle, STYLE_RANGES, styleChanges, styleProblems, writeStyle } from './styles';
+import { readStyle, styleChanges, styleProblems, styleRanges, writeStyle } from './styles';
 import { ratingChanges, ratingProblems, ratingRanges, readRating, readWeather, writeRating, writeWeather } from './teamRatings';
 import { rl, rw } from './bytes';
-import { parseBw95 } from './bw95';
 import { editedReports, readReport, reportLength, REPORT_LIMIT, writeReports, type Report } from './walshReports';
 import type { Game } from './rosterLayouts';
 import { isWideBw95 } from './romfile';
@@ -74,15 +73,12 @@ export function editsSince(base: Uint8Array, data: Uint8Array, game: Game): Edit
   const len = rom.info.players * rom.info.stride;
   const rosterRanges: [number, number][] = rom.teams.map((t) => [t.rosterOffset, t.rosterOffset + len]);
   if (game === 'bw95') rosterRanges.push([OL_PATCH.site, OL_PATCH.site + 8], [OL_PATCH.hook, OL_PATCH.hook + OL_PATCH.hookCode.length]);
-  if (rom.wide) {
-    // The 138-team edition: the Rosters tab and its CFB 27 conversion (rosters, OL tweak, OFF/DEF).
-    return { season: false, teams: differs(base, data, ratingRanges(base)), rosters: differs(base, data, rosterRanges), any };
-  }
   return {
-    season: game === 'bw95' && differs(base, data, seasonRanges(base)),
+    // The 138-team edition has no Season tab edits yet.
+    season: game === 'bw95' && !rom.wide && differs(base, data, seasonRanges(base)),
     teams:
       game === 'bw95' &&
-      (differs(base, data, STYLE_RANGES) ||
+      (differs(base, data, styleRanges(base)) ||
         (!ratingProblems(base).length && differs(base, data, ratingRanges(base))) ||
         reportsDiffer(base, data)),
     rosters: differs(base, data, rosterRanges),
@@ -101,7 +97,7 @@ function reportsDiffer(base: Uint8Array, data: Uint8Array): boolean {
 
 /** The trim the first edit makes to every long report, when that's all that changed. */
 function longTrimmed(base: Uint8Array, data: Uint8Array): boolean {
-  for (let s = 0; s < 36; s++) {
+  for (let s = 0; s < teamsOf(base); s++) {
     if (reportLength(readReport(base, s)) > REPORT_LIMIT && reportLength(readReport(data, s)) <= REPORT_LIMIT) return true;
   }
   return false;
@@ -143,17 +139,8 @@ export function carryEdits(from: Uint8Array, to: Uint8Array, fromBase?: Uint8Arr
   }
   const res: CarryResult = { rosters: a.teams.length, olTweak: false, season: false, teams: 0, skipped: [] };
   if (a.game !== 'bw95') return res;
-  if (a.wide) {
-    // The 138-team edition: rosters (above), OFF/DEF and weather; its other tables aren't edited here.
-    const teams = fromBase ? ratingChanges(fromBase, from) : ratingChanges(to, from);
-    for (const t of teams) {
-      writeRating(to, t, readRating(from, t));
-      writeWeather(to, t, readWeather(from, t));
-    }
-    res.teams = teams.length;
-    return res;
-  }
-  if (olPatchState(from) === 'installed' && olPatchState(to) !== 'installed') {
+  // The 138-team edition comes with the OL tweak, and the Season tab doesn't edit it yet.
+  if (!a.wide && olPatchState(from) === 'installed' && olPatchState(to) !== 'installed') {
     try {
       installOlPatch(to);
       res.olTweak = true;
@@ -161,7 +148,7 @@ export function carryEdits(from: Uint8Array, to: Uint8Array, fromBase?: Uint8Arr
       res.skipped.push(`OL weight tweak: ${(e as Error).message}`);
     }
   }
-  if (dealMode(from) !== 'unknown') {
+  if (!a.wide && dealMode(from) !== 'unknown') {
     try {
       writeSeason(to, readSeason(from));
       res.season = true;
@@ -200,8 +187,8 @@ export function carryEdits(from: Uint8Array, to: Uint8Array, fromBase?: Uint8Arr
     const base = fromBase ?? to;
     const edited = editedReports(base, from);
     if (edited.length) {
-      const fromNames = parseBw95(from).map((t) => t.school);
-      const toNames = parseBw95(to).map((t) => t.school);
+      const fromNames = a.teams.map((t) => t.school);
+      const toNames = b.teams.map((t) => t.school);
       const reports = new Map<number, Report>();
       for (const t of edited) {
         if (fromNames[t] === toNames[t]) reports.set(t, readReport(from, t));

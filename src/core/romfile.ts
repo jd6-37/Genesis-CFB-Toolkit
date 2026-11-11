@@ -13,7 +13,7 @@ export interface KnownRom {
    *  that the code and ROM space it needs are still untouched (`swapProblems` in build.ts). */
   modded?: boolean;
   /** A BW95 ROM over 2 MB: the 138-team 2026 Season Edition (Elevated v2.0.0 on; layout in wide.ts).
-   *  Rosters edits it; Team Swap, Season and Teams don't (yet). */
+   *  Teams and Rosters edit it; Team Swap and Season don't (yet). */
   wide?: boolean;
 }
 
@@ -50,7 +50,8 @@ export const WIDE_ROM_TEXT =
   "original slots) doesn't take it. To swap in CF97 teams, start from the original game or the Elevated edition with the original 36 teams.";
 /** What the other tabs do with a wide ROM so far. */
 export const WIDE_TABS_TEXT =
-  "Rosters edits all 138 teams' players and can bring in the built-in CFB 27 rosters. Season and Teams don't edit the 138-team edition yet.";
+  "Teams and Rosters edit all 138 teams: styles, OFF and DEF, home weather, Walsh Reports and players, with the built-in " +
+  "CFB 27 rosters too. Season doesn't edit the 138-team edition yet.";
 
 /** A known file by SHA-1, else any 2 MB ROM with BW95's header counts as a modded BW95 ROM, and a
  *  bigger one as the 138-team edition. */
