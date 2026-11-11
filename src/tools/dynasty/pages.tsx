@@ -271,7 +271,7 @@ function PlayerCell({ line }: { line: PlayerLine }) {
 }
 
 function StatTables({ lines }: { lines: PlayerLine[] }) {
-  const { d } = useDyn();
+  const { d, v } = useDyn();
   return (
     <div className="dy-stat-tables">
       {STAT_TABLES.map((t) => {
@@ -286,7 +286,7 @@ function StatTables({ lines }: { lines: PlayerLine[] }) {
               {rows.map((l) => (
                 <tr key={`${l.cat}-${l.slot}`}>
                   <td className="dy-left"><PlayerCell line={l} /></td>
-                  <td>{playerOf(d, l.player)?.pos ?? ''}</td>
+                  <td>{v.season.bw?.[l.team]?.[l.slot]?.label ?? playerOf(d, l.player)?.pos ?? ''}</td>
                   {t.cols.map(([k]) => <td key={k}>{statValue(l, k)}</td>)}
                 </tr>
               ))}
