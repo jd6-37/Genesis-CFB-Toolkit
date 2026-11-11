@@ -87,7 +87,8 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const onHash = () => setTab(tabFromHash());
+    // #dynasty… is the Dynasty section (main.tsx); the tab stays as it was.
+    const onHash = () => !window.location.hash.startsWith('#dynasty') && setTab(tabFromHash());
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
@@ -269,6 +270,9 @@ export default function App() {
       }}
     >
       <header className="masthead">
+        <a className="mast-dynasty" href="#dynasty">
+          Dynasty
+        </a>
         <h1>
           <span className="mast-2">
             Bill Walsh '95 <span className="mast-elev">ELEVATED</span>

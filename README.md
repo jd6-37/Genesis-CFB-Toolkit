@@ -11,6 +11,7 @@ Everything runs in your browser. Your ROMs are opened on your own computer and a
 - **[Season](#season):** rename the four conferences, choose which teams play in each, and lock in schedules in Bill Walsh '95.
 - **[Teams](#teams):** for each Bill Walsh '95 team, choose the offense and defense the computer runs, the team's OFF and DEF ratings and the weather in its home games, and write its Walsh Report.
 - **[Rosters](#rosters):** edit the players of Bill Walsh '95, CF96 or CF97, team by team or from a spreadsheet (CSV or Excel), or bring in real College Football 27 rosters (built in: 2026 season, Week 9).
+- **[Dynasty](#dynasty):** a sports news site for your season of the 138-team 2026 Season Edition: import your battery save and read the scores, standings, Top 25, stats and stories, season after season. Open it with **Dynasty** at the top of the page, or `#dynasty`.
 
 Each tool has its own tab. The app opens on Patch; `#swap`, `#season`, `#teams` or `#rosters` at the end of the address opens that tab directly (`#styles`, the Teams tab's old address, still works).
 
@@ -330,6 +331,32 @@ The import follows the rules of CFB-Walsh.exe ("Genesis College Football Editor 
 - Imports checked on BW95's roster screen in an emulator: numbers, ratings and weights show as expected, on a 4-3 team, a 3-4 team (NT, LILB, RILB) and a team-swapped Tulane. Unfilled slots keep their players.
 - Edited CF96 and CF97 ROMs boot (with a wrong checksum CF97 stays on a black screen).
 - ROMs downloaded from the app are byte-identical to the same edits made with the code in Node; a Team Swap result with roster edits differs from the plain swap only in the edited players and the checksums.
+
+## Dynasty
+
+A companion site for playing seasons of the 138-team 2026 Season Edition (Bill Walsh '95 Elevated v2.0.0 or later). The app owns the players; the game plays the games. This first version keeps your season's record; offseasons (graduation, progression, signing classes, the transfer portal and new rosters written into the ROM) come next.
+
+1. **Start a dynasty** on the Manage page: name it and choose your ROM. The players come from the built-in CFB 27 ratings (2026 season, Week 9), 60 to 85 a team; a redshirted player starts one class up (RS FR is a SO, RS SR a SR+). The team logos are read from your ROM and stay in your browser.
+2. **Play** a season in the game (New Season, any schedule).
+3. **Import your save** after you play: the `.srm` battery save from RetroArch's Genesis Plus GX core. The app reads every result, the game's Top 25, the playoff field and each team's season stats, and marks the teams you play as. Import again as often as you like; a save with fewer results than the last import is refused (it's older, or another season), unless you tick the box.
+
+The pages:
+
+- **Home:** a score ticker for the latest week and the stories of the week, written from the results (upsets, Top 25 games, routs, your games, a new No. 1, unbeaten teams, the playoff field, the national leaders, champions), with headlines, your teams and the Top 25.
+- **Scores** by week, **Standings** by conference, the **Top 25** with movement.
+- **Teams:** each team's schedule and results, history, season stats and full roster (the players marked "In game" are on the ROM's 32-man roster). Each **player** has a page with his ratings and stats.
+- **Stats:** the national leaders. **History:** national champions, single-season records and your teams by season.
+- **Manage:** import saves, choose your teams, download the dynasty file (a backup, or to move it to another computer; it has no game art, so load your ROM again there for the logos), and open, rename or delete dynasties.
+
+Dynasties are kept in your browser (IndexedDB). Clearing the site's data deletes them, so download the dynasty file now and then.
+
+### How it works
+
+The save's season block and stats tables, the dynasty file and the plan for the next phases: [docs/dynasty.md](docs/dynasty.md).
+
+### Testing
+
+`npm run test:dynasty -- ELEVATED_2026_138 SAVE.srm` reads a real save in both layouts (the emulator's and the data bytes alone), checks that the stats add up and the ranks follow the game's order, creates a dynasty (twice, the same), imports the save (the same save replaces its import; an older one and one without a season are refused), checks records, standings, leaders and stories, round-trips the dynasty file and reads the art. The pages were checked in a browser with a save after Week 2 (Texas State, 100 games played).
 
 ## Development
 
