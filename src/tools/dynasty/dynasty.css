@@ -152,7 +152,9 @@
 .dy-team-index > div { break-inside: avoid; margin-bottom: 24px; }
 .dy-team-index h3 { font-family: var(--display); font-weight: 700; font-size: 21px; margin: 0 0 6px; border-bottom: 2px solid var(--ink); }
 .dy-team-index ul { list-style: none; margin: 0; padding: 0; }
-.dy-team-index li { padding: 3px 0; }
+.dy-team-index li { padding: 4px 0; }
+.dy-team-index .dy-team, .dy-top25:not(.dy-compact) .dy-team { gap: 12px; }
+.dy-team-index .dy-mark, .dy-top25:not(.dy-compact) .dy-mark { width: 104px; flex: none; }
 .dy-teamhead {
   display: flex; align-items: center; gap: 24px; padding: 24px 28px; margin: 28px -24px 0; background: var(--wash);
 }

@@ -228,7 +228,7 @@ function Top25({ compact = false }: { compact?: boolean }) {
         return (
           <li key={t}>
             <span className="dy-top-n">{i + 1}</span>
-            <TeamLink team={t} rank={false} />
+            <TeamLink team={t} rank={false} size={compact ? 20 : 48} />
             <span className="dy-num">{recordText(v.records[t])}</span>
             {!compact && (
               <span className={`dy-move${move > 0 ? ' dy-up' : move < 0 ? ' dy-down' : ''}`}>
@@ -316,7 +316,7 @@ export function Teams() {
               {d.teams
                 .filter((t) => v.season.conf[t.index] === c)
                 .sort((a, b) => a.school.localeCompare(b.school))
-                .map((t) => <li key={t.index}><TeamLink team={t.index} rank={false} /></li>)}
+                .map((t) => <li key={t.index}><TeamLink team={t.index} rank={false} size={48} /></li>)}
             </ul>
           </div>
         ))}

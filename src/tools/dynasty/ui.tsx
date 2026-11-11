@@ -63,12 +63,12 @@ export function TeamMark({ team, size = 24, kind = 'logo' }: { team: number; siz
 }
 
 /** A team name that links to its page, with its logo and rank. */
-export function TeamLink({ team, mark = true, rank = true, full = false }: { team: number; mark?: boolean; rank?: boolean; full?: boolean }) {
+export function TeamLink({ team, mark = true, rank = true, full = false, size = 20 }: { team: number; mark?: boolean; rank?: boolean; full?: boolean; size?: number }) {
   const { d, v } = useDyn();
   const r = rank ? rankText(v, team) : '';
   return (
     <a className="dy-team" href={href(`team/${team}`)}>
-      {mark && <TeamMark team={team} size={20} />}
+      {mark && <TeamMark team={team} size={size} />}
       {r && <span className="dy-rank">{r}</span>}
       <span>{full ? `${d.teams[team].school} ${d.teams[team].nickname}` : d.teams[team].school}</span>
     </a>
