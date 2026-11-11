@@ -1,5 +1,5 @@
 /* The Dynasty section: a sports news site. White pages and black type like a sports desk's site;
-   the toolkit's indigo and menu yellow only in the masthead; every other color is a team's, read
+   grayscale chrome (masthead, nav, buttons) so it never clashes with a school; every color is a team's, read
    from the ROM. The loud element is the story art: pixel logos on team-color panels. */
 .dy {
   --paper: #ffffff;
@@ -9,13 +9,16 @@
   --wash: #f3f3f7;
   --win: #11703a;
   --loss: #b3261e;
+  --mast: #262626;
+  --mast-dim: #b8b8b8;
+  --button: #262626;
   min-height: 100vh;
   background: var(--paper);
   color: var(--ink);
   color-scheme: light;
   font: 400 16px/1.5 var(--body);
 }
-.dy :focus-visible { outline: 2px solid var(--indigo); outline-offset: 2px; }
+.dy :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .dy a { color: inherit; text-decoration: none; }
 .dy a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .dy select, .dy input:not([type]), .dy input[type='text'] {
@@ -23,19 +26,19 @@
 }
 
 /* Masthead */
-.dy-mast { background: var(--indigo); color: var(--chalk); }
+.dy-mast { background: var(--mast); color: #fff; }
 .dy-mast-inner {
   max-width: 1240px; margin: 0 auto; padding: 14px 24px 10px;
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px;
 }
-.dy-back { color: var(--chalk-dim) !important; font-size: 14px; justify-self: start; }
+.dy-back { color: var(--mast-dim) !important; font-size: 14px; justify-self: start; }
 .dy-title { display: flex; flex-direction: column; align-items: center; line-height: 0.9; }
 .dy-title:hover { text-decoration: none !important; }
 .dy-title-1 {
   font-family: var(--display); font-style: italic; font-weight: 800; font-size: clamp(34px, 6vw, 56px);
-  color: var(--menu); letter-spacing: -0.01em; text-align: center;
+  color: #fff; letter-spacing: -0.01em; text-align: center;
 }
-.dy-title-2 { font-size: 14px; color: var(--chalk-dim); margin-top: 6px; }
+.dy-title-2 { font-size: 14px; color: var(--mast-dim); margin-top: 6px; }
 .dy-mast-teams { justify-self: end; display: flex; gap: 8px; }
 .dy-nav {
   background: var(--paper); color: var(--ink); border-bottom: 1px solid var(--rule);
@@ -45,7 +48,7 @@
   padding: 12px 0 9px; border-bottom: 3px solid transparent; font-weight: 600; font-size: 15px; white-space: nowrap;
 }
 .dy-nav a:hover { text-decoration: none; border-bottom-color: var(--rule); }
-.dy-nav a[aria-current='page'] { border-bottom-color: var(--indigo); }
+.dy-nav a[aria-current='page'] { border-bottom-color: var(--ink); }
 .dy-nav a.dy-off { color: #a9a8b8; pointer-events: none; }
 
 .dy-main { max-width: 1240px; margin: 0 auto; padding: 0 24px 120px; }
@@ -126,7 +129,7 @@
 .dy-l { color: var(--loss); font-weight: 600; }
 .dy-scroll { overflow-x: auto; }
 .dy-roster td, .dy-roster th { white-space: nowrap; }
-.dy-dot { font-size: 12px; font-weight: 600; color: var(--indigo); }
+.dy-dot { font-size: 12px; font-weight: 600; color: var(--ink); }
 
 /* Scores */
 .dy-games { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0 24px; }
@@ -178,9 +181,9 @@
 .dy-check { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; color: var(--gray); }
 .dy-button {
   display: inline-block; border: 0; border-radius: 4px; padding: 8px 16px; font-weight: 600; cursor: pointer;
-  background: var(--indigo); color: #fff !important; text-decoration: none !important;
+  background: var(--button); color: #fff !important; text-decoration: none !important;
 }
-.dy-button:hover { background: var(--night); }
+.dy-button:hover { background: #000; }
 .dy-button:disabled, .dy-button[aria-disabled='true'] { opacity: 0.4; cursor: default; pointer-events: none; }
 .dy-quiet { background: transparent; color: var(--ink) !important; box-shadow: inset 0 0 0 1px #b9b8c8; }
 .dy-quiet:hover { background: var(--wash); }

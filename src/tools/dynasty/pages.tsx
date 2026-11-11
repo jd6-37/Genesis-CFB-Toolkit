@@ -489,7 +489,7 @@ function BwRatings({ team, slot, name }: { team: number; slot: number; name: str
   // Weight: the share of starters he outweighs, counting those at his step as half.
   const heavier = b.attrs.map((_, i) => league.reduce((a, x) => a + (x.steps[i] < b.steps[i] ? 1 : x.steps[i] === b.steps[i] ? 0.5 : 0), 0) - 0.5);
   const c = mainColor(d, team);
-  const color = onColor(c) === '#000' ? 'var(--indigo)' : teamCss(c); // a light team color wouldn't show on white
+  const color = onColor(c) === '#000' ? 'var(--gray)' : teamCss(c); // a light team color wouldn't show on white
   const who = `${b.label}s`;
 
   // Shape: the five ratings other than weight, step 15 at the rim.
