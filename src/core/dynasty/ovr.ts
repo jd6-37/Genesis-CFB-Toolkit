@@ -2,8 +2,9 @@
 //
 // OVR = base + scale x (weighted average of the ratings as the game shows them, 0-100). Only ratings
 // the game uses at that position count (claude.ai notes bw95-cfb27-ratings-notes.md, "How BW95 uses
-// the ratings"): kickers' and punters' Quick is kick distance and Range isn't used for kicks; linemen's
-// Block barely matters in play; Weight is mass, not quality, so it's left out everywhere. The shares,
+// the ratings"): kickers' and punters' Quick is kick distance and Range isn't used for kicks; Weight is
+// mass, not quality, so it's left out everywhere. Linemen's Block keeps them on their feet after hard
+// hits, so it counts. QB Speed is set to 15% (he runs in the game; CFB 27's Overall ignores it). The shares,
 // base and scale were fitted to the CFB 27 Overall of the 4,416 starters of the 138-team 2026 Season
 // Edition (2026-11-12), so the numbers read like CFB 27's.
 
@@ -19,12 +20,12 @@ export interface OvrFormula {
 }
 
 export const OVR_FORMULAS: Record<string, OvrFormula> = {
-  QB: { base: 56, scale: 0.41, weights: { Quickness: 30, Awareness: 50, Range: 15, Power: 5 } }, // 138 starters: within 3 of CFB 27 for 84%, average miss 2.0
+  QB: { base: 57, scale: 0.42, weights: { Quickness: 25, Awareness: 45, Range: 10, Power: 5, Speed: 15 } }, // 138 starters: within 3 of CFB 27 for 82%, average miss 2.2
   HB: { base: 48, scale: 0.51, weights: { Speed: 35, Quickness: 30, Awareness: 15, Hands: 5, Power: 15 } }, // 276 starters: within 3 of CFB 27 for 96%, average miss 1.3
   FB: { base: 46, scale: 0.4, weights: { Speed: 40, Awareness: 20, Hands: 15, Power: 25 } }, // 138 starters: within 3 of CFB 27 for 80%, average miss 2.2
   WR: { base: 52, scale: 0.5, weights: { Speed: 15, Quickness: 25, Awareness: 25, Hands: 15, Power: 20 } }, // 552 starters: within 3 of CFB 27 for 95%, average miss 1.4
   TE: { base: 55, scale: 0.51, weights: { Speed: 20, Quickness: 25, Awareness: 20, Hands: 25, Power: 10 } }, // 276 starters: within 3 of CFB 27 for 89%, average miss 1.6
-  OL: { base: 50, scale: 0.54, weights: { Power: 55, Speed: 25, Awareness: 20 } }, // 690 starters: within 3 of CFB 27 for 94%, average miss 1.5
+  OL: { base: 53, scale: 0.48, weights: { Power: 30, Blocking: 30, Speed: 25, Awareness: 15 } }, // 690 starters: within 3 of CFB 27 for 98%, average miss 1.2
   DE: { base: 48, scale: 0.52, weights: { Power: 15, Speed: 35, Awareness: 20, Tackling: 30 } }, // 276 starters: within 3 of CFB 27 for 97%, average miss 1.2
   DT: { base: 56, scale: 0.38, weights: { Power: 60, Speed: 10, Awareness: 15, Tackling: 15 } }, // 276 starters: within 3 of CFB 27 for 97%, average miss 1.0
   LB: { base: 35, scale: 0.55, weights: { Speed: 10, Quickness: 15, Awareness: 35, Tackling: 40 } }, // 552 starters: within 3 of CFB 27 for 96%, average miss 1.4

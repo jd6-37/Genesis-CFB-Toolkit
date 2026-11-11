@@ -51,16 +51,16 @@ Week names follow the game: with the Real 2026 schedule the first week is Week 0
 ### Team and player OVRs
 
 - Team OFF and DEF are the ROM's own (what Game Setup shows), read when the dynasty is created.
-- A player's OVR comes from his six Bill Walsh '95 ratings: OVR = base + scale × the weighted average of the ratings as the game shows them (0-100), by roster role, capped at 0-99 (`src/core/dynasty/ovr.ts`). Only ratings the game uses at that position count: Weight is mass, not quality; kickers' and punters' Range isn't used for kicks (their Quick is kick distance); linemen's Block barely matters in play. The shares, base and scale were fitted to the CFB 27 Overall of the 4,416 starters of v2.0.0:
+- A player's OVR comes from his six Bill Walsh '95 ratings: OVR = base + scale × the weighted average of the ratings as the game shows them (0-100), by roster role, capped at 0-99 (`src/core/dynasty/ovr.ts`). Only ratings the game uses at that position count: Weight is mass, not quality; kickers' and punters' Range isn't used for kicks (their Quick is kick distance). Linemen's Block counts: it keeps them on their feet after hard hits. QB Speed is set to 15% (the QB runs in the game; CFB 27's Overall ignores it). The shares, base and scale were fitted to the CFB 27 Overall of the 4,416 starters of v2.0.0:
 
 | Slots | OVR | Average miss | Within 3 |
 |---|---|---|---|
-| QB | 56 + 0.41 × (Quickness 30%, Awareness 50%, Range 15%, Power 5%) | 2.0 | 84% |
+| QB | 57 + 0.42 × (Quickness 25%, Awareness 45%, Range 10%, Power 5%, Speed 15%) | 2.2 | 82% |
 | HB1, HB2 | 48 + 0.51 × (Speed 35%, Quickness 30%, Awareness 15%, Hands 5%, Power 15%) | 1.3 | 96% |
 | FB | 46 + 0.4 × (Speed 40%, Awareness 20%, Hands 15%, Power 25%) | 2.2 | 80% |
 | SE, FL, WR1, WR2 | 52 + 0.5 × (Speed 15%, Quickness 25%, Awareness 25%, Hands 15%, Power 20%) | 1.4 | 95% |
 | TE1, TE2 | 55 + 0.51 × (Speed 20%, Quickness 25%, Awareness 20%, Hands 25%, Power 10%) | 1.6 | 89% |
-| LT, LG, C, RG, RT | 50 + 0.54 × (Power 55%, Speed 25%, Awareness 20%) | 1.5 | 94% |
+| LT, LG, C, RG, RT | 53 + 0.48 × (Power 30%, Blocking 30%, Speed 25%, Awareness 15%) | 1.2 | 98% |
 | LDE, RDE | 48 + 0.52 × (Power 15%, Speed 35%, Awareness 20%, Tackling 30%) | 1.2 | 97% |
 | DT1, DT2 | 56 + 0.38 × (Power 60%, Speed 10%, Awareness 15%, Tackling 15%) | 1.0 | 97% |
 | LOLB, MLB1, ROLB, MLB2 | 35 + 0.55 × (Speed 10%, Quickness 15%, Awareness 35%, Tackling 40%) | 1.4 | 96% |
