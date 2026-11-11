@@ -23,7 +23,7 @@ Start here. Load your Bill Walsh College Football '95 ROM (`.md`, `.bin`, `.gen`
 - **The original game:** pick a patch and choose **Apply patch**. The app downloads the patch from the [Elevated](https://github.com/jd6-37/Bill-Walsh-CFB-95-Elevated) mod's GitHub page, applies it in your browser and checks the result, so it always offers the latest release. **Download patched ROM** saves the patched ROM, and **Back to the original game** undoes the patch. **Use a .bps file** applies a patch you downloaded yourself, for example if GitHub can't be reached.
 - **A ROM with a released patch:** the app says which release it has, and whether a newer one is out. Patches go onto the original game only, so to update, load the original ROM and patch it here.
 - **Any other modded or edited ROM:** used as it is.
-- **The 2026 Season Edition of Elevated v2.0.0 and later** (a 4 MB ROM with all 138 FBS teams): the Patch tab makes it and recognizes it, and the Teams and Rosters tabs edit all 138 teams: styles, OFF and DEF, home weather, Walsh Reports and players (**Edit teams and rosters** under Next). Season doesn't edit it yet, and Team Swap doesn't take it (it already has every FBS team); those tabs are grayed out. To bring in CF97 teams, start from the original game or the Elevated edition with the original 36 teams.
+- **The 2026 Season Edition of Elevated v2.0.0 and later** (a 4 MB ROM with all 138 FBS teams): the Patch tab makes it and recognizes it, and the Season, Teams and Rosters tabs edit it: its conferences and their schedule weeks, and all 138 teams' styles, OFF and DEF, home weather, Walsh Reports and players (**Edit season, teams and rosters** under Next). Team Swap doesn't take it (it already has every FBS team), so that tab is grayed out. To bring in CF97 teams, start from the original game or the Elevated edition with the original 36 teams.
 
 The other tabs then use that ROM, patched or not: Team Swap builds on it, and Season, Teams and Rosters open it (if they already have changes in another ROM, they ask first). **Swap teams** and **Edit season, teams and rosters** under Next go to those tabs. A ROM whose teams Team Swap already swapped, such as the 36-team 2026 Season Edition of Elevated v1.1.0, can have them swapped again (see [Swapping a swapped ROM](#swapping-a-swapped-rom)). Team Swap always uses the Patch tab's ROM: a Bill Walsh ROM you load in the Team Swap tab shows up in the Patch tab too.
 
@@ -110,6 +110,16 @@ Not tested in a real game: a full season through the bowls with swapped teams (t
 ## Season
 
 Rename Bill Walsh '95's four conferences, choose which teams play in each, and set schedules. It works on the original ROM, Elevated, a Team Swap result or a ROM it saved earlier, and edits the same ROM as the Rosters tab. **Use the Team Swap result** opens the ROM you set up in the Team Swap tab.
+
+### The 138-team 2026 Season Edition
+
+That edition has a season mode of its own (12 weeks, Random or Real 2026 schedules, conference title games and a playoff), so its Season tab is different:
+
+- **Conferences:** rename each of the ten conferences and the Independents (up to 22 characters: letters, digits, spaces and `- . & '`; the game shows O as 0, as in all its text) and **Move** teams between them. The first four are the Power 4, whose champions get automatic playoff bids; the next six the Group of 6. Each of the ten plays a title game between its top two, so it needs 2 to 24 teams. Independents play no conference games.
+- **Conference games and weeks:** how many conference games each conference plays in a Random season and from which week. A conference plays at most one round robin (a 9-team conference at most 8 games), and the games have to end by week 12.
+- The Real 2026 schedule keeps its games; there the conferences decide the standings and the title games. Changes take effect in a new season. **Undo season changes** puts everything back as loaded. There's no season file for this edition.
+- How it works: each team's conference is its ratings group's word +6 (0-9, 10 = Independents), the names are 22-character strings in the season engine's table (the Rankings screen's titles), and the weeks are two 11-byte tables (first week, games) the engine reads at New Season; the app finds all three through the engine's own code and checks them before writing. Details: [docs/season.md](docs/season.md#the-138-team-2026-season-edition).
+- Checked: the same edits made in the app and with `cli/season138.ts` give the same ROM; in an emulator a Random season on an edited ROM gives the moved teams their new conference's games in the set weeks, shows the new names on the Rankings screen, and plays through the title games and the playoff to the championship.
 
 ### How the game schedules a season
 
@@ -345,11 +355,12 @@ How the Patch tab works, the patch list format and the steps for a new release: 
 npm run test:patch -- BW95.md path/to/Bill-Walsh-CFB-95-Elevated [CF97.md]
 ```
 
-How the Season tool works: [docs/season.md](docs/season.md). Its tests take the original BW95 ROM, CF97 (for the Team Swap checks) and optionally more BW95 ROMs such as Elevated builds; `cli/season.ts` applies a season setup from a JSON spec:
+How the Season tool works: [docs/season.md](docs/season.md). Its tests take the original BW95 ROM, CF97 (for the Team Swap checks) and optionally more BW95 ROMs such as Elevated builds (a 138-team 2026 Season Edition among them gets its own test); `cli/season.ts` applies a season setup from a JSON spec, and `cli/season138.ts` lists or changes the 138-team edition's conferences:
 
 ```sh
-npm run test:season -- BW95.md CF97.md [Elevated.md …]
+npm run test:season -- BW95.md CF97.md [Elevated.md …] [Elevated-2026-138-teams.md]
 npx tsx cli/season.ts BW95.md out.md spec.json
+npx tsx cli/season138.ts Elevated-2026-138-teams.md out.md spec.json   # {"names": {"SEC": "Southeastern"}, "conf": {"Tulane": "SEC"}, "weeks": {"SEC": {"start": 2, "games": 6}}}
 ```
 
 How the Teams tab works: styles in [docs/styles.md](docs/styles.md), ratings and weather in [docs/teams.md](docs/teams.md). The style tests take the same ROMs as the Season tests; the ratings tests take the original ROM, CF97 and the two Elevated v1.1.0 editions, and optionally the 138-team 2026 Season Edition. `cli/styles.ts` lists or changes a ROM's styles, `cli/teams.ts` its styles, OVRs and weather, and `cli/build.ts --style Pitt=Option,3-4` sets a swapped team's styles:

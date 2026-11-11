@@ -4,7 +4,7 @@ import { CfTeam, parseCf97 } from './core/cf97';
 import { buildRom, defaultSlot, isSwapFile, SlotConfig, swapFile, swappedSlots, swapProblemText, validateSlot } from './core/build';
 import { MAX_LEN } from './core/defaults';
 import { renderSprites } from './core/render';
-import { describeUnknown, isWideBw95, OpenedRom, openRom, WIDE_ROM_TEXT } from './core/romfile';
+import { describeUnknown, OpenedRom, openRom, WIDE_ROM_TEXT } from './core/romfile';
 import { CelebBlob, defaultCelebration, genericCelebration, PREVIEW_FRAME } from './core/celebration';
 import { SpriteCanvas, Swatch, UniformEditor } from './components';
 import { RosterTool } from './tools/rosters/RosterTool';
@@ -129,11 +129,9 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startRom]);
 
-  // The 138-team edition: Team Swap is grayed out when it's the Patch tab's ROM, Season when it's the
-  // working ROM (Teams and Rosters edit it).
+  // The 138-team edition: Team Swap is grayed out when it's the Patch tab's ROM (the other tabs edit it).
   const wideStart = !!startRom?.known?.wide;
-  const wideWork = !!work.work && isWideBw95(work.work.data);
-  const tabOff = (t: Tab) => (t === 'swap' && wideStart) || (t === 'season' && wideWork);
+  const tabOff = (t: Tab) => t === 'swap' && wideStart;
 
   const workHasStart = useMemo(() => !!startRom && sameBytes(work.work?.base, startRom.data), [work.work, startRom]);
 
@@ -320,7 +318,7 @@ export default function App() {
             if (!sameBytes(work.work?.base, start.rom.data)) {
               work.takeRom({ name: start.rom.name, label: start.rom.known?.label ?? start.rom.name, data: start.rom.data });
             }
-            pickTab(start.rom.known?.wide ? 'teams' : 'season');
+            pickTab('season');
           }}
         />
       </div>

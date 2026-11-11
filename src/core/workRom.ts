@@ -1,7 +1,7 @@
 // The working ROM that the Season, Teams and Rosters tabs edit together. Pure helpers, no DOM.
 //
 // The three tabs write different bytes (Season: conference names and words, the schedule template
-// and its tables; Teams: the CPU's team set table and the 3-4 roster flags, each team's ratings and
+// and its tables, or the 138-team edition's conference names, words and week tables; Teams: the CPU's team set table and the 3-4 roster flags, each team's ratings and
 // home weather (group +0 to +5), Elevated's OVR table and the Walsh Report text; Rosters: roster records
 // and the OL display tweak; a CFB 27 conversion can set ratings too), so all edit the same buffer in place. Team Swap keeps every
 // roster and ratings group per slot, so edits can be carried from one ROM to another of the same
@@ -17,6 +17,7 @@ import { editedReports, readReport, reportLength, REPORT_LIMIT, writeReports, ty
 import type { Game } from './rosterLayouts';
 import { isWideBw95 } from './romfile';
 import { teamsOf } from './wide';
+import { readWideSeason, wideSeasonProblems, wideSeasonRanges, writeWideSeason } from './seasonWide';
 
 export interface CarryResult {
   rosters: number;
@@ -74,8 +75,7 @@ export function editsSince(base: Uint8Array, data: Uint8Array, game: Game): Edit
   const rosterRanges: [number, number][] = rom.teams.map((t) => [t.rosterOffset, t.rosterOffset + len]);
   if (game === 'bw95') rosterRanges.push([OL_PATCH.site, OL_PATCH.site + 8], [OL_PATCH.hook, OL_PATCH.hook + OL_PATCH.hookCode.length]);
   return {
-    // The 138-team edition has no Season tab edits yet.
-    season: game === 'bw95' && !rom.wide && differs(base, data, seasonRanges(base)),
+    season: game === 'bw95' && differs(base, data, rom.wide ? wideSeasonRanges(base) : seasonRanges(base)),
     teams:
       game === 'bw95' &&
       (differs(base, data, styleRanges(base)) ||
@@ -139,8 +139,17 @@ export function carryEdits(from: Uint8Array, to: Uint8Array, fromBase?: Uint8Arr
   }
   const res: CarryResult = { rosters: a.teams.length, olTweak: false, season: false, teams: 0, skipped: [] };
   if (a.game !== 'bw95') return res;
-  // The 138-team edition comes with the OL tweak, and the Season tab doesn't edit it yet.
-  if (!a.wide && olPatchState(from) === 'installed' && olPatchState(to) !== 'installed') {
+  // The 138-team edition comes with the OL tweak; its season settings are its own.
+  if (a.wide) {
+    try {
+      if (!wideSeasonProblems(from).length && differs(fromBase ?? to, from, wideSeasonRanges(from))) {
+        writeWideSeason(to, readWideSeason(from));
+        res.season = true;
+      }
+    } catch (e) {
+      res.skipped.push(`Season: ${(e as Error).message}`);
+    }
+  } else if (olPatchState(from) === 'installed' && olPatchState(to) !== 'installed') {
     try {
       installOlPatch(to);
       res.olTweak = true;

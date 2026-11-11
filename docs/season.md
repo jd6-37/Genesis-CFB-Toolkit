@@ -104,3 +104,25 @@ When another ROM comes in (a file or the Team Swap result) and the working ROM h
 Emulator checks (stable-retro, Genesis Plus GX; `cli/season.ts` writes the expected schedule): New Season with Weeks 16, then the game list at `$CCAE` was compared with the app's schedule. The place → team deal was recovered from the template and checked against each team's range in the ROM. Four ROMs passed: four locked teams, all 36 locked, all but one locked, and random with moved conferences. The same checks passed on Elevated v1.1.0-beta.11 and on a beta.11 Team Swap result. The rankings screen showed the new names.
 
 Not verified: playing through an edited season (the emulator has no battery save, so a season stops at "Saving Season Games"), bowls with other conference sizes (from the code only), real hardware.
+
+## The 138-team 2026 Season Edition
+
+Elevated v2.0.0's 2026 Season Edition (4 MB, 138 teams) runs its own season engine (12 regular weeks, Random or Real 2026 schedules, conference title games, a 4-, 12- or 24-team playoff or none). Its Season tab is `src/tools/season/SeasonWide.tsx` on `src/core/seasonWide.ts`; the 36-team code above isn't used on it.
+
+What the engine takes from the ROM, and what the tab edits:
+
+| What | Where | Read |
+|---|---|---|
+| Each team's conference | ratings group word +6: 0-9 the ten conferences, 10 Independents (values over 10 count as 10) | New Season (`CONFTAB`), standings, title games |
+| Conference names | 12 strings of 22 characters, centered, each with its length word (`0x0018`): "Top 25", then the 11 conferences | the Rankings screen's titles; found through `lea CONFNAMES(pc),a1` at `0x211D40` |
+| First conference week (0-based) | 11 bytes (the Independents' entry is 99) | New Season, random schedule; `lea CWS(pc),a0` at `0x211576` |
+| Conference games | 11 bytes (Independents 0) | the same; `lea CWN(pc),a0` at `0x2115B2` |
+
+- **Random schedule:** each conference's teams are shuffled, then in week `start + k` (for k below the conference games) round k of a circle-method round robin is played; a conference of n teams has n - 1 rounds (n rounded up to even, so an odd conference has a bye team each round). Every team without a conference game that week is paired at random, another conference first, then someone it hasn't played, then anyone. The engine keeps at most 24 teams a conference (`W_CM`, 24 bytes each). Independents never play conference games.
+- **Title games and playoff:** after week 12 the top two of each of the ten conferences by conference record meet (`TITLESET`), so each needs at least 2 teams. The first four title games' winners are the Power 4 champions (automatic bids); the best-ranked of the other six winners gets the Group of 6 bid. Notre Dame's CFP 12 rule goes by team, not conference.
+- **Real 2026 schedule:** a fixed game table; the conferences only decide which games count as conference games, the standings and the title games.
+- **Checks before writing** (`wideSeasonProblems`): the layout of `src/core/wide.ts`, the three `lea`s and what they point at (12 length words of 24, "Top 25" first, the Independents' 99 and 0, start below 12 and games at most 24), every team's conference 0-10. **Settings** (`wideSeasonIssues`): names 1-22 characters of `A-Z a-z 0-9 space - . & '`, each of the ten conferences 2-24 teams, first week 1-12 and the games within week 12. The app shows the games the engine will actually play (`playedGames`: at most one round robin).
+- **Writing:** names centered in 22 (as the release has them), the group words, the two week tables, all in place; writing the loaded settings back gives the same bytes. `wideSeasonRanges` lists the bytes for `editsSince` (a Season edit) and Undo; `carryEdits` carries the settings to another 138-team ROM.
+- **Tests:** `npm run test:season -- BW95 CF97 [more BW95]` with the 138-team ROM among the extra ROMs: the release's names, sizes (16, 18, 17, 16, 14, 14, 13, 10, 10, 8, 2) and weeks; an unchanged write gives the same bytes; renames (centered), moves and week changes read back, change only those bytes, are a Season edit, carry and undo byte for byte; too few or too many teams, weeks past 12, long or unsupported names and empty names are refused with nothing written.
+- **Emulator** (Genesis Plus GX, from boot): Tulane moved to a renamed SEC (6 games from week 2), Notre Dame to the Big Ten (11 games from week 1), the PAC 12 renamed "Old Pac & Co.": a Random New Season gives Tulane SEC games from week 2 and Notre Dame Big Ten games in weeks 1-11, the Rankings screen shows every new name, and the season plays through week 12, the title games and the CFP to the championship.
+

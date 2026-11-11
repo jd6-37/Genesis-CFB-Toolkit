@@ -38,6 +38,16 @@
 .sea-team-link:hover { color: var(--menu); }
 .sea-team-link.on { color: var(--menu); font-weight: 600; }
 .sea-lock { color: var(--menu); }
+/* 138-team edition: conference weeks, team names (moved ones in menu yellow), changed cards. */
+.sea-cweeks { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0 0 8px; font-size: 14px; color: var(--chalk-dim); }
+.sea-cweeks label { display: flex; align-items: center; gap: 6px; }
+.sea-cweeks select { padding: 1px 4px; background: var(--deep); border: 1px solid var(--line); border-radius: 3px; color: var(--chalk); font-size: 14px; }
+.sea-cweeks small { flex-basis: 100%; }
+.sea-team-name { flex: 1; min-width: 0; padding: 2px 0; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sea-team-name.on { color: var(--menu); font-weight: 600; }
+.sea-conf-changed { border-color: rgba(246, 216, 74, 0.6); }
+.sea-sec > .note { margin: 0 0 10px; }
+.sea-sec > .note p { margin: 0; }
 .sea-conf li select {
   width: 4.6rem;
   padding: 1px 2px;
