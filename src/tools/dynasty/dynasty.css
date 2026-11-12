@@ -455,3 +455,21 @@
 .dy-box-head p { margin: 2px 0 0; }
 .dy-box-table { margin: 8px 0; width: 100%; }
 .dy-box { max-height: calc(100vh - 32px); overflow-y: auto; }
+
+/* Player page header: the jersey number big beside the name; OVR and the team logo side by side (phones first) */
+.dy-player-name { display: flex; align-items: center; gap: 0.25em; flex-wrap: wrap; }
+.dy-jersey { font-variant-numeric: tabular-nums; }
+.dy-jersey-bar { align-self: stretch; width: 2px; min-height: 0.9em; background: currentColor; opacity: 0.85; margin: 0.05em 0.05em; }
+.dy-player-side { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.dy-player-side .dy-teamovr { flex: 1; max-width: 220px; }
+.dy-player-logo { flex: none; display: block; line-height: 0; }
+.dy-player-logo .dy-mark, .dy-player-logo .dy-mark .sprite { height: 56px !important; width: auto !important; }
+.dy-total td { font-weight: 700; border-top: 2px solid var(--rule); }
+@media (min-width: 760px) {
+  .dy-player-side { gap: 24px; }
+  .dy-player-side .dy-teamovr { flex: none; max-width: none; }
+  .dy-player-logo .dy-mark, .dy-player-logo .dy-mark .sprite { height: 96px !important; }
+}
+/* Wide tables scroll sideways on phones instead of widening the page. */
+.dy-scroll-x { overflow-x: auto; min-width: 0; }
+.dy-stat-tables { min-width: 0; }
