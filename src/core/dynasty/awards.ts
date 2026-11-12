@@ -58,6 +58,7 @@ export interface SeasonAwards {
 }
 
 const n = (x: number) => x.toLocaleString('en-US');
+const pl = (x: number, one: string, many = `${one}s`) => `${n(x)} ${x === 1 ? one : many}`;
 
 /** Every Active Roster player's score at his role for the season. */
 export function candidates(v: SeasonView): Candidate[] {
@@ -93,7 +94,7 @@ export function candidates(v: SeasonView): Candidate[] {
         break;
       case 'WR': case 'TE':
         score = rec.yds / 10 + 6 * rec.td + rec.n / 4;
-        line = `${rec.n} catches, ${n(rec.yds)} yards, ${rec.td} TD`;
+        line = `${pl(rec.n, 'catch', 'catches')}, ${n(rec.yds)} yards, ${rec.td} TD`;
         break;
       case 'OL':
         score = ovr + wins / 2;
@@ -101,11 +102,11 @@ export function candidates(v: SeasonView): Candidate[] {
         break;
       case 'DE': case 'DT': case 'LB':
         score = def.tkl + 3 * def.sacks + 4 * def.int;
-        line = `${def.tkl} tackles, ${def.sacks} sacks${def.int ? `, ${def.int} INT` : ''}`;
+        line = `${pl(def.tkl, 'tackle')}, ${pl(def.sacks, 'sack')}${def.int ? `, ${def.int} INT` : ''}`;
         break;
       case 'CB': case 'S':
         score = def.tkl + 3 * def.sacks + 5 * def.int;
-        line = `${def.tkl} tackles, ${def.int} INT${def.sacks ? `, ${def.sacks} sacks` : ''}`;
+        line = `${pl(def.tkl, 'tackle')}, ${def.int} INT${def.sacks ? `, ${pl(def.sacks, 'sack')}` : ''}`;
         break;
       case 'K':
         score = 3 * kick.fgm - (kick.fga - kick.fgm) + kick.xpm / 2;

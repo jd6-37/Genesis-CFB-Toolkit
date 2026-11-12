@@ -497,3 +497,11 @@
 .dy-honors { list-style: none; padding: 0; margin: 0 0 12px; }
 .dy-honors li { padding: 3px 0; }
 .dy-honors a { font-weight: 700; margin-right: 6px; }
+
+/* Records book (RecordsPage.tsx). */
+.dy-records-pick { flex-wrap: wrap; gap: 8px; }
+.dy-records-teams { display: grid; gap: 12px; }
+.dy-records-teams h4 { margin: 8px 0 4px; font-size: 15px; }
+@media (min-width: 700px) { .dy-records-teams { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1100px) { .dy-records-teams { grid-template-columns: repeat(3, 1fr); } }
+.dy-heisman-team { display: flex; align-items: center; gap: 8px; }

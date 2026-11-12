@@ -3,7 +3,7 @@
 import { playerHonors, seasonAwards } from '../../core/dynasty/awards';
 import { useEffect, useMemo, useState } from 'react';
 import {
-  champions, leaders, playerLines, playerName, RECORD_STATS, seasonRecords, seasonView, standings, statValue, teamHistory, weekName,
+  champions, leaders, playerLines, playerName, seasonView, standings, statValue, teamHistory, weekName,
   INDEPENDENT, type PlayerLine, type StatCategory,
 } from '../../core/dynasty/derive';
 import { offseasonStories, stories, type Story } from '../../core/dynasty/news';
@@ -621,7 +621,7 @@ function Honors({ id }: { id: number }) {
     <>
       <h3 className="dy-sub">Honors</h3>
       <ul className="dy-honors">
-        {list.slice().reverse().map((h, i) => <li key={i}><a href={href(`awards/${h.year}`)}>{h.year}</a> {h.label}</li>)}
+        {list.map((h, i) => <li key={i}><a href={href(`awards/${h.year}`)}>{h.year}</a> {h.label}</li>)}
       </ul>
     </>
   );
@@ -949,14 +949,12 @@ export function Leaders() {
 
 export function History() {
   const { d } = useDyn();
-  const [stat, setStat] = useState(0);
   const champs = useMemo(() => champions(d), [d]);
-  const recs = useMemo(() => seasonRecords(d, RECORD_STATS[stat]), [d, stat]);
   const hasAwards = useMemo(() => d.seasons.some((s) => seasonAwards(d, s)), [d]);
   return (
     <section>
       <div className="dy-pagehead"><h2>History</h2><p>Every season of this dynasty since {d.startYear}.</p></div>
-      {hasAwards && <div className="dy-row"><a className="dy-button dy-quiet" href={href('awards')}>Season awards</a></div>}
+      <div className="dy-row"><a className="dy-button dy-quiet" href={href('records')}>Records book</a>{hasAwards && <a className="dy-button dy-quiet" href={href('awards')}>Season awards</a>}</div>
       <div className="dy-team-cols">
         <div>
           <h3 className="dy-sub">National champions</h3>
@@ -986,27 +984,6 @@ export function History() {
               </table>
             </div>
           ))}
-        </div>
-        <div>
-          <h3 className="dy-sub">Single-season records</h3>
-          <select aria-label="Record" value={stat} onChange={(e) => setStat(Number(e.target.value))}>
-            {RECORD_STATS.map((s, i) => <option key={s.label} value={i}>{s.label}</option>)}
-          </select>
-          <table className="dy-table">
-            <tbody>
-              {recs.map((r, i) => {
-                const p = playerOf(d, r.player);
-                return (
-                  <tr key={i}>
-                    <td className="dy-dim">{i + 1}</td>
-                    <td className="dy-left">{p ? <a href={href(`player/${p.id}`)}>#{p.jersey} {playerName(p)}</a> : 'Unknown player'} <span className="dy-dim dy-small">{d.teams[r.team].school}</span></td>
-                    <td>{r.year}</td>
-                    <td className="dy-strong">{r.value.toLocaleString('en-US')}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
         </div>
       </div>
     </section>

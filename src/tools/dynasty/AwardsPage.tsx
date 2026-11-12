@@ -58,7 +58,7 @@ export function Awards({ arg }: { arg?: string }) {
         <div className="dy-heisman">
           <p className="dy-heisman-title">Heisman Trophy</p>
           <p className="dy-heisman-name"><a href={href(`player/${wp.id}`)}>{playerName(wp)}</a></p>
-          <p><TeamLink team={winner.team} rank={false} /> {wp.pos}</p>
+          <p className="dy-heisman-team"><TeamLink team={winner.team} rank={false} /><span className="dy-dim">{wp.pos}</span></p>
           {a.heisman.length > 1 && (
             <p className="dy-small dy-dim">Finalists: {a.heisman.slice(1).map((h, i) => { const p = playerOf(d, h.player); return <span key={h.player}>{i ? ', ' : ''}{p ? <a href={href(`player/${p.id}`)}>{playerName(p)}</a> : ''} ({d.teams[h.team].school})</span>; })}</p>
           )}

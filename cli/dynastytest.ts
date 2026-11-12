@@ -3,6 +3,7 @@
 // The ROM is the 138-team 2026 Season Edition with the dynasty support (Elevated v2.0.1-test9 or later). The
 // save is a Genesis Plus GX (RetroArch) .srm of the 138-team edition with a season started and at least one week
 // played; the test puts its dynasty's mark (the ID block New Season copies) into it.
+import { careerRecords, teamRecords } from '../src/core/dynasty/records';
 import { AWARD_SPOTS, awardsOf, playerHonors, seasonAwards } from '../src/core/dynasty/awards';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { basename } from 'node:path';
@@ -732,6 +733,20 @@ ok('a new season refuses the last season\'s save');
     const h = playerHonors(w2, qb.player, [aw]);
     assert.ok(h.some((x) => x.label === 'All-American, first team') && h.some((x) => x.label === 'Best quarterback') && h.some((x) => x.label.startsWith('All-')), 'honors on the player page');
     ok(`awards: Heisman ${aw.heisman[0] ? playerName(w2.players[aw.heisman[0].player - 1]) : '-'}; first-team QB ${playerName(w2.players[qb.player - 1])} (${qb.line}); ${confs.length} All-Conference teams; honors ${h.map((x) => x.label).join(', ')}`);
+  }
+  {
+    // The records book: career totals add up the seasons; a school's only count what was done there.
+    const st = RECORD_STATS[2];
+    const car = careerRecords(w2, st), one = seasonRecords(w2, st);
+    assert.ok(car.length === 10 && car[0].value === one[0].value, 'one season: career leader = season leader');
+    const tm = car[0].team, mineC = careerRecords(w2, st, tm);
+    assert.ok(mineC.every((c) => c.team === tm) && mineC[0].player === car[0].player, 'per school');
+    const tr = teamRecords(w2);
+    const most = tr.find((x) => x.label === 'Most points in a game')!.list[0];
+    const g = seasonView(w2, w2.seasons[0]).games.filter((x) => x.vs !== null).flatMap((x) => [x.vs!, x.hs!]);
+    assert.equal(most.value, Math.max(...g), 'most points in a game');
+    assert.equal(tr.find((x) => x.label.startsWith('Fewest'))!.list.length, 0, 'points allowed wait for the season to end');
+    ok(`records book: career ${st.label.toLowerCase()} leader ${car[0].value}; ${tr.map((x) => `${x.label} ${x.list[0]?.value ?? '-'}${x.list[0] ? ` (${x.list[0].note})` : ''}`).join('; ')}`);
   }
   ok(`weekly stories: ${potw.map((x) => `"${x.headline}" (${x.dek}; ${x.box!.lines.map((l) => `${l.cat} ${l.cells.map(([k, v]) => `${k} ${v}`).join(' ')}`).join(', ')})`).join('; ')}; kinds ${kinds}`);
 }
