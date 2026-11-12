@@ -3,7 +3,7 @@
 // The ROM is the 138-team 2026 Season Edition with the dynasty support (Elevated v2.0.1-test9 or later). The
 // save is a Genesis Plus GX (RetroArch) .srm of the 138-team edition with a season started and at least one week
 // played; the test puts its dynasty's mark (the ID block New Season copies) into it.
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { strict as assert } from 'node:assert';
 import { openRom } from '../src/core/romfile';
@@ -677,10 +677,17 @@ ok('a new season refuses the last season\'s save');
   const potw = st.filter((x) => x.kind === 'potw');
   assert.equal(potw.length, 2, 'offensive and defensive player of the week');
   assert.ok(potw.every((x) => / (win over|loss to|tie with) /.test(x.dek) && !/\d{4,}/.test(x.dek)), potw.map((x) => x.dek).join(' | '));
+  // Each player of the week has his game: the result and his stat lines; the headline links to him.
+  for (const x of potw) {
+    assert.ok(x.player && x.box && x.box.lines.length > 0 && /(win over|loss to|tie with)/.test(x.box.result), JSON.stringify(x.box));
+    assert.ok(x.box.lines.every((l) => l.cells.every(([k, v]) => typeof v === 'string' || v >= 0 || k === 'Yds')), 'no negative week stats');
+  }
+  assert.ok(st.filter((x) => x.kind === 'leader' || x.kind === 'milestone').every((x) => x.player), 'leaders and milestones link to the player');
+  writeFileSync('/tmp/potw-before.srm', before); writeFileSync('/tmp/potw-after.srm', srm);
   // A gap of more than a week (no import in between): no week's stats, the season-total stories only.
   assert.equal(stories(importSave(d0, srm).dynasty).filter((x) => x.kind === 'potw').length, 0);
   const kinds = [...new Set(st.map((x) => x.kind))].join(', ');
-  ok(`weekly stories: ${potw.map((x) => `"${x.headline}" (${x.dek})`).join('; ')}; kinds ${kinds}`);
+  ok(`weekly stories: ${potw.map((x) => `"${x.headline}" (${x.dek}; ${x.box!.lines.map((l) => `${l.cat} ${l.cells.map(([k, v]) => `${k} ${v}`).join(' ')}`).join(', ')})`).join('; ')}; kinds ${kinds}`);
 }
 
 // ---- names and skin tones

@@ -15,6 +15,13 @@ export interface Story {
   /** Higher = more important (the top one leads). */
   weight: number;
   kind: 'champion' | 'upset' | 'topgame' | 'rout' | 'yours' | 'number1' | 'unbeaten' | 'leader' | 'cfp' | 'title' | 'potw' | 'milestone' | 'streak';
+  /** The player a story is about (stat leaders, milestones, players of the week): the headline links to him. */
+  player?: number;
+  /**
+   * A player of the week's game (user, 2026-11-12: "I have no idea how Hubert 'wrecked' the game … open a
+   * modal that shows that player's stats from that game"): the result and his stat lines for the week.
+   */
+  box?: { result: string; lines: { cat: string; cells: [string, number | string][] }[] };
 }
 
 const rk = (r: number) => (r >= 1 && r <= 25 ? `No. ${r} ` : '');
@@ -221,7 +228,7 @@ export function stories(d: Dynasty, v: SeasonView = seasonView(d, d.seasons[d.se
         const { p, team } = who(key);
         if (!p) continue;
         const id = `${year}-${week}-ms-${p.id}-${field}-${mark}`;
-        ms.push({ id, kind: 'milestone', week, weight: 28 + marks.indexOf(mark) * 4 + (d.userTeams.includes(team) ? 10 : 0), teams: [team],
+        ms.push({ id, kind: 'milestone', week, weight: 28 + marks.indexOf(mark) * 4 + (d.userTeams.includes(team) ? 10 : 0), teams: [team], player: p.id,
           headline: pick(id, [`${playerName(p)} passes ${mark.toLocaleString('en-US')} ${what}`, `${mark.toLocaleString('en-US')} ${what} and counting for ${name(team)}'s ${playerName(p)}`, `${name(team)}'s ${playerName(p)} reaches ${mark.toLocaleString('en-US')} ${what}`]),
           dek: `#${p.jersey} ${p.pos} ${playerName(p)} has ${b.toLocaleString('en-US')} ${what} after ${wk}.` });
       }
@@ -253,6 +260,22 @@ export function stories(d: Dynasty, v: SeasonView = seasonView(d, d.seasons[d.se
         const opp = g.visitor === team ? g.home! : g.visitor!;
         return us > them ? ` in the ${us}-${them} win over ${name(opp)}` : us < them ? ` in the ${them}-${us} loss to ${name(opp)}` : ` in the ${us}-${them} tie with ${name(opp)}`;
       };
+      // A player's lines for the week (season totals now minus at the last import; "long" can't be split by week).
+      const boxFor = (team: number, pid: number): NonNullable<Story['box']> => {
+        const lines: NonNullable<Story['box']>['lines'] = [];
+        for (const key of now.keys()) {
+          if (Number(key.split('/')[0]) !== team || playerOfSlot(key) !== pid) continue;
+          const cat = key.split('/')[1];
+          const f = (x: string) => diff(key, x);
+          if (cat === 'passing' && (f('att') > 0 || f('yds') !== 0 || f('td') > 0)) lines.push({ cat: 'Passing', cells: [['Comp', f('comp')], ['Att', f('att')], ['Yds', f('yds')], ['TD', f('td')], ['Int', f('int')]] });
+          if (cat === 'rushing' && (f('att') > 0 || f('yds') !== 0 || f('td') > 0)) lines.push({ cat: 'Rushing', cells: [['Att', f('att')], ['Yds', f('yds')], ['Avg', f('att') > 0 ? (f('yds') / f('att')).toFixed(1) : '–'], ['TD', f('td')], ['Fum', f('fum')]] });
+          if (cat === 'receiving' && (f('rec') > 0 || f('yds') !== 0 || f('td') > 0)) lines.push({ cat: 'Receiving', cells: [['Rec', f('rec')], ['Yds', f('yds')], ['Avg', f('rec') > 0 ? (f('yds') / f('rec')).toFixed(1) : '–'], ['TD', f('td')]] });
+          if (cat === 'defense' && f('tkl') + f('sacks') + f('int') > 0) lines.push({ cat: 'Defense', cells: [['Tkl', f('tkl')], ['Sacks', f('sacks')], ['Int', f('int')]] });
+        }
+        const order = ['Passing', 'Rushing', 'Receiving', 'Defense'];
+        lines.sort((a, b) => order.indexOf(a.cat) - order.indexOf(b.cat));
+        return { result: result(team).replace(/^ in the /, '').replace(/^./, (c) => c.toUpperCase()), lines };
+      };
       const best = [...off].filter(([, e]) => e.pts > 0).sort((a, b) => b[1].pts - a[1].pts)[0];
       if (best) {
         const [team, pid] = best[0].split('/').map(Number);
@@ -260,7 +283,7 @@ export function stories(d: Dynasty, v: SeasonView = seasonView(d, d.seasons[d.se
         const id = `${year}-${week}-potw-${pid}`;
         const parts = best[1].parts;
         const line = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0];
-        out.push({ id, kind: 'potw', week, weight: 48, teams: [team],
+        out.push({ id, kind: 'potw', week, weight: 48, teams: [team], player: pid, box: boxFor(team, pid),
           headline: pick(id, [`${playerName(p)} is the player of the week`, `${name(team)}'s ${playerName(p)} leads the way in ${wk}`, `Big day for ${name(team)}'s ${playerName(p)}`]),
           dek: `#${p.jersey} ${p.pos} ${playerName(p)} ${line}${result(team)}.` });
       }
@@ -275,7 +298,7 @@ export function stories(d: Dynasty, v: SeasonView = seasonView(d, d.seasons[d.se
         const p = d.players[playerOfSlot(def.k)! - 1];
         const bits = [def.tkl ? `${def.tkl} ${def.tkl === 1 ? 'tackle' : 'tackles'}` : '', def.sk ? `${def.sk} ${def.sk === 1 ? 'sack' : 'sacks'}` : '', def.it ? `${def.it} ${def.it === 1 ? 'interception' : 'interceptions'}` : ''].filter(Boolean);
         const id = `${year}-${week}-dpotw-${p.id}`;
-        out.push({ id, kind: 'potw', week, weight: 42, teams: [team],
+        out.push({ id, kind: 'potw', week, weight: 42, teams: [team], player: p.id, box: boxFor(team, p.id),
           headline: pick(id, [`${playerName(p)} is the defensive player of the week`, `${name(team)}'s ${playerName(p)} wrecks the game in ${wk}`, `${playerName(p)} leads ${name(team)}'s defense`]),
           dek: `#${p.jersey} ${p.pos} ${playerName(p)} had ${bits.length > 1 ? `${bits.slice(0, -1).join(', ')} and ${bits[bits.length - 1]}` : bits[0]}${result(team)}.` });
       }
@@ -289,7 +312,7 @@ export function stories(d: Dynasty, v: SeasonView = seasonView(d, d.seasons[d.se
     if (!top) continue;
     const p = d.players.find((x) => x.id === top.player);
     out.push({
-      id: `${year}-${week}-lead-${cat}`, kind: 'leader', week, weight: 25, teams: [top.team],
+      id: `${year}-${week}-lead-${cat}`, kind: 'leader', week, weight: 25, teams: [top.team], player: p?.id,
       headline: `${playerName(p)} leads the nation with ${statValue(top, key).toLocaleString('en-US')} ${what}`,
       dek: `${name(top.team)}'s ${p?.pos ?? ''} ${p ? `#${p.jersey}` : ''} after ${wk}.`.replace(/\s+/g, ' '),
     });

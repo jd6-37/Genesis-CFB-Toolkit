@@ -1,11 +1,11 @@
 // The Dynasty's reading pages: the news front page, scores, standings, rankings, teams, players,
 // stat leaders and history.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   champions, leaders, playerLines, playerName, RECORD_STATS, seasonRecords, seasonView, standings, statValue, teamHistory, weekName,
   INDEPENDENT, type PlayerLine, type StatCategory,
 } from '../../core/dynasty/derive';
-import { offseasonStories, stories } from '../../core/dynasty/news';
+import { offseasonStories, stories, type Story } from '../../core/dynasty/news';
 import { OffseasonSide, SeasonMore, SeasonSide } from './HomeSide';
 import { AddPlayer, EditLook, EditPlayer } from './EditPlayer';
 import { prestigeStars } from '../../core/dynasty/offseason';
@@ -74,6 +74,58 @@ function Ticker() {
   );
 }
 
+/**
+ * A story's headline as a link (user, 2026-11-12): a player of the week opens a window with his game; stories
+ * about a player (stat leaders, milestones) go to his page; the rest to the team.
+ */
+function StoryLink({ s }: { s: Story }) {
+  const [open, setOpen] = useState(false);
+  if (s.box && s.player) {
+    return (
+      <>
+        <a href={href(`player/${s.player}`)} onClick={(e) => { e.preventDefault(); setOpen(true); }}>{s.headline}</a>
+        {open && <StoryBox s={s} onClose={() => setOpen(false)} />}
+      </>
+    );
+  }
+  return <a href={href(s.player ? `player/${s.player}` : `team/${s.teams[0]}`)}>{s.headline}</a>;
+}
+
+/** A player of the week's game: the result and his stat lines, with a link to his page. */
+function StoryBox({ s, onClose }: { s: Story; onClose: () => void }) {
+  const { d, v } = useDyn();
+  const p = d.players[s.player! - 1];
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', esc);
+    return () => window.removeEventListener('keydown', esc);
+  }, [onClose]);
+  return (
+    <div className="dy-modal-back" role="presentation" onClick={onClose}>
+      <div className="dy-modal dy-box" role="dialog" aria-modal="true" aria-labelledby={`box-${s.id}`} onClick={(e) => e.stopPropagation()}>
+        <div className="dy-box-head">
+          <Headshot p={p} size={64} />
+          <div>
+            <h2 id={`box-${s.id}`}>{playerName(p)}</h2>
+            <p className="dy-small dy-dim">#{p.jersey} {p.pos}, <TeamLink team={s.teams[0]} rank={false} size={16} /></p>
+          </div>
+        </div>
+        <p className="dy-small">{s.headline}{s.box!.result ? `: ${s.box!.result}` : ''}.</p>
+        {s.box!.lines.map((l) => (
+          <table key={l.cat} className="dy-table dy-box-table">
+            <thead><tr><th className="dy-left">{l.cat}</th>{l.cells.map(([k]) => <th key={k}>{k}</th>)}</tr></thead>
+            <tbody><tr><td className="dy-left dy-dim">{weekName(v, s.week)}</td>{l.cells.map(([k, v]) => <td key={k}>{v}</td>)}</tr></tbody>
+          </table>
+        ))}
+        <div className="dy-row">
+          <a className="dy-button" href={href(`player/${p.id}`)} onClick={onClose}>Player page</a>
+          <button type="button" className="dy-button dy-quiet" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Home() {
   const { d, v } = useDyn();
   // In the offseason (and before the first game of a season) the news is the offseason's.
@@ -94,7 +146,7 @@ export function Home() {
           {lead && (
             <article className="dy-lead">
               <StoryArt teams={lead.teams} big />
-              <h2>{lead.headline}</h2>
+              <h2><StoryLink s={lead} /></h2>
               <p>{lead.dek}</p>
             </article>
           )}
@@ -102,7 +154,7 @@ export function Home() {
             {second.map((s) => (
               <article key={s.id} className="dy-second">
                 <StoryArt teams={s.teams} />
-                <h3>{s.headline}</h3>
+                <h3><StoryLink s={s} /></h3>
                 <p>{s.dek}</p>
               </article>
             ))}
@@ -116,7 +168,7 @@ export function Home() {
               <ul className="dy-headlines">
                 {heads.map((s) => (
                   <li key={s.id}>
-                    <a href={href(`team/${s.teams[0]}`)}>{s.headline}</a>
+                    <StoryLink s={s} />
                   </li>
                 ))}
               </ul>
