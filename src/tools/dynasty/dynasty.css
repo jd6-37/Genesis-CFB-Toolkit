@@ -440,3 +440,11 @@
   .dy-train-ovr { align-items: flex-start; flex-direction: row; gap: 8px; }
   .dy-train-chips { grid-column: auto; }
 }
+
+/* Appearance editor (phones: preview above the menus) */
+.dy-edit-wrap { display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; }
+.dy-edit-wrap > form { flex: 1 1 100%; }
+.dy-look-body { display: flex; flex-direction: column; gap: 12px; }
+.dy-look-body .dy-edit-grid { flex: 1; }
+.dy-edit-grid label.dy-check { flex-direction: row; align-items: center; align-self: end; min-height: 40px; }
+@media (min-width: 600px) { .dy-look-body { flex-direction: row; align-items: flex-start; } }

@@ -17,9 +17,28 @@ const SKIN: [RGB, RGB, RGB, RGB][] = [ // base, shade, highlight, deep (SKIN_TON
   [[92, 64, 46], [68, 46, 34], [118, 86, 64], [52, 36, 26]],
 ];
 const HAIR: RGB[] = [[30, 24, 20], [74, 48, 30], [126, 84, 46], [208, 172, 104], [18, 18, 24]];
-const HAIR_STYLES = ['short', 'buzz', 'fade', 'curls', 'locs', 'flow', 'bald', 'twists', 'afro', 'mohawk'] as const;
+export const HAIR_STYLES = ['short', 'buzz', 'fade', 'curls', 'locs', 'flow', 'bald', 'twists', 'afro', 'mohawk'] as const;
 const BEARDS = ['none', 'none', 'stubble', 'none', 'goatee', 'beard', 'stubble'] as const;
-const MOUTHS = ['neutral', 'smile', 'smirk', 'serious', 'grin'] as const;
+export const MOUTHS = ['neutral', 'smile', 'smirk', 'serious', 'grin'] as const;
+
+/** Choices for the appearance editor (user, 2026-11-12: editable any time; nothing of it goes into the ROM). */
+export const HAIR_STYLE_LABELS: Record<(typeof HAIR_STYLES)[number], string> = {
+  short: 'Short', buzz: 'Buzz cut', fade: 'Fade', curls: 'Curls', locs: 'Locs', flow: 'Flow', bald: 'Bald', twists: 'Twists', afro: 'Afro', mohawk: 'Mohawk',
+};
+export const HAIR_COLOR_LABELS = ['Dark brown', 'Brown', 'Light brown', 'Blond', 'Black'] as const;
+export const BEARD_STYLES = ['none', 'stubble', 'goatee', 'beard'] as const;
+export const BEARD_LABELS: Record<(typeof BEARD_STYLES)[number], string> = { none: 'None', stubble: 'Stubble', goatee: 'Goatee', beard: 'Beard' };
+export const MOUTH_LABELS: Record<(typeof MOUTHS)[number], string> = { neutral: 'Neutral', smile: 'Smile', smirk: 'Smirk', serious: 'Serious', grin: 'Grin' };
+
+/** A player's stored changes to his generated look (`DPlayer.look`); anything left out stays generated. */
+export interface LookEdit {
+  hair?: (typeof HAIR_STYLES)[number];
+  /** Index into HAIR_COLOR_LABELS. */
+  hairColor?: number;
+  beard?: (typeof BEARD_STYLES)[number];
+  mouth?: (typeof MOUTHS)[number];
+  eyeBlack?: boolean;
+}
 
 /** Head half-width, neck half-width, shoulder half-width (grid cells). */
 const BUILD = { slim: [7.0, 3, 13], medium: [7.6, 4.5, 16], wide: [8.4, 6.2, 19.5] } as const;
@@ -37,7 +56,7 @@ export interface HeadshotLook {
 }
 
 /** A player's look: skin and build from the player, the rest from his ID (the same every time). */
-export function lookOf(p: Pick<DPlayer, 'id' | 'skin' | 'pos' | 'cls'>): HeadshotLook {
+export function lookOf(p: Pick<DPlayer, 'id' | 'skin' | 'pos' | 'cls' | 'look'>): HeadshotLook {
   const r = rng((Math.imul(p.id, 0x9e3779b1) ^ 0x5bd1e995) >>> 0);
   const skin = Math.max(0, Math.min(3, p.skin));
   const hairColor = skin < 2 ? HAIR[Math.floor(r() * HAIR.length)] : [HAIR[0], HAIR[0], HAIR[1], HAIR[4]][Math.floor(r() * 4)];
@@ -45,7 +64,24 @@ export function lookOf(p: Pick<DPlayer, 'id' | 'skin' | 'pos' | 'cls'>): Headsho
   // Younger players have less facial hair.
   let beard = BEARDS[Math.floor(r() * BEARDS.length)];
   if ((p.cls === 'FR' || p.cls === 'SO') && beard === 'beard' && r() < 0.6) beard = 'stubble';
-  return { skin, build: buildOf(p.pos), hair, hairColor, beard, mouth: MOUTHS[Math.floor(r() * MOUTHS.length)], eyeBlack: r() < 0.3 };
+  const gen: HeadshotLook = { skin, build: buildOf(p.pos), hair, hairColor, beard, mouth: MOUTHS[Math.floor(r() * MOUTHS.length)], eyeBlack: r() < 0.3 };
+  const e = p.look;
+  if (!e) return gen;
+  return {
+    ...gen,
+    ...(e.hair && { hair: e.hair }),
+    ...(e.hairColor !== undefined && HAIR[e.hairColor] && { hairColor: HAIR[e.hairColor] }),
+    ...(e.beard && { beard: e.beard }),
+    ...(e.mouth && { mouth: e.mouth }),
+    ...(e.eyeBlack !== undefined && { eyeBlack: e.eyeBlack }),
+  };
+}
+
+/** The generated look's choices as editor values (what the menus show before any change). */
+export function lookChoices(p: Pick<DPlayer, 'id' | 'skin' | 'pos' | 'cls' | 'look'>): Required<LookEdit> {
+  const l = lookOf(p);
+  const color = HAIR.findIndex((c) => c === l.hairColor);
+  return { hair: l.hair, hairColor: Math.max(0, color), beard: l.beard, mouth: l.mouth, eyeBlack: l.eyeBlack };
 }
 
 /** The headshot as RGBA (HEAD_SIZE × HEAD_SIZE): team colors as CSS hex (#rrggbb). */

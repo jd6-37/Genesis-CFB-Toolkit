@@ -1,13 +1,15 @@
 // Roster editing on the player and team pages (edit.ts). Mobile first: one column of fields on phones.
 
 import { useState } from 'react';
-import { applyEdits, editLock, newSkin, type PlayerEdit } from '../../core/dynasty/edit';
+import { applyEdits, editLock, editLook, newSkin, type PlayerEdit } from '../../core/dynasty/edit';
+import { BEARD_LABELS, BEARD_STYLES, HAIR_COLOR_LABELS, HAIR_STYLE_LABELS, HAIR_STYLES, lookChoices, MOUTH_LABELS, MOUTHS, type LookEdit } from '../../core/dynasty/headshot';
+import { SKIN_TONES } from '../../core/dynasty/appearance';
 import { CLASSES, type ClassYear, type DPlayer } from '../../core/dynasty/model';
 import { makeRecruit, POSITIONS, recruitTemplates } from '../../core/dynasty/offseason';
 import { GROUP_OF_ROLE, RATINGS, roleOfPos, shownOf, stepOf, type Ratings } from '../../core/dynasty/ratings';
 import { GROUP_COLUMNS } from '../../core/rosterLayouts';
 import { rng } from '../../core/dynasty/model';
-import { useDyn } from './ui';
+import { Headshot, useDyn } from './ui';
 
 const LABEL: Partial<Record<string, string>> = { Weight: 'Game weight (lb)', Quickness: 'Quickness (K/P: kick distance)' };
 
@@ -108,5 +110,64 @@ export function AddPlayer({ team }: { team: number }) {
       <select aria-label="Position" value={pos} onChange={(e) => setPos(e.target.value)}>{POSITIONS.map((x) => <option key={x}>{x}</option>)}</select>
       <button type="button" className="dy-button dy-quiet" onClick={() => void add()}>Add a player</button>
     </div>
+  );
+}
+
+/**
+ * The portrait's look (user, 2026-11-12: editable any time; nothing of it goes into the ROM). The preview is
+ * the same live drawing as the page's headshot, so saving just stores the choices.
+ */
+export function EditLook({ p }: { p: DPlayer }) {
+  const { d, commit } = useDyn();
+  const [open, setOpen] = useState(false);
+  const [skin, setSkin] = useState(p.skin);
+  const [look, setLook] = useState<Required<LookEdit>>(() => lookChoices(p));
+  const [error, setError] = useState<string | null>(null);
+  if (!open) {
+    return <button type="button" className="dy-button dy-quiet" onClick={() => { setSkin(p.skin); setLook(lookChoices(p)); setOpen(true); }}>Edit appearance</button>;
+  }
+  const draft: DPlayer = { ...p, skin, look };
+  const save = async (change: Parameters<typeof editLook>[2]) => {
+    try {
+      setError(null);
+      await commit(editLook(d, p.id, change));
+      setOpen(false);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+  const pick = <K extends keyof LookEdit>(k: K, v: Required<LookEdit>[K]) => setLook({ ...look, [k]: v });
+  return (
+    <form className="dy-edit dy-look" onSubmit={(e) => { e.preventDefault(); void save({ skin, look }); }}>
+      <h3 className="dy-sub">Appearance</h3>
+      <p className="dy-dim dy-small">Only the app's portrait: nothing here changes the game.</p>
+      <div className="dy-look-body">
+        <Headshot p={draft} size={120} />
+        <div className="dy-edit-grid">
+          <label>Skin tone
+            <select value={skin} onChange={(e) => setSkin(Number(e.target.value))}>{SKIN_TONES.map((t, i) => <option key={t.label} value={i}>{t.label}</option>)}</select>
+          </label>
+          <label>Hair
+            <select value={look.hair} onChange={(e) => pick('hair', e.target.value as Required<LookEdit>['hair'])}>{HAIR_STYLES.map((h) => <option key={h} value={h}>{HAIR_STYLE_LABELS[h]}</option>)}</select>
+          </label>
+          <label>Hair color
+            <select value={look.hairColor} onChange={(e) => pick('hairColor', Number(e.target.value))}>{HAIR_COLOR_LABELS.map((h, i) => <option key={h} value={i}>{h}</option>)}</select>
+          </label>
+          <label>Facial hair
+            <select value={look.beard} onChange={(e) => pick('beard', e.target.value as Required<LookEdit>['beard'])}>{BEARD_STYLES.map((b) => <option key={b} value={b}>{BEARD_LABELS[b]}</option>)}</select>
+          </label>
+          <label>Expression
+            <select value={look.mouth} onChange={(e) => pick('mouth', e.target.value as Required<LookEdit>['mouth'])}>{MOUTHS.map((m) => <option key={m} value={m}>{MOUTH_LABELS[m]}</option>)}</select>
+          </label>
+          <label className="dy-check"><input type="checkbox" checked={look.eyeBlack} onChange={(e) => pick('eyeBlack', e.target.checked)} /> Eye black</label>
+        </div>
+      </div>
+      {error && <p className="dy-note dy-note-error dy-small" role="alert">{error}</p>}
+      <div className="dy-row">
+        <button type="submit" className="dy-button">Save</button>
+        <button type="button" className="dy-button dy-quiet" onClick={() => setOpen(false)}>Cancel</button>
+        {p.look && <button type="button" className="dy-button dy-quiet" onClick={() => void save({ look: null })}>Back to his original look</button>}
+      </div>
+    </form>
   );
 }

@@ -54,6 +54,8 @@ export interface DPlayer {
   ratings: Ratings;
   /** Skin tone 0-3 (SKIN_TONES in appearance.ts: 0-1 White players, 2-3 Black players), for the app's portraits only (the game uses one tone). */
   skin: number;
+  /** Changes the user made to his generated portrait (headshot.ts `LookEdit`; editable any time, not in the ROM). */
+  look?: import('./headshot').LookEdit;
   status: 'active' | 'graduated' | 'pro' | 'transferred' | 'cut';
   /** The CFB 27 player ID for the starting players. */
   srcId?: number;
@@ -108,6 +110,8 @@ export interface DSeason {
   lineupEdited?: boolean;
   /** Roster version in the season ROM's ID block: 1, then one more for each lineup change after a download. */
   rosterVersion?: number;
+  /** The season's ROM has been downloaded (the "download the ROM" window stops asking). */
+  romDownloaded?: boolean;
 }
 
 export type OffseasonEvent =

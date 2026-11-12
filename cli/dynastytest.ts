@@ -29,7 +29,8 @@ import { simFromOvr } from '../src/core/teamRatings';
 import { parseCsv } from '../src/core/rosterSheet';
 import { rosterLayout } from '../src/core/rosterLayouts';
 import { bwSlotOf, ovrOf, progressOf, stepOf } from '../src/core/dynasty/ratings';
-import { applyEdits, playersCsv, readPlayersCsv } from '../src/core/dynasty/edit';
+import { applyEdits, editLook, playersCsv, readPlayersCsv } from '../src/core/dynasty/edit';
+import { lookChoices, lookOf } from '../src/core/dynasty/headshot';
 import { blackShare, MAX_FIRST, MAX_LAST, SKIN_TONES } from '../src/core/dynasty/appearance';
 import { backupLabel, lineupLock, moveToSpot, SPOTS, spotLabel, spotsFor } from '../src/core/dynasty/lineup';
 import { nextPrestige, tierOfRank } from '../src/core/dynasty/prestige';
@@ -553,6 +554,22 @@ if (user !== undefined) {
   }
   ok(`training focus: on a +${G} year Speed development 40 gives SPD +${upF('Speed').toFixed(1)} (even +${up('Speed').toFixed(1)}), AWR +${upF('Awareness').toFixed(1)} (even +${up('Awareness').toFixed(1)}), same OVR gain`);
   ok(`development paces: an HB's +${G} OVR year gives AWR +${up('Awareness').toFixed(1)}, POW +${up('Power').toFixed(1)}, QUI +${up('Quickness').toFixed(1)}, SPD +${up('Speed').toFixed(1)}`);
+}
+
+// Appearance: editable any time (not in the ROM); back to the generated look.
+{
+  const p0 = d1.players.find((p) => p.status === 'active')!;
+  const gen = lookChoices(p0);
+  const e1 = editLook(d1, p0.id, { skin: 3, look: { hair: 'afro', beard: 'beard', eyeBlack: true } });
+  const q = e1.players[p0.id - 1];
+  assert.equal(q.skin, 3);
+  assert.deepEqual([lookOf(q).hair, lookOf(q).beard, lookOf(q).eyeBlack], ['afro', 'beard', true]);
+  assert.equal(lookOf(q).mouth, gen.mouth, 'the rest stays generated');
+  assert.deepEqual(e1.seasons, d1.seasons, 'nothing about the season changes');
+  const back = editLook(e1, p0.id, { look: null }).players[p0.id - 1];
+  assert.deepEqual(lookChoices(back), lookChoices({ ...p0, skin: 3 }), 'back to the generated look');
+  assert.throws(() => editLook(d1, p0.id, { skin: 7 }), /skin tone/);
+  ok('appearance: skin, hair, facial hair and eye black saved; the rest stays generated; reset works');
 }
 
 // Simming for the user teams: a week, the rest of recruiting, the cuts, the whole offseason.

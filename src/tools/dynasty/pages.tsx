@@ -7,7 +7,7 @@ import {
 } from '../../core/dynasty/derive';
 import { offseasonStories, stories } from '../../core/dynasty/news';
 import { OffseasonSide, SeasonMore, SeasonSide } from './HomeSide';
-import { AddPlayer, EditPlayer } from './EditPlayer';
+import { AddPlayer, EditLook, EditPlayer } from './EditPlayer';
 import { prestigeStars } from '../../core/dynasty/offseason';
 import { MAX_PRESTIGE } from '../../core/dynasty/prestige';
 import type { SaveGame } from '../../core/dynasty/save';
@@ -614,7 +614,7 @@ export function Player({ id }: { id: number }) {
           <StatTables lines={s.lines} />
         </div>
       ))}
-      {p.status === 'active' && team !== null && <div className="dy-edit-wrap"><EditPlayer key={p.id} p={p} /></div>}
+      <div className="dy-edit-wrap">{p.status === 'active' && team !== null && <EditPlayer key={p.id} p={p} />}<EditLook key={`look-${p.id}`} p={p} /></div>
       <h3 className="dy-sub">Bill Walsh '95 ratings</h3>
       {shownSlots.length ? shownSlots.map((slot) => <BwRatings key={slot} team={team!} slot={slot} name={playerName(p)} bench={onBench} player={p} />) : (
         <p className="dy-dim">

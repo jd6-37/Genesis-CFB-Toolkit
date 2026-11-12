@@ -81,6 +81,7 @@ type Note = { kind: 'error' | 'ok'; text: string } | null;
 
 export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
   const [route, setRoute] = useState(parseHash);
+  const [romLater, setRomLater] = useState<number | null>(null);
   const [list, setList] = useState<DynastySummary[] | null>(null);
   const [d, setD] = useState<Dynasty | null>(null);
   const [art, setArt] = useState<TeamArt[] | null>(null);
@@ -166,7 +167,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       setArt(pics);
       setCurrent(dyn.id);
       await refresh();
-      setNote({ kind: 'ok', text: `${dyn.name} is ready: ${dyn.players.length.toLocaleString('en-US')} players on ${dyn.teams.length} teams. Download the ${dyn.seasons[0].year} ROM (Season ROM, below), start a New Season in the game with it, and import your save after you play a week.` });
+      setNote({ kind: 'ok', text: `${dyn.name} is ready: ${dyn.players.length.toLocaleString('en-US')} players on ${dyn.teams.length} teams. Play the ${dyn.seasons[0].year} season on your ROM as it is, and import your save whenever you like (after the last game at the latest). After the offseason the app gives you the next season's ROM.` });
     }),
     importSave: (f, allowOlder) => run('Importing the save…', async () => {
       if (!d) return;
@@ -255,7 +256,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       if (!rom) throw new Error('Choose your ROM to write the season into it.');
       const slug = d.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'dynasty';
       download(`${slug}-${year}.md`, seasonRom(d, season, rom) as Uint8Array<ArrayBuffer>, 'application/octet-stream');
-      if (season.lineupEdited) await commit({ ...d, seasons: d.seasons.map((x) => (x === season ? { ...x, lineupEdited: false } : x)) });
+      if (season.lineupEdited || !season.romDownloaded) await commit({ ...d, seasons: d.seasons.map((x) => (x === season ? { ...x, lineupEdited: false, romDownloaded: true } : x)) });
       setNote({
         kind: 'ok',
         text: `Downloaded the ${year} ROM. Start a New Season with it in the game: Season mode plays the dynasty's rosters, Exhibition keeps the real 2026 ones.`,
@@ -312,6 +313,25 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       <main className="dy-main">
         {note && page !== 'manage' && <p className={`dy-note dy-note-${note.kind}`} role="status">{note.text}</p>}
         {ctx ? <Ctx.Provider value={ctx}>{body}</Ctx.Provider> : body}
+        {d && !d.offseason && d.seasons.length > 1 && (() => {
+          // The new season's ROM (user, 2026-11-12: the download "needs to be VERY obvious, like a modal window"):
+          // asks until it's downloaded or the season's first save is imported; "Later" hides it until the next visit.
+          const s = d.seasons[d.seasons.length - 1];
+          if (s.romDownloaded || s.imports.length || romLater === s.year) return null;
+          return (
+            <div className="dy-modal-back" role="presentation">
+              <div className="dy-modal" role="dialog" aria-modal="true" aria-labelledby="dy-rom-title">
+                <h2 id="dy-rom-title">Download the {s.year} ROM</h2>
+                <p>The {s.year} season is set up. Download its ROM and start a <b>New Season</b> in the game with it: it has the new rosters, and the app can only import saves of seasons started with it.</p>
+                <p className="dy-small dy-dim">You can still change your depth chart first (your team's page); then download it again.</p>
+                <div className="dy-row">
+                  <button type="button" className="dy-button" disabled={!!busy} onClick={() => offActions.downloadRom(s.year)}>Download the {s.year} ROM</button>
+                  <button type="button" className="dy-button dy-quiet" onClick={() => setRomLater(s.year)}>Later</button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </main>
     </div>
   );
@@ -451,7 +471,7 @@ function Manage({ d, art, list, busy, note, actions }: {
             <button type="button" className="dy-button" disabled={addTeam === ''} onClick={() => { actions.setUserTeams([...d.userTeams, Number(addTeam)]); setAddTeam(''); }}>Add team</button>
           </div>
 
-          {!d.offseason && (() => {
+          {!d.offseason && d.seasons.length > 1 && (() => {
             const year = d.seasons[d.seasons.length - 1].year;
             return (
               <>
@@ -459,7 +479,8 @@ function Manage({ d, art, list, busy, note, actions }: {
                 <p>
                   The {year} rosters and team OVRs in your ROM's dynasty area: Season mode plays them, Exhibition keeps the real 2026
                   rosters, and New Season marks the save with the dynasty and season, so the app knows it. Start the {year} season in the
-                  game with this ROM; saves of seasons started with another ROM can't be imported.
+                  game with this ROM; saves of seasons started with another ROM can't be imported. (The first season needs no download:
+                  play it on your ROM as it is.)
                 </p>
                 <button type="button" className="dy-button" disabled={!!busy} onClick={() => actions.downloadRom(year)}>Download the {year} ROM</button>
               </>

@@ -13,7 +13,8 @@ import { playerOvr } from './ovr';
 import { bwSlotOf, ovrOf, RATINGS, type Ratings } from './ratings';
 import { olPlusOf, teamDepth } from './depth';
 import { SLOT_DEFS } from './lineup';
-import { blackShare, nameScore } from './appearance';
+import { blackShare, nameScore, SKIN_TONES } from './appearance';
+import type { LookEdit } from './headshot';
 import { POSITIONS } from './offseason';
 import { recordYear } from './career';
 
@@ -210,4 +211,22 @@ export function readPlayersCsv(d: Dynasty, text: string): CsvImport {
     }
   });
   return out;
+}
+
+/**
+ * Changes a player's portrait (user, 2026-11-12: "make the appearance attributes of a player editable anytime
+ * during the season … anything that doesn't affect the ROM"): skin tone and the look's parts. Allowed any
+ * time; `look: null` goes back to the generated look. The portrait is drawn from these on every page view.
+ */
+export function editLook(d: Dynasty, id: number, change: { skin?: number; look?: LookEdit | null }): Dynasty {
+  const p = d.players[id - 1];
+  if (!p || p.id !== id) throw new Error('There is no such player.');
+  if (change.skin !== undefined && !(Number.isInteger(change.skin) && change.skin >= 0 && change.skin < SKIN_TONES.length)) throw new Error('Pick a skin tone.');
+  const q: DPlayer = { ...p };
+  if (change.skin !== undefined) q.skin = change.skin;
+  if (change.look === null) delete q.look;
+  else if (change.look) q.look = { ...p.look, ...change.look };
+  const players = d.players.slice();
+  players[id - 1] = q;
+  return { ...d, players };
 }
