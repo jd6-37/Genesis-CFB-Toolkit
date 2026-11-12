@@ -1,6 +1,6 @@
 // A player's OVR from his Bill Walsh '95 ratings, by roster role.
 //
-// OVR = base + scale x (weighted average of the ratings as the game shows them, 0-100). Only ratings
+// OVR = base + scale x (weighted average of the ratings as the game shows them, 0-99, from the fine values). Only ratings
 // the game uses at that position count (claude.ai notes bw95-cfb27-ratings-notes.md, "How BW95 uses
 // the ratings"): kickers' and punters' Quick is kick distance and Range isn't used for kicks; Weight is
 // mass, not quality, so it's left out everywhere. Linemen's Block keeps them on their feet after hard
@@ -9,7 +9,8 @@
 // Edition (2026-11-12), so the numbers read like CFB 27's.
 
 import { bw95Role } from '../rosterCfb27';
-import { nibbleToRating, type Attr } from '../rosterLayouts';
+import type { Attr } from '../rosterLayouts';
+import { fineAt, shownFine } from './ratings';
 import type { BwSlot } from './model';
 
 export interface OvrFormula {
@@ -44,7 +45,7 @@ export function playerOvr(slot: number, b: BwSlot): number {
   let avg = 0;
   for (const [a, w] of Object.entries(f.weights) as [Attr, number][]) {
     const i = b.attrs.indexOf(a);
-    if (i >= 0) avg += (w / 100) * nibbleToRating(b.steps[i]);
+    if (i >= 0) avg += (w / 100) * shownFine(fineAt(b, i));
   }
   return Math.max(0, Math.min(99, Math.round(f.base + f.scale * avg)));
 }

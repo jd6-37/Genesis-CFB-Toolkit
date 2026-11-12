@@ -44,7 +44,7 @@ function extras(plan: Cfb27Plan, fills: Cfb27Fill[], rowOf: (row: number) => num
 
 const slotOf = (f: Cfb27Fill, olPlus: number): BwSlot => {
   const attrs = GROUP_COLUMNS[f.group];
-  return { label: f.label, group: f.group, attrs, steps: attrs.map((a) => f.steps[a] ?? 0), weightPlus: f.group === 'OL' ? olPlus : 0 };
+  return { label: f.label, group: f.group, attrs, steps: attrs.map((a) => f.steps[a] ?? 0), offs: attrs.map(() => 0), weightPlus: f.group === 'OL' ? olPlus : 0 };
 };
 
 /** The 32 and the bench of every team the sheet has, with their game ratings. */

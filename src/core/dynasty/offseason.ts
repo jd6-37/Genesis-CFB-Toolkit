@@ -15,6 +15,7 @@
 // Pure functions: each returns a new dynasty. Randomness is seeded, so the same choices give the
 // same offseason. The players before the offseason are kept so it can be started over.
 
+import { FINE_SET_BYTES, putFineOffsets } from './fine';
 import { lastGames, makeSchedule, RELEASE_CONF_WEEKS, scheduleSet } from './schedule';
 import { CLASSES, rng, type ClassYear, type DPlayer, type DSeason, type Dynasty, type OffseasonEvent } from './model';
 import { playerLines, seasonView } from './derive';
@@ -524,7 +525,7 @@ export function makeRecruit(d: Dynasty, tpl: RecruitTemplates, r: Rand, id: numb
     if (a === 'Weight') { ratings.Weight = clamp(Math.round(v + 8 * gauss(r)), 140, 380); continue; }
     const counts = !!f?.weights[a];
     const drop = counts ? gap * (a === 'Speed' ? 0.4 : 1) * between(r, 0.6, 1.4) : 0;
-    ratings[a] = clamp(Math.round(v - drop + 3 * gauss(r)), 0, 100);
+    ratings[a] = clamp(Math.round((v - drop + 3 * gauss(r)) * 10) / 10, 0, 100); // fine ratings: every point plays
   }
   const ovr = ovrOf({ pos, ratings });
   const [plo, phi] = stars === 0 && r() < R.diamondChance ? [R.diamondPotMin, R.diamondPotMax] : STAR_POT[stars];
@@ -834,6 +835,7 @@ export function seasonRom(d: Dynasty, season: DSeason, rom: Uint8Array, now = Da
   const records: Uint8Array[] = [];
   const ovr: { off: number; def: number }[] = [];
   const names: (DynastyName | null)[][] = [];
+  const fine = new Uint8Array(FINE_SET_BYTES); // every slot's fine-ratings offsets (fine.ts)
   for (let t = 0; t < d.teams.length; t++) {
     const rec = new Uint8Array(128);
     const teamNames: (DynastyName | null)[] = new Array(32).fill(null);
@@ -842,6 +844,7 @@ export function seasonRom(d: Dynasty, season: DSeason, rom: Uint8Array, now = Da
       const id = season.slots[t][def.slot];
       const b = season.bw?.[t]?.[def.slot];
       if (id && b) {
+        putFineOffsets(fine, t, def.slot, b);
         const pl = d.players[id - 1];
         teamNames[def.slot] = { cls: CLASSES.indexOf(pl.cls), first: pl.first, last: pl.last };
         p.numberByte = jerseyByte(pl.jersey);
@@ -862,6 +865,7 @@ export function seasonRom(d: Dynasty, season: DSeason, rom: Uint8Array, now = Da
     records,
     ovr,
     names,
+    fine,
     schedule: season.schedule ? scheduleSet(season.schedule) : undefined,
   });
   fixChecksums(out.data, out.game);

@@ -3,7 +3,7 @@
 // and importing battery saves into seasons. Pure functions, no DOM. Spec: claude.ai project notes
 // bw95-dynasty-spec.md (also Bill-Walsh-95-Modding/dynasty/).
 
-import { openRosterRom } from '../rosterRom';
+import { openRosterRom, readPlayer } from '../rosterRom';
 import { parseCsv, type Sheet } from '../rosterSheet';
 import { readWideSeason, wideSeasonProblems } from '../seasonWide';
 import type { ConfWeeks, DSchedule } from './schedule';
@@ -14,8 +14,9 @@ import { ratingProblems, readRating, type TeamRating } from '../teamRatings';
 import { readDynastySave, type DynastySave } from './save';
 import { startingPrestige } from './prestige';
 import { buildRosters } from './rosters';
-import { ovrOf, ratingsFromSlot, type Ratings } from './ratings';
-import { nibbleToRating } from '../rosterLayouts';
+import { ovrOf, ratingsFromSlot, valueOfFine, type Ratings } from './ratings';
+import { GROUP_ATTRS } from '../rosterLayouts';
+import { hasFineRatings, readFineOffsets } from './fine';
 import { assignBlack, skinFor } from './appearance';
 import { recordYear, type YearRecord } from './career';
 import { DYNASTY_EDITION, dynastyRomId, hasDynastyHooks, readStamp } from './dynastyArea';
@@ -128,13 +129,15 @@ export type OffseasonEvent =
   | { kind: 'class'; team: number; rank: number; signed: number; points: number }
   | { kind: 'prestige'; team: number; from: number; to: number; finalRank: number };
 
-/** A roster slot's ratings in the game: 0-15 steps, in the roster screen's column order. */
+/** A roster slot's ratings in the game: 0-15 steps and fine offsets, in the roster screen's column order. */
 export interface BwSlot {
   /** The slot's label on the game's roster screen (QB, HB1, LT, LDE …). */
   label: string;
   group: Group;
   attrs: Attr[];
   steps: number[];
+  /** Fine-ratings offsets, −8..+7 sixteenths of a step (ratings.ts): the game plays 16 × step + offset. */
+  offs: number[];
   /** Pounds the ROM adds to the shown weight (the OL weight tweak). */
   weightPlus: number;
 }
@@ -236,7 +239,24 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
   // The 32 in the game and the bench (one backup per slot), both from the Rosters tool's conversion;
   // the dynasty keeps only these players, with the converted ratings as their own from now on.
   const build = buildRosters(roster, sheet);
-  const random = rng(opt.seed ?? Date.now());
+  const seed = opt.seed ?? Date.now();
+  const random = rng(seed);
+  // Fine ratings: the Active Roster's offsets are the ROM's (its table, when the record has the conversion's
+  // steps); backups aren't in the ROM, so theirs are drawn evenly (a step's average stays the step).
+  const fineRom = hasFineRatings(roster.data);
+  const offRand = rng((seed ^ 0x46524331) >>> 0);
+  const drawn = () => Math.floor(offRand() * 16) - 8;
+  // The app's numbers run 0-100 (fine 0-240): nothing below step 0 (the game reads that as 0) or above step 15.
+  const inRange = (step: number, off: number) => Math.max(0, Math.min(240, 16 * step + off)) - 16 * step;
+  build.bw.forEach((sl, t) => sl.forEach((b, k) => {
+    if (!b) return;
+    const rec = fineRom ? readPlayer(roster, t, k).ratings : null;
+    const order = GROUP_ATTRS[b.group];
+    const same = !!rec && order.every((a, n) => rec[n] === b.steps[b.attrs.indexOf(a)]);
+    const rom = same ? readFineOffsets(roster.data, t, k) : null;
+    b.offs = b.attrs.map((a, i) => inRange(b.steps[i], rom ? rom[order.indexOf(a)] : drawn()));
+  }));
+  build.benchBw.forEach((sl) => sl.forEach((b) => { if (b) b.offs = b.attrs.map((_, i) => inRange(b.steps[i], drawn())); }));
   const teamOfRow = new Map<number, number>();
   const slotOfRow = new Map<number, BwSlot>();
   build.slots.forEach((sl, t) => sl.forEach((row, k) => { if (row !== null && !teamOfRow.has(row)) { teamOfRow.set(row, t); slotOfRow.set(row, build.bw[t][k]!); } })); // a kicker who also punts: the kicker's ratings
@@ -249,7 +269,7 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
     idOfRow.set(row, id);
     // His ratings: the steps the conversion gave him (as the game shows them), and the related group's.
     const ratings = ratingsFromSlot(slotOfRow.get(row)!);
-    for (const [a, step] of Object.entries(build.extra.get(row) ?? {}) as [Attr, number][]) if (ratings[a] === undefined) ratings[a] = nibbleToRating(step);
+    for (const [a, step] of Object.entries(build.extra.get(row) ?? {}) as [Attr, number][]) if (ratings[a] === undefined) ratings[a] = valueOfFine(16 * step + (step ? drawn() : 0));
     const p: DPlayer = {
       id,
       first: r[cFirst].trim(),
