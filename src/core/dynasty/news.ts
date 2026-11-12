@@ -1,7 +1,8 @@
 // Stories for the Dynasty's news homepage, written from the season's results with templates.
 // Pure functions: the same season gives the same stories.
 
-import { leaders, playerLines, playerName, seasonView, statValue, weekName, type SeasonView } from './derive';
+import { INDEPENDENT, leaders, playerLines, playerName, RECORD_STATS, seasonView, standings, statValue, weekName, type SeasonView } from './derive';
+import { rivalryOf } from './rivalries';
 import { fromBase64, type Dynasty, type OffseasonEvent } from './model';
 import { readDynastySave, type DynastySave, type SaveGame } from './save';
 
@@ -14,7 +15,7 @@ export interface Story {
   week: number;
   /** Higher = more important (the top one leads). */
   weight: number;
-  kind: 'champion' | 'upset' | 'topgame' | 'rout' | 'yours' | 'number1' | 'unbeaten' | 'leader' | 'cfp' | 'title' | 'potw' | 'milestone' | 'streak';
+  kind: 'champion' | 'upset' | 'topgame' | 'rout' | 'yours' | 'number1' | 'unbeaten' | 'leader' | 'cfp' | 'title' | 'potw' | 'milestone' | 'streak' | 'rivalry' | 'race' | 'record' | 'commit';
   /** The player a story is about (stat leaders, milestones, players of the week): the headline links to him. */
   player?: number;
   /**
@@ -205,6 +206,87 @@ export function stories(d: Dynasty, v: SeasonView = seasonView(d, d.seasons[d.se
       dek: `${name(l)} drops to ${v.records[l].w}-${v.records[l].l}.` });
   }
 
+  // Rivalry games of the week (rivalries.ts; user, 2026-11-12: more stories).
+  for (const g of weekGames as (SaveGame & { visitor: number; home: number; vs: number; hs: number })[]) {
+    if (g.vs === g.hs) continue;
+    const rivalry = rivalryOf(name(g.visitor), name(g.home));
+    if (!rivalry) continue;
+    const [w, l, ws, ls] = g.vs > g.hs ? [g.visitor, g.home, g.vs, g.hs] : [g.home, g.visitor, g.hs, g.vs];
+    const id = `${year}-${week}-${g.index}-rivalry`;
+    const mine = d.userTeams.includes(w) || d.userTeams.includes(l);
+    out.push({ id, kind: 'rivalry', week, weight: 44 + (mine ? 14 : 0) + (pre[w] <= 25 || pre[l] <= 25 ? 6 : 0), teams: [w, l],
+      headline: pick(id, [`${name(w)} takes ${rivalry}, ${ws}-${ls}`, `${rivalry[0].toUpperCase()}${rivalry.slice(1)} goes to ${name(w)}`, `${name(w)} beats ${name(l)} in ${rivalry}`]),
+      dek: `${full(w)} ${ws}, ${full(l)} ${ls}. ${name(w)} is ${v.records[w].w}-${v.records[w].l}, ${name(l)} ${v.records[l].w}-${v.records[l].l}.` });
+  }
+
+  // Conference races over the last three regular-season weeks: a clinched title, a shared lead, or a lead.
+  if (!post && week >= v.lastRegularWeek - 2) {
+    const races: Story[] = [];
+    const confs = [...new Set(v.season.conf)].filter((c) => c !== INDEPENDENT);
+    for (const c of confs) {
+      const st = standings(v, c);
+      if (st.length < 2) continue;
+      const left = (t: number) => v.games.filter((g) => g.week <= v.lastRegularWeek && g.vs === null && g.visitor !== null && g.home !== null &&
+        (g.visitor === t || g.home === t) && v.season.conf[g.visitor === t ? g.home : g.visitor] === c).length;
+      const [a, b] = st;
+      const cname = v.season.confNames[c] ?? 'conference';
+      const id = `${year}-${week}-race-${c}`;
+      const mine = st.some((r) => d.userTeams.includes(r.team));
+      const weight = 33 + (mine ? 15 : 0) + (v.rank[a.team] <= 10 ? 6 : v.rank[a.team] <= 25 ? 3 : 0);
+      const others = Math.max(...st.slice(1).map((r) => r.cw + left(r.team)));
+      if (a.cw > others) {
+        races.push({ id, kind: 'race', week, weight: weight + 4, teams: [a.team],
+          headline: pick(id, [`${name(a.team)} clinches first place in the ${cname}`, `${name(a.team)} locks up the top of the ${cname}`]),
+          dek: `${full(a.team)} is ${a.cw}-${a.cl} in the ${cname}; nobody can catch them.` });
+      } else if (a.cw === b.cw && a.cl === b.cl) {
+        races.push({ id, kind: 'race', week, weight, teams: [a.team, b.team],
+          headline: pick(id, [`${name(a.team)} and ${name(b.team)} share the ${cname} lead`, `A two-way tie atop the ${cname}`]),
+          dek: `${name(a.team)} and ${name(b.team)} are both ${a.cw}-${a.cl} in conference play with ${left(a.team)} and ${left(b.team)} conference games left.` });
+      } else {
+        const gb = ((a.cw - a.cl) - (b.cw - b.cl)) / 2;
+        races.push({ id, kind: 'race', week, weight: weight - 3, teams: [a.team, b.team],
+          headline: pick(id, [`${name(a.team)} leads the ${cname} race`, `${name(a.team)} holds a ${gb === 1 ? 'one-game' : `${gb}-game`} lead in the ${cname}`]),
+          dek: `${name(a.team)} is ${a.cw}-${a.cl} in the ${cname}, ${name(b.team)} ${b.cw}-${b.cl}, with ${left(a.team)} conference ${left(a.team) === 1 ? 'game' : 'games'} left for ${name(a.team)}.` });
+      }
+    }
+    out.push(...races.sort((x, y) => y.weight - x.weight).slice(0, 4));
+  }
+
+  // Single-season records broken since the last import (against every earlier season of the dynasty).
+  {
+    const earlier = d.seasons.filter((x) => x.year < year);
+    if (earlier.length) {
+      const prevSave = previousSave(v);
+      const before = prevSave ? totals(prevSave.save) : null;
+      const now = totals(v.save!);
+      const earlierLines = earlier.map((es) => ({ year: es.year, lines: playerLines(seasonView(d, es)) }));
+      for (const stat of RECORD_STATS) {
+        if (!['passing', 'rushing', 'receiving', 'defense'].includes(stat.cat)) continue;
+        let best = 0, holder: number | null = null, holderYear = 0;
+        for (const es of earlierLines) for (const l of es.lines) {
+          if (l.cat === stat.cat && statValue(l, stat.key) > best) { best = statValue(l, stat.key); holder = l.player; holderYear = es.year; }
+        }
+        if (best <= 0) continue;
+        // Only the new record holder: the season's top mark, if it passed the old record since the last import.
+        let topKey: string | null = null, topVal = 0;
+        for (const [key, s1] of now) if (key.split('/')[1] === stat.cat && (s1[stat.key] ?? 0) > topVal) { topVal = s1[stat.key] ?? 0; topKey = key; }
+        for (const [key, s1] of now) {
+          const [team, , slot] = key.split('/');
+          if (key !== topKey || topVal <= best) continue;
+          if (before && [...before].some(([k, b1]) => k.split('/')[1] === stat.cat && (b1[stat.key] ?? 0) > best)) continue; // broken before
+          const pid = v.season.slots[Number(team)]?.[Number(slot)];
+          const p = pid ? d.players[pid - 1] : undefined;
+          if (!p) continue;
+          const old = holder ? d.players[holder - 1] : undefined;
+          const id = `${year}-record-${stat.cat}-${stat.key}-${p.id}`;
+          out.push({ id, kind: 'record', week, weight: 62, teams: [Number(team)], player: p.id,
+            headline: `${playerName(p)} sets the record for ${stat.label.toLowerCase()} in a season`,
+            dek: `${name(Number(team))}'s ${p.pos} has ${(s1[stat.key]).toLocaleString('en-US')} after ${wk}, past ${old?.id === p.id ? 'his own' : old ? `${playerName(old)}'s` : 'the'} ${best.toLocaleString('en-US')} (${holderYear}).` });
+        }
+      }
+    }
+  }
+
   // Since the last import: milestones; and with saves exactly a week apart, the players of the week.
   const prev = previousSave(v);
   const latest = v.season.imports[v.season.imports.length - 1];
@@ -331,6 +413,27 @@ export function offseasonStories(d: Dynasty, events: OffseasonEvent[], year: num
   const name = (t: number) => d.teams[t].school;
   const pl = (id: number) => d.players[id - 1];
   const who = (id: number) => `${pl(id).pos} ${pl(id).first} ${pl(id).last}`;
+  // Recruiting: the latest week's commitments and flips (user, 2026-11-12: "more stories … commitments").
+  const rs = d.offseason?.year === year ? d.offseason.recruiting : undefined;
+  if (rs && rs.week > 0) {
+    const latest = rs.log.filter((e) => e.week === rs.week);
+    const pros = new Map(rs.prospects.map((q) => [q.id, q]));
+    const big = latest
+      .map((e) => ({ e, q: pros.get(e.prospect)! }))
+      .filter(({ e, q }) => q && (q.stars >= 4 || d.userTeams.includes(e.team) || (e.flipFrom !== undefined && d.userTeams.includes(e.flipFrom))))
+      .sort((a, b) => b.q.stars - a.q.stars || b.q.player.ovr - a.q.player.ovr)
+      .slice(0, 6);
+    big.forEach(({ e, q }, i) => {
+      const p = q.player;
+      const mine = d.userTeams.includes(e.team);
+      const lost = e.flipFrom !== undefined && d.userTeams.includes(e.flipFrom);
+      const id = `${year}-commit-${rs.week}-${q.id}`;
+      const what = `${q.from !== null ? 'transfer ' : ''}${q.stars ? STAR(q.stars) : ''} ${p.pos} ${p.first} ${p.last}`.replace(/\s+/g, ' ').trim();
+      out.push({ id, kind: 'commit', week: 0, weight: 74 - i * 3 + (mine || lost ? 12 : 0), teams: e.flipFrom !== undefined ? [e.team, e.flipFrom] : [e.team],
+        headline: e.flipFrom !== undefined ? `${what} flips from ${name(e.flipFrom)} to ${name(e.team)}` : pick(id, [`${what} commits to ${name(e.team)}`, `${name(e.team)} lands ${what}`]),
+        dek: `${q.from !== null ? `He leaves ${name(q.from)} after the season.` : `From ${p.hometown}${p.state && p.state !== 'Non-US' ? `, ${p.state}` : ''}.`} Week ${rs.week} of recruiting.` });
+    });
+  }
   const classes = events.filter((e): e is Extract<OffseasonEvent, { kind: 'class' }> => e.kind === 'class').sort((a, b) => a.rank - b.rank);
   const signed = events.filter((e): e is Extract<OffseasonEvent, { kind: 'signed' }> => e.kind === 'signed');
   if (classes[0]) {

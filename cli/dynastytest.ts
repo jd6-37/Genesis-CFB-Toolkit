@@ -3,14 +3,17 @@
 // The ROM is the 138-team 2026 Season Edition with the dynasty support (Elevated v2.0.1-test9 or later). The
 // save is a Genesis Plus GX (RetroArch) .srm of the 138-team edition with a season started and at least one week
 // played; the test puts its dynasty's mark (the ID block New Season copies) into it.
+import { careerRecords, teamRecords } from '../src/core/dynasty/records';
+import { AWARD_SPOTS, AWARD_STATS_WEIGHT, POSITION_AWARDS, awardsOf, candidates, playerHonors, seasonAwards } from '../src/core/dynasty/awards';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { strict as assert } from 'node:assert';
 import { openRom } from '../src/core/romfile';
 import { openSave, readDynastySave, ranksFromPower, STAT_SLOTS } from '../src/core/dynasty/save';
 import { CLASSES, createDynasty, fromBase64, importSave, latestSave, startingClass, weeksDone } from '../src/core/dynasty/model';
-import { champions, leaders, playerLines, seasonRecords, RECORD_STATS, seasonView, standings, teamHistory, weekName } from '../src/core/dynasty/derive';
-import { stories } from '../src/core/dynasty/news';
+import { champions, INDEPENDENT, playerName, leaders, playerLines, seasonRecords, RECORD_STATS, seasonView, standings, teamHistory, weekName } from '../src/core/dynasty/derive';
+import { offseasonStories, stories } from '../src/core/dynasty/news';
+import { rivalryOf } from '../src/core/dynasty/rivalries';
 import { teamArt } from '../src/core/dynasty/art';
 import { dynastyFileName, dynastyFileText, readDynastyFile } from '../src/core/dynasty/storage';
 import { CFB27_LATEST } from '../src/core/cfb27Latest';
@@ -572,6 +575,14 @@ if (user !== undefined) {
   ok('appearance: skin, hair, facial hair and eye black saved; the rest stays generated; reset works');
 }
 
+// Recruiting commitment stories: the latest week's 4-5★ commitments and the user teams' moves.
+{
+  const c1 = Rec.simRecruiting(f1, 2);
+  const cs = offseasonStories(c1, c1.offseason!.events, c1.offseason!.year).filter((x) => x.kind === 'commit');
+  assert.ok(cs.length > 0 && cs.length <= 6, `commitment stories (${cs.length})`);
+  ok(`commitment stories: ${cs.slice(0, 2).map((x) => `"${x.headline}"`).join(', ')}`);
+}
+
 // Simming for the user teams: a week, the rest of recruiting, the cuts, the whole offseason.
 const g1 = Rec.simRecruiting(f1, 1);
 assert.equal(g1.offseason!.recruiting!.week, 1);
@@ -687,6 +698,73 @@ ok('a new season refuses the last season\'s save');
   // A gap of more than a week (no import in between): no week's stats, the season-total stories only.
   assert.equal(stories(importSave(d0, srm).dynasty).filter((x) => x.kind === 'potw').length, 0);
   const kinds = [...new Set(st.map((x) => x.kind))].join(', ');
+  // Rivalries, conference races (late in the season), records broken (from the second season), commitments.
+  assert.equal(rivalryOf('Auburn', 'Alabama'), 'the Iron Bowl');
+  assert.equal(rivalryOf('Alabama', 'Texas State'), null);
+  const v2 = seasonView(w2, w2.seasons[0]);
+  const lastWk = Math.max(...v2.games.filter((g) => g.vs !== null).map((g) => g.week));
+  const late = stories(w2, { ...v2, lastRegularWeek: lastWk + 2 }).filter((x) => x.kind === 'race');
+  assert.ok(late.length > 0 && late.length <= 4, `conference races late in the season (${late.length})`);
+  assert.equal(st.filter((x) => x.kind === 'race').length, 0, 'no races early');
+  {
+    // 2026 with the smaller save, then 2027 with the full one: the leaders pass the 2026 bests.
+    const a1 = importSave(d0, before).dynasty;
+    const o = Off.startOffseason(a1, { seed: 5, force: true });
+    const n2 = Sim.simOffseason(o, Off.recruitTemplates(o));
+    const b2 = importSave(n2, stampSave(rawSrm, dynastyRomId('test'), 2, 1)).dynasty;
+    const rec = stories(b2).filter((x) => x.kind === 'record');
+    assert.ok(rec.length > 0 && rec.length <= RECORD_STATS.length && rec.every((x) => x.player && /sets the record/.test(x.headline)), `records broken (${rec.length})`);
+    assert.equal(new Set(rec.map((x) => x.headline.replace(/^.* sets /, ''))).size, rec.length, 'one new holder per record');
+    ok(`more stories: ${late.length} conference races late in the season, e.g. "${late[0].headline}"; ${rec.length} records broken, e.g. "${rec[0].headline}" (${rec[0].dek})`);
+  }
+  {
+    // Season awards from the stats so far (seasonAwards waits for the season's end).
+    const aw = awardsOf(v2);
+    const [first, second] = aw.allAmerican;
+    const spots = AWARD_SPOTS.reduce((a, x) => a + x.n, 0);
+    assert.ok(first.length === spots && second.length === spots, `full All-American teams (${first.length}, ${second.length} of ${spots})`);
+    assert.equal(new Set([...first, ...second].map((c) => c.player)).size, 2 * spots, 'nobody on both teams');
+    for (const x of AWARD_SPOTS) assert.equal(first.filter((c) => x.roles.includes(c.role)).length, x.n, `${x.label} spots`);
+    const qb = aw.position[0].winner!;
+    // Stats and OVR (user: "stats are very important … they aren't everything"): the winner is among the top 10 QBs
+    // by stats and has the best 60/40 blend of them.
+    const qbs = candidates(v2).filter((c) => c.role === 'QB' && c.score > 0).sort((a, b) => b.score - a.score).slice(0, 10);
+    const bl = (c: { statPct: number; ovrPct: number }) => AWARD_STATS_WEIGHT * c.statPct + (1 - AWARD_STATS_WEIGHT) * c.ovrPct;
+    assert.ok(qbs.some((c) => c.player === qb.player) && qbs.every((c) => bl(c) <= bl(qb) + 1e-9), 'best quarterback: top 10 by stats, best blend');
+    const leader = qbs[0];
+    {
+      // How the blend changed the picks (stats alone vs stats and OVR), for the log.
+      const all = candidates(v2), diffs: string[] = [];
+      for (const pa of aw.position) {
+        const roles = pa.key === 'def' ? ['DE', 'DT', 'LB', 'CB', 'S'] : AWARD_SPOTS.find((x) => x.label === POSITION_AWARDS.find((y) => y.key === pa.key)!.spot)!.roles;
+        const top = all.filter((c) => roles.includes(c.role) && c.score > 0).sort((a, b) => b.score - a.score)[0];
+        if (top && pa.winner && top.player !== pa.winner.player) diffs.push(`${pa.label}: ${playerName(w2.players[pa.winner.player - 1])} (${pa.winner.ovr} OVR) over stat leader ${playerName(w2.players[top.player - 1])} (${top.ovr} OVR)`);
+      }
+      ok(`blend changes: ${diffs.join('; ') || 'none'}`);
+    }
+    ok(`award blend: QB stat leader ${playerName(w2.players[leader.player - 1])} (${leader.ovr} OVR, ${bl(leader).toFixed(2)}), winner ${playerName(w2.players[qb.player - 1])} (${qb.ovr} OVR, ${bl(qb).toFixed(2)})`);
+    assert.ok(first.some((c) => c.role === 'QB'), 'a first-team QB');
+    const confs = Object.keys(aw.allConference).map(Number);
+    assert.ok(confs.length > 5 && !confs.includes(INDEPENDENT) && confs.every((c) => aw.allConference[c].every((x) => w2.seasons[0].conf[x.team] === c)), 'All-Conference teams by conference');
+    assert.equal(seasonAwards(w2, w2.seasons[0]), null, 'no awards before the season ends');
+    const h = playerHonors(w2, qb.player, [aw]);
+    assert.ok(h.some((x) => x.label === 'Best quarterback') && h.some((x) => x.label.startsWith('All-')), 'honors on the player page');
+    ok(`awards: Heisman ${aw.heisman[0] ? playerName(w2.players[aw.heisman[0].player - 1]) : '-'}; best QB ${playerName(w2.players[qb.player - 1])} (${qb.line}); ${confs.length} All-Conference teams; honors ${h.map((x) => x.label).join(', ')}`);
+  }
+  {
+    // The records book: career totals add up the seasons; a school's only count what was done there.
+    const st = RECORD_STATS[2];
+    const car = careerRecords(w2, st), one = seasonRecords(w2, st);
+    assert.ok(car.length === 10 && car[0].value === one[0].value, 'one season: career leader = season leader');
+    const tm = car[0].team, mineC = careerRecords(w2, st, tm);
+    assert.ok(mineC.every((c) => c.team === tm) && mineC[0].player === car[0].player, 'per school');
+    const tr = teamRecords(w2);
+    const most = tr.find((x) => x.label === 'Most points in a game')!.list[0];
+    const g = seasonView(w2, w2.seasons[0]).games.filter((x) => x.vs !== null).flatMap((x) => [x.vs!, x.hs!]);
+    assert.equal(most.value, Math.max(...g), 'most points in a game');
+    assert.equal(tr.find((x) => x.label.startsWith('Fewest'))!.list.length, 0, 'points allowed wait for the season to end');
+    ok(`records book: career ${st.label.toLowerCase()} leader ${car[0].value}; ${tr.map((x) => `${x.label} ${x.list[0]?.value ?? '-'}${x.list[0] ? ` (${x.list[0].note})` : ''}`).join('; ')}`);
+  }
   ok(`weekly stories: ${potw.map((x) => `"${x.headline}" (${x.dek}; ${x.box!.lines.map((l) => `${l.cat} ${l.cells.map(([k, v]) => `${k} ${v}`).join(' ')}`).join(', ')})`).join('; ')}; kinds ${kinds}`);
 }
 
