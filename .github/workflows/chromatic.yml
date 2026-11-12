@@ -1,0 +1,29 @@
+# Publishes Storybook to Chromatic and compares every component with its last accepted look.
+# Needs the repository secret CHROMATIC_PROJECT_TOKEN (chromatic.com, the project's Manage page).
+# Without the secret the job is skipped, so pull requests don't fail before Chromatic is set up.
+name: Chromatic
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  chromatic:
+    runs-on: ubuntu-latest
+    env:
+      CHROMATIC_PROJECT_TOKEN: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint:design
+      - if: env.CHROMATIC_PROJECT_TOKEN != ''
+        uses: chromaui/action@latest
+        with:
+          projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
+          exitZeroOnChanges: true
+          onlyChanged: true

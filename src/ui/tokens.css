@@ -1,0 +1,96 @@
+/* Design tokens for the Mod Toolkit and the Dynasty app (docs/design-system.md).
+   Two layers:
+   1. Scales every brand shares: type sizes, spacing (the Genesis' 8 px tile, halved for small gaps), radius,
+      breakpoints (in comments: custom properties don't work in media queries).
+   2. Semantic colors, set per brand and theme with data-brand and data-theme on a wrapper (or <html>).
+   Components (ui.css) read only these names, never a raw color or size. */
+:root {
+  --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  --font-body: 'Barlow', system-ui, sans-serif;
+
+  /* Type scale (px): small print, labels, body, lead, then headings. */
+  --fs-1: 12px;
+  --fs-2: 14px;
+  --fs-3: 16px;
+  --fs-4: 18px;
+  --fs-5: 22px;
+  --fs-6: 32px;
+  --fs-7: 44px;
+
+  /* Spacing: 4 px steps up to the 8 px tile, then tiles. */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+
+  --radius: 4px;
+  --rule-w: 1px;
+
+  /* Breakpoints (mobile first; use these two in min-width queries): 640px tablet, 960px desktop. */
+}
+
+/* Mod Toolkit: the game's Game Setup screen (indigo backdrop, yellow menu text). */
+:root, [data-brand='toolkit'] {
+  --surface: #23208a;
+  --surface-raised: #16135e;
+  --surface-sunken: #0f0c45;
+  --text: #f2f0ff;
+  --text-muted: #b9b5e8;
+  --rule: rgba(242, 240, 255, 0.16);
+  --rule-strong: #f2f0ff;
+  --accent: #f6d84a;
+  --on-accent: #0f0c45;
+  --field: #0f0c45;
+  --highlight: rgba(246, 216, 74, 0.14);
+  --good: #8fe0a8;
+  --good-wash: rgba(143, 224, 168, 0.14);
+  --bad: #ff9a8a;
+  --bad-wash: rgba(255, 154, 138, 0.14);
+  --scrim: rgba(15, 12, 69, 0.7);
+  color-scheme: dark;
+}
+
+/* Dynasty, light: white paper, black ink; the only color on a page is a team's. */
+[data-brand='dynasty'] {
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-sunken: #f3f3f7;
+  --text: #000000;
+  --text-muted: #5a5870;
+  --rule: #dddce6;
+  --rule-strong: #000000;
+  --accent: #262626;
+  --on-accent: #ffffff;
+  --field: #ffffff;
+  --highlight: #fff8d6;
+  --good: #11703a;
+  --good-wash: #e6f4ea;
+  --bad: #b3261e;
+  --bad-wash: #fdecea;
+  --scrim: rgba(0, 0, 0, 0.5);
+  color-scheme: light;
+}
+
+/* Dynasty, dark. Provisional values (Genesis palette grays), to be settled with the visual direction. */
+[data-brand='dynasty'][data-theme='dark'] {
+  --surface: #242424;
+  --surface-raised: #2f2f2f;
+  --surface-sunken: #1a1a1a;
+  --text: #ffffff;
+  --text-muted: #b6b6b6;
+  --rule: #494949;
+  --rule-strong: #ffffff;
+  --accent: #ffffff;
+  --on-accent: #000000;
+  --field: #1a1a1a;
+  --highlight: #49491f;
+  --good: #6ddb92;
+  --good-wash: #1d3a27;
+  --bad: #ff9a8a;
+  --bad-wash: #45201c;
+  --scrim: rgba(0, 0, 0, 0.7);
+  color-scheme: dark;
+}
