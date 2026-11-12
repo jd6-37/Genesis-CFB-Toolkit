@@ -11,7 +11,9 @@
 //   +0x20 season names set (long, v2.0.1-test9 on; Team Rosters' names view): "NAM1", team count (word), 0
 //         (word), a long per team = address of its 32 records in slot order: class byte (0 FR … 4 SR+,
 //         0xFF none), first name, NUL, last name, NUL (the game's font: A-Z a-z 0-9 ' - . space)
-//   +0x24 reserved (fine ratings, planned)
+//   +0x24 season fine-ratings offsets (long; 0xFFFFFFFF = none): "FRC1", then 138 × 32 × 3 bytes, six nibbles a
+//         slot in the roster record's order, −8..+7, like the 2026 table at 0x2E0000 (fine.ts). Needs ROM support
+//         (the snap and Team Rosters use no offsets for a dynasty roster up to v2.0.1-test14).
 //   +0x28 season schedule (long; 0xFFFFFFFF = none, the first season): "SCH1", weeks (byte), then per week a
 //         game count (byte) and visitor/home team bytes, like the real 2026 table (REALTAB). Needs ROM support:
 //         New Season plays it instead of making a Random one or copying the real 2026 schedule.
@@ -37,6 +39,7 @@ const ROSTERS = DYN_AREA + 0x100;
 const OVRS = ROSTERS + DYN_TEAMS * 128; // 0x3E4600
 const SIMS = OVRS + 0x200; // 0x3E4800
 const NAMES = DYN_AREA + 0x5000; // 0x3E5000
+const FINE = 0x3fb000; // "FRC1" + 13,248 bytes
 const SCHEDULE = 0x3ff000; // up to 4 KB (12 weeks of 69 games: 1,673 bytes)
 
 const u32 = (d: Uint8Array, a: number) => ((d[a] << 24) >>> 0) + (d[a + 1] << 16) + (d[a + 2] << 8) + d[a + 3];
@@ -52,6 +55,13 @@ const put16 = (d: Uint8Array, a: number, v: number) => { d[a] = (v >> 8) & 255; 
 export const hasDynastyHooks = (d: Uint8Array) =>
   d.length >= DYN_END && MARK.every((b, k) => d[DYN_MARK + k] === b) && d[DYN_MARK + 7] >= 1 && d[DYN_MARK + 7] !== 0xff &&
   [0x4e, 0x41, 0x4d, 0x31].every((b, k) => d[0x2c0000 + k] === b) && d[0x06afc0] === 0x4e && d[0x06afc1] === 0xb9;
+
+/** The fine-ratings offsets table's address in a written dynasty area (after its "FRC1"), or null (none). */
+export function fineAddress(d: Uint8Array): number | null {
+  if (!dynastyHeaderValid(d)) return null;
+  const a = u32(d, DYN_AREA + 0x24);
+  return a >= DYN_AREA && a < DYN_END && d[a] === 0x46 && d[a + 1] === 0x52 && d[a + 2] === 0x43 && d[a + 3] === 0x31 ? a + 4 : null;
+}
 
 /** The schedule set's address in a written dynasty area, or null (none). */
 export function scheduleAddress(d: Uint8Array): number | null {
@@ -125,6 +135,8 @@ export interface DynastyAreaData {
   /** Per team, the 32 roster records (4 bytes each, slot order). */
   records: Uint8Array[];
   ovr: { off: number; def: number }[];
+  /** The season's fine-ratings offsets (fine.ts: 138 × 32 × 3 bytes). */
+  fine?: Uint8Array;
   /** The season's schedule set (schedule.ts `scheduleSet`), from the second season. */
   schedule?: Uint8Array;
 }
@@ -134,7 +146,7 @@ export function writeDynastyArea(d: Uint8Array, data: DynastyAreaData): void {
   const problem = dynastyAreaProblem(d);
   if (problem) throw new Error(problem);
   const names = namesSet(data.names, NAMES);
-  if (NAMES + names.length > SCHEDULE) throw new Error('The names don\'t fit in the dynasty area.');
+  if (NAMES + names.length > FINE) throw new Error('The names don\'t fit in the dynasty area.');
   if (data.schedule && data.schedule.length > DYN_END - SCHEDULE) throw new Error('The schedule doesn\'t fit in the dynasty area.');
   d.fill(0xff, DYN_AREA, DYN_END);
   d.set(names, NAMES);
@@ -153,6 +165,12 @@ export function writeDynastyArea(d: Uint8Array, data: DynastyAreaData): void {
   put32(d, DYN_AREA + 0x18, OVRS);
   put32(d, DYN_AREA + 0x1c, SIMS);
   put32(d, DYN_AREA + 0x20, NAMES);
+  if (data.fine) {
+    if (data.fine.length !== DYN_TEAMS * 96) throw new Error('The fine-ratings offsets have the wrong size.');
+    d.set([0x46, 0x52, 0x43, 0x31], FINE);
+    d.set(data.fine, FINE + 4);
+    put32(d, DYN_AREA + 0x24, FINE);
+  }
   if (data.schedule) {
     d.set(data.schedule, SCHEDULE);
     put32(d, DYN_AREA + 0x28, SCHEDULE);

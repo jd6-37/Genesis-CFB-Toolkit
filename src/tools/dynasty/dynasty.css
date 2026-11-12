@@ -243,6 +243,7 @@
 .dy-tile { border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px; }
 .dy-tile-top { display: flex; justify-content: space-between; align-items: baseline; color: var(--gray); font-size: 14px; }
 .dy-tile-top strong { font-family: var(--display); font-weight: 700; font-size: 38px; line-height: 1; color: var(--ink); }
+.dy-tile-top span { font-family: var(--display); font-weight: 700; font-size: 26px; line-height: 1; color: var(--ink); }
 .dy-pips { position: relative; display: flex; gap: 2px; margin: 8px 0 6px; }
 .dy-pips span { flex: 1; height: 12px; border-radius: 2px; background: #ecebf2; }
 .dy-pips i { position: absolute; top: -3px; width: 2px; height: 18px; background: var(--ink); }

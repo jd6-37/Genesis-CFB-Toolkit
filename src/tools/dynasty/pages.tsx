@@ -14,8 +14,8 @@ import { prestigeStars } from '../../core/dynasty/offseason';
 import { MAX_PRESTIGE } from '../../core/dynasty/prestige';
 import type { SaveGame } from '../../core/dynasty/save';
 import type { DPlayer } from '../../core/dynasty/model';
-import { GROUP_COLUMNS, nibbleToRating, nibbleToWeight, type Attr } from '../../core/rosterLayouts';
-import { GROUP_OF_ROLE, progressOf, RATINGS, roleOfPos } from '../../core/dynasty/ratings';
+import { GROUP_COLUMNS, type Attr } from '../../core/rosterLayouts';
+import { fineAt, GROUP_OF_ROLE, RATINGS, roleOfPos, shownFine } from '../../core/dynasty/ratings';
 import { trainingYears, experienceOf } from '../../core/dynasty/career';
 import { seasonDone } from '../../core/dynasty/offseason';
 import type { Dynasty } from '../../core/dynasty/model';
@@ -823,35 +823,29 @@ function BwRatings({ team, slot, name, bench = false, player }: { team: number; 
   const role = roleOfSlot(slot);
   const league = v.season.bw!.flatMap((t) => t.filter((x, k): x is NonNullable<typeof x> => !!x && roleOfSlot(k) === role));
   const n = league.length;
-  const avg = b.attrs.map((_, i) => league.reduce((a, x) => a + x.steps[i], 0) / n);
-  const rank = b.attrs.map((_, i) => 1 + league.filter((x) => x.steps[i] > b.steps[i]).length);
-  // Others at his step (ratings come in 16 steps, so ties are common).
+  // Fine values (16 × step + offset, ratings.ts): what the game plays with since the fine-ratings mod.
+  const fv = (x: typeof b, i: number) => fineAt(x, i);
+  const avg = b.attrs.map((_, i) => league.reduce((a, x) => a + fv(x, i), 0) / n);
+  const rank = b.attrs.map((_, i) => 1 + league.filter((x) => fv(x, i) > fv(b, i)).length);
   const self = bench ? 0 : 1; // he's one of the league's players unless he's on the bench
-  const tied = b.attrs.map((_, i) => league.filter((x) => x.steps[i] === b.steps[i]).length - self);
-  // Weight: the share of starters he outweighs, counting those at his step as half.
-  const heavier = b.attrs.map((_, i) => league.reduce((a, x) => a + (x.steps[i] < b.steps[i] ? 1 : x.steps[i] === b.steps[i] ? 0.5 : 0), 0) - 0.5 * self);
+  const tied = b.attrs.map((_, i) => league.filter((x) => fv(x, i) === fv(b, i)).length - self);
+  // Weight: the share of starters he outweighs, counting those at his weight as half.
+  const heavier = b.attrs.map((_, i) => league.reduce((a, x) => a + (fv(x, i) < fv(b, i) ? 1 : fv(x, i) === fv(b, i) ? 0.5 : 0), 0) - 0.5 * self);
   const color = inkColor(d, team); // a light primary wouldn't show on white
   const [one, who] = ROLE_NAMES[role] ?? [b.label, `${b.label}s`];
 
-  // Shape: the five ratings other than weight, step 15 at the rim.
-  // A rating everyone in the group has at the same step (linemen's Hands: 0) says nothing: no rank, not in the shape.
-  const flat = b.attrs.map((_, i) => league.every((x) => x.steps[i] === league[0].steps[i]));
+  // Shape: the five ratings other than weight, 100 at the rim.
+  // A rating everyone in the group has the same (linemen's Hands: 0) says nothing: no rank, not in the shape.
+  const flat = b.attrs.map((_, i) => league.every((x) => x.steps[i] === league[0].steps[i]) && league.every((x) => x.steps[i] === 0));
   const axes = b.attrs.map((a, i) => ({ a, i })).filter((x) => x.a !== 'Weight' && !flat[x.i]);
   const C = 150, CY = 130, R = 96;
   const pt = (k: number, r: number) => {
     const ang = (-90 + (360 / axes.length) * k) * (Math.PI / 180);
     return [C + r * Math.cos(ang), CY + r * Math.sin(ang)];
   };
-  const poly = (f: (i: number) => number) => axes.map((x, k) => pt(k, (f(x.i) / 15) * R).map((z) => z.toFixed(1)).join(',')).join(' ');
+  const poly = (f: (i: number) => number) => axes.map((x, k) => pt(k, (Math.min(240, f(x.i)) / 240) * R).map((z) => z.toFixed(1)).join(',')).join(' ');
   // A kicker's or punter's Quick is his kick distance in the game.
   const label = (a: string) => (b.group === 'KP' && a === 'Quickness' ? 'Kick distance' : a);
-  // Progress toward the next step from his own numbers (ratings.ts), when they're the slot's step.
-  const growth = (a: Attr, step: number) => {
-    const value = player?.ratings[a];
-    if (value === undefined || a === 'Weight' || step >= 15) return 0;
-    const pr = progressOf(value);
-    return pr.step === step ? pr.frac : 0;
-  };
   const tiles = b.attrs.map((a, i) => ({ a, i })).sort((x, y) => Number(x.a === 'Weight' || flat[x.i]) - Number(y.a === 'Weight' || flat[y.i]) || rank[x.i] - rank[y.i]);
 
   return (
@@ -860,11 +854,11 @@ function BwRatings({ team, slot, name, bench = false, player }: { team: number; 
       <div className="dy-bw-grid">
         <figure className="dy-shape">
           <svg viewBox="0 0 300 250" role="img" aria-label={`${name}'s ratings against the average ${one}`}>
-            <polygon points={poly(() => 15)} className="dy-shape-rim" />
-            <polygon points={poly(() => 7.5)} className="dy-shape-mid" />
+            <polygon points={poly(() => 240)} className="dy-shape-rim" />
+            <polygon points={poly(() => 120)} className="dy-shape-mid" />
             {axes.map((x, k) => { const [px, py] = pt(k, R); return <line key={x.a} x1={C} y1={CY} x2={px} y2={py} className="dy-shape-mid" />; })}
             <polygon points={poly((i) => avg[i])} className="dy-shape-avg" />
-            <polygon points={poly((i) => b.steps[i])} style={{ fill: color, stroke: color }} className="dy-shape-him" />
+            <polygon points={poly((i) => fv(b, i))} style={{ fill: color, stroke: color }} className="dy-shape-him" />
             {axes.map((x, k) => {
               const [px, py] = pt(k, R + 18);
               return <text key={x.a} x={px} y={py + 4} textAnchor={Math.abs(px - C) < 5 ? 'middle' : px > C ? 'start' : 'end'}>{label(x.a)}</text>;
@@ -878,21 +872,20 @@ function BwRatings({ team, slot, name, bench = false, player }: { team: number; 
         <div className="dy-tiles">
           {tiles.map(({ a, i }) => {
             const weight = a === 'Weight';
-            const shown = weight ? `${nibbleToWeight(b.steps[i]) + b.weightPlus} lb` : nibbleToRating(b.steps[i]);
+            const f = fv(b, i);
+            const shown = weight ? `${140 + f + b.weightPlus} lb` : shownFine(f);
+            const avgShown = weight ? `${Math.round(140 + avg[i] + b.weightPlus)} lb` : shownFine(Math.round(avg[i]));
             return (
               <div key={a} className="dy-tile">
                 <div className="dy-tile-top"><span>{label(a)}</span><strong>{shown}</strong></div>
-                <div className="dy-pips" role="img" aria-label={`Step ${b.steps[i]} of 15; average ${one} ${avg[i].toFixed(1)}`}>
+                <div className="dy-pips" role="img" aria-label={`${shown}; average ${one} ${avgShown}`}>
                   {Array.from({ length: 15 }, (_, k) => {
-                    // His progress toward the next step: that pip partly filled.
-                    const part = k === b.steps[i] ? growth(a, b.steps[i]) : 0;
-                    return <span key={k} style={k < b.steps[i] ? { background: color } : part > 0 ? { background: `linear-gradient(90deg, ${color} ${Math.round(part * 100)}%, transparent ${Math.round(part * 100)}%)` } : undefined} />;
+                    // 15 pips of 16 fine points each; the one he's part of the way through is partly filled.
+                    const part = Math.max(0, Math.min(1, (Math.min(240, f) - 16 * k) / 16));
+                    return <span key={k} style={part >= 1 ? { background: color } : part > 0 ? { background: `linear-gradient(90deg, ${color} ${Math.round(part * 100)}%, transparent ${Math.round(part * 100)}%)` } : undefined} />;
                   })}
-                  <i style={{ left: `calc(${(avg[i] / 15) * 100}% - 1px)` }} title={`Average ${one}`} />
+                  <i style={{ left: `calc(${(Math.min(240, avg[i]) / 240) * 100}% - 1px)` }} title={`Average ${one}`} />
                 </div>
-                {!weight && growth(a, b.steps[i]) > 0 && (
-                  <div className="dy-tile-note">{Math.round(growth(a, b.steps[i]) * 100)}% of the way to {nibbleToRating(b.steps[i] + 1)}</div>
-                )}
                 <div className="dy-tile-note">
                   {flat[i] ? `The same for all ${n} ${who}` : weight ? `Heavier than ${Math.round((heavier[i] / Math.max(1, n - self)) * 100)}% of ${who}` : tied[i] > 0 ? <><strong>Tied for {ordinal(rank[i])}</strong> of {n} {who}, with {tied[i]} {tied[i] === 1 ? 'other' : 'others'}</> : <><strong>{ordinal(rank[i])}</strong> of {n} {who}</>}
                 </div>

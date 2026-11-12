@@ -6,7 +6,7 @@ import { BEARD_LABELS, BEARD_STYLES, HAIR_COLOR_LABELS, HAIR_STYLE_LABELS, HAIR_
 import { SKIN_TONES } from '../../core/dynasty/appearance';
 import { CLASSES, type ClassYear, type DPlayer } from '../../core/dynasty/model';
 import { makeRecruit, POSITIONS, recruitTemplates } from '../../core/dynasty/offseason';
-import { GROUP_OF_ROLE, RATINGS, roleOfPos, shownOf, stepOf, type Ratings } from '../../core/dynasty/ratings';
+import { GROUP_OF_ROLE, RATINGS, roleOfPos, shownOf, type Ratings } from '../../core/dynasty/ratings';
 import { GROUP_COLUMNS } from '../../core/rosterLayouts';
 import { rng } from '../../core/dynasty/model';
 import { Headshot, useDyn } from './ui';
@@ -68,7 +68,7 @@ export function EditPlayer({ p }: { p: DPlayer }) {
         </label>
       </div>
       <h3 className="dy-sub">Ratings</h3>
-      <p className="dy-dim dy-small">As the game shows them (0-100). The game has 16 steps (0, 6, 13 … 86, 93, 100): a number counts as the step it has reached.</p>
+      <p className="dy-dim dy-small">As the game's Team Rosters shows them. Every point counts in games (the fine-ratings mod); the game shows whole numbers up to 99.</p>
       <div className="dy-edit-grid">
         {RATINGS.filter((a) => uses.has(a) || p.ratings[a] !== undefined).map((a) => {
           const v = rating(a);
@@ -77,7 +77,7 @@ export function EditPlayer({ p }: { p: DPlayer }) {
             <label key={a}>{LABEL[a] ?? a}
               <input type="number" inputMode="decimal" min={weight ? 140 : 0} max={weight ? 380 : 100} value={v === undefined ? '' : String(Math.round(v * 10) / 10)}
                 onChange={(e) => setRating(a, Number(e.target.value))} />
-              {!weight && v !== undefined && <span className="dy-dim dy-small">In the game: {shownOf(v)} (step {stepOf(v)})</span>}
+              {!weight && v !== undefined && <span className="dy-dim dy-small">In the game: {shownOf(v)}</span>}
             </label>
           );
         })}

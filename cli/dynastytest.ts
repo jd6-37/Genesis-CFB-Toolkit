@@ -28,11 +28,13 @@ import { academicsOf, CFB27_ACADEMICS } from '../src/core/dynasty/academics';
 import { SCHOOL_STATE, stateCode } from '../src/core/dynasty/schoolStates';
 import { experienceOf, recordRatings, trainingResults, trainingYears } from '../src/core/dynasty/career';
 import { randomBench } from '../src/core/dynasty/bench';
-import { gameText, dynastyAreaProblem, dynastyHeaderValid, dynastyRomId, DYN_AREA, DYN_END, hasDynastyHooks, readStamp, scheduleAddress } from '../src/core/dynasty/dynastyArea';
+import { gameText, dynastyAreaProblem, dynastyHeaderValid, dynastyRomId, DYN_AREA, DYN_END, fineAddress, hasDynastyHooks, readStamp, scheduleAddress } from '../src/core/dynasty/dynastyArea';
 import { simFromOvr } from '../src/core/teamRatings';
 import { parseCsv } from '../src/core/rosterSheet';
 import { rosterLayout } from '../src/core/rosterLayouts';
-import { bwSlotOf, ovrOf, progressOf, stepOf } from '../src/core/dynasty/ratings';
+import { bwSlotOf, fineOf, ovrOf, shownFine, splitFine, stepOf, valueOfFine } from '../src/core/dynasty/ratings';
+import { hasFineRatings, putFineOffsets, readFineOffsets } from '../src/core/dynasty/fine';
+import { GROUP_ATTRS } from '../src/core/rosterLayouts';
 import { applyEdits, editLook, playersCsv, readPlayersCsv } from '../src/core/dynasty/edit';
 import { lookChoices, lookOf } from '../src/core/dynasty/headshot';
 import { blackShare, MAX_FIRST, MAX_LAST, SKIN_TONES } from '../src/core/dynasty/appearance';
@@ -125,8 +127,34 @@ for (const [grid, rated] of [[first0().slots, first0().bw], [first0().bench, fir
     if (!id || !b) return;
     const spots = first0().slots[t].filter((x) => x === id).length + (first0().bench?.[t].filter((x) => x === id).length ?? 0);
     if (spots > 1) return; // a kicker who also punts keeps the kicker's ratings (the season keeps both slots' steps)
-    assert.deepEqual(bwSlotOf(d0.players[id - 1], b).steps, b.steps, `team ${t} slot ${slot}`);
+    const mine = bwSlotOf(d0.players[id - 1], b);
+    assert.deepEqual([mine.steps, mine.offs], [b.steps, b.offs], `team ${t} slot ${slot}`);
   }));
+}
+// Fine ratings (v2.0.1-test13 on): the Active Roster's offsets are the ROM's table, so the app shows what the
+// game's Team Rosters shows; backups' are drawn evenly.
+{
+  const fineRom = hasFineRatings(rom);
+  let slots = 0, nonzero = 0, sum = 0, cnt = 0;
+  first0().bw!.forEach((sl, t) => sl.forEach((b, slot) => {
+    if (!b) return;
+    slots++;
+    assert.ok(b.offs.length === 6 && b.offs.every((o) => Number.isInteger(o) && o >= -8 && o <= 7));
+    if (fineRom) {
+      const want = readFineOffsets(rom, t, slot);
+      const rec = GROUP_ATTRS[b.group].map((a) => b.steps[b.attrs.indexOf(a)]);
+      assert.deepEqual(GROUP_ATTRS[b.group].map((a) => b.offs[b.attrs.indexOf(a)]), want.map((o, i) => Math.max(0, Math.min(240, 16 * rec[i] + o)) - 16 * rec[i]), `offsets team ${t} slot ${slot}`);
+    }
+    if (b.offs.some((o) => o)) nonzero++;
+  }));
+  first0().benchBw!.forEach((sl) => sl.forEach((b) => { if (b) for (const o of b.offs) { sum += o; cnt++; } }));
+  assert.ok(nonzero / slots > 0.9 && Math.abs(sum / cnt + 0.5) < 0.3, 'offsets everywhere, backups centered');
+  // Numbers ↔ fine values ↔ what the game shows.
+  assert.deepEqual([fineOf(0), fineOf(50), fineOf(100)], [0, 120, 240]);
+  assert.deepEqual([splitFine(0), splitFine(206), splitFine(216), splitFine(247)], [{ step: 0, off: 0 }, { step: 13, off: -2 }, { step: 14, off: -8 }, { step: 15, off: 7 }]);
+  assert.deepEqual([shownFine(0), shownFine(206), shownFine(239), shownFine(240), shownFine(247)], [0, 85, 99, 99, 99]);
+  for (let f = 0; f <= 240; f++) assert.equal(fineOf(valueOfFine(f)), f, `fine ${f} survives as a number`);
+  ok(`fine ratings: ${fineRom ? 'the ROM\'s offsets on' : 'drawn offsets on'} ${slots} Active Roster slots (${Math.round((nonzero / slots) * 100)}% not on a step), backups average ${(sum / cnt).toFixed(2)}`);
 }
 function first0() { return d0.seasons[0]; }
 // Linemen and linebackers also have the related group's rating (lineup moves DE/OLB).
@@ -708,6 +736,13 @@ ok('season rosters written to the dynasty area and read back');
   for (let w = 0; w < weeks; w++) for (let c = rom2[k++]; c > 0; c--) { back.push({ week: w, visitor: rom2[k], home: rom2[k + 1] }); k += 2; }
   assert.deepEqual(back, sc.games, 'the ROM\'s schedule = the dynasty\'s');
   assert.equal(scheduleAddress(Off.seasonRom(d0, first, rom)), null, 'none for the first season');
+  // Fine-ratings offsets in the ROM: header +0x24 → "FRC1" + the table, every slot's offsets as the season has them.
+  const fa = fineAddress(rom2)!;
+  assert.ok(fa, 'fine-ratings set');
+  next.bw!.forEach((sl, t) => sl.forEach((b, slot) => {
+    if (b) assert.deepEqual(readFineOffsets(rom2, t, slot, fa), GROUP_ATTRS[b.group].map((a) => b.offs[b.attrs.indexOf(a)]), `fine set team ${t} slot ${slot}`);
+  }));
+  { const tb = new Uint8Array(138 * 96); putFineOffsets(tb, 3, 7, next.bw![3][7]!); assert.deepEqual([...tb.subarray((3 * 32 + 7) * 3, (3 * 32 + 7) * 3 + 3)], [...rom2.subarray(fa + (3 * 32 + 7) * 3, fa + (3 * 32 + 7) * 3 + 3)]); }
   // The preseason pages show it before any import.
   const pv = seasonView(o5, next);
   assert.ok(pv.games.length === sc.games.length && pv.currentWeek === 0 && !pv.done);
@@ -854,11 +889,10 @@ ok('a new season refuses the last season\'s save');
 
 // ---- the game's ratings as the truth: steps, progress, development, editing, CSV
 {
-  assert.deepEqual([stepOf(0), stepOf(85.9), stepOf(86), stepOf(92.9), stepOf(93), stepOf(100)], [0, 12, 13, 13, 14, 15]);
-  assert.ok(Math.abs(progressOf(89.5).frac - 0.5) < 0.1 && progressOf(100).next === null);
-  // After an offseason most returning players are part of the way to a next step.
+  assert.deepEqual([stepOf(0), stepOf(85.9), stepOf(90), stepOf(93), stepOf(100)], [0, 13, 14, 14, 15]);
+  // After an offseason returning players sit anywhere between the steps.
   const grown = o5.players.filter((p) => p.status === 'active' && p.srcId !== undefined);
-  const between = grown.filter((p) => Object.entries(p.ratings).some(([a, v]) => a !== 'Weight' && progressOf(v!).frac > 0)).length;
+  const between = grown.filter((p) => Object.entries(p.ratings).some(([a, v]) => a !== 'Weight' && fineOf(v!) % 16 !== 0)).length;
   assert.ok(between / grown.length > 0.5, `${between} of ${grown.length} players between steps`);
   // The depth chart: every slot of every team, the starters at least as good as their backups (same position).
   for (const sl of next.slots) assert.ok(sl.every((x) => x !== null));
