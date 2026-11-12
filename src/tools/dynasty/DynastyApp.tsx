@@ -21,7 +21,10 @@ import { History, Home, Leaders, Player, Rankings, Scores, Standings, Team, Team
 import { Offseason, type OffseasonActions } from './OffseasonPage';
 import { seasonRom } from '../../core/dynasty/offseason';
 import { canReplaceBench, randomBench } from '../../core/dynasty/bench';
+import { ThemeToggle } from '../../ui';
 import './dynasty.css';
+
+const THEME_KEY = 'dynasty-theme';
 
 const PAGES = [
   { id: 'home', label: 'Home' },
@@ -140,9 +143,12 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
 
   const dlRef = useRef<(year: number) => void>(() => {});
   const v = useMemo(() => (d ? seasonView(d, d.seasons[d.seasons.length - 1]) : null), [d]);
+  // Light or dark: the reader's choice, kept in this browser (it's a preference, not part of a dynasty).
+  const [dark, setDarkState] = useState(() => { try { return localStorage.getItem(THEME_KEY) === 'dark'; } catch { return false; } });
+  const setDark = (on: boolean) => { setDarkState(on); try { localStorage.setItem(THEME_KEY, on ? 'dark' : 'light'); } catch { /* private mode: the choice lasts for this visit */ } };
   const ctx: DynCtx | null = useMemo(
-    () => (d && v ? { d, v, art, go: (p: string) => (window.location.hash = href(p)), commit, downloadRom: (y: number) => dlRef.current(y) } : null),
-    [d, v, art, commit],
+    () => (d && v ? { d, v, art, go: (p: string) => (window.location.hash = href(p)), commit, downloadRom: (y: number) => dlRef.current(y), dark } : null),
+    [d, v, art, commit, dark],
   );
 
   const run = async (what: string, fn: () => Promise<void>) => {
@@ -294,10 +300,13 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
   const week = d?.offseason ? 'Offseason' : v && v.save ? (v.currentWeek < v.weeks ? weekName(v, v.currentWeek) : 'Season complete') : d && d.seasons.length > 1 ? 'Preseason' : null;
 
   return (
-    <div className="dy" data-brand="dynasty">
+    <div className="dy" data-brand="dynasty" data-theme={dark ? 'dark' : 'light'}>
       <header className="dy-mast">
         <div className="dy-mast-inner">
-          <a className="dy-back" href={toolkitHref}>Mod Toolkit</a>
+          <span className="dy-mast-left">
+            <a className="dy-back" href={toolkitHref}>Mod Toolkit</a>
+            <ThemeToggle dark={dark} onChange={setDark} />
+          </span>
           <a className="dy-title" href={href('home')}>
             <span className="dy-title-1">{d?.name ?? 'Dynasty'}</span>
             {d && <span className="dy-title-2">{d.offseason ? d.offseason.year : d.seasons[d.seasons.length - 1].year}{week ? `, ${week}` : ''}</span>}

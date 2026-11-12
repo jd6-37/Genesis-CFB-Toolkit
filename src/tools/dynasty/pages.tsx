@@ -639,7 +639,7 @@ function Honors({ id }: { id: number }) {
 }
 
 export function Player({ id }: { id: number }) {
-  const { d, v } = useDyn();
+  const { d, v, dark } = useDyn();
   const p = d.players[id - 1];
   const seasons = useMemo(() => {
     if (!p) return [];
@@ -706,7 +706,7 @@ export function Player({ id }: { id: number }) {
         </p>
       )}
       <Honors id={p.id} />
-      <Progression p={p} color={team !== null ? inkColor(d, team) : 'var(--ink)'} />
+      <Progression p={p} color={team !== null ? inkColor(d, team, dark) : 'var(--ink)'} />
       <CareerStats p={p} seasons={seasons} />
     </section>
   );
@@ -748,7 +748,7 @@ function Progression({ p, color }: { p: DPlayer; color: string }) {
                 <line x1={PAD} x2={W - PAD} y1={y(50)} y2={y(50)} className="dy-prog-grid" />
                 <polyline points={s.values.map((v, i) => `${x(i)},${y(v)}`).join(' ')} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" />
                 {s.values.map((v, i) => (
-                  <circle key={i} cx={x(i)} cy={y(v)} r={4} fill={color} stroke="#fff" strokeWidth={2}>
+                  <circle key={i} cx={x(i)} cy={y(v)} r={4} fill={color} stroke="var(--surface)" strokeWidth={2}>
                     <title>{years[i].year} ({years[i].cls}): {Math.round(v)}</title>
                   </circle>
                 ))}
@@ -825,7 +825,7 @@ const ordinal = (n: number) => {
 };
 
 function BwRatings({ team, slot, name, bench = false, player }: { team: number; slot: number; name: string; bench?: boolean; player?: DPlayer }) {
-  const { d, v } = useDyn();
+  const { d, v, dark } = useDyn();
   // A bench player is rated on the game's scale too (what he'd have if he played), against the players in the game.
   const b = (bench ? v.season.benchBw : v.season.bw)![team][slot]!;
   // Everyone at his position on every team (the OVR's groups): HB1 and HB2 together, all five linemen …
@@ -840,7 +840,7 @@ function BwRatings({ team, slot, name, bench = false, player }: { team: number; 
   const tied = b.attrs.map((_, i) => league.filter((x) => fv(x, i) === fv(b, i)).length - self);
   // Weight: the share of starters he outweighs, counting those at his weight as half.
   const heavier = b.attrs.map((_, i) => league.reduce((a, x) => a + (fv(x, i) < fv(b, i) ? 1 : fv(x, i) === fv(b, i) ? 0.5 : 0), 0) - 0.5 * self);
-  const color = inkColor(d, team); // a light primary wouldn't show on white
+  const color = inkColor(d, team, dark); // a color that shows on the page
   const [one, who] = ROLE_NAMES[role] ?? [b.label, `${b.label}s`];
 
   // Shape: the five ratings other than weight, 100 at the rim.

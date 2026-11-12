@@ -59,10 +59,11 @@ Run `npm run storybook` to browse the components (port 6006).
 | `Stat` | One number with a label (an OVR, a record). |
 | `Empty` | A page with nothing yet: say what to do next. |
 | `Modal` | A window for one decision. Escape or a click outside closes it. |
+| `ThemeToggle` | The light/dark switch in Dynasty's masthead. The app sets `data-theme` from it and keeps the choice in the browser. |
 
 ## Status (2026-11-12)
 
-- Built: tokens, the components above, Storybook, the token check, the Chromatic workflow.
-- **Not moved yet:** the apps' pages still use the older stylesheets (`src/styles.css`, `src/tools/dynasty/dynasty.css`) and hand-written markup. `npm run lint:design` prints how many raw colors and font sizes they still have. Pages move onto the components in later pull requests.
-- The tokens and components have the chosen look (Storybook shows it). The toolkit's good/bad colors are still provisional.
-- Dark mode toggle: not built. It needs the pages on the tokens first.
+- Built: tokens, the components above, Storybook, the token check, Chromatic on pull requests.
+- **Dynasty colors are on the tokens and it has a dark mode** (the switch in the masthead). `dynasty.css` maps its own names (`--paper`, `--ink` …) to the tokens; only team-color overlays and the star color are still raw.
+- **Not moved yet:** the pages' markup. Dynasty and the Mod Toolkit still use hand-written elements and the older stylesheets (`src/styles.css`, `src/tools/dynasty/dynasty.css`), so the look's structure (bars, pixel numerals, square corners) shows only where a page already uses a component. Pages move onto the components in later pull requests: Dynasty first, then the Mod Toolkit.
+- Team colors in charts: use `inkColor(d, team, dark)` so the color shows on the page in both themes.

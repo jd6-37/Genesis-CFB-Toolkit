@@ -25,6 +25,16 @@ export function Button({ children, variant = 'primary', href, onClick, disabled,
   return <button type={type} className={cls} onClick={onClick} disabled={disabled}>{children}</button>;
 }
 
+/** The light/dark switch (Dynasty only; the Mod Toolkit has one look). Sits on a bar. */
+export function ThemeToggle({ dark, onChange }: { dark: boolean; onChange: (dark: boolean) => void }) {
+  return (
+    <button type="button" className="ui-theme" role="switch" aria-checked={dark} onClick={() => onChange(!dark)}>
+      <span aria-hidden="true" className="ui-theme-box" />
+      Dark mode
+    </button>
+  );
+}
+
 /** Buttons or controls side by side, wrapping on phones. */
 export const Row = ({ children }: { children: ReactNode }) => <div className="ui-row">{children}</div>;
 
