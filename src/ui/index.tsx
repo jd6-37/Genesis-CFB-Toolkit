@@ -17,12 +17,16 @@ interface ButtonProps {
   onClick?: () => void;
   disabled?: boolean;
   type?: 'button' | 'submit';
+  /** A tooltip (why it's disabled, what it costs). */
+  title?: string;
+  /** The name for screen readers when the text alone doesn't say it ("vs."). */
+  label?: string;
 }
 /** An action. One primary button per view; the rest quiet. */
-export function Button({ children, variant = 'primary', href, onClick, disabled, type = 'button' }: ButtonProps) {
+export function Button({ children, variant = 'primary', href, onClick, disabled, type = 'button', title, label }: ButtonProps) {
   const cls = cx('ui-button', variant !== 'primary' && `ui-button-${variant}`);
-  if (href !== undefined) return <a className={cls} href={disabled ? undefined : href} aria-disabled={disabled || undefined} onClick={onClick}>{children}</a>;
-  return <button type={type} className={cls} onClick={onClick} disabled={disabled}>{children}</button>;
+  if (href !== undefined) return <a className={cls} href={disabled ? undefined : href} aria-disabled={disabled || undefined} onClick={onClick} title={title} aria-label={label}>{children}</a>;
+  return <button type={type} className={cls} onClick={onClick} disabled={disabled} title={title} aria-label={label}>{children}</button>;
 }
 
 /** The light/dark switch (Dynasty only; the Mod Toolkit has one look). Sits on a bar. */
@@ -54,8 +58,11 @@ export function PageHead({ title, children, actions }: { title: string; children
   );
 }
 
-/** A section heading inside a page. */
-export const SubHead = ({ children }: { children: ReactNode }) => <h3 className="ui-sub">{children}</h3>;
+/** A section heading inside a page (a reversed bar). `level` 2 for a section that isn't under a page title. */
+export function SubHead({ children, level = 3 }: { children: ReactNode; level?: 2 | 3 }) {
+  const H = level === 2 ? 'h2' : 'h3';
+  return <H className="ui-sub">{children}</H>;
+}
 
 export interface Option { value: string | number; label: string; disabled?: boolean }
 interface SelectProps {

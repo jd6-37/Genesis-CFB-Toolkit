@@ -1,5 +1,6 @@
 // Training results (user, 2026-11-12: "a Training Results page, roster ordered by most improved"): a team's
 // returning players after an offseason's training, biggest OVR gain first, with what each rating did.
+import { PageHead, SubHead } from '../../ui';
 import { useMemo } from 'react';
 import { trainingResults, trainingYears, type TrainingRow } from '../../core/dynasty/career';
 import { playerName } from '../../core/dynasty/derive';
@@ -38,7 +39,7 @@ export function TrainingResults({ arg }: { arg?: string }) {
   const avg = gains.length ? gains.reduce((a, b) => a + b, 0) / gains.length : 0;
   return (
     <section className="dy-train">
-      <div className="dy-pagehead"><h2>Training results</h2></div>
+      <PageHead title="Training results" />
       <div className="dy-train-pick">
         <label>
           <span>Team</span>
@@ -56,7 +57,7 @@ export function TrainingResults({ arg }: { arg?: string }) {
           </select>
         </label>
       </div>
-      <h3 className="dy-sub"><TeamLink team={team} rank={false} /></h3>
+      <SubHead><TeamLink team={team} rank={false} /></SubHead>
       {rows.length ? (
         <>
           <p className="dy-small dy-dim">

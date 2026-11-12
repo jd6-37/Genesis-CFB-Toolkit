@@ -1,4 +1,5 @@
 // Full recruiting: five weeks of points and offers for the user teams' boards, then signing day.
+import { Button, Note, SubHead } from '../../ui';
 import { useMemo, useState } from 'react';
 import type { Dynasty } from '../../core/dynasty/model';
 import {
@@ -95,10 +96,10 @@ function ScoutButtons({ p, team, lv, left, onScout }: { p: Prospect; team: numbe
       {opts.map((o) => {
         const cost = scoutCost(rulesOf(d), rs, team, p, o.level);
         return (
-          <button key={o.level} type="button" className="dy-button dy-quiet" disabled={cost > left} onClick={() => onScout(p.id, o.level)}
+          <Button variant="quiet" key={o.level} disabled={cost > left} onClick={() => onScout(p.id, o.level)}
             title={cost > left ? `${cost} points: you have ${left} left this week` : undefined}>
             {o.label} <span className="dy-dim">{cost}</span>
-          </button>
+          </Button>
         );
       })}
     </>
@@ -178,7 +179,7 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
   const thisWeek = rs.log.filter((l) => l.week === rs.week);
   return (
     <>
-      <h3 className="dy-sub">{rs.week < R.weeks ? `Recruiting, week ${rs.week + 1} of ${R.weeks}` : 'Recruiting is over'}</h3>
+      <SubHead>{rs.week < R.weeks ? `Recruiting, week ${rs.week + 1} of ${R.weeks}` : 'Recruiting is over'}</SubHead>
       <p>
         Every week you have {R.userPoints.toLocaleString('en-US')} points to spend on up to {R.boardSize} prospects (at most {R.maxPerProspect} each); they go further with prospects from your state and your pipeline states.
         Interest grows with points, with an offer, and with how well your school fits what a prospect wants: playing time, program prestige, being close to home, academics and a shot at a championship. What he wants is hidden: pitch one of them, and after the week he reacts. + means it's one of his interests and your school is strong there (your points count more), ~ in between, − one of his interests but your school is weak there (your points count less than with no pitch), ✗ not one of his interests.
@@ -190,7 +191,7 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
       {users.length > 1 && (
         <div className="dy-row">
           {users.map((u) => (
-            <button key={u} type="button" className={`dy-button${u === team ? '' : ' dy-quiet'}`} onClick={() => setTeam(u)}>{d.teams[u].school}</button>
+            <Button key={u} variant={u === team ? 'primary' : 'quiet'} onClick={() => setTeam(u)}>{d.teams[u].school}</Button>
           ))}
         </div>
       )}
@@ -251,7 +252,7 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
                       <span className="dy-small">Points</span>
                       <input type="number" inputMode="numeric" min={0} max={R.maxPerProspect} step={10} value={plan.points[p.id] ?? 0} onChange={(e) => setPoints(p.id, Number(e.target.value))} />
                     </label>
-                    {offered ? <span className="dy-small dy-w">Offered</span> : <button type="button" className="dy-button dy-quiet" onClick={() => offer(p.id)}>Offer</button>}
+                    {offered ? <span className="dy-small dy-w">Offered</span> : <Button variant="quiet" onClick={() => offer(p.id)}>Offer</Button>}
                     <ScoutButtons p={p} team={team} lv={lv} left={left} onScout={scout} />
                     <button type="button" className="dy-linkbutton dy-small" onClick={() => remove(p.id)}>Remove</button>
                   </div>
@@ -259,13 +260,13 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
               );
             })}
           </ul>
-          {err && <p className="dy-note dy-note-error" role="alert">{err}</p>}
+          {err && <Note kind="error">{err}</Note>}
           <div className="dy-row dy-next">
-            <button type="button" className="dy-button" disabled={!!busy} onClick={runWeek}>Run week {rs.week + 1}</button>
+            <Button disabled={!!busy} onClick={runWeek}>Run week {rs.week + 1}</Button>
           </div>
           <div className="dy-row">
-            <button type="button" className="dy-button dy-quiet" disabled={!!busy} onClick={() => sim(1)}>Sim week {rs.week + 1}</button>
-            {rs.week + 1 < R.weeks && <button type="button" className="dy-button dy-quiet" disabled={!!busy} onClick={() => sim(R.weeks)}>Sim the rest of recruiting</button>}
+            <Button variant="quiet" disabled={!!busy} onClick={() => sim(1)}>Sim week {rs.week + 1}</Button>
+            {rs.week + 1 < R.weeks && <Button variant="quiet" disabled={!!busy} onClick={() => sim(R.weeks)}>Sim the rest of recruiting</Button>}
             <SimOffseason actions={actions} busy={busy} />
           </div>
           <p className="dy-small dy-dim">Simming lets the computer recruit for {users.length > 1 ? 'your teams' : d.teams[team].school} that week, as for every other team (your board isn't used).</p>
@@ -275,7 +276,7 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
 
       {rs.week >= R.weeks && (
         <div className="dy-row dy-next">
-          <button type="button" className="dy-button" disabled={!!busy} onClick={() => actions.run('Signing day…', async () => actions.commit(finishRecruiting(d, await getTemplates(d))))}>Signing day</button>
+          <Button disabled={!!busy} onClick={() => actions.run('Signing day…', async () => actions.commit(finishRecruiting(d, await getTemplates(d))))}>Signing day</Button>
           <SimOffseason actions={actions} busy={busy} />
         </div>
       )}
@@ -350,7 +351,7 @@ function ProspectSearch({ team, onAdd, board, full, left, onScout }: { team: num
               {lv >= 2 && <RatingsLine p={p} />}
               <Reactions p={p} team={team} />
               <div className="dy-board-ctl">
-                <button type="button" className="dy-button dy-quiet" disabled={full} onClick={() => onAdd(p.id)}>Add to board</button>
+                <Button variant="quiet" disabled={full} onClick={() => onAdd(p.id)}>Add to board</Button>
                 <ScoutButtons p={p} team={team} lv={lv} left={left} onScout={onScout} />
               </div>
             </li>

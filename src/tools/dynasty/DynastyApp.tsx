@@ -21,7 +21,7 @@ import { History, Home, Leaders, Player, Rankings, Scores, Standings, Team, Team
 import { Offseason, type OffseasonActions } from './OffseasonPage';
 import { seasonRom } from '../../core/dynasty/offseason';
 import { canReplaceBench, randomBench } from '../../core/dynasty/bench';
-import { ThemeToggle } from '../../ui';
+import { Button, Note, ThemeToggle } from '../../ui';
 import './dynasty.css';
 
 const THEME_KEY = 'dynasty-theme';
@@ -326,7 +326,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
         </nav>
       </header>
       <main className="dy-main">
-        {note && page !== 'manage' && <p className={`dy-note dy-note-${note.kind}`} role="status">{note.text}</p>}
+        {note && page !== 'manage' && <Note kind={note.kind}>{note.text}</Note>}
         {ctx ? <Ctx.Provider value={ctx}>{body}</Ctx.Provider> : body}
         {d && !d.offseason && d.seasons.length > 1 && (() => {
           // The new season's ROM (user, 2026-11-12: the download "needs to be VERY obvious, like a modal window"):
@@ -340,9 +340,9 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
                 <p>The {s.year} season is set up. Download its ROM and start a <b>New Season</b> in the game with it: it has the new rosters{s.schedule ? ' and schedule' : ''}, and the app can only import saves of seasons started with it.</p>
                 <p className="dy-small dy-dim">You can still change your depth chart{s.schedule ? ' or your schedule' : ''} first (your team's page); then download it again.</p>
                 <div className="dy-row">
-                  <button type="button" className="dy-button" disabled={!!busy} onClick={() => offActions.downloadRom(s.year)}>Download the {s.year} ROM</button>
-                  {s.schedule && d.userTeams.length > 0 && <button type="button" className="dy-button dy-quiet" onClick={() => { setRomLater(s.year); location.hash = href(`schedule/${d.userTeams[0]}`); }}>See the schedule first</button>}
-                  <button type="button" className="dy-button dy-quiet" onClick={() => setRomLater(s.year)}>Later</button>
+                  <Button disabled={!!busy} onClick={() => offActions.downloadRom(s.year)}>Download the {s.year} ROM</Button>
+                  {s.schedule && d.userTeams.length > 0 && <Button variant="quiet" onClick={() => { setRomLater(s.year); location.hash = href(`schedule/${d.userTeams[0]}`); }}>See the schedule first</Button>}
+                  <Button variant="quiet" onClick={() => setRomLater(s.year)}>Later</Button>
                 </div>
               </div>
             </div>
@@ -383,11 +383,11 @@ function BenchChoice({ onRandom, busy }: { onRandom: () => void; busy: boolean }
       <div className="dy-row">
         {sure ? (
           <>
-            <button type="button" className="dy-button" disabled={busy} onClick={() => { onRandom(); setSure(false); }}>Replace every team's backups</button>
-            <button type="button" className="dy-button dy-quiet" onClick={() => setSure(false)}>Keep the real players</button>
+            <Button disabled={busy} onClick={() => { onRandom(); setSure(false); }}>Replace every team's backups</Button>
+            <Button variant="quiet" onClick={() => setSure(false)}>Keep the real players</Button>
           </>
         ) : (
-          <button type="button" className="dy-button dy-quiet" onClick={() => setSure(true)}>Generate random backups</button>
+          <Button variant="quiet" onClick={() => setSure(true)}>Generate random backups</Button>
         )}
       </div>
     </>
@@ -398,7 +398,7 @@ function FileButton({ label, accept, onFile, disabled }: { label: string; accept
   const ref = useRef<HTMLInputElement>(null);
   return (
     <>
-      <button type="button" className="dy-button" disabled={disabled} onClick={() => ref.current?.click()}>{label}</button>
+      <Button disabled={disabled} onClick={() => ref.current?.click()}>{label}</Button>
       <input
         ref={ref}
         type="file"
@@ -432,8 +432,8 @@ function Manage({ d, art, list, busy, note, actions }: {
 
   return (
     <div className="dy-manage">
-      {busy && <p className="dy-note" role="status">{busy}</p>}
-      {note && <p className={`dy-note dy-note-${note.kind}`} role="status">{note.text}</p>}
+      {busy && <Note>{busy}</Note>}
+      {note && <Note kind={note.kind}>{note.text}</Note>}
 
       {d && season && (
         <section className="dy-panel">
@@ -484,7 +484,7 @@ function Manage({ d, art, list, busy, note, actions }: {
                 <option key={t.index} value={t.index}>{t.school}</option>
               ))}
             </select>
-            <button type="button" className="dy-button" disabled={addTeam === ''} onClick={() => { actions.setUserTeams([...d.userTeams, Number(addTeam)]); setAddTeam(''); }}>Add team</button>
+            <Button disabled={addTeam === ''} onClick={() => { actions.setUserTeams([...d.userTeams, Number(addTeam)]); setAddTeam(''); }}>Add team</Button>
           </div>
 
           {!d.offseason && d.seasons.length > 1 && (() => {
@@ -498,7 +498,7 @@ function Manage({ d, art, list, busy, note, actions }: {
                   game with this ROM; saves of seasons started with another ROM can't be imported. (The first season needs no download:
                   play it on your ROM as it is.)
                 </p>
-                <button type="button" className="dy-button" disabled={!!busy} onClick={() => actions.downloadRom(year)}>Download the {year} ROM</button>
+                <Button disabled={!!busy} onClick={() => actions.downloadRom(year)}>Download the {year} ROM</Button>
               </>
             );
           })()}
@@ -519,28 +519,28 @@ function Manage({ d, art, list, busy, note, actions }: {
 
           <h3>Offseason rules</h3>
           <p>Every number the computer's offseason uses (departures, development, transfers, recruiting, walk-ons, prestige), to change for this dynasty or move to another one. Spoilers.</p>
-          <div className="dy-row"><a className="dy-button dy-quiet" href={href('rules')}>Offseason rules</a></div>
+          <div className="dy-row"><Button variant="quiet" href={href('rules')}>Offseason rules</Button></div>
 
           <h3>Keep a copy</h3>
           <p>Your dynasty lives in this browser. Download it to keep a backup or to move it to another computer.</p>
           <div className="dy-row">
-            <button type="button" className="dy-button" onClick={actions.exportFile}>Download dynasty file</button>
+            <Button onClick={actions.exportFile}>Download dynasty file</Button>
             {rename === null ? (
-              <button type="button" className="dy-button dy-quiet" onClick={() => setRename(d.name)}>Rename</button>
+              <Button variant="quiet" onClick={() => setRename(d.name)}>Rename</Button>
             ) : (
               <form className="dy-row" onSubmit={(e) => { e.preventDefault(); actions.rename(rename); setRename(null); }}>
                 <input aria-label="Dynasty name" value={rename} onChange={(e) => setRename(e.target.value)} maxLength={40} />
-                <button type="submit" className="dy-button">Save name</button>
-                <button type="button" className="dy-button dy-quiet" onClick={() => setRename(null)}>Cancel</button>
+                <Button type="submit">Save name</Button>
+                <Button variant="quiet" onClick={() => setRename(null)}>Cancel</Button>
               </form>
             )}
             {confirm === d.id ? (
               <>
-                <button type="button" className="dy-button dy-danger" onClick={() => { actions.remove(d.id); setConfirm(null); }}>Delete {d.name} for good</button>
-                <button type="button" className="dy-button dy-quiet" onClick={() => setConfirm(null)}>Keep it</button>
+                <Button variant="danger" onClick={() => { actions.remove(d.id); setConfirm(null); }}>Delete {d.name} for good</Button>
+                <Button variant="quiet" onClick={() => setConfirm(null)}>Keep it</Button>
               </>
             ) : (
-              <button type="button" className="dy-button dy-quiet" onClick={() => setConfirm(d.id)}>Delete</button>
+              <Button variant="quiet" onClick={() => setConfirm(d.id)}>Delete</Button>
             )}
           </div>
         </section>
@@ -553,11 +553,11 @@ function Manage({ d, art, list, busy, note, actions }: {
             {others.map((x) => (
               <li key={x.id}>
                 <span><strong>{x.name}</strong> <span className="dy-dim">{x.year}{x.schools.length ? `, ${x.schools.join(', ')}` : ''}</span></span>
-                <button type="button" className="dy-button" onClick={() => actions.open(x.id)}>Open</button>
+                <Button onClick={() => actions.open(x.id)}>Open</Button>
                 {confirm === x.id ? (
-                  <button type="button" className="dy-button dy-danger" onClick={() => { actions.remove(x.id); setConfirm(null); }}>Delete for good</button>
+                  <Button variant="danger" onClick={() => { actions.remove(x.id); setConfirm(null); }}>Delete for good</Button>
                 ) : (
-                  <button type="button" className="dy-button dy-quiet" onClick={() => setConfirm(x.id)}>Delete</button>
+                  <Button variant="quiet" onClick={() => setConfirm(x.id)}>Delete</Button>
                 )}
               </li>
             ))}
@@ -597,7 +597,7 @@ function PlayersCsv({ d, actions }: { d: Dynasty; actions: ManageActions }) {
         rows with an ID change that player, rows without one add a player, a cleared Team releases him. You see every change before it's applied.
       </p>
       <div className="dy-row">
-        <button type="button" className="dy-button dy-quiet" onClick={() => actions.download(`${slug}-players-${year}.csv`, playersCsv(d), 'text/csv')}>Download players CSV</button>
+        <Button variant="quiet" onClick={() => actions.download(`${slug}-players-${year}.csv`, playersCsv(d), 'text/csv')}>Download players CSV</Button>
         {lock ? <span className="dy-dim dy-small">{lock}</span> : (
           <FileButton label="Import players CSV" accept=".csv,text/csv" onFile={async (f) => {
             setMsg(null);
@@ -620,21 +620,21 @@ function PlayersCsv({ d, actions }: { d: Dynasty; actions: ManageActions }) {
                 <ul className="dy-small dy-changes">{pending.changes.slice(0, 200).map((m, i) => <li key={i}>{m}</li>)}</ul>
                 {pending.changes.length > 200 && <p className="dy-small dy-dim">and {pending.changes.length - 200} more.</p>}
                 <div className="dy-row">
-                  <button type="button" className="dy-button" onClick={async () => {
+                  <Button onClick={async () => {
                     try {
                       await actions.commit(applyEdits(d, pending.edits, pending.adds));
                       setMsg({ kind: 'ok', text: `${pending.changes.length} ${pending.changes.length === 1 ? 'player' : 'players'} changed.${d.offseason ? '' : ' Download the season ROM again before you start the New Season.'}` });
                       setPending(null);
                     } catch (e) { setMsg({ kind: 'error', text: (e as Error).message }); }
-                  }}>Apply the changes</button>
-                  <button type="button" className="dy-button dy-quiet" onClick={() => setPending(null)}>Cancel</button>
+                  }}>Apply the changes</Button>
+                  <Button variant="quiet" onClick={() => setPending(null)}>Cancel</Button>
                 </div>
               </>
             ) : <p>Nothing in the file differs from the dynasty.</p>
           )}
         </div>
       )}
-      {msg && <p className={`dy-note dy-note-${msg.kind}`}>{msg.text}</p>}
+      {msg && <Note kind={msg.kind}>{msg.text}</Note>}
     </>
   );
 }

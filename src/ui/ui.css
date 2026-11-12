@@ -83,3 +83,5 @@
 .ui-theme-box { width: var(--sp-3); height: var(--sp-3); border: 2px solid var(--on-masthead); }
 .ui-theme[aria-checked='true'] .ui-theme-box { background: var(--on-masthead); box-shadow: inset 0 0 0 2px var(--masthead); }
 .ui-theme:focus-visible { outline: 2px solid var(--on-masthead); outline-offset: 2px; }
+.ui-sub a { color: inherit; text-decoration: none; }
+.ui-sub a:hover { text-decoration: underline; }

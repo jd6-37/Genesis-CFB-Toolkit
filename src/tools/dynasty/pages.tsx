@@ -3,7 +3,7 @@
 import { playerHonors, seasonAwards } from '../../core/dynasty/awards';
 import { scheduleLock } from '../../core/dynasty/schedule';
 import { setWhiteHome, whiteHomeLock } from '../../core/dynasty/kit';
-import { Select } from '../../ui';
+import { Button, Note, PageHead, Select, SubHead } from '../../ui';
 import { useEffect, useMemo, useState } from 'react';
 import {
   champions, leaders, playerLines, playerName, seasonView, standings, statValue, teamHistory, weekName,
@@ -31,7 +31,7 @@ function NoResults() {
   return (
     <Empty>
       <p>No results yet. Play a week in the game, then import your save on the Manage page.</p>
-      <a className="dy-button" href={href('manage')}>Import a save</a>
+      <Button href={href('manage')}>Import a save</Button>
     </Empty>
   );
 }
@@ -122,8 +122,8 @@ function StoryBox({ s, onClose }: { s: Story; onClose: () => void }) {
           </table>
         ))}
         <div className="dy-row">
-          <a className="dy-button" href={href(`player/${p.id}`)} onClick={onClose}>Player page</a>
-          <button type="button" className="dy-button dy-quiet" onClick={onClose}>Close</button>
+          <Button href={href(`player/${p.id}`)} onClick={onClose}>Player page</Button>
+          <Button variant="quiet" onClick={onClose}>Close</Button>
         </div>
       </div>
     </div>
@@ -168,7 +168,7 @@ export function Home() {
         <aside className="dy-front-side">
           {heads.length > 0 && (
             <section>
-              <h2 className="dy-side-head">Headlines</h2>
+              <SubHead level={2}>Headlines</SubHead>
               <ul className="dy-headlines">
                 {heads.map((s) => (
                   <li key={s.id}>
@@ -200,7 +200,7 @@ function HomePoll() {
   const top = v.order.slice(0, 25);
   return (
     <section className="dy-poll">
-      <h2 className="dy-side-head"><a href={href('top25')}>Top 25</a></h2>
+      <SubHead level={2}><a href={href('top25')}>Top 25</a></SubHead>
       <ol className="dy-poll-top">
         {top.slice(0, 4).map((t, i) => {
           const m = row(t, i);
@@ -233,7 +233,7 @@ function YourTeams() {
   if (!d.userTeams.length) return null;
   return (
     <section>
-      <h2 className="dy-side-head">Your {d.userTeams.length > 1 ? 'teams' : 'team'}</h2>
+      <SubHead level={2}>Your {d.userTeams.length > 1 ? 'teams' : 'team'}</SubHead>
       {d.userTeams.map((t) => {
         const next = v.games.find((g) => g.vs === null && (g.visitor === t || g.home === t));
         const opp = next ? (next.visitor === t ? next.home : next.visitor) : null;
@@ -262,16 +262,14 @@ export function Scores({ week: asked }: { week?: number }) {
   const games = v.games.filter((g) => g.week === week);
   return (
     <section>
-      <div className="dy-pagehead">
-        <h2>Scores</h2>
-        <div className="dy-weeknav">
-          <a className="dy-button dy-quiet" aria-disabled={week === 0} href={week > 0 ? href(`scores/${week - 1}`) : undefined}>Previous</a>
-          <select aria-label="Week" value={week} onChange={(e) => (window.location.hash = href(`scores/${e.target.value}`))}>
-            {Array.from({ length: v.weeks }, (_, w) => <option key={w} value={w}>{weekName(v, w)}</option>)}
-          </select>
-          <a className="dy-button dy-quiet" aria-disabled={week === v.weeks - 1} href={week < v.weeks - 1 ? href(`scores/${week + 1}`) : undefined}>Next</a>
-        </div>
-      </div>
+      <PageHead
+        title="Scores"
+        actions={<>
+          <Button variant="quiet" disabled={week === 0} href={href(`scores/${week - 1}`)}>Previous</Button>
+          <Select label="Week" hideLabel value={week} options={Array.from({ length: v.weeks }, (_, w) => ({ value: w, label: weekName(v, w) }))} onChange={(x) => (window.location.hash = href(`scores/${x}`))} />
+          <Button variant="quiet" disabled={week === v.weeks - 1} href={href(`scores/${week + 1}`)}>Next</Button>
+        </>}
+      />
       <div className="dy-games">
         {games.map((g) => (
           <div key={g.index} className={`dy-game${d.userTeams.some((u) => u === g.visitor || u === g.home) ? ' dy-game-mine' : ''}`}>
@@ -302,7 +300,7 @@ export function Standings() {
   const confs = v.season.confNames.map((name, c) => ({ name, c })).filter(({ c }) => v.season.conf.includes(c));
   return (
     <section>
-      <div className="dy-pagehead"><h2>Standings</h2></div>
+      <PageHead title="Standings" />
       <div className="dy-confs">
         {confs.map(({ name, c }) => (
           <table key={c} className="dy-table">
@@ -359,7 +357,7 @@ export function Rankings() {
   if (!v.save) return <NoResults />;
   return (
     <section>
-      <div className="dy-pagehead"><h2>Top 25</h2><p>The game's own poll as of your latest save.</p></div>
+      <PageHead title="Top 25">The game's own poll as of your latest save.</PageHead>
       <Top25 />
     </section>
   );
@@ -426,7 +424,7 @@ export function Teams() {
   const confs = v.season.confNames.map((name, c) => ({ name, c })).filter(({ c }) => v.season.conf.includes(c));
   return (
     <section>
-      <div className="dy-pagehead"><h2>Teams</h2></div>
+      <PageHead title="Teams" />
       <div className="dy-team-index">
         {confs.map(({ name, c }) => (
           <div key={c}>
@@ -503,7 +501,7 @@ export function Team({ team }: { team: number }) {
               {whiteHomeLock(d, team) && <p className="dy-small dy-dim">{whiteHomeLock(d, team)}</p>}
             </div>
           )}
-          <h3 className="dy-sub">Schedule</h3>
+          <SubHead>Schedule</SubHead>
           {mine && v.season.schedule && !scheduleLock(v.season) && <p className="dy-small"><a href={href(`schedule/${team}`)}>Change the schedule</a></p>}
           {games.length ? (
             <table className="dy-table">
@@ -524,7 +522,7 @@ export function Team({ team }: { team: number }) {
             </table>
           ) : <p className="dy-dim">No games in the imported season.</p>}
 
-          <h3 className="dy-sub">History</h3>
+          <SubHead>History</SubHead>
           <table className="dy-table">
             <thead><tr><th className="dy-left">Season</th><th>Record</th><th>Final rank</th><th></th></tr></thead>
             <tbody>
@@ -540,12 +538,12 @@ export function Team({ team }: { team: number }) {
           </table>
         </div>
         <div>
-          <h3 className="dy-sub">Season stats</h3>
+          <SubHead>Season stats</SubHead>
           {lines.some((l) => Object.values(l.s).some((x) => x > 0)) ? <StatTables lines={lines} /> : <p className="dy-dim">No stats yet.</p>}
         </div>
       </div>
 
-      <h3 className="dy-sub">Active Roster</h3>
+      <SubHead>Active Roster</SubHead>
       <p className="dy-dim dy-small">
         The {roster.length} players in Bill Walsh '95 this season.
         {trainingYears(d).length > 0 && <> <a href={href(`training/${team}-${trainingYears(d)[0]}`)}>Training results</a></>}
@@ -553,14 +551,14 @@ export function Team({ team }: { team: number }) {
       {edit && <p className="dy-small">Choose a player's position to move him: the player there takes his place. ★ marks the Active Roster spots. A player can change position once a season (HB and FB, FB and TE, DE and OLB, OLB and MLB, K and P).</p>}
       {lock && mine && <p className="dy-dim dy-small">{lock}</p>}
       {mine && v.season.lineupEdited && (
-        <p className="dy-note dy-small">
+        <Note>
           You changed the lineup. Download the {v.season.year} ROM again before you start the New Season.{' '}
-          <button type="button" className="dy-button dy-quiet" onClick={() => downloadRom(v.season.year)}>Download the {v.season.year} ROM</button>
-        </p>
+          <Button variant="quiet" onClick={() => downloadRom(v.season.year)}>Download the {v.season.year} ROM</Button>
+        </Note>
       )}
-      {moveError && <p className="dy-note dy-note-error dy-small" role="alert">{moveError}</p>}
+      {moveError && <Note kind="error">{moveError}</Note>}
       <RosterTable rows={roster} edit={edit} />
-      <h3 className="dy-sub">Backups</h3>
+      <SubHead>Backups</SubHead>
       <p className="dy-dim dy-small">{bench.length + reserves.length} players who aren't on the Active Roster this season. Each backs up a spot and can move up when it opens.</p>
       <RosterTable rows={[...bench, ...reserves.map((p) => ({ p, spot: null, label: p.pos, ovr: null }))]} edit={edit} />
       <AddPlayer team={team} />
@@ -630,7 +628,7 @@ function Honors({ id }: { id: number }) {
   if (!list.length) return null;
   return (
     <>
-      <h3 className="dy-sub">Honors</h3>
+      <SubHead>Honors</SubHead>
       <ul className="dy-honors">
         {list.map((h, i) => <li key={i}><a href={href(`awards/${h.year}`)}>{h.year}</a> {h.label}</li>)}
       </ul>
@@ -694,12 +692,12 @@ export function Player({ id }: { id: number }) {
       </header>
       {seasons.filter((s) => s.year === v.season.year && s.lines.length > 0).map((s) => (
         <div key={s.year}>
-          <h3 className="dy-sub">{s.year} season{s.team !== null && <span className="dy-sub-team"> at <TeamLink team={s.team} rank={false} /></span>}</h3>
+          <SubHead>{s.year} season{s.team !== null && <span className="dy-sub-team"> at <TeamLink team={s.team} rank={false} /></span>}</SubHead>
           <StatTables lines={s.lines} />
         </div>
       ))}
       <div className="dy-edit-wrap">{p.status === 'active' && team !== null && <EditPlayer key={p.id} p={p} />}<EditLook key={`look-${p.id}`} p={p} /></div>
-      <h3 className="dy-sub">Bill Walsh '95 ratings</h3>
+      <SubHead>Bill Walsh '95 ratings</SubHead>
       {shownSlots.length ? shownSlots.map((slot) => <BwRatings key={slot} team={team!} slot={slot} name={playerName(p)} bench={onBench} player={p} />) : (
         <p className="dy-dim">
           {v.season.bw ? `He isn't one of ${team !== null ? d.teams[team].school : 'his team'}'s 32 players in Bill Walsh '95 this season, so he has no ratings.` : 'Start this dynasty again to see the ratings (it was made before the app kept them).'}
@@ -733,7 +731,7 @@ function Progression({ p, color }: { p: DPlayer; color: string }) {
   const y = (v: number) => PAD + (1 - v / 100) * (H - 2 * PAD);
   return (
     <>
-      <h3 className="dy-sub">Progression</h3>
+      <SubHead>Progression</SubHead>
       <p className="dy-dim dy-small">{years[0].year} to {last.year}, each season as he started it (0-100 for every line).</p>
       <div className="dy-prog">
         {series.map((s) => {
@@ -774,7 +772,7 @@ function CareerStats({ p, seasons }: { p: DPlayer; seasons: { year: number; team
   const sum = (l: PlayerLine[], k: string) => (k === 'long' ? Math.max(0, ...l.map((x) => statValue(x, k))) : l.reduce((a, x) => a + statValue(x, k), 0));
   return (
     <>
-      <h3 className="dy-sub">Career stats</h3>
+      <SubHead>Career stats</SubHead>
       <div className="dy-stat-tables">
         {STAT_TABLES.map((t) => {
           const rows = withStats.map((s) => ({ s, lines: s.lines.filter((l) => l.cat === t.cat) })).filter((r) => r.lines.some((l) => t.cols.some(([k]) => statValue(l, k) > 0)));
@@ -928,7 +926,7 @@ export function Leaders() {
   if (!v.save) return <NoResults />;
   return (
     <section>
-      <div className="dy-pagehead"><h2>Stat leaders</h2><p>{v.season.year} season to date.</p></div>
+      <PageHead title="Stat leaders">{v.season.year} season to date.</PageHead>
       <div className="dy-boards">
         {LEADER_BOARDS.map((b) => (
           <table key={b.title} className="dy-table dy-board">
@@ -957,11 +955,11 @@ export function History() {
   const hasAwards = useMemo(() => d.seasons.some((s) => seasonAwards(d, s)), [d]);
   return (
     <section>
-      <div className="dy-pagehead"><h2>History</h2><p>Every season of this dynasty since {d.startYear}.</p></div>
-      <div className="dy-row"><a className="dy-button dy-quiet" href={href('records')}>Records book</a>{hasAwards && <a className="dy-button dy-quiet" href={href('awards')}>Season awards</a>}</div>
+      <PageHead title="History">Every season of this dynasty since {d.startYear}.</PageHead>
+      <div className="dy-row"><Button variant="quiet" href={href('records')}>Records book</Button>{hasAwards && <Button variant="quiet" href={href('awards')}>Season awards</Button>}</div>
       <div className="dy-team-cols">
         <div>
-          <h3 className="dy-sub">National champions</h3>
+          <SubHead>National champions</SubHead>
           {champs.length ? (
             <table className="dy-table">
               <tbody>
@@ -973,7 +971,7 @@ export function History() {
           ) : <p className="dy-dim">No champion yet. The national championship game crowns the first one.</p>}
           {d.userTeams.map((t) => (
             <div key={t}>
-              <h3 className="dy-sub">{d.teams[t].school} by season</h3>
+              <SubHead>{d.teams[t].school} by season</SubHead>
               <table className="dy-table">
                 <tbody>
                   {teamHistory(d, t).map((h) => (
