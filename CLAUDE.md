@@ -49,6 +49,7 @@ Read this before changing anything. More than one person or Claude session may b
 - ROM space: every area the app writes must be checked as free first, and every piece of code it patches as unchanged (like `swapProblems` in `src/core/build.ts`), because the tools also take modded ROMs. New areas must not overlap the areas the README lists or those used by Bill Walsh College Football '95 Elevated (formerly Rebalanced).
 - No ROMs, ROM data or game art in the repo. Everything is read from the user's own ROMs in the browser.
 - Update the README when anything a user sees changes.
+- Design mobile-first, always: base styles for a phone, then `min-width` media queries for wider screens. Check every page at phone width.
 - US English spelling everywhere: code, UI labels, file names, docs ("color", "catalog").
 
 ## Commits

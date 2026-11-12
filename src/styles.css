@@ -46,7 +46,12 @@ button, input, select { font: inherit; color: inherit; }
 .page.dragging { outline: 3px dashed var(--menu); outline-offset: -12px; }
 
 /* Masthead: set like the game's title, stacked and slanted. */
-.masthead { margin-bottom: 40px; }
+.masthead { margin-bottom: 40px; position: relative; }
+.mast-dynasty {
+  position: absolute; top: 0; right: 0; padding: 6px 18px; border: 2px solid var(--menu); border-radius: 4px;
+  color: var(--menu); font-family: var(--display); font-style: italic; font-weight: 800; font-size: 22px; text-decoration: none;
+}
+.mast-dynasty:hover { background: rgba(246, 216, 74, 0.12); }
 .masthead h1 {
   margin: 0;
   font-family: var(--display);

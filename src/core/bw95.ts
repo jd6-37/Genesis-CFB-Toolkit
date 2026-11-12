@@ -47,9 +47,10 @@ function readImage(d: Uint8Array, c: number): BwImage {
   };
 }
 
-export function parseBw95(d: Uint8Array): BwTeam[] {
+/** The team blocks (36, or the count of a 138-team edition when given). */
+export function parseBw95(d: Uint8Array, count = BW_TEAMS): BwTeam[] {
   const out: BwTeam[] = [];
-  for (let i = 0; i < BW_TEAMS; i++) {
+  for (let i = 0; i < count; i++) {
     const b = rl(d, BW_TABLE + 4 * i);
     const h = Array.from({ length: 6 }, (_, k) => rw(d, b + 2 * k));
     let a = b + h[2];
