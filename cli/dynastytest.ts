@@ -667,7 +667,7 @@ ok('a new season refuses the last season\'s save');
   for (let t = 0; t < 138; t++) {
     const base = 0x3951 + 2 * 0xb8 * t, b = (j: number) => base + 2 * j;
     scaleWord(b(4)); scaleByte(b(6)); scaleByte(b(7));
-    for (let k = 0; k < 4; k++) { scaleWord(b(8 + 8 * k + 2)); scaleByte(b(8 + 8 * k + 7)); }
+    for (let k = 0; k < 4; k++) { scaleWord(b(8 + 8 * k)); scaleWord(b(8 + 8 * k + 2)); scaleByte(b(8 + 8 * k + 7)); }
     for (let k = 0; k < 9; k++) { scaleWord(b(40 + 8 * k)); scaleWord(b(40 + 8 * k + 2)); scaleByte(b(40 + 8 * k + 7)); }
     for (let k = 0; k < 15; k++) { scaleWord(b(124 + 4 * k)); scaleByte(b(124 + 4 * k + 2)); scaleByte(b(124 + 4 * k + 3)); }
   }
