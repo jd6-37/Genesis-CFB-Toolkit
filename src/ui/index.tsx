@@ -74,6 +74,8 @@ export interface Column<T> {
   label: string;
   /** Text columns are left-aligned; numbers stay right-aligned. */
   left?: boolean;
+  /** Figures (scores, ratings, totals): shown in the pixel numerals. */
+  num?: boolean;
   cell: (row: T, index: number) => ReactNode;
 }
 interface DataTableProps<T> {
@@ -97,7 +99,7 @@ export function DataTable<T>({ columns, rows, rowKey, mine, empty = 'Nothing yet
         <tbody>
           {rows.map((r, i) => (
             <tr key={rowKey(r, i)} className={mine?.(r) ? 'ui-row-mine' : undefined}>
-              {columns.map((c) => <td key={c.key} className={c.left ? 'ui-left' : undefined}>{c.cell(r, i)}</td>)}
+              {columns.map((c) => <td key={c.key} className={c.left ? 'ui-left' : c.num ? 'ui-num' : undefined}>{c.cell(r, i)}</td>)}
             </tr>
           ))}
         </tbody>

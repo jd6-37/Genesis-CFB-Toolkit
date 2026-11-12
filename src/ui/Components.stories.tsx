@@ -53,10 +53,10 @@ export const Tables: Story = {
         mine={(r) => r.team === 'Texas State'}
         columns={[
           { key: 'team', label: 'Team', left: true, cell: (r) => r.team },
-          { key: 'conf', label: 'Conf', cell: (r) => r.conf },
-          { key: 'all', label: 'Overall', cell: (r) => r.all },
-          { key: 'pf', label: 'PF', cell: (r) => r.pf },
-          { key: 'pa', label: 'PA', cell: (r) => r.pa },
+          { key: 'conf', num: true, label: 'Conf', cell: (r) => r.conf },
+          { key: 'all', num: true, label: 'Overall', cell: (r) => r.all },
+          { key: 'pf', num: true, label: 'PF', cell: (r) => r.pf },
+          { key: 'pa', num: true, label: 'PA', cell: (r) => r.pa },
         ]}
       />
       <SubHead>No rows</SubHead>
