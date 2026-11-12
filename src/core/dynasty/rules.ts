@@ -78,8 +78,7 @@ export interface OffseasonRules {
   pitchStrongAt: number; pitchWeakBelow: number;
   /** Points count (×) after a pitch: his interest and you're strong, middling, weak; not his interest. */
   pitchGood: number; pitchOk: number; pitchBad: number; pitchNotInterested: number;
-  /** Computer teams pick his top pitch with chance base + this × prestige (0-1), else a random one. */
-  cpuPitchBase: number; cpuPitchPrestige: number;
+
   // New players
   /** How far below the player he's modeled on a freshman starts (OVR points). */
   freshmanGapMin: number; freshmanGapMax: number;
@@ -101,7 +100,7 @@ export const DEFAULT_RULES: OffseasonRules = {
   pitchHome: [1.6, 1.6, 1.5, 1.3, 0.8, 0.6], pitchPrestige: [0.6, 0.6, 0.7, 0.9, 1.4, 1.7],
   pitchAcademics: [0.7, 0.7, 0.7, 0.7, 0.7, 0.7], pitchContender: [0.4, 0.4, 0.5, 0.7, 1.1, 1.4],
   portalPlayingTime: 0.5, contenderLastSeason: 0.5,
-  pitchInterests: 2, pitchStrongAt: 0.65, pitchWeakBelow: 0.4, pitchGood: 1.5, pitchOk: 1.15, pitchBad: 0.7, pitchNotInterested: 1, cpuPitchBase: 0.25, cpuPitchPrestige: 0.45,
+  pitchInterests: 2, pitchStrongAt: 0.65, pitchWeakBelow: 0.4, pitchGood: 1.5, pitchOk: 1.15, pitchBad: 0.7, pitchNotInterested: 1,
   freshmanGapMin: 7, freshmanGapMax: 13, diamondChance: 0.03, diamondPotMin: 84, diamondPotMax: 96,
   minQB: 2, minRB: 4, minWR: 5, minTE: 3, minOL: 7, minDL: 5, minLB: 5, minCB: 5, minS: 4, minKP: 2,
   tier6: 10, tier5: 20, tier4: 35, tier3: 70, tier2: 100,
@@ -205,7 +204,7 @@ export const RULE_SECTIONS: RuleSection[] = [
   },
   {
     title: 'Pitches',
-    intro: 'What a prospect cares about: a random draw for each pitch, multiplied by these, then scaled to add up to 100%. Playing time is 1 for everyone. His top pitches are his interests: pitching one gets a reaction.',
+    intro: 'What a prospect cares about: a random draw for each pitch, multiplied by these, then scaled to add up to 100%. Playing time is 1 for everyone. His top pitches are his interests: pitching one gets a reaction. Computer teams learn them the way you do, from the reactions.',
     fields: [
       { key: 'pitchHome', label: 'Being close to home', help: '', kind: 'num', min: 0, max: 5, items: STARS },
       { key: 'pitchPrestige', label: 'Program prestige', help: '', kind: 'num', min: 0, max: 5, items: STARS },
@@ -220,8 +219,6 @@ export const RULE_SECTIONS: RuleSection[] = [
       { key: 'pitchOk', label: 'After a middling pitch (~)', help: 'His interest, you\'re in between.', kind: 'num', min: 0, max: 5 },
       { key: 'pitchBad', label: 'After a bad pitch (−)', help: 'His interest, but you\'re weak at it: less than no pitch.', kind: 'num', min: 0, max: 5 },
       { key: 'pitchNotInterested', label: 'After a pitch he doesn\'t care about (✗)', help: '', kind: 'num', min: 0, max: 5 },
-      { key: 'cpuPitchBase', label: 'Computer teams pick his best pitch: base chance', help: 'Else a random pitch.', kind: 'pct', min: 0, max: 1 },
-      { key: 'cpuPitchPrestige', label: '… plus this × prestige (0-1)', help: 'Bigger programs read recruits better.', kind: 'pct', min: 0, max: 1 },
     ],
   },
   {

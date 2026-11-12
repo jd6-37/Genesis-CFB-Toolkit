@@ -272,6 +272,15 @@ export function fit(d: Dynasty, ctx: WeekContext, pr: Prospect, team: number): n
   return PITCHES.reduce((a, k) => a + (pr.wants[k] ?? 0) * sc[k], 0);
 }
 
+/** The next pitch from the reactions so far: + kept, untried pitches before a ~, never − or ✗ again. */
+export function learnedPitch(known: Partial<Record<PitchKey, PitchReaction>>, r: () => number): PitchKey {
+  const good = PITCHES.find((k) => known[k] === 'good');
+  if (good) return good;
+  const untried = PITCHES.filter((k) => !known[k]);
+  if (untried.length) return untried[Math.floor(r() * untried.length)];
+  return PITCHES.find((k) => known[k] === 'ok') ?? PITCHES[Math.floor(r() * PITCHES.length)];
+}
+
 /** His interests: his top pitches (rules: pitchInterests). */
 export const interestsOf = (R: OffseasonRules, pr: Prospect): PitchKey[] =>
   PITCHES.slice().sort((a, b) => (pr.wants[b] ?? 0) - (pr.wants[a] ?? 0)).slice(0, R.pitchInterests);
@@ -314,11 +323,14 @@ export function cpuPlan(d: Dynasty, rs: RecruitingState, ctx: WeekContext, team:
     points[c.p.id] = pts;
     left -= pts;
   }
-  // Its pitch for each target: his top pitch with a chance that grows with prestige, else a random one.
+  // Its pitch for each target, learned the way the user learns it (user, 2026-11-12: prestige shouldn't
+  // make a school better at reading recruits): keep a pitch that got +, try one not tried yet over a ~,
+  // never repeat − or ✗; with nothing better left, the best reaction so far.
   const pitches: Record<number, PitchKey> = {};
+  const memory = rs.reactions?.[team] ?? {};
   for (const c of cands) {
     if (!points[c.p.id]) continue;
-    pitches[c.p.id] = r() < R.cpuPitchBase + R.cpuPitchPrestige * pres ? interestsOf(R, c.p)[0] : PITCHES[Math.floor(r() * PITCHES.length)];
+    pitches[c.p.id] = learnedPitch(memory[c.p.id] ?? {}, r);
   }
   return { points, offers: cands.slice(0, open + 6).map((c) => c.p.id), pitches };
 }
@@ -408,10 +420,8 @@ export function runRecruitingWeek(d: Dynasty, rs0: RecruitingState, userPlans: R
       if (pitch) {
         const x = pitchReaction(R, p, sc, pitch);
         pv = reactionValue(R, x);
-        if (d.userTeams.includes(team)) {
-          const mine = (rs.reactions ??= {})[team] ??= {};
-          mine[p.id] = { ...mine[p.id], [pitch]: x };
-        }
+        const mine = (rs.reactions ??= {})[team] ??= {};
+        mine[p.id] = { ...mine[p.id], [pitch]: x };
       }
       p.interest[team] = (p.interest[team] ?? 0) + pts * pv * pointValue(d, ctx, p, team) * (0.5 + f) * (p.offers.includes(team) ? R.offerBoost : R.noOffer) * reach(p.stars, ctx.stars.get(team)!) * (0.85 + 0.3 * r());
     }

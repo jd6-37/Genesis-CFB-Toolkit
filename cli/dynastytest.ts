@@ -489,6 +489,11 @@ if (user !== undefined) {
     const g = gain(k), x = Rec.pitchReaction(RD, tgt, sc, k);
     assert.ok(Math.abs(g.v - none.v * Rec.reactionValue(RD, x)) < 1e-6 * Math.max(1, none.v), `pitch ${k} (${x}) scales the points`);
   }
+  // Computer teams learn: keep a +, try untried pitches, never repeat − or ✗.
+  const rnd = () => 0.5;
+  assert.equal(Rec.learnedPitch({ home: 'good', pt: 'no' }, rnd), 'home');
+  assert.ok(!['pt', 'prestige'].includes(Rec.learnedPitch({ pt: 'no', prestige: 'bad' }, rnd)));
+  assert.equal(Rec.learnedPitch({ pt: 'no', prestige: 'bad', home: 'ok', academics: 'no', contender: 'no' }, rnd), 'home');
   ok(`pitching: ${tgt.player.first} ${tgt.player.last}'s interests ${ints.join(', ')}; reactions ${ints.map((k) => Rec.pitchReaction(RD, tgt, sc, k)).join(', ')}, the rest ✗`);
 }
 
