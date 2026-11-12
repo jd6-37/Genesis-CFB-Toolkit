@@ -26,4 +26,6 @@ jobs:
         with:
           projectToken: ${{ secrets.CHROMATIC_PROJECT_TOKEN }}
           exitZeroOnChanges: true
+          # What is merged into main was reviewed on its pull request: it becomes the baseline without a second review.
+          autoAcceptChanges: main
           onlyChanged: true

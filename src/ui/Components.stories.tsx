@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
-import { Button, DataTable, Empty, Modal, Note, PageHead, Row, Select, Stat, SubHead } from './index';
+import { Button, DataTable, Empty, Modal, Note, PageHead, Row, Select, Stat, SubHead, ThemeToggle } from './index';
 
 const meta: Meta = { title: 'Components' };
 export default meta;
@@ -74,6 +74,13 @@ export const Stats: Story = {
     </Row>
   ),
 };
+
+function ThemeDemo() {
+  const [dark, setDark] = useState(false);
+  return <div style={{ background: 'var(--masthead)', padding: 'var(--sp-4)' }}><ThemeToggle dark={dark} onChange={setDark} /></div>;
+}
+/** The switch only; the Dynasty app sets data-theme from it. */
+export const ThemeSwitch: Story = { render: () => <ThemeDemo /> };
 
 export const EmptyState: Story = {
   render: () => <Empty><p>Awards are handed out once a season is over: import the save after the national championship game.</p></Empty>,

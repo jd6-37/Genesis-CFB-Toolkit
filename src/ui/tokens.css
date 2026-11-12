@@ -48,6 +48,8 @@
   --rule-strong: #f2f0ff;
   --bar: #0f0c45;
   --on-bar: #f6d84a;
+  --masthead: #0f0c45;
+  --on-masthead: #f2f0ff;
   --bar-on: #ffffff;
   --accent: #f6d84a;
   --on-accent: #0f0c45;
@@ -73,6 +75,8 @@
   --rule-strong: #000000;
   --bar: #000000;
   --on-bar: #ffffff;
+  --masthead: #000000;
+  --on-masthead: #ffffff;
   --bar-on: #ffdb49;
   --accent: #242424;
   --on-accent: #ffffff;
@@ -97,6 +101,9 @@
   --rule-strong: #ffffff;
   --bar: #ffffff;
   --on-bar: #000000;
+  /* The masthead stays black in dark mode (owner, 2026-11-12: "i don't like the white masthead"). */
+  --masthead: #000000;
+  --on-masthead: #ffffff;
   --bar-on: #b62400;
   --accent: #ffffff;
   --on-accent: #000000;

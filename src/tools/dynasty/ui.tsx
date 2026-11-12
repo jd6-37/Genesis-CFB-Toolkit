@@ -17,6 +17,8 @@ export interface DynCtx {
   go: (path: string) => void;
   /** Saves a changed dynasty (the lineup editor). */
   commit: (next: Dynasty) => Promise<void>;
+  /** The dark theme is on (team colors for charts are picked to show on it). */
+  dark: boolean;
   /** Downloads the season's ROM (needs the user's ROM, kept in the browser). */
   downloadRom: (year: number) => void;
 }
@@ -44,12 +46,13 @@ export function mainColor(d: Dynasty, t: number): string {
   const l = lum(css(team));
   return css(l < 24 || l > 235 ? jersey : team);
 }
-/** A school color that shows on white (for marks, meters and charts): primary, else secondary, else gray. */
-export function inkColor(d: Dynasty, t: number): string {
+/** A school color that shows on the page (for marks, meters and charts): primary, else secondary, else gray. */
+export function inkColor(d: Dynasty, t: number, dark = false): string {
+  const shows = (c: string) => (dark ? lum(c) >= 90 : lum(c) <= 150);
   const main = mainColor(d, t);
-  if (lum(main) <= 150) return main;
+  if (shows(main)) return main;
   const second = SCHOOL_COLORS[d.teams[t].school]?.[1];
-  return second && lum(second) <= 150 ? second : 'var(--gray)';
+  return second && shows(second) ? second : 'var(--text-muted)';
 }
 
 export const playerOf = (d: Dynasty, id: number | null): DPlayer | undefined => (id ? d.players[id - 1] : undefined);

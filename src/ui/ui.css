@@ -74,3 +74,12 @@
   .ui-table { font-size: var(--fs-3); }
   .ui-table th, .ui-table td { padding: var(--sp-2) var(--sp-3); }
 }
+
+/* ThemeToggle: a check box drawn in the masthead's colors. */
+.ui-theme {
+  display: inline-flex; align-items: center; gap: var(--sp-2); padding: var(--sp-1) 0; border: 0; background: none;
+  color: var(--on-masthead); font-family: var(--font-display); font-size: var(--fs-2); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer;
+}
+.ui-theme-box { width: var(--sp-3); height: var(--sp-3); border: 2px solid var(--on-masthead); }
+.ui-theme[aria-checked='true'] .ui-theme-box { background: var(--on-masthead); box-shadow: inset 0 0 0 2px var(--masthead); }
+.ui-theme:focus-visible { outline: 2px solid var(--on-masthead); outline-offset: 2px; }

@@ -381,6 +381,7 @@ Dynasties are kept in your browser (IndexedDB), with your ROM for the offseason 
 
 The save's season block and stats tables, the dynasty file and the plan for the next phases: [docs/dynasty.md](docs/dynasty.md).
 
+- **Dark mode:** the **Dark mode** switch at the top left turns the pages dark; the choice is kept in your browser.
 - **Home jersey:** on a ROM with the uniform picker (v2.0.1-test14 on), your team's page has **Home jersey**: Dark at home or White at home. Change it before the season's first save import or in the offseason; it's written into the season ROM (download the ROM again if you already had). The other teams keep the ROM's setting.
 - **ROM areas:** the season ROM is written into the dynasty area of Elevated's 2026 Season Edition (v2.0.1-test9 on), `0x3E0000`-`0x3FFFFF`: a header with the ID block (dynasty, season, roster version), the season rosters (138 × 32 × 4 bytes at `0x3E0100`), an OVR table (`0x3E4600`), the sim words (`0x3E4800`) and the names set for Team Rosters' names view (`0x3E5000`, "NAM1": class, first and last name per slot, in the game's font). The app writes it (and creates dynasties) only when the ROM has the dynasty hooks (the mark `BW95DYN` at `0x2B0000`) and Team Rosters' names (v2.0.1-test9 on) and the area is free (all `0xFF`) or already holds a dynasty header. Checksums are recomputed; nothing else changes.
 
