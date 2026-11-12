@@ -5,15 +5,14 @@
 
 import { openRosterRom } from '../rosterRom';
 import { parseCsv, type Sheet } from '../rosterSheet';
-import { convertCfb27 } from '../rosterCfb27';
 import { readWideSeason, wideSeasonProblems } from '../seasonWide';
 import { parseBw95 } from '../bw95';
 import { teamsOf } from '../wide';
-import { GROUP_COLUMNS, type Attr, type Group } from '../rosterLayouts';
-import { hasOlPatch, OL_PATCH } from '../rosterOlPatch';
+import type { Attr, Group } from '../rosterLayouts';
 import { ratingProblems, readRating, type TeamRating } from '../teamRatings';
 import { readDynastySave, type DynastySave } from './save';
 import { startingPrestige } from './prestige';
+import { buildRosters } from './rosters';
 
 export const DYNASTY_FILE = { app: 'genesis-cfb-toolkit', tool: 'dynasty', version: 1 } as const;
 
@@ -83,6 +82,9 @@ export interface DSeason {
   slots: (number | null)[][];
   /** Per team and slot, the Bill Walsh '95 ratings the slot's player has in the game this season. */
   bw?: (BwSlot | null)[][];
+  /** Per team and slot, the slot's backup on the bench and his ratings on the game's scale (not in the ROM). */
+  bench?: (number | null)[][];
+  benchBw?: (BwSlot | null)[][];
   /** Each team's prestige this season, 1-6 stars (prestige.ts). */
   prestige?: number[];
   /** Each team's offense and defense OVR in the ROM this season (what Game Setup shows). */
@@ -199,21 +201,23 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
     if (k < 0) throw new Error(`The ratings file has no "${name}" column.`);
     return k;
   };
-  const cTeam = H('Team'), cFirst = H('First Name'), cLast = H('Last Name'), cPos = H('Position'), cJersey = H('Jersey Number');
+  const cFirst = H('First Name'), cLast = H('Last Name'), cPos = H('Position'), cJersey = H('Jersey Number');
   const cHeight = H('Height (in)'), cWeight = H('Weight'), cOvr = H('Overall'), cClass = H('Class'), cRs = H('Redshirt Status');
   const cTown = H('Hometown'), cState = H('Home State'), cId = H('EA Player ID');
   const first = H('Speed');
   const attrKeys = sheet.headers.slice(first);
 
-  // Which ROM team each sheet team is (the roster conversion's own matching), and the season's slots.
-  const plan = convertCfb27(roster, sheet);
-  const teamOfSheet = new Map(plan.teams.map((t) => [t.sheetTeam, t.team]));
+  // The 32 in the game and the bench (one backup per slot), both from the Rosters tool's conversion;
+  // the dynasty keeps only these players.
+  const build = buildRosters(roster, sheet);
   const random = rng(opt.seed ?? Date.now());
+  const teamOfRow = new Map<number, number>();
+  build.slots.forEach((sl, t) => sl.forEach((row) => row !== null && teamOfRow.set(row, t)));
+  build.bench.forEach((sl, t) => sl.forEach((row) => row !== null && teamOfRow.set(row, t)));
   const players: DPlayer[] = [];
   const idOfRow = new Map<number, number>();
-  sheet.rows.forEach((r, row) => {
-    const team = teamOfSheet.get(r[cTeam]);
-    if (team === undefined) return;
+  for (const row of [...teamOfRow.keys()].sort((x, y) => x - y)) {
+    const r = sheet.rows[row];
     const id = players.length + 1;
     idOfRow.set(row, id);
     players.push({
@@ -221,7 +225,7 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
       first: r[cFirst].trim(),
       last: r[cLast].trim(),
       pos: r[cPos].trim().replace(/^LEDG$/, 'LE').replace(/^REDG$/, 'RE'),
-      team,
+      team: teamOfRow.get(row)!,
       cls: startingClass(r[cClass], r[cRs]),
       jersey: Number(r[cJersey]) || 0,
       heightIn: Number(r[cHeight]) || 0,
@@ -234,17 +238,12 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
       status: 'active',
       srcId: Number(r[cId]) || undefined,
     });
-  });
-  const slots: (number | null)[][] = Array.from({ length: n }, () => new Array<number | null>(32).fill(null));
-  const bw: (BwSlot | null)[][] = Array.from({ length: n }, () => new Array<BwSlot | null>(32).fill(null));
-  const olPlus = hasOlPatch(roster) ? OL_PATCH.pounds : 0;
-  for (const t of plan.teams) {
-    for (const f of t.fills) {
-      slots[t.team][f.slot] = idOfRow.get(f.player.row) ?? null;
-      const attrs = GROUP_COLUMNS[f.group];
-      bw[t.team][f.slot] = { label: f.label, group: f.group, attrs, steps: attrs.map((a) => f.steps[a] ?? 0), weightPlus: f.group === 'OL' ? olPlus : 0 };
-    }
   }
+  const ids = (grid: (number | null)[][]) => grid.map((sl) => sl.map((row) => (row === null ? null : idOfRow.get(row) ?? null)));
+  const slots = ids(build.slots);
+  const bench = ids(build.bench);
+  const bw = build.bw;
+  const benchBw = build.benchBw;
 
   const season = readWideSeason(rom);
   const teamOvr = ratingProblems(rom).length ? undefined : Array.from({ length: n }, (_, t) => readRating(rom, t));
@@ -259,7 +258,7 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
     teams,
     attrKeys,
     players,
-    seasons: [{ index: 0, year: startYear, conf: season.conf, confNames: season.names, slots, bw, teamOvr, prestige: startingPrestige(teams.map((t) => t.school), teamOvr), imports: [] }],
+    seasons: [{ index: 0, year: startYear, conf: season.conf, confNames: season.names, slots, bw, bench, benchBw, teamOvr, prestige: startingPrestige(teams.map((t) => t.school), teamOvr), imports: [] }],
   };
 }
 

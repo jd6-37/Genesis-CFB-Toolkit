@@ -9,6 +9,7 @@ import { offseasonStories, stories } from '../../core/dynasty/news';
 import { prestigeStars } from '../../core/dynasty/offseason';
 import { MAX_PRESTIGE } from '../../core/dynasty/prestige';
 import type { SaveGame } from '../../core/dynasty/save';
+import type { DPlayer } from '../../core/dynasty/model';
 import { nibbleToRating, nibbleToWeight, rosterLayout } from '../../core/rosterLayouts';
 import { playerOvr, roleOfSlot } from '../../core/dynasty/ovr';
 import { Empty, StoryArt, TeamLink, TeamMark, href, heightText, hometownText, inkColor, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
@@ -358,6 +359,14 @@ export function Team({ team }: { team: number }) {
     const bw = v.season.bw?.[team]?.[def.slot] ?? null;
     return p ? [{ def, p, bw, label: bw?.label ?? def.label }] : [];
   });
+  // The bench: each slot's backup, then anyone else on the team (reserves).
+  const bench = SLOT_ORDER.flatMap((def) => {
+    const p = playerOf(d, v.season.bench?.[team]?.[def.slot] ?? null);
+    const bw = v.season.benchBw?.[team]?.[def.slot] ?? null;
+    return p ? [{ def, p, bw, label: bw?.label ?? def.label }] : [];
+  });
+  const placed = new Set([...roster, ...bench].map((x) => x.p.id));
+  const reserves = d.players.filter((p) => p.team === team && p.status === 'active' && !placed.has(p.id));
   const games = v.games.filter((g) => g.visitor === team || g.home === team);
   const ovr = v.season.teamOvr?.[team];
   const conf = v.season.conf[team];
@@ -429,29 +438,42 @@ export function Team({ team }: { team: number }) {
         </div>
       </div>
 
-      <h3 className="dy-sub">Roster</h3>
-      <div className="dy-scroll">
-        <table className="dy-table dy-roster">
-          <thead>
-            <tr><th className="dy-left">Pos</th><th>#</th><th className="dy-left">Name</th><th>OVR</th><th>Class</th><th className="dy-wide">Ht</th><th className="dy-wide">Wt</th><th className="dy-left dy-wide">Hometown</th></tr>
-          </thead>
-          <tbody>
-            {roster.map(({ def, p, bw, label }) => (
-              <tr key={def.slot}>
-                <td className="dy-left dy-strong">{label}</td>
-                <td>{p.jersey}</td>
-                <td className="dy-left"><a href={href(`player/${p.id}`)}>{playerName(p)}</a></td>
-                <td className="dy-strong">{bw ? playerOvr(def.slot, bw) : ''}</td>
-                <td>{p.cls}</td>
-                <td className="dy-wide">{heightText(p.heightIn)}</td>
-                <td className="dy-wide">{p.weight || ''}</td>
-                <td className="dy-left dy-dim dy-wide">{hometownText(p)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <h3 className="dy-sub">In the game</h3>
+      <p className="dy-dim dy-small">The {roster.length} players on the team's roster in Bill Walsh '95.</p>
+      <RosterTable rows={roster.map((x) => ({ ...x, ovr: x.bw ? playerOvr(x.def.slot, x.bw) : null }))} />
+      <h3 className="dy-sub">Bench</h3>
+      <p className="dy-dim dy-small">{bench.length + reserves.length} players who aren't in the game this season. Each backs up a slot and can move up when it opens.</p>
+      <RosterTable rows={[
+        ...bench.map((x) => ({ ...x, ovr: x.bw ? playerOvr(x.def.slot, x.bw) : null })),
+        ...reserves.map((p) => ({ p, label: p.pos, ovr: null })),
+      ]} bench />
     </section>
+  );
+}
+
+function RosterTable({ rows, bench = false }: { rows: { p: DPlayer; label: string; ovr: number | null }[]; bench?: boolean }) {
+  return (
+    <div className="dy-scroll">
+      <table className={`dy-table dy-roster${bench ? ' dy-bench' : ''}`}>
+        <thead>
+          <tr><th className="dy-left">{bench ? 'Backs up' : 'Pos'}</th><th>#</th><th className="dy-left">Name</th><th>OVR</th><th>Class</th><th className="dy-wide">Ht</th><th className="dy-wide">Wt</th><th className="dy-left dy-wide">Hometown</th></tr>
+        </thead>
+        <tbody>
+          {rows.map(({ p, label, ovr }) => (
+            <tr key={`${label}-${p.id}`}>
+              <td className="dy-left dy-strong">{label}</td>
+              <td>{p.jersey}</td>
+              <td className="dy-left"><a href={href(`player/${p.id}`)}>{playerName(p)}</a></td>
+              <td className="dy-strong">{ovr ?? ''}</td>
+              <td>{p.cls}</td>
+              <td className="dy-wide">{heightText(p.heightIn)}</td>
+              <td className="dy-wide">{p.weight || ''}</td>
+              <td className="dy-left dy-dim dy-wide">{hometownText(p)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -468,6 +490,11 @@ export function Player({ id }: { id: number }) {
   const team = p.team;
   // His roster slots in the ROM this season (a kicker can also be the punter).
   const bwSlots = team === null ? [] : v.season.slots[team].flatMap((id, slot) => (id === p.id && v.season.bw?.[team]?.[slot] ? [slot] : []));
+  // Or the slots he backs up on the bench.
+  const benchSlots = team === null || bwSlots.length ? [] : (v.season.bench?.[team] ?? []).flatMap((id, slot) => (id === p.id && v.season.benchBw?.[team]?.[slot] ? [slot] : []));
+  const onBench = benchSlots.length > 0;
+  const shownSlots = onBench ? benchSlots : bwSlots;
+  const rated = (slot: number) => (onBench ? v.season.benchBw : v.season.bw)![team!][slot]!;
   const c = team !== null ? mainColor(d, team) : '#ffffff';
   return (
     <section>
@@ -477,7 +504,8 @@ export function Player({ id }: { id: number }) {
         <div>
           <h2>{playerName(p)}</h2>
           <p>
-            <span>#{p.jersey} {bwSlots.length ? bwSlots.map((x) => v.season.bw![team!][x]!.label).join(', ') : p.pos}</span>
+            <span>#{p.jersey} {shownSlots.length ? shownSlots.map((x) => rated(x).label).join(', ') : p.pos}</span>
+            {team !== null && <span className="dy-status">{bwSlots.length ? 'In the game' : onBench ? `Bench (backs up ${shownSlots.map((x) => rated(x).label).join(', ')})` : 'Bench'}</span>}
             <span>{p.cls}</span>
             <span>{heightText(p.heightIn)}, {p.weight} lb</span>
             {team !== null && <a href={href(`team/${team}`)}>{d.teams[team].school}</a>}
@@ -485,9 +513,9 @@ export function Player({ id }: { id: number }) {
           </p>
         </div>
         </div>
-        {bwSlots.length > 0 && (
+        {shownSlots.length > 0 && (
           <dl className={`dy-teamovr${team !== null && onColor(c) === '#000' ? ' dy-on-light' : ''}`}>
-            <div><dt>OVR</dt><dd>{playerOvr(bwSlots[0], v.season.bw![team!][bwSlots[0]]!)}</dd></div>
+            <div><dt>OVR</dt><dd>{playerOvr(shownSlots[0], rated(shownSlots[0]))}</dd></div>
           </dl>
         )}
       </header>
@@ -498,7 +526,7 @@ export function Player({ id }: { id: number }) {
         </div>
       ))}
       <h3 className="dy-sub">Bill Walsh '95 ratings</h3>
-      {bwSlots.length ? bwSlots.map((slot) => <BwRatings key={slot} team={team!} slot={slot} name={playerName(p)} />) : (
+      {shownSlots.length ? shownSlots.map((slot) => <BwRatings key={slot} team={team!} slot={slot} name={playerName(p)} bench={onBench} />) : (
         <p className="dy-dim">
           {v.season.bw ? `He isn't one of ${team !== null ? d.teams[team].school : 'his team'}'s 32 players in Bill Walsh '95 this season, so he has no ratings.` : 'Start this dynasty again to see the ratings (it was made before the app kept them).'}
         </p>
@@ -521,10 +549,10 @@ const ordinal = (n: number) => {
   return `${n}${t >= 11 && t <= 13 ? 'th' : u === 1 ? 'st' : u === 2 ? 'nd' : u === 3 ? 'rd' : 'th'}`;
 };
 
-function BwRatings({ team, slot, name }: { team: number; slot: number; name: string }) {
+function BwRatings({ team, slot, name, bench = false }: { team: number; slot: number; name: string; bench?: boolean }) {
   const { d, v } = useDyn();
-  const b = v.season.bw![team][slot]!;
-  // The same slot on every team this season.
+  // A bench player is rated on the game's scale too (what he'd have if he played), against the players in the game.
+  const b = (bench ? v.season.benchBw : v.season.bw)![team][slot]!;
   // Everyone at his position on every team (the OVR's groups): HB1 and HB2 together, all five linemen …
   const role = roleOfSlot(slot);
   const league = v.season.bw!.flatMap((t) => t.filter((x, k): x is NonNullable<typeof x> => !!x && roleOfSlot(k) === role));
@@ -532,9 +560,10 @@ function BwRatings({ team, slot, name }: { team: number; slot: number; name: str
   const avg = b.attrs.map((_, i) => league.reduce((a, x) => a + x.steps[i], 0) / n);
   const rank = b.attrs.map((_, i) => 1 + league.filter((x) => x.steps[i] > b.steps[i]).length);
   // Others at his step (ratings come in 16 steps, so ties are common).
-  const tied = b.attrs.map((_, i) => league.filter((x) => x.steps[i] === b.steps[i]).length - 1);
+  const self = bench ? 0 : 1; // he's one of the league's players unless he's on the bench
+  const tied = b.attrs.map((_, i) => league.filter((x) => x.steps[i] === b.steps[i]).length - self);
   // Weight: the share of starters he outweighs, counting those at his step as half.
-  const heavier = b.attrs.map((_, i) => league.reduce((a, x) => a + (x.steps[i] < b.steps[i] ? 1 : x.steps[i] === b.steps[i] ? 0.5 : 0), 0) - 0.5);
+  const heavier = b.attrs.map((_, i) => league.reduce((a, x) => a + (x.steps[i] < b.steps[i] ? 1 : x.steps[i] === b.steps[i] ? 0.5 : 0), 0) - 0.5 * self);
   const color = inkColor(d, team); // a light primary wouldn't show on white
   const [one, who] = ROLE_NAMES[role] ?? [b.label, `${b.label}s`];
 
@@ -554,7 +583,7 @@ function BwRatings({ team, slot, name }: { team: number; slot: number; name: str
 
   return (
     <div className="dy-bw">
-      <p className="dy-dim">{d.teams[team].school}'s {b.label}, ranked among all {n} {who}.</p>
+      <p className="dy-dim">{bench ? `${d.teams[team].school}'s backup ${b.label}, not in the game this season: his ratings if he played, ranked against all ${n} ${who} in the game.` : `${d.teams[team].school}'s ${b.label}, ranked among all ${n} ${who}.`}</p>
       <div className="dy-bw-grid">
         <figure className="dy-shape">
           <svg viewBox="0 0 300 250" role="img" aria-label={`${name}'s ratings against the average ${one}`}>
@@ -585,7 +614,7 @@ function BwRatings({ team, slot, name }: { team: number; slot: number; name: str
                   <i style={{ left: `calc(${(avg[i] / 15) * 100}% - 1px)` }} title={`Average ${one}`} />
                 </div>
                 <div className="dy-tile-note">
-                  {flat[i] ? `The same for all ${n} ${who}` : weight ? `Heavier than ${Math.round((heavier[i] / Math.max(1, n - 1)) * 100)}% of ${who}` : tied[i] > 0 ? <><strong>Tied for {ordinal(rank[i])}</strong> of {n} {who}, with {tied[i]} {tied[i] === 1 ? 'other' : 'others'}</> : <><strong>{ordinal(rank[i])}</strong> of {n} {who}</>}
+                  {flat[i] ? `The same for all ${n} ${who}` : weight ? `Heavier than ${Math.round((heavier[i] / Math.max(1, n - self)) * 100)}% of ${who}` : tied[i] > 0 ? <><strong>Tied for {ordinal(rank[i])}</strong> of {n} {who}, with {tied[i]} {tied[i] === 1 ? 'other' : 'others'}</> : <><strong>{ordinal(rank[i])}</strong> of {n} {who}</>}
                 </div>
               </div>
             );

@@ -299,3 +299,6 @@
   .dy-board li > .dy-small { grid-column: 1; }
   .dy-board-ctl { grid-column: 2; grid-row: 1 / span 2; }
 }
+.dy-status { font-weight: 600; }
+.dy-bench td, .dy-bench td a { color: var(--gray); }
+.dy-bench td.dy-strong { color: var(--ink); }

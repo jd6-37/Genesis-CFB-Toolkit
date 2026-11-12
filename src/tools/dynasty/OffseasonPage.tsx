@@ -26,7 +26,7 @@ const STEPS = ['Departures', 'Transfer portal', 'Signing day and cuts', 'Next se
 const STEP_OF = { portal: 0, recruiting: 1, signing: 1, cuts: 2, ready: 3 } as const;
 
 let templates: Promise<RecruitTemplates> | null = null;
-const getTemplates = (d: Dynasty) =>
+export const getTemplates = (d: Dynasty) =>
   (templates ??= fetchCfb27Latest().then((b) => recruitTemplates(d, new TextDecoder().decode(b))).catch((e) => { templates = null; throw e; }));
 
 const stars = (n: number) => (n ? `${n}★` : 'Walk-on');

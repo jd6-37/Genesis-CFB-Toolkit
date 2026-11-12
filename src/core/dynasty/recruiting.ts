@@ -3,8 +3,8 @@
 // in the transfer portal alike; prospects commit when one team's interest is high enough and clearly
 // ahead; signing day settles the rest.
 //
-//   openPortal       who leaves his team for the portal (playing time, being stuck behind better
-//                    players, a team that got worse, a little chance); they become prospects
+//   portalEntries    who leaves his team for the portal (bench players after two seasons; see
+//                    transferChance); they become prospects
 //   startRecruiting  the high-school pool (sized to the open spots, positions by the country's needs),
 //                    each prospect's priorities (playing time, prestige, close to home)
 //   runRecruitingWeek  CPU teams pick targets and offers; the user teams' plans; interest, commitments,
@@ -18,7 +18,7 @@
 // best prospects don't decide before week 3 (4★) or 4 (5★).
 
 import { rng, type DPlayer, type Dynasty, type OffseasonEvent } from './model';
-import { CLASS_MAX, POSITIONS, POS_TARGET, ROSTER_LIMIT, STAR_POINTS, drawStars, makeRecruit, prestige, prestigeStars, suggestCuts, type RecruitTemplates } from './offseason';
+import { CLASS_MAX, POSITIONS, POS_TARGET, ROSTER_LIMIT, STAR_POINTS, benchSeasons, drawStars, fillMinimums, makeRecruit, prestige, prestigeStars, suggestCuts, transferChance, type RecruitTemplates } from './offseason';
 import { closeness } from './schoolStates';
 
 export const WEEKS = 5;
@@ -80,33 +80,11 @@ const roster = (d: Dynasty, team: number) => d.players.filter((p) => p.status ==
 
 // ---- 1. the portal: who leaves
 
-/**
- * Who enters the portal (full recruiting): players outside their team's 32 who would still not
- * start, good players stuck behind better ones, some players of teams that got much worse, and a
- * little chance for anyone else who isn't a starter. Seniors with little playing time often leave
- * as graduate transfers.
- */
+/** Who enters the portal (full recruiting): the same rule as the random version (transferChance). */
 export function portalEntries(d: Dynasty, seed: number): DPlayer[] {
   const r = seeded(seed, 21);
-  const season = d.seasons[d.seasons.length - 1];
-  const inGame = new Set(season.slots.flat().filter((x): x is number => x !== null));
-  const out: DPlayer[] = [];
-  for (const t of d.teams) {
-    const team = roster(d, t.index);
-    const pres = prestige(d, t.index);
-    for (const p of team) {
-      if (inGame.has(p.id)) continue;
-      const ahead = team.filter((x) => x.pos === p.pos && x.ovr > p.ovr).length;
-      const starters = Math.max(1, Math.round((POS_TARGET[p.pos] ?? 4) / 3));
-      let chance = 0.03;
-      if (ahead >= starters && p.ovr >= 74) chance += 0.2; // good enough to start elsewhere
-      if (ahead >= starters + 2) chance += 0.06; // buried
-      if (p.cls === 'SR+' || p.cls === 'SR') chance += 0.05; // graduate transfer
-      if (pres < 0.3 && p.ovr >= 76) chance += 0.08; // a better program calls
-      if (r() < clamp(chance, 0, 0.6)) out.push(p);
-    }
-  }
-  return out;
+  const benched = benchSeasons(d);
+  return d.players.filter((p) => p.status === 'active' && p.team !== null && r() < transferChance(d, p, benched));
 }
 
 // ---- 2. the pool
@@ -290,27 +268,33 @@ export function signingDay(d: Dynasty, rs: RecruitingState, year: number): { pla
   const prs = rs.prospects.map((p) => ({ ...p }));
   const count = new Map<number, number>();
   for (const p of prs) if (p.committed !== null) count.set(p.committed, (count.get(p.committed) ?? 0) + 1);
+  // Who each team has at each position (portal players out), with its commitments.
+  const portalIds = new Set(prs.filter((p) => p.id > 0).map((p) => p.id));
+  const counts = new Map(d.teams.map((t) => [t.index, new Map<string, number>()]));
+  const bump = (team: number, pos: string) => counts.get(team)!.set(pos, (counts.get(team)!.get(pos) ?? 0) + 1);
+  for (const p of d.players) if (p.status === 'active' && p.team !== null && !portalIds.has(p.id)) bump(p.team, p.pos);
+  for (const p of prs) if (p.committed !== null) bump(p.committed, p.player.pos);
+  const needs = (team: number, pos: string) => (POS_TARGET[pos] ?? 0) - (counts.get(team)!.get(pos) ?? 0) > 0;
+  // The uncommitted pick the school that offered with the most interest, a spot left and a need at his position.
   for (const p of prs.filter((x) => x.committed === null).sort((a, b) => b.stars - a.stars || b.player.ovr - a.player.ovr)) {
     const best = Object.entries(p.interest).map(([t, v]) => ({ t: Number(t), v }))
-      .filter((x) => p.offers.includes(x.t) && (count.get(x.t) ?? 0) < rs.spots[x.t]).sort((a, b) => b.v - a.v)[0];
+      .filter((x) => p.offers.includes(x.t) && (count.get(x.t) ?? 0) < rs.spots[x.t] && needs(x.t, p.player.pos)).sort((a, b) => b.v - a.v)[0];
     if (best) {
       p.committed = best.t;
       count.set(best.t, (count.get(best.t) ?? 0) + 1);
+      bump(best.t, p.player.pos);
     }
   }
   // Late signings: teams with spots left take the best high-school players nobody signed, at
   // positions they need first (round by round, the stronger programs first in each round).
   const left = prs.filter((p) => p.committed === null && p.id < 0).sort((a, b) => b.stars - a.stars || b.player.ovr - a.player.ovr);
   const order = d.teams.map((t) => ({ t: t.index, pres: prestige(d, t.index) })).sort((a, b) => b.pres - a.pres).map((x) => x.t);
-  const counts = new Map(d.teams.map((t) => [t.index, new Map<string, number>()]));
-  for (const p of d.players) if (p.status === 'active' && p.team !== null) counts.get(p.team)!.set(p.pos, (counts.get(p.team)!.get(p.pos) ?? 0) + 1);
-  for (const p of prs) if (p.committed !== null) counts.get(p.committed)!.set(p.player.pos, (counts.get(p.committed)!.get(p.player.pos) ?? 0) + 1);
   for (let round = 0; round < CLASS_MAX && left.length; round++) {
     for (const t of order) {
       if ((count.get(t) ?? 0) >= rs.spots[t] || !left.length) continue;
       const c = counts.get(t)!;
-      let k = left.findIndex((p) => (POS_TARGET[p.player.pos] ?? 0) - (c.get(p.player.pos) ?? 0) > 0);
-      if (k < 0) k = 0;
+      const k = left.findIndex((p) => (POS_TARGET[p.player.pos] ?? 0) - (c.get(p.player.pos) ?? 0) > 0);
+      if (k < 0) continue;
       const p = left.splice(k, 1)[0];
       p.committed = t;
       count.set(t, (count.get(t) ?? 0) + 1);
@@ -365,11 +349,12 @@ export function recruitingWeek(d: Dynasty, userPlans: Record<number, TeamPlan>):
 }
 
 /** After the last week: signing day, then the cuts. */
-export function finishRecruiting(d: Dynasty): Dynasty {
+export function finishRecruiting(d: Dynasty, tpl: RecruitTemplates): Dynasty {
   const st = d.offseason;
   if (!st || st.step !== 'recruiting' || !st.recruiting) throw new Error('It isn\'t recruiting time.');
   if (st.recruiting.week < WEEKS) throw new Error(`Recruiting has ${WEEKS - st.recruiting.week} weeks left.`);
-  const { players, events } = signingDay(d, st.recruiting, st.year + 1);
+  const { players: signed, events } = signingDay(d, st.recruiting, st.year + 1);
+  const players = fillMinimums(d, signed, tpl, seeded(st.seed, 30), st.year + 1, events);
   const next: Dynasty = { ...d, players, offseason: { ...st, step: 'cuts', recruiting: undefined, events: [...st.events, ...events] } };
   const suggestedCuts: Record<number, number[]> = {};
   for (const t of d.userTeams) suggestedCuts[t] = suggestCuts(next, t);

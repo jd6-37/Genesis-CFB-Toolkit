@@ -17,6 +17,7 @@ import { OVR_FORMULAS, playerOvr, roleOfSlot } from '../src/core/dynasty/ovr';
 import { readRating } from '../src/core/teamRatings';
 import * as Off from '../src/core/dynasty/offseason';
 import * as Rec from '../src/core/dynasty/recruiting';
+import { randomBench } from '../src/core/dynasty/bench';
 import { nextPrestige, tierOfRank } from '../src/core/dynasty/prestige';
 import { openRosterRom, readPlayer, getRating, teamLayout } from '../src/core/rosterRom';
 
@@ -85,11 +86,20 @@ const t0 = Date.now();
 const d0 = createDynasty(rom, csv, { name: 'Test', seed: 1, id: 'test', created: '2026-01-01T00:00:00.000Z' });
 const took = Date.now() - t0;
 assert.equal(d0.teams.length, 138);
-assert.ok(d0.players.length > 8000, 'players');
+assert.ok(d0.players.length > 8000 && d0.players.length <= 138 * 64, 'players: the 32 and the bench of every team');
+assert.ok(d0.players.every((p) => first0Has(p.id)), 'every player is in the game or on the bench');
 assert.equal(d0.attrKeys[0], 'Speed');
 assert.ok(d0.players.every((p) => p.attrs.length === d0.attrKeys.length && CLASSES.includes(p.cls) && p.skin >= 0 && p.skin < 5));
 assert.equal(new Set(d0.players.map((p) => p.id)).size, d0.players.length);
 const first = d0.seasons[0];
+function first0Has(id: number) { return d0.seasons[0].slots.some((sl) => sl.includes(id)) || !!d0.seasons[0].bench?.some((sl) => sl.includes(id)); }
+assert.ok(first.bench!.flat().filter((x) => x !== null).length > 4000, 'nearly every slot has a backup');
+first.bench!.forEach((sl, t) => sl.forEach((id, slot) => {
+  if (id === null) return;
+  assert.equal(d0.players[id - 1].team, t);
+  assert.ok(!first.slots[t].includes(id), 'a backup isn\'t also in the game');
+  assert.equal(first.benchBw![t][slot]!.label, first.bw![t][slot]!.label, 'the backup is rated for his slot');
+}));
 assert.equal(first.year, 2026);
 assert.equal(first.conf.length, 138);
 assert.equal(first.slots.length, 138);
@@ -232,17 +242,17 @@ o1.offseason!.prestige!.forEach((to, t) => {
 assert.deepEqual(Off.cancelOffseason(o1).players, d1.players);
 const o2 = Off.runPortal(o1);
 const moves = o2.offseason!.events.filter((e) => e.kind === 'transfer');
-assert.ok(moves.length > 0);
+assert.equal(moves.length, 0, 'nobody transfers after one season on the bench');
 for (const m of moves) if (m.kind === 'transfer') assert.equal(o2.players[m.player - 1].team, m.to);
 const tpl = Off.recruitTemplates(o2, csv);
 const o3 = Off.runSigningDay(o2, tpl);
 const signed = o3.offseason!.events.filter((e) => e.kind === 'signed');
 for (const t of o3.teams) {
   const n = signed.filter((e) => e.kind === 'signed' && e.team === t.index).length;
-  assert.ok(n >= 3 && n <= Off.CLASS_MAX, `${t.school} signs ${n}`);
+  assert.ok(n <= Off.CLASS_MAX, `${t.school} signs ${n}`);
 }
 assert.ok(signed.every((e) => e.kind === 'signed' && e.stars >= 1 && e.stars <= 5));
-assert.equal(Off.classRankings(o3.offseason!.events).length, 138);
+assert.ok(Off.classRankings(o3.offseason!.events).length > 130);
 const user = o3.userTeams[0];
 const sug = o3.offseason!.suggestedCuts![user];
 assert.deepEqual(Off.cutProblems(o3, user, sug), []);
@@ -269,7 +279,7 @@ ok(`offseason: ${o1.offseason!.events.filter((e) => e.kind !== 'returns').length
 const f1 = Rec.openRecruiting(o1, tpl);
 const rs0 = f1.offseason!.recruiting!;
 assert.equal(f1.offseason!.step, 'recruiting');
-assert.ok(rs0.prospects.some((p) => p.id > 0) && rs0.prospects.some((p) => p.id < 0), 'portal and high-school prospects');
+assert.ok(rs0.prospects.some((p) => p.id < 0) && !rs0.prospects.some((p) => p.id > 0), 'high-school prospects; no portal players after one season');
 const targets = rs0.prospects.filter((p) => p.id < 0 && p.stars <= 3).slice(0, 10);
 const plan = { points: Object.fromEntries(targets.map((p) => [p.id, 60])), offers: targets.map((p) => p.id) };
 assert.deepEqual(Rec.planProblems(plan), []);
@@ -280,13 +290,29 @@ for (let w = 0; w < Rec.WEEKS; w++) f2 = Rec.recruitingWeek(f2, { [user]: w === 
 assert.throws(() => Rec.recruitingWeek(f2, {}), /signing day/);
 const rsEnd = f2.offseason!.recruiting!;
 for (const t of f2.teams) assert.ok(rsEnd.prospects.filter((p) => p.committed === t.index).length <= rsEnd.spots[t.index]);
-const f3 = Rec.finishRecruiting(f2);
+const f3 = Rec.finishRecruiting(f2, tpl);
 const fSigned = f3.offseason!.events.filter((e) => e.kind === 'signed');
 for (const t of f3.teams) assert.ok(fSigned.filter((e) => e.kind === 'signed' && e.team === t.index).length <= rsEnd.spots[t.index]);
 assert.ok(f3.players.filter((p) => rsEnd.prospects.some((q) => q.id === p.id)).every((p) => p.status === 'transferred' ? p.team === null : p.team !== null), 'portal players moved or left');
 const f5 = Off.finishOffseason(Off.applyCuts(f3, {}, tpl), rom);
 assert.equal(f5.seasons[1].slots.flat().filter((x) => x !== null).length, 138 * 32);
 ok(`full recruiting: ${rs0.prospects.length} prospects, ${rsEnd.prospects.filter((p) => p.committed !== null).length} committed in ${Rec.WEEKS} weeks, ${fSigned.length} signed; ${user === undefined ? '' : `${f3.teams[user].school} landed ${targets.filter((t) => rsEnd.prospects.find((p) => p.id === t.id)!.committed === user).length} of its 10 targets`}`);
+
+// A second offseason: only players with two seasons on the bench may transfer.
+const y1 = Off.runPortal(Off.startOffseason(o5, { seed: 4, force: true }));
+const benched = Off.benchSeasons(o5);
+const y1moves = y1.offseason!.events.filter((e) => e.kind === 'transfer');
+assert.ok(y1moves.length > 0);
+assert.ok(y1moves.every((e) => e.kind === 'transfer' && (benched.get(e.player) ?? 0) >= 2 && !next.slots.some((sl) => sl.includes(e.player))));
+ok(`second offseason: ${y1moves.length} transfers, all after two seasons on the bench`);
+
+// A random bench for the first season: the 32 stay (the ROM is unchanged), every slot gets a backup.
+const rb = randomBench(d0, rom, tpl, 5);
+assert.ok(Off.seasonRom(rb, rb.seasons[0], rom).every((b, i) => b === rom[i]));
+assert.equal(rb.seasons[0].bench!.flat().filter((x) => x !== null).length, 138 * 32);
+assert.deepEqual(rb.seasons[0].slots.map((sl) => sl.map((id) => (id ? rb.players[id - 1].srcId : null))), first.slots.map((sl) => sl.map((id) => (id ? d0.players[id - 1].srcId : null))));
+assert.throws(() => randomBench(o5, rom, tpl), /first season/);
+ok('random bench for the first season');
 
 // The season's rosters in the ROM: the first season gives the ROM back unchanged; the next one reads back.
 assert.ok(Off.seasonRom(d0, first, rom).every((b, i) => b === rom[i]), 'season 1 written = the ROM');

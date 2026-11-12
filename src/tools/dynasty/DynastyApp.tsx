@@ -12,8 +12,9 @@ import {
 } from '../../core/dynasty/storage';
 import { Ctx, href, TeamMark, type DynCtx } from './ui';
 import { History, Home, Leaders, Player, Rankings, Scores, Standings, Team, Teams } from './pages';
-import { Offseason, type OffseasonActions } from './OffseasonPage';
+import { Offseason, getTemplates, type OffseasonActions } from './OffseasonPage';
 import { seasonRom } from '../../core/dynasty/offseason';
+import { canReplaceBench, randomBench } from '../../core/dynasty/bench';
 import './dynasty.css';
 
 const PAGES = [
@@ -209,6 +210,13 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
     setUserTeams: (teams) => run('Saving…', async () => {
       if (d) await commit({ ...d, userTeams: teams });
     }),
+    randomBench: () => run('Making a random bench…', async () => {
+      if (!d) return;
+      const rom = await getRom();
+      if (!rom) throw new Error('The bench needs your ROM: choose it to go on.');
+      await commit(randomBench(d, rom, await getTemplates(d)));
+      setNote({ kind: 'ok', text: 'Every team has a new, generated bench. The players in the game are the same.' });
+    }),
   };
 
   const getRom = async (): Promise<Uint8Array | null> => {
@@ -303,6 +311,30 @@ interface ManageActions {
   remove: (id: string) => void;
   rename: (name: string) => void;
   setUserTeams: (teams: number[]) => void;
+  randomBench: () => void;
+}
+
+function BenchChoice({ onRandom, busy }: { onRandom: () => void; busy: boolean }) {
+  const [sure, setSure] = useState(false);
+  return (
+    <>
+      <h3>Bench</h3>
+      <p>
+        Every team has a bench: one backup for each of its 32 players in the game, who moves up when a spot opens. It starts as the next-best real
+        players (CFB 27). In the first season you can replace it with generated players instead; the players in the game stay the same.
+      </p>
+      <div className="dy-row">
+        {sure ? (
+          <>
+            <button type="button" className="dy-button" disabled={busy} onClick={() => { onRandom(); setSure(false); }}>Replace every bench</button>
+            <button type="button" className="dy-button dy-quiet" onClick={() => setSure(false)}>Keep the real players</button>
+          </>
+        ) : (
+          <button type="button" className="dy-button dy-quiet" onClick={() => setSure(true)}>Generate a random bench</button>
+        )}
+      </div>
+    </>
+  );
 }
 
 function FileButton({ label, accept, onFile, disabled }: { label: string; accept?: string; onFile: (f: File) => void; disabled?: boolean }) {
@@ -397,6 +429,8 @@ function Manage({ d, art, list, busy, note, actions }: {
             </select>
             <button type="button" className="dy-button" disabled={addTeam === ''} onClick={() => { actions.setUserTeams([...d.userTeams, Number(addTeam)]); setAddTeam(''); }}>Add team</button>
           </div>
+
+          {canReplaceBench(d) && <BenchChoice onRandom={actions.randomBench} busy={!!busy} />}
 
           <h3>Team logos</h3>
           {art ? (

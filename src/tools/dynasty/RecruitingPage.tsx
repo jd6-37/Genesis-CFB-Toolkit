@@ -9,7 +9,7 @@ import { POSITIONS, POS_TARGET, prestigeStars } from '../../core/dynasty/offseas
 import { closeness } from '../../core/dynasty/schoolStates';
 import { playerName } from '../../core/dynasty/derive';
 import { TeamLink, hometownText, useDyn } from './ui';
-import type { OffseasonActions } from './OffseasonPage';
+import { getTemplates, type OffseasonActions } from './OffseasonPage';
 
 const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
 const starText = (n: number) => `${n}★`;
@@ -159,7 +159,7 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
 
       {rs.week >= WEEKS && (
         <div className="dy-row dy-next">
-          <button type="button" className="dy-button" disabled={!!busy} onClick={() => actions.run('Signing day…', () => actions.commit(finishRecruiting(d)))}>Signing day</button>
+          <button type="button" className="dy-button" disabled={!!busy} onClick={() => actions.run('Signing day…', async () => actions.commit(finishRecruiting(d, await getTemplates(d))))}>Signing day</button>
         </div>
       )}
     </>

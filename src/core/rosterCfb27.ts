@@ -323,3 +323,29 @@ export function applyCfb27(rom: RosterRom, plan: Cfb27Plan, only?: Iterable<numb
   }
   return written;
 }
+
+/**
+ * Game ratings for players outside a conversion (the Dynasty's bench), on the converted players'
+ * scale: for each rating, the step of the converted player of the same role whose CFB 27 score is
+ * closest below his (the lowest step if he is below them all). Nothing in `plan` changes.
+ */
+export function rateAgainst(plan: Cfb27Plan, extra: Cfb27Fill[]): void {
+  const fills = plan.teams.flatMap((t) => t.fills);
+  const table = new Map<string, [number, number][]>(); // role|attr -> [score, step], low to high
+  for (const f of fills) {
+    for (const attr of GROUP_ATTRS[f.group]) {
+      const k = `${f.role}|${attr}`;
+      table.set(k, [...(table.get(k) ?? []), [score(f, attr), f.steps[attr] ?? 0]]);
+    }
+  }
+  for (const list of table.values()) list.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  for (const e of extra) {
+    for (const attr of GROUP_ATTRS[e.group]) {
+      const list = table.get(`${e.role}|${attr}`) ?? [];
+      const mine = score(e, attr);
+      let lo = 0, hi = list.length; // first index with score > mine
+      while (lo < hi) { const m = (lo + hi) >> 1; if (list[m][0] <= mine) lo = m + 1; else hi = m; }
+      e.steps[attr] = lo > 0 ? list[lo - 1][1] : list.length ? list[0][1] : 0;
+    }
+  }
+}

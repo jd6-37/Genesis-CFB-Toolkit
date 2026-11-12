@@ -15,34 +15,30 @@
 // Pure functions: each returns a new dynasty. Randomness is seeded, so the same choices give the
 // same offseason. The players before the offseason are kept so it can be started over.
 
-import { CLASSES, rng, type ClassYear, type DPlayer, type DSeason, type Dynasty, type OffseasonEvent, type BwSlot } from './model';
+import { CLASSES, rng, type ClassYear, type DPlayer, type DSeason, type Dynasty, type OffseasonEvent } from './model';
 import { seasonView } from './derive';
 import { parseCsv, type Sheet } from '../rosterSheet';
-import { convertCfb27 } from '../rosterCfb27';
 import { fixChecksums, jerseyByte, openRosterRom, readPlayer, setRating, teamLayout, writePlayer } from '../rosterRom';
-import { GROUP_ATTRS, GROUP_COLUMNS } from '../rosterLayouts';
-import { hasOlPatch, OL_PATCH } from '../rosterOlPatch';
+import { GROUP_ATTRS } from '../rosterLayouts';
 import CFB_OVR from './cfbOvr.json';
 import { MAX_PRESTIGE, nextPrestige, seasonPrestige } from './prestige';
 import { playerOvr } from './ovr';
 import { ratingProblems, starterOvr, writeRating } from '../teamRatings';
+import { buildRosters, TEAM_SIZE } from './rosters';
 
-export const ROSTER_LIMIT = 85;
+/** A team is 64 players: the 32 in the game and one backup for each (rosters.ts). */
+export const ROSTER_LIMIT = TEAM_SIZE;
 export const CLASS_MAX = 25;
 /** Walk-ons fill a team up to this many players. */
-export const ROSTER_MIN = 65;
-const CLASS_MIN = 3;
+export const ROSTER_MIN = TEAM_SIZE;
 
-/** How many players a team wants at each position (adds up to 85). */
+/** How many players a team wants at each position: two for each of its slots in the game (adds up to 64). */
 export const POS_TARGET: Record<string, number> = {
-  QB: 4, HB: 6, FB: 1, WR: 10, TE: 4, LT: 3, LG: 3, C: 3, RG: 3, RT: 3,
-  LE: 4, RE: 4, DT: 6, LOLB: 3, MLB: 4, ROLB: 3, CB: 9, FS: 4, SS: 4, K: 2, P: 2,
+  QB: 2, HB: 4, FB: 2, WR: 8, TE: 4, LT: 2, LG: 2, C: 2, RG: 2, RT: 2,
+  LE: 2, RE: 2, DT: 4, LOLB: 2, MLB: 4, ROLB: 2, CB: 8, FS: 4, SS: 2, K: 2, P: 2,
 };
-/** The fewest a team may have at each position (cuts stop there; walk-ons fill up to it). */
-export const POS_MIN: Record<string, number> = {
-  QB: 2, HB: 3, FB: 0, WR: 5, TE: 2, LT: 2, LG: 2, C: 2, RG: 2, RT: 2,
-  LE: 2, RE: 2, DT: 3, LOLB: 1, MLB: 2, ROLB: 1, CB: 5, FS: 2, SS: 2, K: 1, P: 1,
-};
+/** The fewest a team may have at each position: one for each of its slots (cuts stop there; walk-ons fill up to it). */
+export const POS_MIN: Record<string, number> = Object.fromEntries(Object.entries(POS_TARGET).map(([p, n]) => [p, n / 2]));
 export const POSITIONS = Object.keys(POS_TARGET);
 
 export type OffseasonStep = 'portal' | 'recruiting' | 'signing' | 'cuts' | 'ready';
@@ -121,7 +117,7 @@ export function seasonDone(d: Dynasty): boolean {
 // ---- 1. departures, classes, development
 
 /** Grows a player toward his potential: the gain goes to the ratings his position's Overall counts. */
-function develop(d: Dynasty, p: DPlayer, gain: number, r: Rand): DPlayer {
+export function develop(d: Dynasty, p: DPlayer, gain: number, r: Rand): DPlayer {
   const f = FORMULAS[p.pos];
   if (!f || Math.abs(gain) < 0.5) return p;
   const keys = Object.entries(f.weights).filter(([, w]) => w > 0);
@@ -202,32 +198,46 @@ const countBy = (ps: DPlayer[], team: number) => {
 /** How badly a team needs a position: target minus what it has (negative = too many). */
 const need = (counts: Record<string, number>, pos: string) => (POS_TARGET[pos] ?? 0) - (counts[pos] ?? 0);
 
+/** Seasons each player spent on the bench (not one of his team's 32 in the game). */
+export function benchSeasons(d: Dynasty): Map<number, number> {
+  const out = new Map<number, number>();
+  for (const s of d.seasons) {
+    const inGame = new Set(s.slots.flat());
+    for (const id of new Set(s.bench?.flat() ?? [])) if (id !== null && !inGame.has(id)) out.set(id, (out.get(id) ?? 0) + 1);
+  }
+  return out;
+}
+
 /**
- * Players who didn't have one of their team's 32 spots may enter the portal (good players stuck
- * behind a starter more often); teams that need the position take them, the best players first.
+ * The chance a player enters the transfer portal (user, 2026-11-12: nobody leaves too soon for
+ * playing time, since the game can't give a backup a few snaps). Players in the game never; bench
+ * players only after two seasons on the bench: 10%, +10% when the starter ahead of him stays, +10%
+ * for a senior (graduate transfer).
+ */
+export function transferChance(d: Dynasty, p: DPlayer, benched = benchSeasons(d)): number {
+  if (p.status !== 'active' || p.team === null || p.recruit?.year === lastSeason(d).year + 1) return 0;
+  const season = lastSeason(d);
+  if (season.slots[p.team]?.includes(p.id)) return 0;
+  if ((benched.get(p.id) ?? 0) < 2) return 0;
+  const slot = season.bench?.[p.team]?.indexOf(p.id) ?? -1;
+  const starter = slot >= 0 ? season.slots[p.team][slot] : null;
+  const stays = starter !== null && d.players[starter - 1]?.status === 'active' && d.players[starter - 1]?.team === p.team;
+  return 0.1 + (stays ? 0.1 : 0) + (p.cls === 'SR' || p.cls === 'SR+' ? 0.1 : 0);
+}
+
+/**
+ * Bench players who have waited two seasons may enter the portal (transferChance); teams that need the position take them, the best players first.
  * Players nobody takes leave the dynasty (they transfer down).
  */
 export function runPortal(d: Dynasty): Dynasty {
   const st = d.offseason;
   if (!st || st.step !== 'portal') throw new Error('The transfer portal comes after the season ends.');
   const r = stepRand(st, 2);
-  const season = lastSeason(d);
-  const inGame = new Set(season.slots.flat().filter((x): x is number => x !== null));
   let players = d.players.slice();
-  const byTeam = new Map<number, DPlayer[]>();
-  for (const p of players) if (p.status === 'active' && p.team !== null) byTeam.set(p.team, [...(byTeam.get(p.team) ?? []), p]);
 
-  // Who enters.
-  const entries: DPlayer[] = [];
-  for (const roster of byTeam.values()) {
-    for (const p of roster) {
-      if (inGame.has(p.id) || p.recruit?.year === st.year + 1) continue;
-      const better = roster.filter((x) => x.pos === p.pos && x.ovr > p.ovr).length;
-      const blocked = p.ovr >= 72 && better <= 2 ? 0.18 : 0;
-      const buried = better >= 4 ? 0.05 : 0;
-      if (r() < 0.04 + blocked + buried) entries.push(p);
-    }
-  }
+  // Who enters: only bench players who have waited (transferChance).
+  const benched = benchSeasons(d);
+  const entries = players.filter((p) => p.status === 'active' && p.team !== null && r() < transferChance(d, p, benched));
   entries.sort((a, b) => b.ovr - a.ovr || a.id - b.id);
 
   // Where they go: teams that need the position, the better programs first in line.
@@ -309,7 +319,8 @@ export function drawStars(r: Rand, pres: number): number {
 
 /** One new player made from a CFB 27 freshman of the position, with fresh ratings, name and hometown. */
 export function makeRecruit(d: Dynasty, tpl: RecruitTemplates, r: Rand, id: number, team: number, pos: string, stars: number, year: number): DPlayer {
-  const pool = tpl.byPos[pos] ?? tpl.byPos.WR;
+  // Positions with few freshmen in CFB 27 (fullbacks) borrow a close position's.
+  const pool = (tpl.byPos[pos]?.length ?? 0) >= 5 ? tpl.byPos[pos] : tpl.byPos[pos === 'FB' ? 'TE' : 'WR'];
   const [lo, hi] = STAR_BAND[stars];
   const t = pool[Math.min(pool.length - 1, Math.floor(between(r, lo, hi) * pool.length))];
   const attrs = t.attrs.map((a) => (a === 0 ? 0 : clamp(Math.round(a + 3 * gauss(r)), 1, 99)));
@@ -328,9 +339,8 @@ export function makeRecruit(d: Dynasty, tpl: RecruitTemplates, r: Rand, id: numb
 export const STAR_POINTS = [0, 4, 12, 30, 60, 100];
 
 /**
- * Every team signs a class: as many as it has open spots (at most 25, at least 3, and a few more
- * for strong programs, who cut later), position by position where the need is biggest, stars by
- * the program's prestige.
+ * Every team signs a class: as many as it has open spots up to 64 (at most 25), position by
+ * position where the need is biggest, stars by the program's prestige.
  */
 export function runSigningDay(d: Dynasty, tpl: RecruitTemplates): Dynasty {
   const st = d.offseason;
@@ -344,10 +354,9 @@ export function runSigningDay(d: Dynasty, tpl: RecruitTemplates): Dynasty {
     const pres = prestige(d, t.index);
     const counts = countBy(players, t.index);
     const roster = Object.values(counts).reduce((a, b) => a + b, 0);
-    const over = r() < 0.3 + 0.5 * pres ? Math.floor(between(r, 1, 4)) : 0;
-    const n = clamp(ROSTER_LIMIT - roster, CLASS_MIN, CLASS_MAX) + (ROSTER_LIMIT - roster >= CLASS_MAX ? 0 : over);
+    const n = clamp(ROSTER_LIMIT - roster, 0, CLASS_MAX);
     let points = 0;
-    for (let k = 0; k < Math.min(n, CLASS_MAX); k++) {
+    for (let k = 0; k < n; k++) {
       // The biggest need (ties at random).
       const pos = POSITIONS.map((p) => ({ p, g: need(counts, p) + r() * 0.9 })).sort((a, b) => b.g - a.g)[0].p;
       const stars = drawStars(r, pres);
@@ -357,17 +366,38 @@ export function runSigningDay(d: Dynasty, tpl: RecruitTemplates): Dynasty {
       points += STAR_POINTS[stars];
       events.push({ kind: 'signed', player: rec.id, team: t.index, stars, ovr: rec.ovr });
     }
-    classes.push({ team: t.index, points, signed: Math.min(n, CLASS_MAX) });
+    if (n > 0) classes.push({ team: t.index, points, signed: n });
   }
   classes.sort((a, b) => b.points - a.points || a.team - b.team);
   classes.forEach((c, i) => events.push({ kind: 'class', team: c.team, rank: i + 1, signed: c.signed, points: c.points }));
-  const next: Dynasty = { ...d, players, offseason: { ...st, step: 'cuts', events: [...st.events, ...events] } };
+  const filled = fillMinimums(d, players, tpl, r, st.year + 1, events);
+  const next: Dynasty = { ...d, players: filled, offseason: { ...st, step: 'cuts', events: [...st.events, ...events] } };
   const suggestedCuts: Record<number, number[]> = {};
   for (const t of d.userTeams) suggestedCuts[t] = suggestCuts(next, t);
   return { ...next, offseason: { ...next.offseason!, suggestedCuts } };
 }
 
 // ---- 4. cuts and walk-ons
+
+/**
+ * Walk-ons for every position a team has fewer players at than it has slots for (so every slot in
+ * the game has a player of its position). Run at the end of signing day, before the cuts.
+ */
+export function fillMinimums(d: Dynasty, players: DPlayer[], tpl: RecruitTemplates, r: Rand, year: number, events: OffseasonEvent[]): DPlayer[] {
+  let out = players;
+  let nextId = out.reduce((a, p) => Math.max(a, p.id), 0) + 1;
+  for (const t of d.teams) {
+    const counts = countBy(out, t.index);
+    for (const pos of POSITIONS) {
+      for (let k = counts[pos] ?? 0; k < POS_MIN[pos]; k++) {
+        const w = makeRecruit({ ...d, players: out }, tpl, r, nextId++, t.index, pos, 0, year);
+        out = [...out, w];
+        events.push({ kind: 'walkon', player: w.id, team: t.index, ovr: w.ovr });
+      }
+    }
+  }
+  return out;
+}
 
 /** What a player is worth to his team when it has to cut: rating now, room to grow, years left. */
 export function keepValue(p: DPlayer): number {
@@ -425,19 +455,10 @@ export function applyCuts(d: Dynasty, userCuts: Record<number, number[]> = {}, t
     events.push({ kind: 'cut', player: p.id, team: p.team!, ovr: p.ovr });
     return { ...p, status: 'cut' as const, team: null, leftYear: st.year };
   });
-  // Walk-ons for positions below their minimum.
+  // Walk-ons up to the roster size, where the need is biggest.
   if (tpl) {
     let nextId = players.reduce((a, p) => Math.max(a, p.id), 0) + 1;
     for (const t of d.teams) {
-      const counts = countBy(players, t.index);
-      for (const pos of POSITIONS) {
-        for (let k = counts[pos] ?? 0; k < POS_MIN[pos]; k++) {
-          const w = makeRecruit({ ...d, players }, tpl, r, nextId++, t.index, pos, 0, st.year + 1);
-          players = [...players, w];
-          events.push({ kind: 'walkon', player: w.id, team: t.index, ovr: w.ovr });
-        }
-      }
-      // Up to the roster minimum, where the need is biggest.
       for (let k = Object.values(countBy(players, t.index)).reduce((a, b) => a + b, 0); k < ROSTER_MIN; k++) {
         const c = countBy(players, t.index);
         const pos = POSITIONS.map((p) => ({ p, g: need(c, p) + r() * 0.9 })).sort((a, b) => b.g - a.g)[0].p;
@@ -482,9 +503,8 @@ export function fixJerseys(players: DPlayer[], r: Rand): DPlayer[] {
 }
 
 /** The dynasty's players as a CFB 27 sheet the Rosters tool's conversion reads (EA Player ID = dynasty ID). */
-export function rosterSheet(d: Dynasty): { sheet: Sheet; ids: number[] } {
+export function rosterSheet(d: Dynasty, ps: DPlayer[] = active(d)): { sheet: Sheet; ids: number[] } {
   const headers = ['Team', 'Name', 'Position', 'Overall', 'Jersey Number', 'Weight', 'EA Player ID', ...d.attrKeys];
-  const ps = active(d);
   return {
     sheet: {
       headers,
@@ -495,32 +515,23 @@ export function rosterSheet(d: Dynasty): { sheet: Sheet; ids: number[] } {
 }
 
 /**
- * The next season's 32 per team, their game ratings and the team OVRs, from the Rosters tool's
- * CFB 27 conversion of the dynasty's players (the same conversion the dynasty started with).
+ * The next season's 32 per team and their bench, their game ratings and the team OVRs, from the
+ * Rosters tool's CFB 27 conversion of the dynasty's players (rosters.ts).
  */
-export function depthChart(d: Dynasty, rom: Uint8Array): Pick<DSeason, 'slots' | 'bw' | 'teamOvr'> {
+export function depthChart(d: Dynasty, rom: Uint8Array): Pick<DSeason, 'slots' | 'bw' | 'bench' | 'benchBw' | 'teamOvr'> {
   const roster = openRosterRom(rom);
   const { sheet, ids } = rosterSheet(d);
-  const plan = convertCfb27(roster, sheet);
-  const n = d.teams.length;
-  const slots: (number | null)[][] = Array.from({ length: n }, () => new Array<number | null>(32).fill(null));
-  const bw: (BwSlot | null)[][] = Array.from({ length: n }, () => new Array<BwSlot | null>(32).fill(null));
-  const olPlus = hasOlPatch(roster) ? OL_PATCH.pounds : 0;
-  for (const t of plan.teams) {
-    for (const f of t.fills) {
-      slots[t.team][f.slot] = ids[f.player.row];
-      const attrs = GROUP_COLUMNS[f.group];
-      bw[t.team][f.slot] = { label: f.label, group: f.group, attrs, steps: attrs.map((a) => f.steps[a] ?? 0), weightPlus: f.group === 'OL' ? olPlus : 0 };
-    }
-  }
+  const b = buildRosters(roster, sheet);
+  const map = (grid: (number | null)[][]) => grid.map((sl) => sl.map((row) => (row === null ? null : ids[row])));
+  const slots = map(b.slots);
   // Team OVRs from the starters' game-rating OVRs (the game's ratings are relative, so this keeps the
   // scale steady from season to season, where CFB 27-style OVRs drift with each class).
   const teamOvr = d.teams.map((t) => starterOvr(slots[t.index].flatMap((id, slot) => {
     const p = id ? d.players[id - 1] : undefined;
-    const b = bw[t.index][slot];
-    return p && b ? [{ pos: p.pos, ovr: playerOvr(slot, b) }] : [];
+    const bw = b.bw[t.index][slot];
+    return p && bw ? [{ pos: p.pos, ovr: playerOvr(slot, bw) }] : [];
   })));
-  return { slots, bw, teamOvr: teamOvr.map((o) => ({ off: o.off, def: o.def })) };
+  return { slots, bw: b.bw, bench: map(b.bench), benchBw: b.benchBw, teamOvr: teamOvr.map((o) => ({ off: o.off, def: o.def })) };
 }
 
 /** Ends the offseason: unique numbers, the depth chart, and the next season (same conferences). */
