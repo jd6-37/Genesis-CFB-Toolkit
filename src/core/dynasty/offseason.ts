@@ -79,8 +79,14 @@ export interface OffseasonState {
   /** The players as they were when the offseason started (to start it over). */
   before: DPlayer[];
   events: OffseasonEvent[];
-  /** Development of every returning player: OVR before and after. */
+  /** Development of every returning player: OVR before and after (filled at the end of the offseason). */
   growth: { player: number; from: number; to: number }[];
+  /**
+   * The returning players who develop at the end of the offseason (user, 2026-11-12: "training progression
+   * should happen after recruiting … just prior to the final depth chart phase"): the class they're leaving
+   * and whether they were on last season's Active Roster. New signees and walk-ons aren't in it.
+   */
+  train?: { player: number; leaving: DPlayer['cls']; starter: boolean }[];
   /** Players who enter the transfer portal (decided after the projected depth chart; Players Leaving lists them). */
   portal?: number[];
   /**
@@ -201,7 +207,7 @@ export function startOffseason(d: Dynasty, opt: { seed?: number; force?: boolean
   if (d.offseason) throw new Error('The offseason has already started.');
   if (!opt.force && !seasonDone(d)) throw new Error('The season isn\'t over yet: import the save after the last game first.');
   const year = lastSeason(d).year;
-  const st: OffseasonState = { year, step: 'depth', seed: opt.seed ?? (Date.now() >>> 0), before: d.players, events: [], growth: [] };
+  const st: OffseasonState = { year, step: 'depth', seed: opt.seed ?? (Date.now() >>> 0), before: d.players, events: [], growth: [], train: [] };
   // Prestige: one star toward the tier of the final poll place (no change without a save).
   const v = seasonView(d, lastSeason(d));
   const was = seasonPrestige(d, lastSeason(d));
@@ -225,14 +231,9 @@ export function startOffseason(d: Dynasty, opt: { seed?: number; force?: boolean
       else return leave('graduated');
     }
     if (p.cls === 'JR' && r() < clamp((p.ovr - R.proJuniorBase) / R.proJuniorScale, 0, R.proJuniorMax)) return leave('pro');
-    // Moves up a class and develops.
-    const from = p.ovr;
-    const room = (p.pot ?? p.ovr) - p.ovr;
-    const gain = room * growthRate(R, p.cls) * between(r, R.growthMin, R.growthMax) + (inGame.has(p.id) ? R.starterBonus : 0) + gauss(r);
-    p = develop({ ...p, cls: CLASSES[Math.min(4, CLASSES.indexOf(p.cls) + 1)] }, gain, r, R, trainingOf(d, R, team));
-    if (p.ovr > (p.pot ?? 99)) p = { ...p, pot: p.ovr };
-    st.growth.push({ player: p.id, from, to: p.ovr });
-    return p;
+    // Moves up a class; he develops at the end of the offseason (trainPlayers).
+    st.train!.push({ player: p.id, leaving: p.cls, starter: inGame.has(p.id) });
+    return { ...p, cls: CLASSES[Math.min(4, CLASSES.indexOf(p.cls) + 1)] };
   });
   return { ...d, players, offseason: st };
 }
@@ -676,6 +677,29 @@ export function cutProblems(d: Dynasty, team: number, cuts: number[]): string[] 
  * Cuts every team to the roster limit (user teams: their own list, or the suggestion), then adds
  * walk-ons where a position is below its minimum. Cut players leave the dynasty.
  */
+/**
+ * The offseason's training: every returning player still on a team (transfers at their new one) closes a
+ * share of the gap to his potential, by the class he left, +1 for last season's Active Roster, shaped by
+ * his team's training focus. Runs with the cuts, just before the next season's depth charts.
+ */
+export function trainPlayers(d: Dynasty, players: DPlayer[], st: OffseasonState): { players: DPlayer[]; growth: OffseasonState['growth'] } {
+  const R = rulesOf(d);
+  const r = stepRand(st, 6);
+  const growth: OffseasonState['growth'] = [];
+  const out = players.slice();
+  for (const t of st.train ?? []) {
+    const p = out[t.player - 1];
+    if (!p || p.id !== t.player || p.status !== 'active' || p.team === null) continue;
+    const room = (p.pot ?? p.ovr) - p.ovr;
+    const gain = room * growthRate(R, t.leaving) * between(r, R.growthMin, R.growthMax) + (t.starter ? R.starterBonus : 0) + gauss(r);
+    let q = develop(p, gain, r, R, trainingOf(d, R, p.team));
+    if (q.ovr > (q.pot ?? 99)) q = { ...q, pot: q.ovr };
+    growth.push({ player: q.id, from: p.ovr, to: q.ovr });
+    out[t.player - 1] = q;
+  }
+  return { players: out, growth };
+}
+
 export function applyCuts(d: Dynasty, userCuts: Record<number, number[]> = {}, tpl?: RecruitTemplates): Dynasty {
   const st = d.offseason;
   if (!st || st.step !== 'cuts') throw new Error('Cuts come after signing day.');
@@ -708,7 +732,9 @@ export function applyCuts(d: Dynasty, userCuts: Record<number, number[]> = {}, t
       }
     }
   }
-  return { ...d, players, offseason: { ...st, step: 'ready', events: [...st.events, ...events] } };
+  // The offseason's training, then the season's depth charts come next.
+  const trained = trainPlayers(d, players, st);
+  return { ...d, players: trained.players, offseason: { ...st, step: 'ready', events: [...st.events, ...events], growth: [...st.growth, ...trained.growth] } };
 }
 
 // ---- 5. depth chart and the next season

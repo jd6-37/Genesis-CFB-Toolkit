@@ -265,6 +265,14 @@ assert.equal(act(o1).filter((p) => p.cls === 'SR+').length, o1.offseason!.events
 assert.ok(d1.players.filter((p) => p.cls === 'SR+').every((p) => o1.players[p.id - 1].status === 'graduated'), 'every SR+ leaves');
 assert.ok(act(o1).every((p) => p.pot !== undefined && p.pot >= p.ovr));
 assert.deepEqual(Off.startOffseason(d1, { seed: 3, force: true }), o1, 'same seed, same offseason');
+{
+  // Players develop at the end of the offseason (after recruiting and cuts), not when it starts.
+  const back = o1.offseason!.train!;
+  assert.ok(back.length > 3000 && o1.offseason!.growth.length === 0, 'nobody develops yet');
+  const p0 = back[0].player;
+  assert.deepEqual(o1.players[p0 - 1].ratings, d1.players[p0 - 1].ratings, 'ratings unchanged at the start');
+  assert.notEqual(o1.players[p0 - 1].cls, d1.players[p0 - 1].cls, 'but he moves up a class');
+}
 // Prestige: the starting stars follow the scale (10 six-star, 10 five, 15 four, 35 three, 30 two, 38 one);
 // at the season's end each school moves at most one star toward its final poll place's tier.
 assert.deepEqual([1, 10, 11, 20, 21, 35, 36, 70, 71, 100, 101].map((r) => tierOfRank(r)), [6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1]);
@@ -331,14 +339,18 @@ assert.deepEqual(Off.cutProblems(o3, user, sug), []);
 const fr = { ...act(o3)[0], cls: 'FR' as const, ovr: 75, pot: 82 }, sr = { ...act(o3)[0], cls: 'SR' as const, ovr: 76, pot: 76 };
 assert.ok(Off.keepValue(fr) > Off.keepValue(sr), 'a 75 FR outranks a 76 SR backup');
 let checkedCuts = 0;
-for (const t of o3.teams) {
-  const roster = act(o3).filter((p) => p.team === t.index);
+// Random classes may stay under the limit, so put extra backups on the user team to make sure some team cuts.
+const mine3 = act(o3).filter((p) => p.team === user);
+const extra = Array.from({ length: Math.max(3, Off.ROSTER_LIMIT - mine3.length + 3) }, (_, k) => ({ ...mine3[mine3.length - 1 - (k % mine3.length)], id: o3.players.length + 1 + k }));
+const o3x = { ...o3, players: [...o3.players, ...extra] };
+for (const t of o3x.teams) {
+  const roster = act(o3x).filter((p) => p.team === t.index);
   if (roster.length <= Off.ROSTER_LIMIT) continue;
-  const cuts = Off.suggestCuts(o3, t.index);
+  const cuts = Off.suggestCuts(o3x, t.index);
   const { active: starters } = Off.cutOrder(roster);
   assert.equal(cuts.length, roster.length - Off.ROSTER_LIMIT, `${t.school} cuts to the limit`);
   assert.ok(cuts.every((id) => !starters.has(id)), `${t.school} keeps its Active Roster`);
-  assert.deepEqual(Off.cutProblems(o3, t.index, cuts), []);
+  assert.deepEqual(Off.cutProblems(o3x, t.index, cuts), []);
   checkedCuts++;
 }
 assert.ok(checkedCuts > 0, 'some teams had to cut');
@@ -544,6 +556,8 @@ assert.equal(g2.offseason!.recruiting!.week, RD.weeks);
 assert.equal(g2.offseason!.step, 'recruiting', 'signing day stays a step');
 const g3 = Sim.simCuts(Rec.finishRecruiting(g2, tpl), tpl);
 assert.equal(g3.offseason!.step, 'ready');
+assert.ok(g3.offseason!.growth.length > 3000, `players develop with the cuts (${g3.offseason!.growth.length})`);
+assert.ok(g3.offseason!.growth.every((g) => !g3.offseason!.events.some((e) => (e.kind === 'signed' || e.kind === 'walkon') && e.player === g.player)), 'new signees and walk-ons don\'t');
 assert.ok(act(g3).filter((p) => p.team === user).length <= Off.ROSTER_LIMIT, 'user team cut to the limit');
 assert.throws(() => Sim.simOffseason(d1, tpl), /isn.t over/);
 const g4 = Sim.simOffseason(o1, tpl);

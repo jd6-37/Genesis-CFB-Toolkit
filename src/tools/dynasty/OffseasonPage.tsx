@@ -98,7 +98,7 @@ function TrainingFocus({ actions, busy }: { actions: OffseasonActions; busy: str
   return (
     <section className="dy-training">
       <h3>Training focus</h3>
-      <p>Where your staff puts its time this offseason: {TRAINING_POINTS} points, at most {R.trainingMax} in one area. Even (25 each) is a balanced program.</p>
+      <p>Where your staff puts its time this offseason: {TRAINING_POINTS} points, at most {R.trainingMax} in one area. Even (25 each) is a balanced program. Returning players develop with the cuts, before the next season's depth charts.</p>
       {d.userTeams.map((u) => {
         const t = d.training?.[u] ?? EVEN_TRAINING;
         const total = TRAINING_AREAS.reduce((s, a) => s + t[a.key], 0);
@@ -151,13 +151,13 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
           <>
             <p>
               {done
-                ? `The ${season.year} season is over. The offseason takes your dynasty to ${season.year + 1}: seniors leave, players develop, the transfer portal opens, every team signs a class and cuts to ${ROSTER_LIMIT}.`
+                ? `The ${season.year} season is over. The offseason takes your dynasty to ${season.year + 1}: seniors leave, the transfer portal opens, every team signs a class and cuts to ${ROSTER_LIMIT}, and the returning players develop in offseason training.`
                 : `The offseason starts once the ${season.year} season is over: import the save after the last game. ${v.save ? `So far ${v.games.filter((g) => g.vs !== null).length} of ${v.games.length} games are played.` : ''}`}
             </p>
             {users.length > 0 && <TrainingFocus actions={actions} busy={busy} />}
             <div className="dy-row">
               {done && (
-                <button type="button" className="dy-button" disabled={!!busy || trainingBad(d)} onClick={() => actions.run('Ending the season…', () => actions.commit(startOffseason(d)))}>Start the offseason</button>
+                <button type="button" className="dy-button" disabled={!!busy} onClick={() => actions.run('Ending the season…', () => actions.commit(startOffseason(d)))}>Start the offseason</button>
               )}
               {done && <SimOffseason actions={actions} busy={busy} />}
             </div>
@@ -183,7 +183,6 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
           <h3 className="dy-sub">Players leaving</h3>
           {users.map((u) => {
             const team = (k: 'graduated' | 'pro' | 'returns') => of(k).filter((e) => e.team === u).map((e) => ({ p: pl(e.player) }));
-            const grew = st.growth.filter((g) => pl(g.player).team === u).sort((a, b) => b.to - b.from - (a.to - a.from)).slice(0, 5);
             return (
               <div key={u} className="dy-off-team">
                 <h4><TeamLink team={u} rank={false} /></h4>
@@ -195,8 +194,6 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
                 <PlayerList rows={(st.portal ?? []).map(pl).filter((p) => p.team === u).map((p) => ({ p, extra: p.cls }))} />
                 <p className="dy-small dy-dim">Back for a fifth year (SR+)</p>
                 <PlayerList rows={team('returns')} />
-                <p className="dy-small dy-dim">Most improved</p>
-                <PlayerList rows={grew.map((g) => ({ p: pl(g.player), extra: `+${g.to - g.from}` }))} />
               </div>
             );
           })}
@@ -239,7 +236,7 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
 
       {st.step === 'ready' && (
         <>
-          <h3 className="dy-sub">Cuts and walk-ons</h3>
+          <h3 className="dy-sub">Cuts, walk-ons and training</h3>
           {users.map((u) => (
             <div key={u} className="dy-off-team">
               <h4><TeamLink team={u} rank={false} /></h4>
@@ -247,6 +244,8 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
               <PlayerList rows={of('cut').filter((e) => e.team === u).map((e) => ({ p: pl(e.player) }))} />
               <p className="dy-small dy-dim">Walk-ons</p>
               <PlayerList rows={of('walkon').filter((e) => e.team === u).map((e) => ({ p: pl(e.player) }))} />
+              <p className="dy-small dy-dim">Most improved in offseason training</p>
+              <PlayerList rows={st.growth.filter((g) => pl(g.player).team === u).sort((a, b) => b.to - b.from - (a.to - a.from)).slice(0, 5).map((g) => ({ p: pl(g.player), extra: `${g.from} → ${g.to}` }))} />
             </div>
           ))}
           <p>
@@ -351,12 +350,14 @@ function SigningAndCuts({ actions, busy }: { actions: OffseasonActions; busy: st
           </div>
         );
       })}
+      <TrainingFocus actions={actions} busy={busy} />
       {err && <p className="dy-note dy-note-error" role="alert">{err}</p>}
       <Next
         busy={busy}
-        label="Make the cuts"
+        label="Make the cuts and train"
         onClick={() => {
           const bad = d.userTeams.flatMap((u) => cutProblems(d, u, cuts[u] ?? []).map((m) => `${d.teams[u].school}: ${m}`));
+          if (trainingBad(d)) bad.push('Training focus: use exactly 100 points.');
           if (bad.length) return setErr(bad.join(' '));
           void actions.run('Making the cuts…', async () => actions.commit(applyCuts(d, cuts, await getTemplates(d))));
         }}
