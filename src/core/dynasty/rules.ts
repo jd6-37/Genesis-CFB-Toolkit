@@ -72,6 +72,14 @@ export interface OffseasonRules {
   portalPlayingTime: number;
   /** Championship Contender: the weight of last season's final poll (the rest is the roster as it stands). */
   contenderLastSeason: number;
+  /** Pitching: how many of a prospect's top pitches count as his interests. */
+  pitchInterests: number;
+  /** A school is strong at a pitch from this score (0-1) and weak below the next. */
+  pitchStrongAt: number; pitchWeakBelow: number;
+  /** Points count (×) after a pitch: his interest and you're strong, middling, weak; not his interest. */
+  pitchGood: number; pitchOk: number; pitchBad: number; pitchNotInterested: number;
+  /** Computer teams pick his top pitch with chance base + this × prestige (0-1), else a random one. */
+  cpuPitchBase: number; cpuPitchPrestige: number;
   // New players
   /** How far below the player he's modeled on a freshman starts (OVR points). */
   freshmanGapMin: number; freshmanGapMax: number;
@@ -93,6 +101,7 @@ export const DEFAULT_RULES: OffseasonRules = {
   pitchHome: [1.6, 1.6, 1.5, 1.3, 0.8, 0.6], pitchPrestige: [0.6, 0.6, 0.7, 0.9, 1.4, 1.7],
   pitchAcademics: [0.7, 0.7, 0.7, 0.7, 0.7, 0.7], pitchContender: [0.4, 0.4, 0.5, 0.7, 1.1, 1.4],
   portalPlayingTime: 0.5, contenderLastSeason: 0.5,
+  pitchInterests: 2, pitchStrongAt: 0.65, pitchWeakBelow: 0.4, pitchGood: 1.5, pitchOk: 1.15, pitchBad: 0.7, pitchNotInterested: 1, cpuPitchBase: 0.25, cpuPitchPrestige: 0.45,
   freshmanGapMin: 7, freshmanGapMax: 13, diamondChance: 0.03, diamondPotMin: 84, diamondPotMax: 96,
   minQB: 2, minRB: 4, minWR: 5, minTE: 3, minOL: 7, minDL: 5, minLB: 5, minCB: 5, minS: 4, minKP: 2,
   tier6: 10, tier5: 20, tier4: 35, tier3: 70, tier2: 100,
@@ -196,7 +205,7 @@ export const RULE_SECTIONS: RuleSection[] = [
   },
   {
     title: 'Pitches',
-    intro: 'What a prospect cares about: a random draw for each pitch, multiplied by these, then scaled to add up to 100%. Playing time is 1 for everyone.',
+    intro: 'What a prospect cares about: a random draw for each pitch, multiplied by these, then scaled to add up to 100%. Playing time is 1 for everyone. His top pitches are his interests: pitching one gets a reaction.',
     fields: [
       { key: 'pitchHome', label: 'Being close to home', help: '', kind: 'num', min: 0, max: 5, items: STARS },
       { key: 'pitchPrestige', label: 'Program prestige', help: '', kind: 'num', min: 0, max: 5, items: STARS },
@@ -204,6 +213,15 @@ export const RULE_SECTIONS: RuleSection[] = [
       { key: 'pitchContender', label: 'Championship contender', help: '', kind: 'num', min: 0, max: 5, items: STARS },
       { key: 'portalPlayingTime', label: 'Portal players: playing time at least', help: 'Before scaling.', kind: 'num', min: 0, max: 5 },
       { key: 'contenderLastSeason', label: 'Contender: weight of last season\'s final poll', help: 'The rest is the roster as it stands, commitments included.', kind: 'pct', min: 0, max: 1 },
+      { key: 'pitchInterests', label: 'His interests: his top … pitches', help: 'Pitching one of these gets a reaction (+, ~ or −).', kind: 'int', min: 1, max: 5 },
+      { key: 'pitchStrongAt', label: 'Your school is strong at a pitch from', help: 'School scores are 0-1 (an A+ academic school is 1, F 0.1).', kind: 'pct', min: 0, max: 1 },
+      { key: 'pitchWeakBelow', label: 'Your school is weak at a pitch below', help: '', kind: 'pct', min: 0, max: 1 },
+      { key: 'pitchGood', label: 'Points count after a good pitch (+)', help: 'His interest, and you\'re strong at it.', kind: 'num', min: 0, max: 5 },
+      { key: 'pitchOk', label: 'After a middling pitch (~)', help: 'His interest, you\'re in between.', kind: 'num', min: 0, max: 5 },
+      { key: 'pitchBad', label: 'After a bad pitch (−)', help: 'His interest, but you\'re weak at it: less than no pitch.', kind: 'num', min: 0, max: 5 },
+      { key: 'pitchNotInterested', label: 'After a pitch he doesn\'t care about (✗)', help: '', kind: 'num', min: 0, max: 5 },
+      { key: 'cpuPitchBase', label: 'Computer teams pick his best pitch: base chance', help: 'Else a random pitch.', kind: 'pct', min: 0, max: 1 },
+      { key: 'cpuPitchPrestige', label: '… plus this × prestige (0-1)', help: 'Bigger programs read recruits better.', kind: 'pct', min: 0, max: 1 },
     ],
   },
   {
@@ -261,6 +279,7 @@ export function ruleProblems(changes: Partial<OffseasonRules>): string[] {
   const R = { ...DEFAULT_RULES, ...changes };
   if (R.growthMin > R.growthMax) out.push('Development: the worst year can\'t be better than the best.');
   if (R.freshmanGapMin > R.freshmanGapMax) out.push('New players: the least gap can\'t be more than the most.');
+  if (R.pitchWeakBelow > R.pitchStrongAt) out.push('Pitches: weak must start below strong.');
   if (R.diamondPotMin > R.diamondPotMax) out.push('New players: the lowest potential can\'t be above the highest.');
   if (!(R.tier6 <= R.tier5 && R.tier5 <= R.tier4 && R.tier4 <= R.tier3 && R.tier3 <= R.tier2)) out.push('Prestige: each tier must reach at least as far as the one above.');
   return out;

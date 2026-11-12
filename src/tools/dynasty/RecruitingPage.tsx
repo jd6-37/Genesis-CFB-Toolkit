@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import type { Dynasty } from '../../core/dynasty/model';
 import {
   contenderScores, finishRecruiting, weekContext, interestRanking, planProblems, reach, recruitingWeek,
-  scoutCost, scoutLevel, scoutProspect, simRecruiting, type Prospect, type RecruitingState, type ScoutLevel, type TeamPlan,
+  scoutCost, scoutLevel, scoutProspect, simRecruiting, PITCHES, type PitchKey, type PitchReaction, type Prospect, type RecruitingState, type ScoutLevel, type TeamPlan,
 } from '../../core/dynasty/recruiting';
 import { POSITIONS, POS_TARGET, prestigeStars } from '../../core/dynasty/offseason';
 import { closeness } from '../../core/dynasty/schoolStates';
@@ -27,12 +27,29 @@ const aboutText = (p: Prospect, d: Dynasty, team: number) => {
   return `${p.from === team ? 'Left your team (transfer portal)' : `${p.from !== null ? `Transfer from ${d.teams[p.from].school}, from ` : ''}${hometownText(p.player)}${tag}`}. ${heightText(p.player.heightIn)}, ${p.player.weight} lb`;
 };
 
-/** What he cares about most, then next (his best pitches). */
-const PITCH: Record<keyof Prospect['wants'], string> = { pt: 'playing time', prestige: 'program prestige', home: 'being close to home', academics: 'academics', contender: 'a shot at a championship' };
-const pitchText = (p: Prospect) => {
-  const [a, b] = (Object.keys(PITCH) as (keyof Prospect['wants'])[]).sort((x, y) => (p.wants[y] ?? 0) - (p.wants[x] ?? 0));
-  return `Cares most about ${PITCH[a]}, then ${PITCH[b]}`;
+/** The pitches (user, 2026-11-12: his interests stay hidden; a pitch shows whether it matched). */
+const PITCH: Record<PitchKey, string> = { pt: 'Playing time', prestige: 'Program prestige', home: 'Close to home', academics: 'Academics', contender: 'Championship contender' };
+const REACT: Record<PitchReaction, { mark: string; text: string; cls: string }> = {
+  good: { mark: '+', text: 'interested, and you\'re strong there', cls: 'dy-react-good' },
+  ok: { mark: '~', text: 'interested, you\'re in between', cls: 'dy-react-ok' },
+  bad: { mark: '−', text: 'interested, but you\'re weak there', cls: 'dy-react-bad' },
+  no: { mark: '✗', text: 'not interested', cls: 'dy-react-no' },
 };
+
+/** The reactions so far to your pitches. */
+function Reactions({ p, team }: { p: Prospect; team: number }) {
+  const { d } = useDyn();
+  const got = d.offseason!.recruiting!.reactions?.[team]?.[p.id];
+  if (!got || !Object.keys(got).length) return null;
+  return (
+    <div className="dy-small dy-reactions">
+      {PITCHES.filter((k) => got[k]).map((k) => {
+        const x = REACT[got[k]!];
+        return <span key={k} className={x.cls} title={`${PITCH[k]}: ${x.text}`}>{PITCH[k]} <b>{x.mark}</b></span>;
+      })}
+    </div>
+  );
+}
 
 /** His five top schools by interest (yours marked). */
 function TopSchools({ p, team }: { p: Prospect; team: number }) {
@@ -110,7 +127,7 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
   const users = d.userTeams;
   const [team, setTeam] = useState(users[0]);
   const [plans, setPlans] = useState<Record<number, TeamPlan>>(() =>
-    Object.fromEntries(users.map((u) => [u, rs.plans[u] ? { points: { ...rs.plans[u].points }, offers: [] } : { points: {}, offers: [] }])));
+    Object.fromEntries(users.map((u) => [u, rs.plans[u] ? { points: { ...rs.plans[u].points }, offers: [], pitches: { ...rs.plans[u].pitches } } : { points: {}, offers: [] }])));
   const [err, setErr] = useState<string | null>(null);
   const byId = useMemo(() => new Map(rs.prospects.map((p) => [p.id, p])), [rs]);
   const plan = plans[team] ?? { points: {}, offers: [] };
@@ -132,6 +149,7 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
   const add = (id: number) => setPlan((p) => (Object.keys(p.points).length >= R.boardSize ? p : { ...p, points: { ...p.points, [id]: 0 } }));
   const remove = (id: number) => setPlan((p) => { const points = { ...p.points }; delete points[id]; return { ...p, points }; });
   const setPoints = (id: number, v: number) => setPlan((p) => ({ ...p, points: { ...p.points, [id]: Math.max(0, Math.min(R.maxPerProspect, Math.round(v) || 0)) } }));
+  const setPitch = (id: number, k: PitchKey | '') => setPlan((p) => { const pitches = { ...p.pitches }; if (k) pitches[id] = k; else delete pitches[id]; return { ...p, pitches }; });
   const offer = (id: number) => setPlan((p) => ({ ...p, offers: p.offers.includes(id) ? p.offers : [...p.offers, id] }));
 
 
@@ -140,7 +158,8 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
     const send = Object.fromEntries(users.map((u) => {
       const p = plans[u] ?? { points: {}, offers: [] };
       const points = Object.fromEntries(Object.entries(p.points).filter(([id]) => byId.get(Number(id))?.committed === null));
-      return [u, { points, offers: p.offers }];
+      const pitches = Object.fromEntries(Object.entries(p.pitches ?? {}).filter(([id]) => id in points));
+      return [u, { points, offers: p.offers, pitches }];
     }));
     const bad = users.flatMap((u) => planProblems(R, send[u], rs.scoutSpent?.[u] ?? 0).map((m) => `${d.teams[u].school}: ${m}`));
     if (bad.length) return setErr(bad.join(' '));
@@ -162,7 +181,7 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
       <h3 className="dy-sub">{rs.week < R.weeks ? `Recruiting, week ${rs.week + 1} of ${R.weeks}` : 'Recruiting is over'}</h3>
       <p>
         Every week you have {R.userPoints.toLocaleString('en-US')} points to spend on up to {R.boardSize} prospects (at most {R.maxPerProspect} each); they go further with prospects from your state and your pipeline states.
-        Interest grows with points, with an offer, and with how well your school fits what a prospect wants: playing time, program prestige, being close to home, academics and a shot at a championship.
+        Interest grows with points, with an offer, and with how well your school fits what a prospect wants: playing time, program prestige, being close to home, academics and a shot at a championship. What he wants is hidden: pitch one of them, and after the week he reacts. + means it's one of his interests and your school is strong there (your points count more), ~ in between, − one of his interests but your school is weak there (your points count less than with no pitch), ✗ not one of his interests.
         Prospects rated above your program's prestige are harder to reach. A prospect commits when one school's interest is high enough and clearly
         ahead (the best ones not before week 3 or 4); at signing day the rest choose among the schools that offered. Players in the transfer portal are
         prospects too; your own players in the portal start on your board, and their old school (you) is one of their top schools. Scouting a high-school prospect shows his OVR ({R.scoutOvr} points), then all his ratings ({R.scoutRatings} more), out of the
@@ -213,10 +232,21 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
               return (
                 <li key={p.id}>
                   <ProspectTop p={p} lv={lv} />
-                  <div className="dy-small dy-dim">{aboutText(p, d, team)}. {standing(p, team, d)}. {pitchText(p)}.</div>
+                  <div className="dy-small dy-dim">{aboutText(p, d, team)}. {standing(p, team, d)}.</div>
                   <TopSchools p={p} team={team} />
                   {lv >= 2 && <RatingsLine p={p} />}
+                  <Reactions p={p} team={team} />
                   <div className="dy-board-ctl">
+                    <label>
+                      <span className="dy-small">Pitch</span>
+                      <select value={plan.pitches?.[p.id] ?? ''} onChange={(e) => setPitch(p.id, e.target.value as PitchKey | '')}>
+                        <option value="">No pitch</option>
+                        {PITCHES.map((k) => {
+                          const x = rs.reactions?.[team]?.[p.id]?.[k];
+                          return <option key={k} value={k}>{PITCH[k]}{x ? ` (${REACT[x].mark})` : ''}</option>;
+                        })}
+                      </select>
+                    </label>
                     <label>
                       <span className="dy-small">Points</span>
                       <input type="number" inputMode="numeric" min={0} max={R.maxPerProspect} step={10} value={plan.points[p.id] ?? 0} onChange={(e) => setPoints(p.id, Number(e.target.value))} />
@@ -315,9 +345,10 @@ function ProspectSearch({ team, onAdd, board, full, left, onScout }: { team: num
           return (
             <li key={p.id}>
               <ProspectTop p={p} lv={lv} />
-              <div className="dy-small dy-dim">{aboutText(p, d, team)}. {standing(p, team, d)}. {pitchText(p)}.</div>
+              <div className="dy-small dy-dim">{aboutText(p, d, team)}. {standing(p, team, d)}.</div>
               <TopSchools p={p} team={team} />
               {lv >= 2 && <RatingsLine p={p} />}
+              <Reactions p={p} team={team} />
               <div className="dy-board-ctl">
                 <button type="button" className="dy-button dy-quiet" disabled={full} onClick={() => onAdd(p.id)}>Add to board</button>
                 <ScoutButtons p={p} team={team} lv={lv} left={left} onScout={onScout} />

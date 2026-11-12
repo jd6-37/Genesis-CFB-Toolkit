@@ -392,6 +392,13 @@
 .dy-rule-inputs { display: flex; flex-wrap: wrap; gap: 8px 12px; }
 .dy-rule-in { display: inline-flex; align-items: center; gap: 4px; }
 .dy-rule-in input { width: 84px; border: 1px solid #b9b8c8; border-radius: 4px; padding: 6px 8px; }
+.dy-reactions { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 4px; }
+.dy-reactions span { border-radius: 3px; padding: 0 5px; }
+.dy-react-good { background: #dff3e3; color: #145a24; }
+.dy-react-ok { background: #f0eff4; color: #44434d; }
+.dy-react-bad { background: #fbe1df; color: #8a1d14; }
+.dy-react-no { background: #f0eff4; color: #6e6d78; }
+.dy-board-ctl select { max-width: 180px; }
 .dy-pitch { display: flex; flex-wrap: wrap; gap: 4px 16px; }
 @media (min-width: 640px) {
   .dy-rule { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }

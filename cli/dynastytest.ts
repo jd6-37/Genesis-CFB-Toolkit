@@ -469,6 +469,29 @@ if (user !== undefined) {
 }
 ok(`rules: changes stored and applied, files round-trip; academics for all 138; contender and pipelines${user !== undefined ? ` (${f1.teams[user].school}: ${Rec.pipelineStates(f1, user).map((x) => x.state).join(', ') || 'none'})` : ''}`);
 
+// Pitching (user teams pick a pitch per prospect; reactions +, ~, −, ✗): a good pitch adds more interest than none, a bad one less.
+if (user !== undefined) {
+  const ctxP = Rec.weekContext(f1, rs0);
+  const tgt = rs0.prospects.find((p) => p.id < 0 && p.committed === null && p.stars <= 3)!;
+  const sc = Rec.pitchScores(f1, ctxP, tgt, user);
+  const ints = Rec.interestsOf(RD, tgt);
+  const notInt = Rec.PITCHES.find((k) => !ints.includes(k))!;
+  assert.equal(Rec.pitchReaction(RD, tgt, sc, notInt), 'no');
+  for (const k of ints) assert.equal(Rec.pitchReaction(RD, tgt, sc, k), sc[k] >= RD.pitchStrongAt ? 'good' : sc[k] < RD.pitchWeakBelow ? 'bad' : 'ok');
+  const gain = (pitch?: Rec.PitchKey) => {
+    const w = Rec.recruitingWeek(f1, { [user]: { points: { [tgt.id]: 50 }, offers: [], pitches: pitch ? { [tgt.id]: pitch } : {} } });
+    return { v: w.offseason!.recruiting!.prospects.find((p) => p.id === tgt.id)!.interest[user] - (tgt.interest[user] ?? 0), r: w.offseason!.recruiting!.reactions?.[user]?.[tgt.id] };
+  };
+  const none = gain(), withNo = gain(notInt);
+  assert.ok(Math.abs(withNo.v - none.v * RD.pitchNotInterested) < 1e-6 * Math.max(1, none.v), 'not interested: normal points');
+  assert.equal(withNo.r?.[notInt], 'no', 'the reaction is recorded');
+  for (const k of ints) {
+    const g = gain(k), x = Rec.pitchReaction(RD, tgt, sc, k);
+    assert.ok(Math.abs(g.v - none.v * Rec.reactionValue(RD, x)) < 1e-6 * Math.max(1, none.v), `pitch ${k} (${x}) scales the points`);
+  }
+  ok(`pitching: ${tgt.player.first} ${tgt.player.last}'s interests ${ints.join(', ')}; reactions ${ints.map((k) => Rec.pitchReaction(RD, tgt, sc, k)).join(', ')}, the rest ✗`);
+}
+
 // Simming for the user teams: a week, the rest of recruiting, the cuts, the whole offseason.
 const g1 = Rec.simRecruiting(f1, 1);
 assert.equal(g1.offseason!.recruiting!.week, 1);
