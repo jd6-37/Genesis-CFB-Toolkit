@@ -223,7 +223,7 @@ function Commitments() {
     <section>
       <h2 className="dy-side-head"><a href={href('offseason')}>Your commitments</a></h2>
       {d.userTeams.map((t) => {
-        const mine = rs.prospects.filter((p) => p.committed === t).sort((a, b) => b.stars - a.stars || b.player.ovr - a.player.ovr);
+        const mine = rs.prospects.filter((p) => p.committed === t).sort((a, b) => b.stars - a.stars || a.player.last.localeCompare(b.player.last));
         return (
           <div key={t}>
             {d.userTeams.length > 1 && <h3 className="dy-side-sub">{d.teams[t].school}</h3>}

@@ -25,6 +25,14 @@ export const WEEKS = 5;
 export const WEEKLY_POINTS = 1000;
 export const MAX_PER_PROSPECT = 60;
 export const BOARD_SIZE = 35;
+/**
+ * Scouting (user, 2026-11-12): a user team sees a high-school prospect's stars, position, hometown and
+ * size; scouting reveals his OVR (10 points), then all his ratings (20 more; both in one week is fine).
+ * The points come out of the week's 1,000 and don't count toward a prospect's 60. What's revealed stays
+ * revealed. Portal players have played college ball: everything shows. CPU teams don't scout.
+ */
+export const SCOUT_COST = [0, 10, 20] as const;
+export type ScoutLevel = 0 | 1 | 2;
 /** Interest a prospect needs from a team before he commits, by stars (portal players decide sooner). */
 const THRESHOLD = [40, 60, 100, 160, 230, 320];
 /** The first week a prospect may commit, by stars (the best take their time; portal players a week sooner). */
@@ -60,6 +68,10 @@ export interface RecruitingState {
   log: { week: number; prospect: number; team: number; flipFrom?: number }[];
   /** The user teams' plans as they were last used (the page starts from them). */
   plans: Record<number, TeamPlan>;
+  /** Per user team, how far it has scouted each prospect (1 OVR, 2 all ratings). */
+  scouted: Record<number, Record<number, ScoutLevel>>;
+  /** Per user team, points spent on scouting this week. */
+  scoutSpent: Record<number, number>;
 }
 
 type Rand = () => number;
@@ -121,7 +133,7 @@ export function startRecruiting(d: Dynasty, tpl: RecruitTemplates, portal: DPlay
     const s = pr.wants.pt + pr.wants.prestige + pr.wants.home;
     pr.wants = { pt: pr.wants.pt / s, prestige: pr.wants.prestige / s, home: pr.wants.home / s };
   }
-  return { week: 0, prospects, spots, log: [], plans: {} };
+  return { week: 0, prospects, spots, log: [], plans: {}, scouted: {}, scoutSpent: {} };
 }
 
 // ---- 3. a week
@@ -191,13 +203,47 @@ export function cpuPlan(d: Dynasty, rs: RecruitingState, ctx: WeekContext, team:
 }
 
 /** Why a user team's plan can't be used (empty when it can). */
-export function planProblems(plan: TeamPlan): string[] {
+/** How far a team sees a prospect: portal players fully, high-school recruits as far as it scouted. */
+export const scoutLevel = (rs: RecruitingState, team: number, p: Prospect): ScoutLevel =>
+  p.id > 0 ? 2 : rs.scouted?.[team]?.[p.id] ?? 0;
+
+/** Points to scout a prospect from where the team stands up to a level. */
+export function scoutCost(rs: RecruitingState, team: number, p: Prospect, level: ScoutLevel): number {
+  let c = 0;
+  for (let l = scoutLevel(rs, team, p) + 1; l <= level; l++) c += SCOUT_COST[l];
+  return c;
+}
+
+/**
+ * A user team scouts a prospect up to a level, at once (the page shows what's revealed right away);
+ * `planned` = the points already planned for the week on the board, which must still fit.
+ */
+export function scoutProspect(d: Dynasty, team: number, id: number, level: ScoutLevel, planned = 0): Dynasty {
+  const st = d.offseason;
+  const rs = st?.recruiting;
+  if (!st || !rs || st.step !== 'recruiting' || rs.week >= WEEKS) throw new Error('Scouting is only during the recruiting weeks.');
+  if (!d.userTeams.includes(team)) throw new Error('Only your teams scout.');
+  const p = rs.prospects.find((x) => x.id === id);
+  if (!p) throw new Error('No such prospect.');
+  const cost = scoutCost(rs, team, p, level);
+  if (cost === 0) return d;
+  const spent = rs.scoutSpent?.[team] ?? 0;
+  if (spent + cost + planned > WEEKLY_POINTS) throw new Error(`Scouting him costs ${cost} points: you have ${WEEKLY_POINTS - spent - planned} left this week.`);
+  const recruiting: RecruitingState = {
+    ...rs,
+    scouted: { ...rs.scouted, [team]: { ...rs.scouted?.[team], [id]: level } },
+    scoutSpent: { ...rs.scoutSpent, [team]: spent + cost },
+  };
+  return { ...d, offseason: { ...st, recruiting } };
+}
+
+export function planProblems(plan: TeamPlan, scoutSpent = 0): string[] {
   const out: string[] = [];
   const vals = Object.values(plan.points);
-  const total = vals.reduce((a, b) => a + b, 0);
+  const total = vals.reduce((a, b) => a + b, 0) + scoutSpent;
   if (vals.some((v) => v < 0 || !Number.isFinite(v))) out.push('Points must be zero or more.');
   if (vals.some((v) => v > MAX_PER_PROSPECT)) out.push(`At most ${MAX_PER_PROSPECT} points for one prospect a week.`);
-  if (total > WEEKLY_POINTS) out.push(`That's ${total} points: you have ${WEEKLY_POINTS} a week.`);
+  if (total > WEEKLY_POINTS) out.push(`That's ${total} points${scoutSpent ? `, ${scoutSpent} of them on scouting` : ''}: you have ${WEEKLY_POINTS} a week.`);
   if (Object.keys(plan.points).length > BOARD_SIZE) out.push(`At most ${BOARD_SIZE} prospects on your board.`);
   return out;
 }
@@ -209,11 +255,11 @@ export function planProblems(plan: TeamPlan): string[] {
 export function runRecruitingWeek(d: Dynasty, rs0: RecruitingState, userPlans: Record<number, TeamPlan>, seed: number): RecruitingState {
   if (rs0.week >= WEEKS) throw new Error('Recruiting is over: it\'s signing day.');
   for (const [t, p] of Object.entries(userPlans)) {
-    const bad = planProblems(p);
+    const bad = planProblems(p, rs0.scoutSpent?.[Number(t)] ?? 0);
     if (bad.length) throw new Error(`${d.teams[Number(t)].school}: ${bad.join(' ')}`);
   }
   const r = seeded(seed, 100 + rs0.week);
-  const rs: RecruitingState = { ...rs0, prospects: rs0.prospects.map((p) => ({ ...p, interest: { ...p.interest }, offers: p.offers.slice() })), log: rs0.log.slice(), plans: { ...rs0.plans, ...userPlans } };
+  const rs: RecruitingState = { ...rs0, prospects: rs0.prospects.map((p) => ({ ...p, interest: { ...p.interest }, offers: p.offers.slice() })), log: rs0.log.slice(), plans: { ...rs0.plans, ...userPlans }, scouted: rs0.scouted ?? {}, scoutSpent: {} };
   const ctx = weekContext(d, rs);
   const byId = new Map(rs.prospects.map((p) => [p.id, p]));
   // Plans: user teams as given, the rest by the computer.

@@ -317,6 +317,26 @@ const plan = { points: Object.fromEntries(targets.map((p) => [p.id, 60])), offer
 assert.deepEqual(Rec.planProblems(plan), []);
 assert.ok(Rec.planProblems({ points: { [targets[0].id]: 61 }, offers: [] }).length > 0, 'at most 60 a prospect');
 assert.ok(Rec.planProblems({ points: Object.fromEntries(rs0.prospects.slice(0, 20).map((p) => [p.id, 60])), offers: [] }).length > 0, 'at most 1,000 a week');
+// Scouting (user teams): OVR 10, all ratings 20 more, out of the week's points; kept; portal players fully known.
+const sp = targets[0];
+assert.equal(Rec.scoutLevel(rs0, user, sp), 0);
+assert.equal(Rec.scoutCost(rs0, user, sp, 2), 30);
+let fs = Rec.scoutProspect(f1, user, sp.id, 1, 600);
+assert.equal(Rec.scoutLevel(fs.offseason!.recruiting!, user, sp), 1);
+assert.equal(Rec.scoutCost(fs.offseason!.recruiting!, user, sp, 2), 20);
+for (const t of targets) fs = Rec.scoutProspect(fs, user, t.id, 2, 600);
+assert.equal(fs.offseason!.recruiting!.scoutSpent[user], 300);
+assert.throws(() => Rec.scoutProspect(fs, user, targets[0].id - 1000000, 1, 600), /No such/);
+const other = rs0.prospects.find((p) => p.id < 0 && !targets.includes(p))!;
+assert.throws(() => Rec.scoutProspect(fs, user, other.id, 2, 700), /left this week/);
+assert.deepEqual(Rec.planProblems(plan, 300), []);
+assert.ok(Rec.planProblems(plan, 410).length > 0, 'scouting counts toward the 1,000');
+assert.equal(Rec.scoutLevel(rs0, user, { ...sp, id: 5 }), 2, 'portal players show everything');
+const fsw = Rec.recruitingWeek(fs, { [user]: plan });
+assert.equal(fsw.offseason!.recruiting!.scoutSpent[user] ?? 0, 0, 'scouting points are per week');
+assert.equal(Rec.scoutLevel(fsw.offseason!.recruiting!, user, sp), 2, 'scouting is kept');
+ok('scouting: OVR 10 and all ratings 20 points, within the week\'s 1,000, kept across weeks');
+
 let f2 = f1;
 for (let w = 0; w < Rec.WEEKS; w++) f2 = Rec.recruitingWeek(f2, { [user]: w === 0 ? plan : { points: plan.points, offers: [] } });
 assert.throws(() => Rec.recruitingWeek(f2, {}), /signing day/);
