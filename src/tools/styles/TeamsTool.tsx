@@ -22,6 +22,8 @@ import {
   writeReports, type Report,
 } from '../../core/walshReports';
 import { WalshEditor } from '../walsh/WalshEditor';
+import { hasKits } from '../../core/kits';
+import { KitEditor } from './KitEditor';
 import './teamstyles.css';
 
 type Note = { kind: 'error' | 'ok'; text: string } | null;
@@ -241,6 +243,7 @@ export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapS
               </div>
             )}
           </section>
+          {hasKits(work.data) && <KitEditor api={api} names={ok.names} />}
           <StyleLegend info={ok.info} ovrShown={ok.ovrShown} wide={ok.wide} />
         </div>
       ) : (

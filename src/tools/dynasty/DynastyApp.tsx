@@ -294,7 +294,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
   const week = d?.offseason ? 'Offseason' : v && v.save ? (v.currentWeek < v.weeks ? weekName(v, v.currentWeek) : 'Season complete') : d && d.seasons.length > 1 ? 'Preseason' : null;
 
   return (
-    <div className="dy">
+    <div className="dy" data-brand="dynasty">
       <header className="dy-mast">
         <div className="dy-mast-inner">
           <a className="dy-back" href={toolkitHref}>Mod Toolkit</a>

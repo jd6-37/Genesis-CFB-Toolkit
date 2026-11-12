@@ -16,6 +16,7 @@ import { rl, rw } from './bytes';
 import { editedReports, readReport, reportLength, REPORT_LIMIT, writeReports, type Report } from './walshReports';
 import type { Game } from './rosterLayouts';
 import { isWideBw95 } from './romfile';
+import { hasKits, kitsDiffer, readKits, writeKits } from './kits';
 import { teamsOf } from './wide';
 import { readWideSeason, wideSeasonProblems, wideSeasonRanges, writeWideSeason } from './seasonWide';
 
@@ -80,7 +81,8 @@ export function editsSince(base: Uint8Array, data: Uint8Array, game: Game): Edit
       game === 'bw95' &&
       (differs(base, data, styleRanges(base)) ||
         (!ratingProblems(base).length && differs(base, data, ratingRanges(base))) ||
-        reportsDiffer(base, data)),
+        reportsDiffer(base, data) ||
+        kitsDiffer(base, data)),
     rosters: differs(base, data, rosterRanges),
     any,
   };
@@ -210,6 +212,17 @@ export function carryEdits(from: Uint8Array, to: Uint8Array, fromBase?: Uint8Arr
     }
   } catch (e) {
     res.skipped.push(`Walsh Reports: ${(e as Error).message}`);
+  }
+  // Alternate uniforms (kits.ts): the teams whose extras or white-at-home flag changed.
+  try {
+    const base = fromBase ?? to;
+    if (hasKits(from) && hasKits(to) && hasKits(base) && kitsDiffer(base, from)) {
+      const was = readKits(base), now = readKits(from), dest = readKits(to);
+      now.forEach((k, t) => { if (JSON.stringify(k) !== JSON.stringify(was[t])) { dest[t] = k; carried.add(t); } });
+      writeKits(to, dest);
+    }
+  } catch (e) {
+    res.skipped.push(`Uniforms: ${(e as Error).message}`);
   }
   res.teams = carried.size;
   return res;

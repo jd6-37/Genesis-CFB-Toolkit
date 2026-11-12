@@ -1,0 +1,21 @@
+/* Teams tab: alternate uniforms (KitEditor.tsx). Tokens only (docs/design-system.md); mobile first. */
+.kit { display: grid; gap: var(--sp-3); }
+.kit-lead, .kit-none { margin: 0; max-width: 64ch; font-size: var(--fs-2); color: var(--text-muted); }
+.kit-part { display: grid; gap: var(--sp-2); justify-items: start; padding-top: var(--sp-3); border-top: var(--rule-w) solid var(--rule); }
+.kit-part h4 { margin: 0; font-family: var(--font-display); font-size: var(--fs-4); }
+.kit-part ul { display: grid; gap: var(--sp-3); width: 100%; margin: 0; padding: 0; list-style: none; }
+.kit-part li { display: grid; justify-content: start; grid-template-columns: auto minmax(0, 1fr); gap: var(--sp-2) var(--sp-3); align-items: center; }
+.kit-part li .ui-button { grid-column: 1 / -1; justify-self: start; }
+.kit-part dl { display: grid; gap: var(--sp-1); margin: 0; }
+.kit-part .chip { grid-row: auto; }
+/* Phones: the swatch first, so its color picker (which opens to the right there) stays on the screen. */
+.kit-part dl > div { display: flex; flex-direction: row-reverse; align-items: center; justify-content: flex-end; gap: var(--sp-3); max-width: 16rem; font-size: var(--fs-2); }
+.kit-part dt { color: var(--text-muted); }
+.kit-part dd { margin: 0; }
+@media (min-width: 640px) {
+  .kit-part li { grid-template-columns: auto minmax(0, 16rem) auto; }
+  .kit-part li .ui-button { grid-column: auto; }
+}
+@media (min-width: 960px) {
+  .kit-part dl > div { flex-direction: row; justify-content: space-between; }
+}

@@ -20,6 +20,8 @@ import { dynastyFileName, dynastyFileText, readDynastyFile } from '../src/core/d
 import { CFB27_LATEST } from '../src/core/cfb27Latest';
 import { OVR_FORMULAS, playerOvr, roleOfSlot } from '../src/core/dynasty/ovr';
 import { readRating } from '../src/core/teamRatings';
+import { hasKits, readKits } from '../src/core/kits';
+import { setWhiteHome, whiteHomeLock } from '../src/core/dynasty/kit';
 import * as Off from '../src/core/dynasty/offseason';
 import * as Rec from '../src/core/dynasty/recruiting';
 import * as Sim from '../src/core/dynasty/sim';
@@ -1053,6 +1055,29 @@ assert.ok(hasDynastyHooks(rom) && dynastyAreaProblem(rom) === null);
   const t8 = rom.slice(); t8.fill(0xff, 0x2c0000, 0x2c0004); // no names table: a test8 ROM
   assert.throws(() => createDynasty(t8, csv, { name: 'x', seed: 1 }), /test9/);
   ok('dynasty area: header, ID block, season rosters, OVRs, sim words and names; 2026 data untouched; lineup changes; busy area and older ROMs refused');
+}
+
+// Home jerseys (kit.ts, handoff H-004): the ROM's flags at the start, a user team's changed between seasons, written into the season ROM.
+if (hasKits(rom)) {
+  const k0 = createDynasty(rom, csv, { name: 'kits', seed: 5, userTeams: [0] });
+  const romFlags = readKits(rom).map((k) => k.whiteHome);
+  assert.deepEqual(k0.whiteHome, romFlags);
+  assert.match(whiteHomeLock(k0, 1)!, /your own teams/);
+  assert.throws(() => setWhiteHome(k0, 1, true));
+  assert.equal(whiteHomeLock(k0, 0), null);
+  const k1 = setWhiteHome(k0, 0, !romFlags[0]);
+  assert.equal(k1.seasons[0].rosterVersion ?? 1, 1, 'no new ROM version before a download');
+  const outK = Off.seasonRom(k1, k1.seasons[0], rom);
+  const after = readKits(outK);
+  assert.equal(after[0].whiteHome, !romFlags[0]);
+  assert.deepEqual(after.map((k, t) => (t === 0 ? null : k)), readKits(rom).map((k, t) => (t === 0 ? null : k)), 'other teams and every extra uniform kept');
+  // After a download the ROM has to be written again; once the season has games, the flag waits for the offseason.
+  const dl = { ...k0, seasons: [{ ...k0.seasons[0], romDownloaded: true }] };
+  assert.equal(setWhiteHome(dl, 0, !romFlags[0]).seasons[0].rosterVersion, 2);
+  const played = { ...k0, seasons: [{ ...k0.seasons[0], imports: [{} as never] }] };
+  assert.match(whiteHomeLock(played, 0)!, /offseason/);
+  assert.equal(whiteHomeLock({ ...played, offseason: {} as never }, 0), null);
+  ok('home jersey: flags from the ROM, a user team changed, written into the season ROM, locked during the season');
 }
 
 console.log(`\n${passed} passed`);

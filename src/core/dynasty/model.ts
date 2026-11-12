@@ -17,6 +17,7 @@ import { buildRosters } from './rosters';
 import { ovrOf, ratingsFromSlot, valueOfFine, type Ratings } from './ratings';
 import { GROUP_ATTRS } from '../rosterLayouts';
 import { hasFineRatings, readFineOffsets } from './fine';
+import { whiteHomeOf } from './kit';
 import { assignBlack, skinFor } from './appearance';
 import { recordYear, type YearRecord } from './career';
 import { DYNASTY_EDITION, dynastyRomId, hasDynastyHooks, readStamp } from './dynastyArea';
@@ -160,6 +161,8 @@ export interface Dynasty {
   rules?: Partial<import('./rules').OffseasonRules>;
   /** Each user team's training focus for the next offseason (training.ts; user, 2026-11-12). */
   training?: Record<number, import('./training').Training>;
+  /** Per team: wears its white jersey at home (kit.ts; the ROM's alternate-uniforms table). Absent on a ROM without it. */
+  whiteHome?: boolean[];
 }
 
 // ---- small helpers
@@ -310,6 +313,7 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
     startYear,
     userTeams: opt.userTeams ?? [],
     teams,
+    whiteHome: whiteHomeOf(rom),
     players: recordYear(players, startYear),
     seasons: [{ index: 0, year: startYear, conf: season.conf, confNames: season.names, confWeeks: { start: season.start, games: season.games }, slots, bw, bench, benchBw, teamOvr, prestige: startingPrestige(teams.map((t) => t.school), teamOvr), imports: [] }],
   };
