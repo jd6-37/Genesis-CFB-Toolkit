@@ -37,7 +37,7 @@ const ROSTERS = DYN_AREA + 0x100;
 const OVRS = ROSTERS + DYN_TEAMS * 128; // 0x3E4600
 const SIMS = OVRS + 0x200; // 0x3E4800
 const NAMES = DYN_AREA + 0x5000; // 0x3E5000
-const SCHEDULE = 0x3ff000; // up to 4 KB (12 weeks of 69 games: 1,681 bytes)
+const SCHEDULE = 0x3ff000; // up to 4 KB (12 weeks of 69 games: 1,673 bytes)
 
 const u32 = (d: Uint8Array, a: number) => ((d[a] << 24) >>> 0) + (d[a + 1] << 16) + (d[a + 2] << 8) + d[a + 3];
 const u16 = (d: Uint8Array, a: number) => (d[a] << 8) | d[a + 1];
