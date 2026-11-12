@@ -11,6 +11,7 @@ Picked from three Figma mockups (file "CFB-Toolkit", page "Directions"): **"B's 
 - **Dynasty is the booklet from the game box:** white paper, black ink, black bars with reversed uppercase condensed type for section headings, a heavy rule under page titles and table headings, dotted rules between rows, square corners.
 - **Pixel numerals** (Jersey 15, `--font-num`) for figures only: scores, ratings, table numbers. Never for words.
 - **The Mod Toolkit keeps its indigo and yellow** and takes the same components ("yes, toolkit too").
+- **The Mod Toolkit's tab menu is "the subtle retro design"** (mockup A's toolkit frame): Barlow Condensed as today, square corners, 2 px rules and hard offset shadows. No pixel menu text and no chrome selection bar.
 - **Dark mode is for Dynasty only** ("the blue design of the toolkit is enough").
 - **Colors:** prefer Genesis palette values (each channel one of 0, 36, 73, 109, 146, 182, 219, 255) for solid UI colors. It's a guide that keeps the palette small and close to the game's art, not a hard rule.
 
