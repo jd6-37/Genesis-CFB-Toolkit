@@ -10,7 +10,8 @@ import { openRom } from '../src/core/romfile';
 import { openSave, readDynastySave, ranksFromPower, STAT_SLOTS } from '../src/core/dynasty/save';
 import { CLASSES, createDynasty, fromBase64, importSave, latestSave, startingClass, weeksDone } from '../src/core/dynasty/model';
 import { champions, leaders, playerLines, seasonRecords, RECORD_STATS, seasonView, standings, teamHistory, weekName } from '../src/core/dynasty/derive';
-import { stories } from '../src/core/dynasty/news';
+import { offseasonStories, stories } from '../src/core/dynasty/news';
+import { rivalryOf } from '../src/core/dynasty/rivalries';
 import { teamArt } from '../src/core/dynasty/art';
 import { dynastyFileName, dynastyFileText, readDynastyFile } from '../src/core/dynasty/storage';
 import { CFB27_LATEST } from '../src/core/cfb27Latest';
@@ -572,6 +573,14 @@ if (user !== undefined) {
   ok('appearance: skin, hair, facial hair and eye black saved; the rest stays generated; reset works');
 }
 
+// Recruiting commitment stories: the latest week's 4-5★ commitments and the user teams' moves.
+{
+  const c1 = Rec.simRecruiting(f1, 2);
+  const cs = offseasonStories(c1, c1.offseason!.events, c1.offseason!.year).filter((x) => x.kind === 'commit');
+  assert.ok(cs.length > 0 && cs.length <= 6, `commitment stories (${cs.length})`);
+  ok(`commitment stories: ${cs.slice(0, 2).map((x) => `"${x.headline}"`).join(', ')}`);
+}
+
 // Simming for the user teams: a week, the rest of recruiting, the cuts, the whole offseason.
 const g1 = Rec.simRecruiting(f1, 1);
 assert.equal(g1.offseason!.recruiting!.week, 1);
@@ -687,6 +696,25 @@ ok('a new season refuses the last season\'s save');
   // A gap of more than a week (no import in between): no week's stats, the season-total stories only.
   assert.equal(stories(importSave(d0, srm).dynasty).filter((x) => x.kind === 'potw').length, 0);
   const kinds = [...new Set(st.map((x) => x.kind))].join(', ');
+  // Rivalries, conference races (late in the season), records broken (from the second season), commitments.
+  assert.equal(rivalryOf('Auburn', 'Alabama'), 'the Iron Bowl');
+  assert.equal(rivalryOf('Alabama', 'Texas State'), null);
+  const v2 = seasonView(w2, w2.seasons[0]);
+  const lastWk = Math.max(...v2.games.filter((g) => g.vs !== null).map((g) => g.week));
+  const late = stories(w2, { ...v2, lastRegularWeek: lastWk + 2 }).filter((x) => x.kind === 'race');
+  assert.ok(late.length > 0 && late.length <= 4, `conference races late in the season (${late.length})`);
+  assert.equal(st.filter((x) => x.kind === 'race').length, 0, 'no races early');
+  {
+    // 2026 with the smaller save, then 2027 with the full one: the leaders pass the 2026 bests.
+    const a1 = importSave(d0, before).dynasty;
+    const o = Off.startOffseason(a1, { seed: 5, force: true });
+    const n2 = Sim.simOffseason(o, Off.recruitTemplates(o));
+    const b2 = importSave(n2, stampSave(rawSrm, dynastyRomId('test'), 2, 1)).dynasty;
+    const rec = stories(b2).filter((x) => x.kind === 'record');
+    assert.ok(rec.length > 0 && rec.length <= RECORD_STATS.length && rec.every((x) => x.player && /sets the record/.test(x.headline)), `records broken (${rec.length})`);
+    assert.equal(new Set(rec.map((x) => x.headline.replace(/^.* sets /, ''))).size, rec.length, 'one new holder per record');
+    ok(`more stories: ${late.length} conference races late in the season, e.g. "${late[0].headline}"; ${rec.length} records broken, e.g. "${rec[0].headline}" (${rec[0].dek})`);
+  }
   ok(`weekly stories: ${potw.map((x) => `"${x.headline}" (${x.dek}; ${x.box!.lines.map((l) => `${l.cat} ${l.cells.map(([k, v]) => `${k} ${v}`).join(' ')}`).join(', ')})`).join('; ')}; kinds ${kinds}`);
 }
 

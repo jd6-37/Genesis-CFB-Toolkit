@@ -473,3 +473,16 @@
 /* Wide tables scroll sideways on phones instead of widening the page. */
 .dy-scroll-x { overflow-x: auto; min-width: 0; }
 .dy-stat-tables { min-width: 0; }
+
+/* Progression: one small line per rating, two columns on phones, more on wider screens */
+.dy-prog { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 8px 0 16px; }
+.dy-prog-tile { margin: 0; border: 1px solid var(--rule); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+.dy-prog-tile figcaption { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.dy-prog-tile figcaption > span:first-child { font-family: var(--display); font-weight: 700; font-size: 18px; line-height: 1.1; color: var(--ink); }
+.dy-prog-nums { font-variant-numeric: tabular-nums; color: var(--gray); }
+.dy-prog-nums b { color: var(--ink); }
+.dy-prog-tile svg { display: block; width: 100%; height: auto; margin-top: 4px; overflow: visible; }
+.dy-prog-grid { stroke: var(--rule); stroke-dasharray: 2 3; }
+.dy-prog-years { display: flex; justify-content: space-between; font-size: 11px; color: var(--gray); }
+@media (min-width: 600px) { .dy-prog { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 900px) { .dy-prog { grid-template-columns: repeat(4, minmax(0, 1fr)); } }

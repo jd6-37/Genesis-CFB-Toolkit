@@ -12,8 +12,8 @@ import { prestigeStars } from '../../core/dynasty/offseason';
 import { MAX_PRESTIGE } from '../../core/dynasty/prestige';
 import type { SaveGame } from '../../core/dynasty/save';
 import type { DPlayer } from '../../core/dynasty/model';
-import { nibbleToRating, nibbleToWeight, type Attr } from '../../core/rosterLayouts';
-import { progressOf } from '../../core/dynasty/ratings';
+import { GROUP_COLUMNS, nibbleToRating, nibbleToWeight, type Attr } from '../../core/rosterLayouts';
+import { GROUP_OF_ROLE, progressOf, RATINGS, roleOfPos } from '../../core/dynasty/ratings';
 import { trainingYears, experienceOf } from '../../core/dynasty/career';
 import { seasonDone } from '../../core/dynasty/offseason';
 import type { Dynasty } from '../../core/dynasty/model';
@@ -678,8 +678,59 @@ export function Player({ id }: { id: number }) {
           {v.season.bw ? `He isn't one of ${team !== null ? d.teams[team].school : 'his team'}'s 32 players in Bill Walsh '95 this season, so he has no ratings.` : 'Start this dynasty again to see the ratings (it was made before the app kept them).'}
         </p>
       )}
+      <Progression p={p} color={team !== null ? inkColor(d, team) : 'var(--ink)'} />
       <CareerStats p={p} seasons={seasons} />
     </section>
+  );
+}
+
+/**
+ * His ratings season by season (user, 2026-11-12: a small chart of how each rating grew), from his year
+ * records (`DPlayer.years`): OVR and the ratings his position uses, one small line each on the same 0-100
+ * scale, so a big jump looks big. Shown from his second season.
+ */
+function Progression({ p, color }: { p: DPlayer; color: string }) {
+  const years = (p.years ?? []).slice().sort((a, b) => a.year - b.year);
+  if (years.length < 2) return null;
+  const last = years[years.length - 1];
+  const group = GROUP_OF_ROLE[roleOfPos(last.pos)];
+  const attrs = (GROUP_COLUMNS[group] ?? []).filter((a) => a !== 'Weight');
+  const kp = group === 'KP';
+  const series = [
+    { label: 'OVR', values: years.map((y) => y.ovr) },
+    ...attrs.map((a) => ({ label: kp && a === 'Quickness' ? 'Kick distance' : a, values: years.map((y) => y.r[RATINGS.indexOf(a)] ?? 0) })),
+  ];
+  const W = 160, H = 44, PAD = 4;
+  const x = (i: number) => PAD + (i * (W - 2 * PAD)) / (years.length - 1);
+  const y = (v: number) => PAD + (1 - v / 100) * (H - 2 * PAD);
+  return (
+    <>
+      <h3 className="dy-sub">Progression</h3>
+      <p className="dy-dim dy-small">{years[0].year} to {last.year}, each season as he started it (0-100 for every line).</p>
+      <div className="dy-prog">
+        {series.map((s) => {
+          const first = s.values[0], end = s.values[s.values.length - 1], change = Math.round(end - first);
+          return (
+            <figure key={s.label} className="dy-prog-tile">
+              <figcaption>
+                <span>{s.label}</span>
+                <span className="dy-prog-nums">{Math.round(first)} → <b>{Math.round(end)}</b> <span className={change > 0 ? 'dy-train-up' : change < 0 ? 'dy-train-down' : 'dy-dim'}>{change > 0 ? `+${change}` : change < 0 ? `−${-change}` : '±0'}</span></span>
+              </figcaption>
+              <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${s.label} by season: ${s.values.map((v, i) => `${years[i].year} ${Math.round(v)}`).join(', ')}`}>
+                <line x1={PAD} x2={W - PAD} y1={y(50)} y2={y(50)} className="dy-prog-grid" />
+                <polyline points={s.values.map((v, i) => `${x(i)},${y(v)}`).join(' ')} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" />
+                {s.values.map((v, i) => (
+                  <circle key={i} cx={x(i)} cy={y(v)} r={4} fill={color} stroke="#fff" strokeWidth={2}>
+                    <title>{years[i].year} ({years[i].cls}): {Math.round(v)}</title>
+                  </circle>
+                ))}
+              </svg>
+              <div className="dy-prog-years"><span>{years[0].year}</span><span>{last.year}</span></div>
+            </figure>
+          );
+        })}
+      </div>
+    </>
   );
 }
 
