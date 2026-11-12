@@ -85,10 +85,8 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
                 : `The offseason starts once the ${season.year} season is over: import the save after the last game. ${v.save ? `So far ${v.games.filter((g) => g.vs !== null).length} of ${v.games.length} games are played.` : ''}`}
             </p>
             <div className="dy-row">
-              {done ? (
+              {done && (
                 <button type="button" className="dy-button" disabled={!!busy} onClick={() => actions.run('Ending the season…', () => actions.commit(startOffseason(d)))}>Start the offseason</button>
-              ) : (
-                <EndEarly onEnd={() => actions.run('Ending the season…', () => actions.commit(startOffseason(d, { force: true })))} />
               )}
             </div>
           </>
@@ -199,18 +197,6 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
 
 function Next({ label, onClick, busy }: { label: string; onClick: () => void; busy: string | null }) {
   return <div className="dy-row dy-next"><button type="button" className="dy-button" disabled={!!busy} onClick={onClick}>{label}</button></div>;
-}
-
-function EndEarly({ onEnd }: { onEnd: () => void }) {
-  const [sure, setSure] = useState(false);
-  return sure ? (
-    <>
-      <button type="button" className="dy-button dy-danger" onClick={onEnd}>End the season now</button>
-      <button type="button" className="dy-button dy-quiet" onClick={() => setSure(false)}>Keep playing</button>
-    </>
-  ) : (
-    <button type="button" className="dy-button dy-quiet" onClick={() => setSure(true)}>End the season early</button>
-  );
 }
 
 function SigningAndCuts({ actions, busy }: { actions: OffseasonActions; busy: string | null }) {
