@@ -158,6 +158,13 @@ function basePace(R: OffseasonRules, a: string): number {
   }
 }
 
+/** The most a rating can move in one offseason (rating points), with the team's training focus. */
+export function capOf(R: OffseasonRules, a: string, t: Training = EVEN_TRAINING): number {
+  const area = areaOf(a);
+  const base = a === 'Speed' ? R.capSpeed : a === 'Quickness' || a === 'Range' ? R.capQuickRange : a === 'Awareness' ? R.capAwareness : R.capOther;
+  return base * (area ? trainingFactor(R, t[area]) : 1);
+}
+
 /**
  * Grows a player toward his potential: an OVR gain raises the ratings his position's OVR formula counts,
  * by the shown numbers, so he can be part of the way to the next step. The gain is shared out by each
@@ -172,19 +179,27 @@ export function develop(p: DPlayer, gain: number, r: Rand, R: OffseasonRules = D
   const ws = (Object.entries(f.weights) as [keyof Ratings, number][]).filter(([, w]) => w > 0);
   const norm = ws.reduce((s, [a, w]) => s + w * paceOf(R, a, t), 0) / ws.reduce((s, [, w]) => s + w, 0) || 1; // the weighted average pace
   const ratings: Ratings = { ...p.ratings };
-  // Each rating's share, then a rating at 0 or 100 passes what it can't take to the others (by weight × pace).
+  // Each rating's share, at most its yearly cap (user, 2026-11-12: "+30 AWR? Doesn't that seem like A LOT?
+  // … yeah cap them"); a rating at its cap, 0 or 100 passes what it can't take to the others (by weight ×
+  // pace), and whatever none of them can take is lost.
+  const start = new Map(ws.map(([a]) => [a, ratings[a] ?? 0] as const));
+  const lo = (a: keyof Ratings) => Math.max(0, start.get(a)! - capOf(R, a, t));
+  const hi = (a: keyof Ratings) => Math.min(100, start.get(a)! + capOf(R, a, t));
   let want = new Map(ws.map(([a]) => [a, per * (paceOf(R, a, t) / norm) * between(r, 0.6, 1.4)] as const));
-  for (let round = 0; round < 4 && want.size; round++) {
+  for (let round = 0; round < 5 && want.size; round++) {
     let left = 0;
     const open: [keyof Ratings, number][] = [];
     for (const [a, step] of want) {
-      const was = ratings[a] ?? 0, to = clamp(was + step, 0, 100);
+      const was = ratings[a] ?? 0, to = clamp(was + step, lo(a), hi(a));
       ratings[a] = Math.round(to * 10) / 10;
       const w = ws.find(([x]) => x === a)![1];
       left += (step - (to - was)) * w;
-      if (to > 0 && to < 100) open.push([a, w * paceOf(R, a, t)]);
     }
-    const tot = open.reduce((t, [, x]) => t + x, 0);
+    for (const [a, w] of ws) {
+      const v = ratings[a] ?? 0;
+      if (left > 0 ? v < hi(a) - 0.05 : v > lo(a) + 0.05) open.push([a, w * paceOf(R, a, t)]);
+    }
+    const tot = open.reduce((s2, [, x]) => s2 + x, 0);
     if (Math.abs(left) < 0.01 || !tot) break;
     want = new Map(open.map(([a, x]) => [a, (left * x) / tot / ws.find(([y]) => y === a)![1]] as const));
   }

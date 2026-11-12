@@ -514,16 +514,17 @@ if (user !== undefined) {
 {
   const hb = d0.players.find((p) => p.pos === 'HB' && (p.ratings.Speed ?? 100) < 85 && (p.ratings.Awareness ?? 100) < 85)!;
   const half = () => 0.5;
-  const g = Off.develop(hb, 4, half);
+  const G = 1.5; // a small year, under the caps
+  const g = Off.develop(hb, G, half);
   const up = (a: 'Speed' | 'Awareness' | 'Quickness' | 'Power') => (g.ratings[a] ?? 0) - (hb.ratings[a] ?? 0);
   assert.ok(up('Awareness') > up('Power') && up('Power') > up('Quickness') && up('Quickness') > up('Speed') && up('Speed') > 0, 'Awareness > Power > Quickness > Speed');
   assert.ok(Math.abs(up('Awareness') / up('Speed') - RD.paceAwareness / RD.speedPace) < 0.2, 'by the paces');
   const f = OVR_FORMULAS.HB, raw = Object.entries(f.weights).reduce((t, [a, w]) => t + (w / 100) * f.scale * up(a as 'Speed'), 0);
-  assert.ok(Math.abs(raw - 4) < 0.2, `the ratings move by the gain before steps (${raw.toFixed(2)})`);
-  const capped = { ...hb, ratings: { ...hb.ratings, Awareness: 99 } }, gc = Off.develop(capped, 4, half);
+  assert.ok(Math.abs(raw - G) < 0.1, `the ratings move by the gain before steps (${raw.toFixed(2)})`);
+  const capped = { ...hb, ratings: { ...hb.ratings, Awareness: 99.5 } }, gc = Off.develop(capped, G, half);
   const rawC = Object.entries(f.weights).reduce((t, [a, w]) => t + (w / 100) * f.scale * (((gc.ratings as Record<string, number>)[a] ?? 0) - ((capped.ratings as Record<string, number>)[a] ?? 0)), 0);
   assert.equal(gc.ratings.Awareness, 100);
-  assert.ok(Math.abs(rawC - 4) < 0.2, `a rating at 100 passes its share to the others (${rawC.toFixed(2)})`);
+  assert.ok(Math.abs(rawC - G) < 0.1, `a rating at 100 passes its share to the others (${rawC.toFixed(2)})`);
   // Training focus: 25 = normal, the cap +20%, 0 −20%; the OVR gain stays the same.
   assert.equal(trainingFactor(RD, 25), 1);
   assert.ok(Math.abs(trainingFactor(RD, RD.trainingMax) - (1 + RD.trainingEffect)) < 1e-9 && Math.abs(trainingFactor(RD, 0) - (1 - RD.trainingEffect)) < 1e-9);
@@ -531,11 +532,18 @@ if (user !== undefined) {
   assert.equal(trainingProblems(RD, { strength: 45, speed: 25, technique: 15, knowledge: 15 }).length, 1, 'over the cap');
   assert.equal(trainingProblems(RD, { strength: 40, speed: 40, technique: 20, knowledge: 0 }).length, 0);
   assert.equal(trainingProblems(RD, { strength: 40, speed: 40, technique: 10, knowledge: 5 }).length, 1, 'not 100');
-  const fast = Off.develop(hb, 4, half, RD, { strength: 20, speed: 40, technique: 20, knowledge: 20 });
+  const fast = Off.develop(hb, G, half, RD, { strength: 20, speed: 40, technique: 20, knowledge: 20 });
   const upF = (a: 'Speed' | 'Awareness') => (fast.ratings[a] ?? 0) - (hb.ratings[a] ?? 0);
   assert.ok(upF('Speed') > up('Speed') && upF('Awareness') < up('Awareness'), 'speed focus: more Speed, less Awareness');
   const rawF = Object.entries(f.weights).reduce((t, [a, w]) => t + (w / 100) * f.scale * (((fast.ratings as Record<string, number>)[a] ?? 0) - ((hb.ratings as Record<string, number>)[a] ?? 0)), 0);
-  assert.ok(Math.abs(rawF - 4) < 0.2, 'same OVR gain');
+  assert.ok(Math.abs(rawF - G) < 0.1, 'same OVR gain');
+  // Yearly caps: a big year stops at each rating's cap; what none can take is lost.
+  const big = Off.develop(hb, 10, half), upB = (a: string) => ((big.ratings as Record<string, number>)[a] ?? 0) - ((hb.ratings as Record<string, number>)[a] ?? 0);
+  assert.ok(upB('Awareness') <= RD.capAwareness + 0.05 && upB('Speed') <= RD.capSpeed + 0.05 && upB('Quickness') <= RD.capQuickRange + 0.05 && upB('Power') <= RD.capOther + 0.05 && upB('Hands') <= RD.capOther + 0.05, 'capped');
+  assert.ok(Math.abs(upB('Speed') - RD.capSpeed) < 0.05 && Math.abs(upB('Awareness') - RD.capAwareness) < 0.05, 'a big year fills the caps');
+  const fastBig = Off.develop(hb, 10, half, RD, { strength: 20, speed: 40, technique: 20, knowledge: 20 });
+  assert.ok(Math.abs(((fastBig.ratings.Speed ?? 0) - (hb.ratings.Speed ?? 0)) - RD.capSpeed * (1 + RD.trainingEffect)) < 0.05, 'training focus moves the cap');
+  ok(`yearly caps: a +10 OVR year for an HB stops at AWR +${upB('Awareness').toFixed(1)}, POW +${upB('Power').toFixed(1)}, QUI +${upB('Quickness').toFixed(1)}, SPD +${upB('Speed').toFixed(1)} (OVR ${hb.ovr} → ${big.ovr})`);
   const cpu = d0.teams.findIndex((_, t) => !d0.userTeams.includes(t));
   const dt = { ...d0, training: { [cpu]: { strength: 40, speed: 40, technique: 20, knowledge: 0 } } };
   assert.deepEqual(trainingOf(dt, RD, cpu), EVEN_TRAINING, 'computer teams train evenly');
@@ -543,8 +551,8 @@ if (user !== undefined) {
     const u0 = d0.userTeams[0], mine = { strength: 40, speed: 40, technique: 20, knowledge: 0 };
     assert.deepEqual(trainingOf({ ...d0, training: { [u0]: mine } }, RD, u0), mine);
   }
-  ok(`training focus: Speed development 40 gives SPD +${upF('Speed').toFixed(1)} (even +${up('Speed').toFixed(1)}), AWR +${upF('Awareness').toFixed(1)} (even +${up('Awareness').toFixed(1)}), same OVR gain`);
-  ok(`development paces: an HB's +4 OVR year gives AWR +${up('Awareness').toFixed(1)}, POW +${up('Power').toFixed(1)}, QUI +${up('Quickness').toFixed(1)}, SPD +${up('Speed').toFixed(1)}`);
+  ok(`training focus: on a +${G} year Speed development 40 gives SPD +${upF('Speed').toFixed(1)} (even +${up('Speed').toFixed(1)}), AWR +${upF('Awareness').toFixed(1)} (even +${up('Awareness').toFixed(1)}), same OVR gain`);
+  ok(`development paces: an HB's +${G} OVR year gives AWR +${up('Awareness').toFixed(1)}, POW +${up('Power').toFixed(1)}, QUI +${up('Quickness').toFixed(1)}, SPD +${up('Speed').toFixed(1)}`);
 }
 
 // Simming for the user teams: a week, the rest of recruiting, the cuts, the whole offseason.

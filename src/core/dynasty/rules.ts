@@ -27,6 +27,8 @@ export interface OffseasonRules {
   speedPace: number; paceQuickness: number; paceRange: number; pacePower: number; paceTechnique: number; paceAwareness: number;
   /** Training focus (training.ts): the most points in one area, and how much the cap speeds an area up (and 0 slows it down). */
   trainingMax: number; trainingEffect: number;
+  /** The most a rating can move in one offseason, in rating points (Awareness; Speed; Quickness and Range; the others). */
+  capAwareness: number; capSpeed: number; capQuickRange: number; capOther: number;
   // Transfers
   transferStarter: number; transferDepth: number; transferBackup: number;
   /** Added when next season's (projected) depth chart has him out of a starting spot. */
@@ -94,7 +96,7 @@ export interface OffseasonRules {
 
 export const DEFAULT_RULES: OffseasonRules = {
   proSeniorBase: 80, proSeniorScale: 14, proSeniorMax: 0.85, srPlusReturn: 0.3, proJuniorBase: 84, proJuniorScale: 12, proJuniorMax: 0.7,
-  growthFR: 0.45, growthSO: 0.4, growthJR: 0.35, growthSR: 0.3, growthSRPlus: 0.25, growthMin: 0.5, growthMax: 1.5, starterBonus: 1, speedPace: 0.5, paceQuickness: 0.7, paceRange: 0.8, pacePower: 1, paceTechnique: 1.2, paceAwareness: 1.4, trainingMax: 40, trainingEffect: 0.2,
+  growthFR: 0.45, growthSO: 0.4, growthJR: 0.35, growthSR: 0.3, growthSRPlus: 0.25, growthMin: 0.5, growthMax: 1.5, starterBonus: 1, speedPace: 0.5, paceQuickness: 0.7, paceRange: 0.8, pacePower: 1, paceTechnique: 1.2, paceAwareness: 1.4, trainingMax: 40, trainingEffect: 0.2, capAwareness: 18, capSpeed: 6, capQuickRange: 10, capOther: 14,
   transferStarter: 0.01, transferDepth: 0.08, transferBackup: 0.12, transferBlocked: 0.1, transferSenior: 0.05, playingTimeCut: 0.8, playingTimeShare: 0.5, transfersPerTeam: 4,
   weeks: 5, userPoints: 1000, cpuPoints: 1000, maxPerProspect: 60, boardSize: 35, scoutOvr: 10, scoutRatings: 20, offerBoost: 1.2, noOffer: 0.6,
   commitThreshold: [40, 60, 100, 160, 230, 320], firstWeek: [1, 1, 2, 2, 3, 4], portalThreshold: 0.7, commitLead: 1.25, flipMargin: 1.5, flipChance: 0.5,
@@ -166,6 +168,10 @@ export const RULE_SECTIONS: RuleSection[] = [
       { key: 'paceRange', label: 'Range grows at', help: 'QB arm, kicking range.', kind: 'num', min: 0, max: 3 },
       { key: 'paceQuickness', label: 'Quickness grows at', help: 'Also kick distance for kickers and punters.', kind: 'num', min: 0, max: 3 },
       { key: 'speedPace', label: 'Speed grows at', help: 'Speed is hard to add.', kind: 'num', min: 0, max: 3 },
+      { key: 'capAwareness', label: 'Most Awareness gained in a year', help: 'Rating points (a step of the game\'s 15 is about 7). Growth past a cap goes to his other ratings; what none can take is lost. Training focus moves the caps like the paces.', kind: 'num', min: 0, max: 100 },
+      { key: 'capSpeed', label: 'Most Speed gained in a year', help: '', kind: 'num', min: 0, max: 100 },
+      { key: 'capQuickRange', label: 'Most Quickness or Range gained in a year', help: 'Quickness is kick distance for kickers and punters.', kind: 'num', min: 0, max: 100 },
+      { key: 'capOther', label: 'Most Power, Hands, Blocking, Tackling or Accuracy gained in a year', help: '', kind: 'num', min: 0, max: 100 },
       { key: 'trainingMax', label: 'Training focus: most points in one area', help: 'Your teams split 100 points over Strength program (Power, Range), Speed development (Speed, Quickness), Technique (Hands, Blocking, Tackling, Accuracy) and Game knowledge (Awareness); 25 each is the paces above. Computer teams use 25 each.', kind: 'int', min: 25, max: 100 },
       { key: 'trainingEffect', label: 'Training focus: effect at the most points', help: 'At the most points an area grows this much faster; at 0 points this much slower. The year\'s total OVR gain doesn\'t change.', kind: 'pct', min: 0, max: 1 },
     ],
