@@ -77,7 +77,7 @@ export const Stats: Story = {
 
 function ThemeDemo() {
   const [dark, setDark] = useState(false);
-  return <div style={{ background: 'var(--bar)', padding: 'var(--sp-4)' }}><ThemeToggle dark={dark} onChange={setDark} /></div>;
+  return <div style={{ background: 'var(--masthead)', padding: 'var(--sp-4)' }}><ThemeToggle dark={dark} onChange={setDark} /></div>;
 }
 /** The switch only; the Dynasty app sets data-theme from it. */
 export const ThemeSwitch: Story = { render: () => <ThemeDemo /> };
