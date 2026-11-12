@@ -438,11 +438,11 @@ export function Team({ team }: { team: number }) {
         </div>
       </div>
 
-      <h3 className="dy-sub">In the game</h3>
-      <p className="dy-dim dy-small">The {roster.length} players on the team's roster in Bill Walsh '95.</p>
+      <h3 className="dy-sub">Active Roster</h3>
+      <p className="dy-dim dy-small">The {roster.length} players in Bill Walsh '95 this season.</p>
       <RosterTable rows={roster.map((x) => ({ ...x, ovr: x.bw ? playerOvr(x.def.slot, x.bw) : null }))} />
-      <h3 className="dy-sub">Bench</h3>
-      <p className="dy-dim dy-small">{bench.length + reserves.length} players who aren't in the game this season. Each backs up a slot and can move up when it opens.</p>
+      <h3 className="dy-sub">Backups</h3>
+      <p className="dy-dim dy-small">{bench.length + reserves.length} players who aren't on the Active Roster this season. Each backs up a spot and can move up when it opens.</p>
       <RosterTable rows={[
         ...bench.map((x) => ({ ...x, ovr: x.bw ? playerOvr(x.def.slot, x.bw) : null })),
         ...reserves.map((p) => ({ p, label: p.pos, ovr: null })),
@@ -505,7 +505,7 @@ export function Player({ id }: { id: number }) {
           <h2>{playerName(p)}</h2>
           <p>
             <span>#{p.jersey} {shownSlots.length ? shownSlots.map((x) => rated(x).label).join(', ') : p.pos}</span>
-            {team !== null && <span className="dy-status">{bwSlots.length ? 'In the game' : onBench ? `Bench (backs up ${shownSlots.map((x) => rated(x).label).join(', ')})` : 'Bench'}</span>}
+            {team !== null && <span className="dy-status">{bwSlots.length ? 'Active Roster' : onBench ? `Backup (${shownSlots.map((x) => rated(x).label).join(', ')})` : 'Backup'}</span>}
             <span>{p.cls}</span>
             <span>{heightText(p.heightIn)}, {p.weight} lb</span>
             {team !== null && <a href={href(`team/${team}`)}>{d.teams[team].school}</a>}
@@ -583,7 +583,7 @@ function BwRatings({ team, slot, name, bench = false }: { team: number; slot: nu
 
   return (
     <div className="dy-bw">
-      <p className="dy-dim">{bench ? `${d.teams[team].school}'s backup ${b.label}, not in the game this season: his ratings if he played, ranked against all ${n} ${who} in the game.` : `${d.teams[team].school}'s ${b.label}, ranked among all ${n} ${who}.`}</p>
+      <p className="dy-dim">{bench ? `${d.teams[team].school}'s backup ${b.label}, not on the Active Roster this season: his ratings if he played, ranked against all ${n} active ${who}.` : `${d.teams[team].school}'s ${b.label}, ranked among all ${n} ${who}.`}</p>
       <div className="dy-bw-grid">
         <figure className="dy-shape">
           <svg viewBox="0 0 300 250" role="img" aria-label={`${name}'s ratings against the average ${one}`}>

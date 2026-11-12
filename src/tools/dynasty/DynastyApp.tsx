@@ -210,12 +210,12 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
     setUserTeams: (teams) => run('Saving…', async () => {
       if (d) await commit({ ...d, userTeams: teams });
     }),
-    randomBench: () => run('Making a random bench…', async () => {
+    randomBench: () => run('Making random backups…', async () => {
       if (!d) return;
       const rom = await getRom();
-      if (!rom) throw new Error('The bench needs your ROM: choose it to go on.');
+      if (!rom) throw new Error('Making backups needs your ROM: choose it to go on.');
       await commit(randomBench(d, rom, await getTemplates(d)));
-      setNote({ kind: 'ok', text: 'Every team has a new, generated bench. The players in the game are the same.' });
+      setNote({ kind: 'ok', text: 'Every team has new, generated backups. The Active Rosters are the same.' });
     }),
   };
 
@@ -318,19 +318,19 @@ function BenchChoice({ onRandom, busy }: { onRandom: () => void; busy: boolean }
   const [sure, setSure] = useState(false);
   return (
     <>
-      <h3>Bench</h3>
+      <h3>Backups</h3>
       <p>
-        Every team has a bench: one backup for each of its 32 players in the game, who moves up when a spot opens. It starts as the next-best real
-        players (CFB 27). In the first season you can replace it with generated players instead; the players in the game stay the same.
+        Every team has a backup for each of the 32 players on its Active Roster, who moves up when a spot opens. The backups start as the
+        next-best real players (CFB 27). In the first season you can replace them with generated players instead; the Active Rosters stay the same.
       </p>
       <div className="dy-row">
         {sure ? (
           <>
-            <button type="button" className="dy-button" disabled={busy} onClick={() => { onRandom(); setSure(false); }}>Replace every bench</button>
+            <button type="button" className="dy-button" disabled={busy} onClick={() => { onRandom(); setSure(false); }}>Replace every team's backups</button>
             <button type="button" className="dy-button dy-quiet" onClick={() => setSure(false)}>Keep the real players</button>
           </>
         ) : (
-          <button type="button" className="dy-button dy-quiet" onClick={() => setSure(true)}>Generate a random bench</button>
+          <button type="button" className="dy-button dy-quiet" onClick={() => setSure(true)}>Generate random backups</button>
         )}
       </div>
     </>
