@@ -32,3 +32,24 @@ export function recordYear(players: DPlayer[], year: number): DPlayer[] {
     return { ...p, years: [...years, rec].sort((a, b) => a.year - b.year) };
   });
 }
+
+/**
+ * Experience at his current school (user, 2026-11-12), as college rosters show it: letters earned there,
+ * one per completed season on the team ("2L"); "TR" for a transfer who hasn't played a season there yet,
+ * "HS" for a first-year player out of high school. `lastDone` is the last completed season's year. The
+ * starting players' seasons before the dynasty count by their starting class (FR 0 … SR+ 4: CFB 27 has no
+ * earlier history, so they're taken as having been at their school all along). `from`: the school he
+ * transferred from, if he did.
+ */
+export function experienceOf(p: DPlayer, lastDone: number, startYear: number): { letters: number; label: string; from: number | null } {
+  if (p.team === null) return { letters: 0, label: '', from: null };
+  const years = p.years ?? [];
+  let letters = years.filter((y) => y.team === p.team && y.year <= lastDone).length;
+  const first = years[0];
+  if (p.srcId !== undefined && first && first.year === startYear && first.team === p.team) letters += CLASS_INDEX[first.cls];
+  const into = (p.transfers ?? []).filter((x) => x.to === p.team).at(-1);
+  const from = into ? into.from : null;
+  return { letters, label: letters > 0 ? `${letters}L` : from !== null ? 'TR' : 'HS', from };
+}
+
+const CLASS_INDEX: Record<ClassYear, number> = { FR: 0, SO: 1, JR: 2, SR: 3, 'SR+': 4 };

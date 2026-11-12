@@ -19,7 +19,7 @@ import { readRating } from '../src/core/teamRatings';
 import * as Off from '../src/core/dynasty/offseason';
 import * as Rec from '../src/core/dynasty/recruiting';
 import * as Sim from '../src/core/dynasty/sim';
-import { recordRatings } from '../src/core/dynasty/career';
+import { experienceOf, recordRatings } from '../src/core/dynasty/career';
 import { randomBench } from '../src/core/dynasty/bench';
 import { gameText, dynastyAreaProblem, dynastyHeaderValid, dynastyRomId, DYN_AREA, DYN_END, hasDynastyHooks, readStamp } from '../src/core/dynasty/dynastyArea';
 import { simFromOvr } from '../src/core/teamRatings';
@@ -326,6 +326,16 @@ assert.ok(gone.every((p) => !p.years?.some((y) => y.year === y27)), 'players who
 const ex = stayed[0];
 assert.deepEqual(Object.keys(recordRatings(ex.years![0])).length, 10);
 ok(`career records: ${stayed.length} players with ${y26} and ${y27}; file grows ${((dynastyFileText(o5).length - dynastyFileText({ ...o5, players: o5.players.map((p) => ({ ...p, years: undefined })) }).length) / 1e6).toFixed(1)} MB`);
+// Experience at the current school: letters (one per completed season there), TR, HS.
+const so = d1.players.find((p) => p.status === 'active' && p.team !== null && p.cls === 'SO')!;
+assert.equal(experienceOf(so, y26 - 1, d1.startYear).label, '1L', 'a starting SO has lettered once');
+const so27 = o5.players[so.id - 1];
+if (so27.status === 'active' && so27.team === so.team) assert.equal(experienceOf(so27, y26, o5.startYear).label, '2L', 'and twice after 2026');
+const hs = act(o5).find((p) => p.recruit && p.recruit.year === y27)!;
+assert.equal(experienceOf(hs, y26, o5.startYear).label, 'HS');
+const tr = act(o5).find((p) => p.transfers?.some((x) => x.to === p.team));
+if (tr) { const x = experienceOf(tr, y26, o5.startYear); assert.ok(x.label === 'TR' && x.from !== null, 'a transfer shows TR and his old school'); }
+ok(`experience: 1L/2L for starting players, HS for recruits${tr ? ', TR for transfers' : ''}`);
 const walkons = o5.players.filter((p) => p.recruit?.stars === 0);
 const diamonds = walkons.filter((p) => (p.pot ?? 0) >= Off.DIAMOND_POT[0]);
 assert.ok(diamonds.length > 0 && diamonds.length < walkons.length * 0.08, `a few walk-ons are diamonds in the rough (${diamonds.length} of ${walkons.length})`);

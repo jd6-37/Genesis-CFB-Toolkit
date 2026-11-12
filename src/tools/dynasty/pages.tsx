@@ -14,6 +14,9 @@ import type { SaveGame } from '../../core/dynasty/save';
 import type { DPlayer } from '../../core/dynasty/model';
 import { nibbleToRating, nibbleToWeight, type Attr } from '../../core/rosterLayouts';
 import { progressOf } from '../../core/dynasty/ratings';
+import { experienceOf } from '../../core/dynasty/career';
+import { seasonDone } from '../../core/dynasty/offseason';
+import type { Dynasty } from '../../core/dynasty/model';
 import { backupLabel, isBackup, lineupLock, moveToSpot, slotKind, slotOfSpot, spotLabel, spotsFor, SPOTS } from '../../core/dynasty/lineup';
 import { playerOvr, roleOfSlot } from '../../core/dynasty/ovr';
 import { Empty, Headshot, StoryArt, TeamLink, TeamMark, href, heightText, hometownText, inkColor, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
@@ -567,6 +570,7 @@ export function Player({ id }: { id: number }) {
   }, [d, v, p]);
   if (!p) return <Empty><p>There's no such player.</p></Empty>;
   const team = p.team;
+  const experience = experienceOf(p, lastDoneYear(d), d.startYear);
   // His roster slots in the ROM this season (a kicker can also be the punter).
   const bwSlots = team === null ? [] : v.season.slots[team].flatMap((id, slot) => (id === p.id && v.season.bw?.[team]?.[slot] ? [slot] : []));
   // Or the slots he backs up on the bench.
@@ -586,11 +590,12 @@ export function Player({ id }: { id: number }) {
             <span>#{p.jersey} {shownSlots.length ? shownSlots.map((x) => (onBench ? backupLabel(x) : rated(x).label)).join(', ') : p.pos}</span>
             {team !== null && <span className="dy-status">{bwSlots.length ? 'Active Roster' : 'Backup'}</span>}
             <span>{p.cls}</span>
+            <Experience p={p} />
             {p.recruit && <span title={`Signed in ${p.recruit.year}`}>{p.recruit.stars ? `${'★'.repeat(p.recruit.stars)} recruit` : 'Walk-on'} ({p.recruit.year})</span>}
             <span>{heightText(p.heightIn)}, {p.weight} lb</span>
             {team !== null && <a href={href(`team/${team}`)}>{d.teams[team].school}</a>}
             {p.hometown && <span>{hometownText(p)}</span>}
-            {(p.transfers ?? []).filter((x) => x.to !== null).map((x) => <span key={`${x.year}-${x.from}`}>Transferred from {d.teams[x.from].school} ({x.year + 1})</span>)}
+            {(p.transfers ?? []).filter((x) => x.to !== null && !(x.to === team && experience.label === 'TR')).map((x) => <span key={`${x.year}-${x.from}`}>Transferred from {d.teams[x.from].school} ({x.year + 1})</span>)}
           </p>
         </div>
         </div>
@@ -826,5 +831,29 @@ export function History() {
         </div>
       </div>
     </section>
+  );
+}
+
+/** The last completed season: the one the offseason follows, else the current one once it's over. */
+function lastDoneYear(d: Dynasty): number {
+  const s = d.seasons[d.seasons.length - 1];
+  if (d.offseason) return d.offseason.year;
+  return seasonDone(d) ? s.year : s.year - 1;
+}
+
+/** Letters at his school ("2L"), "TR (Louisville)" or "HS", with an explanation on tap or hover. */
+function Experience({ p }: { p: DPlayer }) {
+  const { d } = useDyn();
+  const [open, setOpen] = useState(false);
+  if (p.team === null) return null;
+  const x = experienceOf(p, lastDoneYear(d), d.startYear);
+  const school = d.teams[p.team].school;
+  const help = `Experience at ${school}: letters earned, one per season played there (2L = two seasons). TR: transferred in, no season there yet. HS: first season out of high school.`;
+  const text = x.label === 'TR' && x.from !== null ? `TR (${d.teams[x.from].school})` : x.label;
+  return (
+    <span className="dy-exp">
+      <button type="button" className="dy-exp-btn" title={help} aria-expanded={open} onClick={() => setOpen(!open)}>{text}</button>
+      {open && <span className="dy-exp-help" role="note">{help}</span>}
+    </span>
   );
 }
