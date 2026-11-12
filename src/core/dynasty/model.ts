@@ -58,6 +58,8 @@ export interface DPlayer {
   leftYear?: number;
   /** Moves through the transfer portal. */
   transfers?: { year: number; from: number; to: number | null }[];
+  /** His last position change in the lineup editor: the season's year and the position he had. */
+  posChange?: { year: number; from: string };
 }
 
 export interface SaveImport {
@@ -93,6 +95,8 @@ export interface DSeason {
   imports: SaveImport[];
   /** What happened in the offseason before this season (departures, transfers, signings …), for the news. */
   events?: OffseasonEvent[];
+  /** A user changed a team's lineup after the ROM was last written (download it again). */
+  lineupEdited?: boolean;
 }
 
 export type OffseasonEvent =

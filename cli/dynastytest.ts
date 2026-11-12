@@ -18,6 +18,7 @@ import { readRating } from '../src/core/teamRatings';
 import * as Off from '../src/core/dynasty/offseason';
 import * as Rec from '../src/core/dynasty/recruiting';
 import { randomBench } from '../src/core/dynasty/bench';
+import { backupLabel, lineupLock, moveToSpot, SPOTS, spotLabel, spotsFor } from '../src/core/dynasty/lineup';
 import { nextPrestige, tierOfRank } from '../src/core/dynasty/prestige';
 import { openRosterRom, readPlayer, getRating, teamLayout } from '../src/core/rosterRom';
 
@@ -330,5 +331,70 @@ ok('season rosters written to the ROM and read back');
 // The new season doesn't take last season's save.
 assert.throws(() => importSave(o5, srm), /2026 season's save/);
 ok('a new season refuses the last season\'s save');
+
+// ---- the lineup editor
+{
+  // A team whose HBs, FB and first TE play their own positions, and the HB3 too.
+  const pos = (t: number, slot: number, bench = false) => d0.players[(bench ? d0.seasons[0].bench![t][slot] : d0.seasons[0].slots[t][slot])! - 1]?.pos;
+  const T = d0.teams.findIndex((_, t) => pos(t, 1) === 'HB' && pos(t, 2) === 'HB' && pos(t, 1, true) === 'HB' && pos(t, 3) === 'FB' && pos(t, 13) === 'TE');
+  assert.ok(T >= 0);
+  const L = { ...d0, userTeams: [T] };
+  const labels = SPOTS.map(spotLabel);
+  assert.equal(new Set(labels).size, 64);
+  for (const x of ['QB2', 'HB3', 'HB4', 'FB2', 'SE2', 'WR3', 'WR4', 'TE3', 'LT2', 'DT3', 'LOLB2', 'MLB4', 'LCB3', 'RCB4', 'SS2', 'FS3', 'FS4', 'K2', 'P2']) assert.ok(labels.includes(x), x);
+  assert.equal(backupLabel(1), 'HB3');
+  const s = L.seasons[0];
+  const at = (dd: typeof L, spot: number) => (spot >= 32 ? dd.seasons[0].bench![T][spot - 32] : dd.seasons[0].slots[T][spot]);
+  // HB1 and HB2 swap, keeping their ratings.
+  const hb1 = s.slots[T][1]!, hb2 = s.slots[T][2]!;
+  const a1 = moveToSpot(L, T, hb2, 1);
+  assert.equal(at(a1, 1), hb2); assert.equal(at(a1, 2), hb1);
+  assert.deepEqual(a1.seasons[0].bw![T][1]!.steps, s.bw![T][2]!.steps);
+  assert.equal(a1.seasons[0].bw![T][1]!.label, 'HB1');
+  assert.equal(a1.seasons[0].lineupEdited, true);
+  // A backup moves up: HB3 to HB2, the HB2 to HB3.
+  const hb3 = s.bench![T][1]!;
+  const a2 = moveToSpot(a1, T, hb3, 2);
+  assert.equal(at(a2, 2), hb3); assert.equal(at(a2, 33), hb1);
+  assert.deepEqual(a2.seasons[0].bw![T][2]!.steps, s.benchBw![T][1]!.steps);
+  // Other teams are untouched.
+  const o = T === 0 ? 1 : 0;
+  assert.deepEqual(a2.seasons[0].slots[o], s.slots[o]); assert.deepEqual(a2.seasons[0].bw![o], s.bw![o]);
+  // FB to HB1: a position change, rated again for the HB slot; the HB1 goes to FB.
+  const fb = s.slots[T][3]!;
+  const a3 = moveToSpot(a2, T, fb, 1);
+  assert.equal(at(a3, 1), fb); assert.equal(at(a3, 3), hb2);
+  assert.equal(a3.players[fb - 1].pos, 'HB'); assert.deepEqual(a3.players[fb - 1].posChange, { year: s.year, from: 'FB' });
+  assert.equal(a3.players[hb2 - 1].pos, 'FB');
+  assert.equal(a3.seasons[0].bw![T][1]!.group, 'RB');
+  // He can still move around the HBs (and back to FB), but not on to TE this season.
+  const fbNow = a3.players[fb - 1];
+  const ok3 = spotsFor(a3, T, fbNow).map(spotLabel);
+  assert.ok(ok3.includes('HB2') && ok3.includes('HB4') && ok3.includes('FB') && !ok3.includes('TE1'), ok3.join(' '));
+  const a4 = moveToSpot(a3, T, fb, 2);
+  assert.equal(a4.players[fb - 1].pos, 'HB');
+  // A TE can't go straight to HB; a QB has nowhere else to go.
+  const te = s.slots[T][13]!;
+  assert.ok(!spotsFor(L, T, L.players[te - 1]).map(spotLabel).includes('HB1'));
+  assert.throws(() => moveToSpot(L, T, te, 1), /can't play HB1/);
+  assert.deepEqual(spotsFor(L, T, L.players[s.slots[T][0]! - 1]).map(spotLabel), ['QB', 'QB2']);
+  // No CB to S, no DE to DT.
+  assert.ok(!spotsFor(L, T, L.players[s.slots[T][24]! - 1]).map(spotLabel).some((x) => /^(SS|FS)/.test(x)));
+  assert.ok(!spotsFor(L, T, L.players[s.slots[T][16]! - 1]).map(spotLabel).some((x) => /^DT/.test(x)));
+  // Only your teams, and not once the season's results are in.
+  assert.ok(lineupLock(d0, T));
+  assert.throws(() => moveToSpot(d0, T, hb2, 1));
+  const played = importSave(L, srm).dynasty;
+  assert.match(lineupLock(played, T) ?? '', /set for this season/);
+  // The ROM gets the new lineup.
+  const romE = Off.seasonRom(a4, a4.seasons[0], rom);
+  const re = openRosterRom(romE);
+  for (const def of teamLayout(re, T)) {
+    const b = a4.seasons[0].bw![T][def.slot]!;
+    assert.deepEqual(b.attrs.map((x) => getRating(readPlayer(re, T, def.slot), def, x)), b.steps);
+  }
+  assert.deepEqual(readRating(romE, T), a4.seasons[0].teamOvr![T]);
+  ok(`lineup editor: 64 spots (${labels.slice(32, 36).join(', ')} …), swaps, position changes once a season, locks, ROM`);
+}
 
 console.log(`\n${passed} passed`);

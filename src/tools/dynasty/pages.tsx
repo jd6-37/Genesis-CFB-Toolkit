@@ -10,7 +10,8 @@ import { prestigeStars } from '../../core/dynasty/offseason';
 import { MAX_PRESTIGE } from '../../core/dynasty/prestige';
 import type { SaveGame } from '../../core/dynasty/save';
 import type { DPlayer } from '../../core/dynasty/model';
-import { nibbleToRating, nibbleToWeight, rosterLayout } from '../../core/rosterLayouts';
+import { nibbleToRating, nibbleToWeight } from '../../core/rosterLayouts';
+import { backupLabel, isBackup, lineupLock, moveToSpot, slotKind, slotOfSpot, spotLabel, spotsFor, SPOTS } from '../../core/dynasty/lineup';
 import { playerOvr, roleOfSlot } from '../../core/dynasty/ovr';
 import { Empty, StoryArt, TeamLink, TeamMark, href, heightText, hometownText, inkColor, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
 
@@ -320,9 +321,6 @@ function Prestige({ stars }: { stars: number }) {
   );
 }
 
-/** The 138-team edition's 32 roster slots in the game's order (every team plays the 4-3). */
-const SLOT_ORDER = rosterLayout('bw95', false, true);
-
 export function Teams() {
   const { d, v } = useDyn();
   const confs = v.season.confNames.map((name, c) => ({ name, c })).filter(({ c }) => v.season.conf.includes(c));
@@ -347,26 +345,27 @@ export function Teams() {
 }
 
 export function Team({ team }: { team: number }) {
-  const { d, v } = useDyn();
+  const { d, v, downloadRom } = useDyn();
   const lines = useMemo(() => playerLines(v).filter((l) => l.team === team), [v, team]);
+  const [moveError, setMoveError] = useState<string | null>(null);
   const t = d.teams[team];
   if (!t) return <Empty><p>There's no such team.</p></Empty>;
   const c = mainColor(d, team);
   const r = v.records[team];
-  // The team's 32 in the ROM, in the game's roster order (the kicker can also be the punter).
-  const roster = SLOT_ORDER.flatMap((def) => {
-    const p = playerOf(d, v.season.slots[team][def.slot]);
-    const bw = v.season.bw?.[team]?.[def.slot] ?? null;
-    return p ? [{ def, p, bw, label: bw?.label ?? def.label }] : [];
-  });
-  // The bench: each slot's backup, then anyone else on the team (reserves).
-  const bench = SLOT_ORDER.flatMap((def) => {
-    const p = playerOf(d, v.season.bench?.[team]?.[def.slot] ?? null);
-    const bw = v.season.benchBw?.[team]?.[def.slot] ?? null;
-    return p ? [{ def, p, bw, label: bw?.label ?? def.label }] : [];
-  });
+  // The team's 32 in the ROM, in the game's roster order, then their backups (QB2, HB3 …), then anyone else.
+  const row = (spot: number) => {
+    const slot = slotOfSpot(spot);
+    const p = playerOf(d, isBackup(spot) ? v.season.bench?.[team]?.[slot] ?? null : v.season.slots[team][slot]);
+    const bw = (isBackup(spot) ? v.season.benchBw : v.season.bw)?.[team]?.[slot] ?? null;
+    return p ? [{ p, spot, label: spotLabel(spot), ovr: bw ? playerOvr(slot, bw) : null }] : [];
+  };
+  const roster = SPOTS.filter((x) => !isBackup(x)).flatMap(row);
+  const bench = SPOTS.filter(isBackup).flatMap(row);
   const placed = new Set([...roster, ...bench].map((x) => x.p.id));
   const reserves = d.players.filter((p) => p.team === team && p.status === 'active' && !placed.has(p.id));
+  const mine = d.userTeams.includes(team);
+  const lock = mine ? lineupLock(d, team) : null;
+  const edit = mine && !lock ? { team, onError: setMoveError } : undefined;
   const games = v.games.filter((g) => g.visitor === team || g.home === team);
   const ovr = v.season.teamOvr?.[team];
   const conf = v.season.conf[team];
@@ -440,28 +439,61 @@ export function Team({ team }: { team: number }) {
 
       <h3 className="dy-sub">Active Roster</h3>
       <p className="dy-dim dy-small">The {roster.length} players in Bill Walsh '95 this season.</p>
-      <RosterTable rows={roster.map((x) => ({ ...x, ovr: x.bw ? playerOvr(x.def.slot, x.bw) : null }))} />
+      {edit && <p className="dy-small">Choose a player's position to move him: the player there takes his place. ★ marks the Active Roster spots. A player can change position once a season (HB and FB, FB and TE, DE and OLB, OLB and MLB, K and P).</p>}
+      {lock && mine && <p className="dy-dim dy-small">{lock}</p>}
+      {mine && v.season.lineupEdited && (
+        <p className="dy-note dy-small">
+          You changed the lineup. Download the {v.season.year} ROM again before you start the New Season.{' '}
+          <button type="button" className="dy-button dy-quiet" onClick={() => downloadRom(v.season.year)}>Download the {v.season.year} ROM</button>
+        </p>
+      )}
+      {moveError && <p className="dy-note dy-note-error dy-small" role="alert">{moveError}</p>}
+      <RosterTable rows={roster} edit={edit} />
       <h3 className="dy-sub">Backups</h3>
       <p className="dy-dim dy-small">{bench.length + reserves.length} players who aren't on the Active Roster this season. Each backs up a spot and can move up when it opens.</p>
-      <RosterTable rows={[
-        ...bench.map((x) => ({ ...x, ovr: x.bw ? playerOvr(x.def.slot, x.bw) : null })),
-        ...reserves.map((p) => ({ p, label: p.pos, ovr: null })),
-      ]} bench />
+      <RosterTable rows={[...bench, ...reserves.map((p) => ({ p, spot: null, label: p.pos, ovr: null }))]} edit={edit} />
     </section>
   );
 }
 
-function RosterTable({ rows, bench = false }: { rows: { p: DPlayer; label: string; ovr: number | null }[]; bench?: boolean }) {
+type RosterRow = { p: DPlayer; spot: number | null; label: string; ovr: number | null };
+
+function RosterTable({ rows, edit }: { rows: RosterRow[]; edit?: { team: number; onError: (m: string | null) => void } }) {
+  const { d, commit } = useDyn();
+  const move = (p: DPlayer, spot: number) => {
+    try {
+      edit!.onError(null);
+      void commit(moveToSpot(d, edit!.team, p.id, spot));
+    } catch (e) {
+      edit!.onError((e as Error).message);
+    }
+  };
   return (
     <div className="dy-scroll">
-      <table className={`dy-table dy-roster${bench ? ' dy-bench' : ''}`}>
+      <table className="dy-table dy-roster">
         <thead>
-          <tr><th className="dy-left">{bench ? 'Backs up' : 'Pos'}</th><th>#</th><th className="dy-left">Name</th><th>OVR</th><th>Class</th><th className="dy-wide">Ht</th><th className="dy-wide">Wt</th><th className="dy-left dy-wide">Hometown</th></tr>
+          <tr><th className="dy-left">Pos</th><th>#</th><th className="dy-left">Name</th><th>OVR</th><th>Class</th><th className="dy-wide">Ht</th><th className="dy-wide">Wt</th><th className="dy-left dy-wide">Hometown</th></tr>
         </thead>
         <tbody>
-          {rows.map(({ p, label, ovr }) => (
-            <tr key={`${label}-${p.id}`}>
-              <td className="dy-left dy-strong">{label}</td>
+          {rows.map(({ p, spot, label, ovr }) => (
+            <tr key={`${spot ?? label}-${p.id}`}>
+              <td className="dy-left dy-strong">
+                {edit ? (
+                  <select className="dy-pos" aria-label={`Position of ${playerName(p)}`} value={spot ?? ''} onChange={(e) => move(p, Number(e.target.value))}>
+                    {spot === null && <option value="" disabled>{label}</option>}
+                    {/* By position, Active Roster spots (★) before their backups. */}
+                    {(() => {
+                      const ok = spotsFor(d, edit.team, p);
+                      const kinds = [...new Set(ok.map((x) => slotKind(slotOfSpot(x))))];
+                      return kinds.map((k) => (
+                        <optgroup key={k} label={k}>
+                          {ok.filter((x) => slotKind(slotOfSpot(x)) === k).map((x) => <option key={x} value={x}>{spotLabel(x)}{isBackup(x) ? '' : ' ★'}</option>)}
+                        </optgroup>
+                      ));
+                    })()}
+                  </select>
+                ) : label}
+              </td>
               <td>{p.jersey}</td>
               <td className="dy-left"><a href={href(`player/${p.id}`)}>{playerName(p)}</a></td>
               <td className="dy-strong">{ovr ?? ''}</td>
@@ -504,8 +536,8 @@ export function Player({ id }: { id: number }) {
         <div>
           <h2>{playerName(p)}</h2>
           <p>
-            <span>#{p.jersey} {shownSlots.length ? shownSlots.map((x) => rated(x).label).join(', ') : p.pos}</span>
-            {team !== null && <span className="dy-status">{bwSlots.length ? 'Active Roster' : onBench ? `Backup (${shownSlots.map((x) => rated(x).label).join(', ')})` : 'Backup'}</span>}
+            <span>#{p.jersey} {shownSlots.length ? shownSlots.map((x) => (onBench ? backupLabel(x) : rated(x).label)).join(', ') : p.pos}</span>
+            {team !== null && <span className="dy-status">{bwSlots.length ? 'Active Roster' : 'Backup'}</span>}
             <span>{p.cls}</span>
             <span>{heightText(p.heightIn)}, {p.weight} lb</span>
             {team !== null && <a href={href(`team/${team}`)}>{d.teams[team].school}</a>}
@@ -583,7 +615,7 @@ function BwRatings({ team, slot, name, bench = false }: { team: number; slot: nu
 
   return (
     <div className="dy-bw">
-      <p className="dy-dim">{bench ? `${d.teams[team].school}'s backup ${b.label}, not on the Active Roster this season: his ratings if he played, ranked against all ${n} active ${who}.` : `${d.teams[team].school}'s ${b.label}, ranked among all ${n} ${who}.`}</p>
+      <p className="dy-dim">{bench ? `${d.teams[team].school}'s ${backupLabel(slot)}, not on the Active Roster this season: his ratings if he played, ranked against all ${n} active ${who}.` : `${d.teams[team].school}'s ${b.label}, ranked among all ${n} ${who}.`}</p>
       <div className="dy-bw-grid">
         <figure className="dy-shape">
           <svg viewBox="0 0 300 250" role="img" aria-label={`${name}'s ratings against the average ${one}`}>

@@ -14,6 +14,10 @@ export interface DynCtx {
   art: TeamArt[] | null;
   /** Hash path under #dynasty/, e.g. "team/12". */
   go: (path: string) => void;
+  /** Saves a changed dynasty (the lineup editor). */
+  commit: (next: Dynasty) => Promise<void>;
+  /** Downloads the season's ROM (needs the user's ROM, kept in the browser). */
+  downloadRom: (year: number) => void;
 }
 export const Ctx = createContext<DynCtx | null>(null);
 export const useDyn = () => useContext(Ctx)!;

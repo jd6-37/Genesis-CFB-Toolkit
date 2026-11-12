@@ -302,3 +302,7 @@
 .dy-status { font-weight: 600; }
 .dy-bench td, .dy-bench td a { color: var(--gray); }
 .dy-bench td.dy-strong { color: var(--ink); }
+
+/* Lineup editor: a position menu in the roster's Pos column. */
+.dy-pos { font: inherit; font-weight: 600; padding: 4px 2px; min-height: 32px; border: 1px solid var(--rule, #ccc); border-radius: 4px; background: #fff; color: inherit; }
+.dy-note .dy-button { margin-left: 4px; }

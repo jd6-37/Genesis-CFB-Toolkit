@@ -32,7 +32,7 @@ export const CFB27_COLUMNS = ['Team', 'Name', 'Position', 'Overall', 'Jersey Num
   'Throw Accuracy Short', 'Throw Accuracy Mid', 'Throw Accuracy Deep', 'Break Tackle', 'Trucking', 'Run Block',
   'Pass Block', 'Run Block Power', 'Pass Block Power', 'Power Moves', 'Block Shedding', 'Tackle', 'Hit Power', 'Pursuit',
   'Kick Power', 'Kick Accuracy', 'Lead Block'] as const;
-type Column = (typeof CFB27_COLUMNS)[number];
+export type Column = (typeof CFB27_COLUMNS)[number];
 
 /** Columns only CFB 27 data has (a BW95-style sheet has none of them). */
 const CFB27_ONLY = CFB27_COLUMNS.filter((c) => !['Team', 'Name', 'Position', 'Overall', 'Jersey Number', 'Weight', 'Speed',
@@ -155,7 +155,11 @@ const FALLBACK: Record<string, string[]> = {
 
 /** CFB 27 score behind each BW95 rating (integer sums; only the order matters). See docs/rosters.md. */
 function score(f: Cfb27Fill, attr: Attr): number {
-  const v = f.player.v, g = f.group;
+  return scoreOf(f.group, f.player.v, attr);
+}
+
+/** The CFB 27 score behind a BW95 rating, for a player's values `v` in a slot group. */
+export function scoreOf(g: Group, v: (c: Column) => number, attr: Attr): number {
   switch (attr) {
     case 'Weight': return v('Weight');
     case 'Speed': return v('Speed');

@@ -126,10 +126,11 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
     await refresh();
   }, [refresh]);
 
+  const dlRef = useRef<(year: number) => void>(() => {});
   const v = useMemo(() => (d ? seasonView(d, d.seasons[d.seasons.length - 1]) : null), [d]);
   const ctx: DynCtx | null = useMemo(
-    () => (d && v ? { d, v, art, go: (p: string) => (window.location.hash = href(p)) } : null),
-    [d, v, art],
+    () => (d && v ? { d, v, art, go: (p: string) => (window.location.hash = href(p)), commit, downloadRom: (y: number) => dlRef.current(y) } : null),
+    [d, v, art, commit],
   );
 
   const run = async (what: string, fn: () => Promise<void>) => {
@@ -244,9 +245,11 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       if (!rom) throw new Error('Choose your ROM to write the season into it.');
       const slug = d.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'dynasty';
       download(`${slug}-${year}.md`, seasonRom(d, season, rom) as Uint8Array<ArrayBuffer>, 'application/octet-stream');
+      if (season.lineupEdited) await commit({ ...d, seasons: d.seasons.map((x) => (x === season ? { ...x, lineupEdited: false } : x)) });
       setNote({ kind: 'ok', text: `Downloaded the ${year} ROM. Start a New Season with it in the game.` });
     }),
   };
+  dlRef.current = offActions.downloadRom;
 
   const { page, arg } = route;
   const num = arg !== undefined && /^\d+$/.test(arg) ? Number(arg) : undefined;

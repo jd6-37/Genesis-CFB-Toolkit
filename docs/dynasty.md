@@ -81,6 +81,15 @@ The pages use each school's official primary and secondary colors (`src/core/dyn
 
 IndexedDB database `genesis-cfb-dynasty`: store `dynasties` (the dynasty and when it changed) and store `art` (each team's logo, helmet and wordmark drawn from the user's ROM). The dynasty file is the dynasty as JSON with `app: "genesis-cfb-toolkit"`, `tool: "dynasty"`, `version: 1`; it never carries the art. A file from a newer version is refused.
 
+### Lineups
+
+`src/core/dynasty/lineup.ts` (user, 2026-11-12). A team has 64 spots: the 32 slots (the Active Roster) and each slot's backup, named QB2, HB3 and HB4 (behind HB1 and HB2), FB2, SE2, FL2, WR3, WR4, TE3, TE4, LT2 … RT2, LDE2, DT3, DT4, RDE2, LOLB2, MLB3, MLB4, ROLB2, LCB3, LCB4, RCB3, RCB4, SS2, FS3, FS4, K2, P2 (`backupLabel`: the family's size plus the slot's number). On a user team's page the Pos column is a menu, grouped by position with ★ on the Active Roster spots; choosing a spot swaps the player with the one there (who must be able to play the spot left; an Active Roster spot is never left empty).
+
+- **Which spots:** any spot of his position (by `DPlayer.pos`, plus the kind of spot he already holds), and one related position: HB↔FB, FB↔TE, DE↔OLB, OLB↔MLB, K↔P. No CB/S or DE/DT (user: so nobody signs corners to play safety). A change to another position sets his `pos` (LE/RE, LOLB/ROLB by the spot) and his CFB 27-style OVR, and is recorded in `posChange` with the season: once a season, so a TE needs a season at FB before HB. In that season he can still move between the spots of both positions (back to his old one undoes the change).
+- **Ratings:** within the same role (the conversion's QB, HB, FB, OL, WR, TE, DE, DT, LB, CB, S, K, P) he keeps his steps. In another role he's rated like the backups: per rating, the step of the Active Roster player of that role (all teams) whose CFB 27 score is closest below his (`scoreOf` in `rosterCfb27.ts`).
+- **Team OVRs** move by the change in `starterOvr` of the team's starters (season one's are the ROM's own).
+- **When:** user teams only, outside the offseason, before any imported save has a result (stats belong to slots). `DSeason.lineupEdited` shows a reminder to download the season's ROM again (cleared by the download). The next offseason's `depthChart` sets every lineup again from the players' positions.
+
 ## Prestige
 
 `src/core/dynasty/prestige.ts`. Every school has 1-6 stars per season (`DSeason.prestige`). Scale (user, 2026-11-12): final poll top 10 = 6, top 20 = 5, top 35 = 4, top 70 = 3, top 100 = 2, else 1; when the season ends a school moves at most one star toward the tier it finished in. Start: College Football 27's prestige at launch (0-5 in half stars, `CFB27_PRESTIGE`); schools are ranked by it (ties by team OVR in the ROM) and given the tier of their place, so the first season has 10 six-star, 10 five-star, 15 four-star, 35 three-star, 30 two-star and 38 one-star programs. Recruiting and the portal read prestige as (stars − 1) / 5.
