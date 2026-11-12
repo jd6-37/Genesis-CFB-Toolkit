@@ -1,5 +1,6 @@
 // The Dynasty's reading pages: the news front page, scores, standings, rankings, teams, players,
 // stat leaders and history.
+import { playerHonors, seasonAwards } from '../../core/dynasty/awards';
 import { useEffect, useMemo, useState } from 'react';
 import {
   champions, leaders, playerLines, playerName, RECORD_STATS, seasonRecords, seasonView, standings, statValue, teamHistory, weekName,
@@ -611,6 +612,21 @@ function RosterTable({ rows, edit }: { rows: RosterRow[]; edit?: { team: number;
 
 // ---- players
 
+/** Awards he won (awards.ts), newest first; nothing shows until he has one. */
+function Honors({ id }: { id: number }) {
+  const { d } = useDyn();
+  const list = useMemo(() => playerHonors(d, id, d.seasons.map((s) => seasonAwards(d, s))), [d, id]);
+  if (!list.length) return null;
+  return (
+    <>
+      <h3 className="dy-sub">Honors</h3>
+      <ul className="dy-honors">
+        {list.slice().reverse().map((h, i) => <li key={i}><a href={href(`awards/${h.year}`)}>{h.year}</a> {h.label}</li>)}
+      </ul>
+    </>
+  );
+}
+
 export function Player({ id }: { id: number }) {
   const { d, v } = useDyn();
   const p = d.players[id - 1];
@@ -678,6 +694,7 @@ export function Player({ id }: { id: number }) {
           {v.season.bw ? `He isn't one of ${team !== null ? d.teams[team].school : 'his team'}'s 32 players in Bill Walsh '95 this season, so he has no ratings.` : 'Start this dynasty again to see the ratings (it was made before the app kept them).'}
         </p>
       )}
+      <Honors id={p.id} />
       <Progression p={p} color={team !== null ? inkColor(d, team) : 'var(--ink)'} />
       <CareerStats p={p} seasons={seasons} />
     </section>
@@ -935,9 +952,11 @@ export function History() {
   const [stat, setStat] = useState(0);
   const champs = useMemo(() => champions(d), [d]);
   const recs = useMemo(() => seasonRecords(d, RECORD_STATS[stat]), [d, stat]);
+  const hasAwards = useMemo(() => d.seasons.some((s) => seasonAwards(d, s)), [d]);
   return (
     <section>
       <div className="dy-pagehead"><h2>History</h2><p>Every season of this dynasty since {d.startYear}.</p></div>
+      {hasAwards && <div className="dy-row"><a className="dy-button dy-quiet" href={href('awards')}>Season awards</a></div>}
       <div className="dy-team-cols">
         <div>
           <h3 className="dy-sub">National champions</h3>

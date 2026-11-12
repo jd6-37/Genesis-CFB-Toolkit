@@ -486,3 +486,14 @@
 .dy-prog-years { display: flex; justify-content: space-between; font-size: 11px; color: var(--gray); }
 @media (min-width: 600px) { .dy-prog { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (min-width: 900px) { .dy-prog { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* Season awards (AwardsPage.tsx) and player honors. */
+.dy-heisman { border: 2px solid var(--line, #ccc); border-radius: 8px; padding: 12px 14px; margin: 12px 0; }
+.dy-heisman p { margin: 2px 0; }
+.dy-heisman-title { font-weight: 700; font-size: 14px; color: var(--muted, #666); }
+.dy-heisman-name { font-size: 24px; font-weight: 800; }
+.dy-awards-table td { vertical-align: top; }
+.dy-awards select { margin: 4px 0 8px; }
+.dy-honors { list-style: none; padding: 0; margin: 0 0 12px; }
+.dy-honors li { padding: 3px 0; }
+.dy-honors a { font-weight: 700; margin-right: 6px; }

@@ -14,6 +14,7 @@ import {
   type DynastySummary, type TeamArt,
 } from '../../core/dynasty/storage';
 import { Ctx, href, TeamMark, type DynCtx } from './ui';
+import { Awards } from './AwardsPage';
 import { History, Home, Leaders, Player, Rankings, Scores, Standings, Team, Teams } from './pages';
 import { Offseason, type OffseasonActions } from './OffseasonPage';
 import { seasonRom } from '../../core/dynasty/offseason';
@@ -278,13 +279,14 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       case 'player': return num !== undefined ? <Player id={num} /> : <Home />;
       case 'stats': return <Leaders />;
       case 'history': return <History />;
+      case 'awards': return <Awards arg={arg} />;
       case 'offseason': return <Offseason actions={offActions} busy={busy} />;
       case 'rules': return <Rules actions={offActions} busy={busy} />;
       case 'training': return <TrainingResults arg={arg} />;
       default: return <Home />;
     }
   })();
-  const navPage = page === 'team' || page === 'player' ? (page === 'team' ? 'teams' : 'stats') : page === 'rules' ? 'manage' : page === 'training' ? 'offseason' : page;
+  const navPage = page === 'team' || page === 'player' ? (page === 'team' ? 'teams' : 'stats') : page === 'rules' ? 'manage' : page === 'training' ? 'offseason' : page === 'awards' ? 'history' : page;
   const week = d?.offseason ? 'Offseason' : v && v.save ? (v.currentWeek < v.weeks ? weekName(v, v.currentWeek) : 'Season complete') : d && d.seasons.length > 1 ? 'Preseason' : null;
 
   return (

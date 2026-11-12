@@ -3,13 +3,14 @@
 // The ROM is the 138-team 2026 Season Edition with the dynasty support (Elevated v2.0.1-test9 or later). The
 // save is a Genesis Plus GX (RetroArch) .srm of the 138-team edition with a season started and at least one week
 // played; the test puts its dynasty's mark (the ID block New Season copies) into it.
+import { AWARD_SPOTS, awardsOf, playerHonors, seasonAwards } from '../src/core/dynasty/awards';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { strict as assert } from 'node:assert';
 import { openRom } from '../src/core/romfile';
 import { openSave, readDynastySave, ranksFromPower, STAT_SLOTS } from '../src/core/dynasty/save';
 import { CLASSES, createDynasty, fromBase64, importSave, latestSave, startingClass, weeksDone } from '../src/core/dynasty/model';
-import { champions, leaders, playerLines, seasonRecords, RECORD_STATS, seasonView, standings, teamHistory, weekName } from '../src/core/dynasty/derive';
+import { champions, INDEPENDENT, playerName, leaders, playerLines, seasonRecords, RECORD_STATS, seasonView, standings, teamHistory, weekName } from '../src/core/dynasty/derive';
 import { offseasonStories, stories } from '../src/core/dynasty/news';
 import { rivalryOf } from '../src/core/dynasty/rivalries';
 import { teamArt } from '../src/core/dynasty/art';
@@ -714,6 +715,23 @@ ok('a new season refuses the last season\'s save');
     assert.ok(rec.length > 0 && rec.length <= RECORD_STATS.length && rec.every((x) => x.player && /sets the record/.test(x.headline)), `records broken (${rec.length})`);
     assert.equal(new Set(rec.map((x) => x.headline.replace(/^.* sets /, ''))).size, rec.length, 'one new holder per record');
     ok(`more stories: ${late.length} conference races late in the season, e.g. "${late[0].headline}"; ${rec.length} records broken, e.g. "${rec[0].headline}" (${rec[0].dek})`);
+  }
+  {
+    // Season awards from the stats so far (seasonAwards waits for the season's end).
+    const aw = awardsOf(v2);
+    const [first, second] = aw.allAmerican;
+    const spots = AWARD_SPOTS.reduce((a, x) => a + x.n, 0);
+    assert.ok(first.length === spots && second.length === spots, `full All-American teams (${first.length}, ${second.length} of ${spots})`);
+    assert.equal(new Set([...first, ...second].map((c) => c.player)).size, 2 * spots, 'nobody on both teams');
+    for (const x of AWARD_SPOTS) assert.equal(first.filter((c) => x.roles.includes(c.role)).length, x.n, `${x.label} spots`);
+    const qb = first.find((c) => c.role === 'QB')!;
+    assert.ok(aw.position[0].winner && aw.position[0].winner.player === qb.player, 'best quarterback is the first-team QB');
+    const confs = Object.keys(aw.allConference).map(Number);
+    assert.ok(confs.length > 5 && !confs.includes(INDEPENDENT) && confs.every((c) => aw.allConference[c].every((x) => w2.seasons[0].conf[x.team] === c)), 'All-Conference teams by conference');
+    assert.equal(seasonAwards(w2, w2.seasons[0]), null, 'no awards before the season ends');
+    const h = playerHonors(w2, qb.player, [aw]);
+    assert.ok(h.some((x) => x.label === 'All-American, first team') && h.some((x) => x.label === 'Best quarterback') && h.some((x) => x.label.startsWith('All-')), 'honors on the player page');
+    ok(`awards: Heisman ${aw.heisman[0] ? playerName(w2.players[aw.heisman[0].player - 1]) : '-'}; first-team QB ${playerName(w2.players[qb.player - 1])} (${qb.line}); ${confs.length} All-Conference teams; honors ${h.map((x) => x.label).join(', ')}`);
   }
   ok(`weekly stories: ${potw.map((x) => `"${x.headline}" (${x.dek}; ${x.box!.lines.map((l) => `${l.cat} ${l.cells.map(([k, v]) => `${k} ${v}`).join(' ')}`).join(', ')})`).join('; ')}; kinds ${kinds}`);
 }
