@@ -24,8 +24,9 @@ import CFB_OVR from './cfbOvr.json';
 import { MAX_PRESTIGE, nextPrestige, seasonPrestige } from './prestige';
 import { playerOvr } from './ovr';
 import { readRating, starterOvr } from '../teamRatings';
-import { DYNASTY_EDITION, dynastyAreaProblem, dynastyRomId, writeDynastyArea } from './dynastyArea';
+import { DYNASTY_EDITION, dynastyAreaProblem, dynastyRomId, writeDynastyArea, type DynastyName } from './dynastyArea';
 import { buildRosters, TEAM_SIZE } from './rosters';
+import { blackShare, firstOdds, lastOdds, MAX_FIRST, MAX_LAST, namePool, pickName, skinFor, type NamePool } from './appearance';
 
 /** A team is 64 players: the 32 in the game and one backup for each (rosters.ts). */
 export const ROSTER_LIMIT = TEAM_SIZE;
@@ -277,8 +278,11 @@ export function runPortal(d: Dynasty): Dynasty {
 export interface RecruitTemplates {
   /** Freshmen of each position from the built-in CFB 27 ratings, as rating arrays in attrKeys order, lowest Overall first. */
   byPos: Record<string, { attrs: number[]; ovr: number; heightIn: number; weight: number }[]>;
-  firstNames: string[];
-  lastNames: string[];
+  /** Names of the CFB 27 players (short enough for the game), weighted by how often and for whom they occur. */
+  firstNames: NamePool;
+  lastNames: NamePool;
+  /** Real players' full names, never given to a new player. */
+  realNames: Set<string>;
   towns: { hometown: string; state: string }[];
 }
 
@@ -290,19 +294,21 @@ export function recruitTemplates(d: Pick<Dynasty, 'attrKeys'>, csvText: string):
     ['Position', 'Overall', 'Class', 'First Name', 'Last Name', 'Hometown', 'Home State', 'Height (in)', 'Weight'].map(H);
   const ks = d.attrKeys.map(H);
   const byPos: RecruitTemplates['byPos'] = {};
-  const first = new Set<string>(), last = new Set<string>();
+  const first = new Map<string, number>(), last = new Map<string, number>(), real = new Set<string>();
   const towns: RecruitTemplates['towns'] = [];
   for (const row of sheet.rows) {
     const pos = row[cPos].trim().replace(/^LEDG$/, 'LE').replace(/^REDG$/, 'RE');
-    if (row[cFirst]?.trim()) first.add(row[cFirst].trim());
-    if (row[cLast]?.trim()) last.add(row[cLast].trim());
+    const f = row[cFirst]?.trim() ?? '', l = row[cLast]?.trim() ?? '';
+    if (f) first.set(f, (first.get(f) ?? 0) + 1);
+    if (l) last.set(l, (last.get(l) ?? 0) + 1);
+    if (f && l) real.add(`${f} ${l}`);
     // Hometowns in the US (CFB 27 writes "Non-US" as the state of the others).
     if (row[cTown]?.trim() && row[cState]?.trim() && row[cState].trim() !== 'Non-US') towns.push({ hometown: row[cTown].trim(), state: row[cState].trim() });
     if (!/^freshman$/i.test(row[cCls]?.trim() ?? '')) continue;
     (byPos[pos] ??= []).push({ attrs: ks.map((k) => Number(row[k]) || 0), ovr: Number(row[cOvr]) || 0, heightIn: Number(row[cH]) || 72, weight: Number(row[cW]) || 200 });
   }
   for (const list of Object.values(byPos)) list.sort((a, b) => a.ovr - b.ovr);
-  return { byPos, firstNames: [...first].sort(), lastNames: [...last].sort(), towns };
+  return { byPos, firstNames: namePool(first, firstOdds, MAX_FIRST), lastNames: namePool(last, lastOdds, MAX_LAST), realNames: real, towns };
 }
 
 /** Where in the freshmen of a position a recruit of each star rating comes from (Overall percentile). */
@@ -328,10 +334,17 @@ export function makeRecruit(d: Dynasty, tpl: RecruitTemplates, r: Rand, id: numb
   const ovr = cfbOvr(d, pos, attrs);
   const [plo, phi] = STAR_POT[stars];
   const town = pick(r, tpl.towns);
+  // White or Black by the position's share; names that fit, never a real player's full name.
+  const black = r() < blackShare(pos);
+  let first = '', last = '';
+  for (let k = 0; k < 20 && (!first || tpl.realNames.has(`${first} ${last}`)); k++) {
+    first = pickName(tpl.firstNames, black, r);
+    last = pickName(tpl.lastNames, black, r);
+  }
   return {
-    id, first: pick(r, tpl.firstNames), last: pick(r, tpl.lastNames), pos, team, cls: 'FR', jersey: 0,
+    id, first, last, pos, team, cls: 'FR', jersey: 0,
     heightIn: clamp(Math.round(t.heightIn + gauss(r)), 64, 82), weight: clamp(Math.round(t.weight + 6 * gauss(r)), 150, 380),
-    hometown: town.hometown, state: town.state, ovr, attrs, skin: Math.floor(r() * 5), status: 'active',
+    hometown: town.hometown, state: town.state, ovr, attrs, skin: skinFor(black, r), status: 'active',
     pot: clamp(Math.round(between(r, plo, phi)), ovr + 3, 99), recruit: { stars, year },
   };
 }
@@ -574,14 +587,18 @@ export function seasonRom(d: Dynasty, season: DSeason, rom: Uint8Array, now = Da
   if (problem) throw new Error(problem);
   const records: Uint8Array[] = [];
   const ovr: { off: number; def: number }[] = [];
+  const names: (DynastyName | null)[][] = [];
   for (let t = 0; t < d.teams.length; t++) {
     const rec = new Uint8Array(128);
+    const teamNames: (DynastyName | null)[] = new Array(32).fill(null);
     for (const def of teamLayout(out, t)) {
       const p = readPlayer(out, t, def.slot);
       const id = season.slots[t][def.slot];
       const b = season.bw?.[t]?.[def.slot];
       if (id && b) {
-        p.numberByte = jerseyByte(d.players[id - 1].jersey);
+        const pl = d.players[id - 1];
+        teamNames[def.slot] = { cls: CLASSES.indexOf(pl.cls), first: pl.first, last: pl.last };
+        p.numberByte = jerseyByte(pl.jersey);
         for (const attr of GROUP_ATTRS[def.group]) {
           const i = b.attrs.indexOf(attr);
           if (i >= 0) setRating(p, def, attr, b.steps[i]);
@@ -591,12 +608,14 @@ export function seasonRom(d: Dynasty, season: DSeason, rom: Uint8Array, now = Da
       rec.set([p.numberByte & 255, (r[0] << 4) | r[1], (r[2] << 4) | r[3], (r[4] << 4) | r[5]], 4 * def.slot);
     }
     records.push(rec);
+    names.push(teamNames);
     ovr.push(season.teamOvr?.[t] ?? readRating(out.data, t));
   }
   writeDynastyArea(out.data, {
     stamp: { dynasty: dynastyRomId(d.id), season: season.index + 1, rosterVersion: season.rosterVersion ?? 1, time: Math.floor(now / 1000) },
     records,
     ovr,
+    names,
   });
   fixChecksums(out.data, out.game);
   return out.data;

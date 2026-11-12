@@ -13,6 +13,7 @@ import { ratingProblems, readRating, type TeamRating } from '../teamRatings';
 import { readDynastySave, type DynastySave } from './save';
 import { startingPrestige } from './prestige';
 import { buildRosters } from './rosters';
+import { assignBlack, skinFor } from './appearance';
 import { DYNASTY_EDITION, dynastyRomId, hasDynastyHooks, readStamp } from './dynastyArea';
 
 export const DYNASTY_FILE = { app: 'genesis-cfb-toolkit', tool: 'dynasty', version: 1 } as const;
@@ -46,7 +47,7 @@ export interface DPlayer {
   ovr: number;
   /** Values in the order of Dynasty.attrKeys (0-99). */
   attrs: number[];
-  /** Skin tone 0-4, for the app's portraits only (the game uses one tone). */
+  /** Skin tone 0-3 (SKIN_TONES in appearance.ts: 0-1 White players, 2-3 Black players), for the app's portraits only (the game uses one tone). */
   skin: number;
   status: 'active' | 'graduated' | 'pro' | 'transferred' | 'cut';
   /** The CFB 27 player ID for the starting players. */
@@ -242,11 +243,13 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
       state: r[cState].trim(),
       ovr: Number(r[cOvr]) || 0,
       attrs: attrKeys.map((_, k) => Number(r[first + k]) || 0),
-      skin: Math.floor(random() * 5),
+      skin: 0, // set below, from the name and position
       status: 'active',
       srcId: Number(r[cId]) || undefined,
     });
   }
+  // Skin tones: each position's share of Black players, given by how the names point (appearance.ts).
+  assignBlack(players, random).forEach((black, i) => { players[i].skin = skinFor(black, random); });
   const ids = (grid: (number | null)[][]) => grid.map((sl) => sl.map((row) => (row === null ? null : idOfRow.get(row) ?? null)));
   const slots = ids(build.slots);
   const bench = ids(build.bench);

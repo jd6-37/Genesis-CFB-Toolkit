@@ -2,7 +2,7 @@
 
 The Dynasty section (`#dynasty`) keeps a multi-season record of the 138-team 2026 Season Edition: the app owns the players, the game plays the games, and the battery save carries each season's results back to the app.
 
-Code: `src/core/dynasty/` (no DOM) and `src/tools/dynasty/` (the pages). Tests: `npm run test:dynasty -- ELEVATED_2026_138_DYNASTY SAVE.srm` (v2.0.1-test8 or later; the test marks the save for its dynasty).
+Code: `src/core/dynasty/` (no DOM) and `src/tools/dynasty/` (the pages). Tests: `npm run test:dynasty -- ELEVATED_2026_138_DYNASTY SAVE.srm` (v2.0.1-test9 or later; the test marks the save for its dynasty).
 
 ## The battery save
 
@@ -94,10 +94,21 @@ IndexedDB database `genesis-cfb-dynasty`: store `dynasties` (the dynasty and whe
 
 `seasonRom` (`offseason.ts`) writes a season's 32 per team (jersey numbers and game ratings, on the 2026 record of each slot) and the team OVRs into a copy of the user's ROM, checksums fixed.
 
-- **Only ROMs with the dynasty support** (Elevated 2026 Season Edition v2.0.1-test8 on: the mark `BW95DYN` + version at `0x2B0000`; `dynastyArea.ts`); older ROMs and saves aren't supported before the first public release (user, 2026-11-12: "things are changing fast and big"). Everything goes into the dynasty area `0x3E0000`-`0x3FFFFF`, which Season mode reads and Exhibition never does. Header: the ID block (`DYN1`, dynasty ID = FNV-1a of the dynasty's app ID, season number = season index + 1, roster version, export time in Unix seconds), format word 1, team count 138, then the addresses of the roster set (`0x3E0100`, 138 × 32 game records), the OVR table (`0x3E4600`, `OVR1` + OFF/DEF bytes) and the sim words (`0x3E4800`, `simFromOvr`). The ID block is written last. The area must be all `0xFF` or hold a valid header (`DYN1`, `0x0001008A` at +0x10); the 2026 data stays as it is. Season one's sets equal the ROM's own rosters and OVRs.
+- **Only ROMs with the dynasty support** (Elevated 2026 Season Edition v2.0.1-test8 on: the mark `BW95DYN` + version at `0x2B0000`; `dynastyArea.ts`); older ROMs and saves aren't supported before the first public release (user, 2026-11-12: "things are changing fast and big"). Everything goes into the dynasty area `0x3E0000`-`0x3FFFFF`, which Season mode reads and Exhibition never does. Header: the ID block (`DYN1`, dynasty ID = FNV-1a of the dynasty's app ID, season number = season index + 1, roster version, export time in Unix seconds), format word 1, team count 138, then the addresses of the roster set (`0x3E0100`, 138 × 32 game records), the OVR table (`0x3E4600`, `OVR1` + OFF/DEF bytes), the sim words (`0x3E4800`, `simFromOvr`) and (+0x20) the names set (`0x3E5000`, `NAM1`: team count, a long per team, then per slot class byte 0-4, first name, NUL, last name, NUL; Team Rosters' names view in v2.0.1-test9 on; season one's set equals the ROM's own 2026 names table at `0x2C0000`). The ID block is written last. The area must be all `0xFF` or hold a valid header (`DYN1`, `0x0001008A` at +0x10); the 2026 data stays as it is. Season one's sets equal the ROM's own rosters and OVRs.
 - **Roster version:** 1, then one more when the lineup changes after the last download (`DSeason.rosterVersion`, lineup editor).
 - **The save stamp:** New Season copies the ID block into the season block's +0x1330. `importSave` only takes stamped saves: another dynasty's or season's are refused (this also refuses last season's save in a new season), and an older roster version than the season's gives a warning (the season was started before the last lineup change).
 - The Manage page has a Download button for the current season's ROM (the first season's too, so its save gets the stamp); the Offseason page has one for the next season; the lineup editor reminds the user to download again.
+
+## Names and skin tones
+
+`appearance.ts` (user, 2026-11-12). Players are White or Black in the app; that decides the skin tone and, for generated players, which names fit together. Nothing of it goes into the ROM (the game has one skin tone); the tones are for the app's portraits.
+
+- **Share by position** (`BLACK_SHARE`, the user's numbers): QB 45%, HB 95.5, FB 47, WR 81.1, TE 35.4, LT 48.8, LG 49.5, C 34.3, RG 47.9, RT 48.7, LE 75.9, RE 70, DT 73.5, LOLB 75.1, MLB 69.6, ROLB 73.4, CB 98.2, FS 89.6, SS 89.2, K 3.8, P 4.8.
+- **Skin tones** (`SKIN_TONES`, `DPlayer.skin` 0-3): Light and Tan for White players, Brown and Dark for Black players, half and half.
+- **Name odds** (`nameOdds.json`, built by `cli/nameodds.ts`): for every first and last name in the CFB 27 file, how likely it's a Black player's: the US Census 2010 surname table (public domain) and Tzioumis (2018) first names (Harvard Dataverse, CC0), as copied in the `surgeo` package on PyPI. Names they don't have (many modern first names, hyphenated and rare surnames) are estimated from the other half of the names and the positions of the CFB 27 players who have them, pulled toward the average when few do.
+- **Starting players** (`assignBlack`): per position, the share of the position's players, chosen by how their names point plus random noise (a logistic draw), so names lean the choice without fixing it.
+- **Generated players** (`makeRecruit`): White or Black by the position's share, then a first and a last name weighted by how often they appear among CFB 27 players and how well they fit (count × odds, or × 1 − odds); never a real CFB 27 player's full name. Only names the game can show well: first names up to 10 characters, last names up to 12 (`MAX_FIRST`, `MAX_LAST`), in the game's font (A-Z a-z 0-9 ' - . space).
+- **In the ROM** (the season ROM's names set): every name goes through `gameText` (accents dropped, other characters out, at most 23 characters, the room Team Rosters has for a last name).
 
 ## Prestige
 

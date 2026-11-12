@@ -1,6 +1,6 @@
 // Dynasty tests against a real ROM and battery save (bring your own; the ROM may be a .zip):
 //   npx tsx cli/dynastytest.ts ELEVATED_2026_138_DYNASTY SAVE.srm
-// The ROM is the 138-team 2026 Season Edition with the dynasty support (Elevated v2.0.1-test8 or later). The
+// The ROM is the 138-team 2026 Season Edition with the dynasty support (Elevated v2.0.1-test9 or later). The
 // save is a Genesis Plus GX (RetroArch) .srm of the 138-team edition with a season started and at least one week
 // played; the test puts its dynasty's mark (the ID block New Season copies) into it.
 import { readFileSync } from 'node:fs';
@@ -19,8 +19,9 @@ import { readRating } from '../src/core/teamRatings';
 import * as Off from '../src/core/dynasty/offseason';
 import * as Rec from '../src/core/dynasty/recruiting';
 import { randomBench } from '../src/core/dynasty/bench';
-import { dynastyAreaProblem, dynastyHeaderValid, dynastyRomId, DYN_AREA, DYN_END, hasDynastyHooks, readStamp } from '../src/core/dynasty/dynastyArea';
+import { gameText, dynastyAreaProblem, dynastyHeaderValid, dynastyRomId, DYN_AREA, DYN_END, hasDynastyHooks, readStamp } from '../src/core/dynasty/dynastyArea';
 import { simFromOvr } from '../src/core/teamRatings';
+import { blackShare, MAX_FIRST, MAX_LAST, SKIN_TONES } from '../src/core/dynasty/appearance';
 import { backupLabel, lineupLock, moveToSpot, SPOTS, spotLabel, spotsFor } from '../src/core/dynasty/lineup';
 import { nextPrestige, tierOfRank } from '../src/core/dynasty/prestige';
 import { openRosterRom, readPlayer, getRating, jerseyNumber, teamLayout } from '../src/core/rosterRom';
@@ -362,6 +363,35 @@ ok('season rosters written to the dynasty area and read back');
 assert.throws(() => importSave(o5, srm), /the 2026 ROM, and the dynasty is in 2027/);
 ok('a new season refuses the last season\'s save');
 
+// ---- names and skin tones
+{
+  const black = (p: { skin: number }) => p.skin >= 2;
+  assert.ok(d0.players.every((p) => p.skin >= 0 && p.skin <= 3));
+  // Starting players: each position's share, given by name.
+  const by = (ps: typeof d0.players) => {
+    const m = new Map<string, [number, number]>();
+    for (const p of ps) { const [b, n] = m.get(p.pos) ?? [0, 0]; m.set(p.pos, [b + (black(p) ? 1 : 0), n + 1]); }
+    return m;
+  };
+  for (const [pos, [b, n]] of by(d0.players)) assert.ok(Math.abs(b / n - blackShare(pos)) <= 1 / n + 1e-9, `${pos} ${b}/${n}`);
+  // Names that point one way mostly land that way.
+  const named = (n: string) => d0.players.filter((p) => p.last === n);
+  const wash = named('Washington'), okafor = named('Okafor');
+  if (wash.length + okafor.length) assert.ok([...wash, ...okafor].filter(black).length / (wash.length + okafor.length) > 0.7);
+  // Generated players: short names, never a real player's, shares near the position's.
+  const recruits = o5.players.filter((p) => p.recruit);
+  const real = new Set(d0.players.map((p) => `${p.first} ${p.last}`));
+  assert.ok(recruits.length > 1000);
+  assert.ok(recruits.every((p) => p.first.length <= MAX_FIRST && p.last.length <= MAX_LAST && /^[A-Za-z0-9'. -]+$/.test(`${p.first} ${p.last}`)));
+  assert.ok(recruits.filter((p) => real.has(`${p.first} ${p.last}`)).length === 0);
+  const rb = by(recruits).get('CB')!, rq = by(recruits).get('QB')!;
+  assert.ok(rb[0] / rb[1] > 0.9 && rq[0] / rq[1] > 0.25 && rq[0] / rq[1] < 0.65, `CB ${rb} QB ${rq}`);
+  const tones = [0, 1, 2, 3].map((t) => recruits.filter((p) => p.skin === t).length);
+  assert.ok(tones.every((x) => x > recruits.length * 0.1), tones.join(' '));
+  const sample = recruits.slice(0, 6).map((p) => `${p.first} ${p.last} (${p.pos}, ${SKIN_TONES[p.skin].label})`);
+  ok(`names and skin tones: shares by position, names lean the tone; ${recruits.length} recruits, e.g. ${sample.join(', ')}`);
+}
+
 // ---- the lineup editor
 {
   // A team whose HBs, FB and first TE play their own positions, and the HB3 too.
@@ -449,6 +479,25 @@ assert.ok(hasDynastyHooks(rom) && dynastyAreaProblem(rom) === null);
     assert.deepEqual([out[ovrT + 4 + 2 * t], out[ovrT + 5 + 2 * t]], [r.off, r.def]);
     assert.deepEqual([(out[sims + 4 * t] << 8) | out[sims + 4 * t + 1], (out[sims + 4 * t + 2] << 8) | out[sims + 4 * t + 3]], [simFromOvr(r.off), simFromOvr(r.def)]);
   }
+  // The names set (Team Rosters' names view, v2.0.1-test9 on): class, first and last name per slot.
+  const nam = u32at(out, DYN_AREA + 0x20);
+  assert.deepEqual([...out.subarray(nam, nam + 4)], [0x4e, 0x41, 0x4d, 0x31]);
+  const readNames = (t: number) => {
+    let a = u32at(out, nam + 8 + 4 * t);
+    const recs: [number, string, string][] = [];
+    const str = () => { let x = ''; while (out[a]) x += String.fromCharCode(out[a++]); a++; return x; };
+    for (let k = 0; k < 32; k++) { const c = out[a++]; recs.push([c, str(), str()]); }
+    return recs;
+  };
+  for (const t of [0, 77, 137]) {
+    readNames(t).forEach(([c, f, l], slot) => {
+      const id = d0.seasons[0].slots[t][slot];
+      if (!id) return;
+      const p = d0.players[id - 1];
+      assert.deepEqual([c, f, l], [CLASSES.indexOf(p.cls), gameText(p.first, 23), gameText(p.last, 23)], `team ${t} slot ${slot}`);
+    });
+  }
+  assert.equal(gameText('José Núñez-O’Brien Jr.', 23), 'Jose Nunez-OBrien Jr.');
   // A lineup change: a new roster version and the new records; written again over the last export.
   const T = d0.teams.findIndex((_, t) => d0.players[d0.seasons[0].slots[t][2]! - 1].pos === 'HB' && d0.players[d0.seasons[0].slots[t][1]! - 1].pos === 'HB');
   const L8 = moveToSpot({ ...d0, userTeams: [T] }, T, d0.seasons[0].slots[T][2]!, 1);
@@ -462,7 +511,7 @@ assert.ok(hasDynastyHooks(rom) && dynastyAreaProblem(rom) === null);
   const noHooks = rom.slice(); noHooks[0x2b0000] = 0xff;
   assert.throws(() => createDynasty(noHooks, csv, { name: 'x', seed: 1 }), /dynasty support/);
   assert.throws(() => Off.seasonRom(d0, d0.seasons[0], noHooks), /dynasty support/);
-  ok('dynasty area: header, ID block, season rosters, OVRs and sim words; 2026 data untouched; lineup changes; busy area and older ROMs refused');
+  ok('dynasty area: header, ID block, season rosters, OVRs, sim words and names; 2026 data untouched; lineup changes; busy area and older ROMs refused');
 }
 
 console.log(`\n${passed} passed`);

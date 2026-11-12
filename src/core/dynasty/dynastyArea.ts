@@ -8,6 +8,9 @@
 //   +0x14 season roster set (long, ROM address): 138 × 32 × 4 bytes, the game's roster records
 //   +0x18 season OVR table (long): "OVR1" + 138 × {OFF, DEF} bytes, like 0x218000
 //   +0x1C season sim words (long): 138 × {offense, defense} words (0-100), like the ratings groups
+//   +0x20 season names set (long, v2.0.1-test9 on; Team Rosters' names view): "NAM1", team count (word), 0
+//         (word), a long per team = address of its 32 records in slot order: class byte (0 FR … 4 SR+,
+//         0xFF none), first name, NUL, last name, NUL (the game's font: A-Z a-z 0-9 ' - . space)
 // Season mode reads the sets when +0 is "DYN1" and the long at +0x10 is 0x0001008A; Exhibition keeps
 // the 2026 data. New Season copies the ID block into the save (the season block's +0x1330), so an
 // imported save says which dynasty and season it belongs to.
@@ -29,7 +32,7 @@ export const DYNASTY_EDITION = "the 138-team 2026 Season Edition with dynasty su
 const ROSTERS = DYN_AREA + 0x100;
 const OVRS = ROSTERS + DYN_TEAMS * 128; // 0x3E4600
 const SIMS = OVRS + 0x200; // 0x3E4800
-const USED_END = SIMS + 4 * DYN_TEAMS;
+const NAMES = DYN_AREA + 0x5000; // 0x3E5000
 
 const u32 = (d: Uint8Array, a: number) => ((d[a] << 24) >>> 0) + (d[a + 1] << 16) + (d[a + 2] << 8) + d[a + 3];
 const u16 = (d: Uint8Array, a: number) => (d[a] << 8) | d[a + 1];
@@ -66,8 +69,42 @@ export function readStamp(b: Uint8Array | null): DynastyStamp | null {
   return { dynasty: u32(b, 4), season: u16(b, 8), rosterVersion: u16(b, 10), time: u32(b, 12) };
 }
 
+export interface DynastyName { cls: number; first: string; last: string }
+
+/** A name in the game's font: accents dropped, other characters out; last names at most 23 (the screen's room). */
+export function gameText(s: string, max: number): string {
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9'. -]/g, '').trim().slice(0, max).trim();
+}
+
+/** The names set ("NAM1") for writing at `base`. */
+export function namesSet(names: (DynastyName | null)[][], base: number): Uint8Array {
+  const body: number[] = [];
+  const ptrs: number[] = [];
+  const head = 8 + 4 * names.length;
+  for (const team of names) {
+    ptrs.push(base + head + body.length);
+    for (let slot = 0; slot < 32; slot++) {
+      const n = team[slot];
+      if (!n) { body.push(0xff, 0, 0); continue; }
+      body.push(n.cls & 0xff);
+      for (const c of gameText(n.first, 23)) body.push(c.charCodeAt(0));
+      body.push(0);
+      for (const c of gameText(n.last, 23)) body.push(c.charCodeAt(0));
+      body.push(0);
+    }
+  }
+  const out = new Uint8Array(head + body.length);
+  out.set([0x4e, 0x41, 0x4d, 0x31], 0); // NAM1
+  put16(out, 4, names.length);
+  ptrs.forEach((a, t) => put32(out, 8 + 4 * t, a));
+  out.set(body, head);
+  return out;
+}
+
 export interface DynastyAreaData {
   stamp: DynastyStamp;
+  /** Per team and slot, the player's class and name for Team Rosters (null = none). */
+  names: (DynastyName | null)[][];
   /** Per team, the 32 roster records (4 bytes each, slot order). */
   records: Uint8Array[];
   ovr: { off: number; def: number }[];
@@ -77,7 +114,10 @@ export interface DynastyAreaData {
 export function writeDynastyArea(d: Uint8Array, data: DynastyAreaData): void {
   const problem = dynastyAreaProblem(d);
   if (problem) throw new Error(problem);
-  d.fill(0xff, DYN_AREA, USED_END);
+  const names = namesSet(data.names, NAMES);
+  if (NAMES + names.length > DYN_END) throw new Error('The names don\'t fit in the dynasty area.');
+  d.fill(0xff, DYN_AREA, DYN_END);
+  d.set(names, NAMES);
   for (let t = 0; t < DYN_TEAMS; t++) d.set(data.records[t].subarray(0, 128), ROSTERS + 128 * t);
   d.set([0x4f, 0x56, 0x52, 0x31], OVRS); // OVR1
   for (let t = 0; t < DYN_TEAMS; t++) {
@@ -92,6 +132,7 @@ export function writeDynastyArea(d: Uint8Array, data: DynastyAreaData): void {
   put32(d, DYN_AREA + 0x14, ROSTERS);
   put32(d, DYN_AREA + 0x18, OVRS);
   put32(d, DYN_AREA + 0x1c, SIMS);
+  put32(d, DYN_AREA + 0x20, NAMES);
   // The ID block last.
   const s = data.stamp;
   put32(d, DYN_AREA + 4, s.dynasty);
