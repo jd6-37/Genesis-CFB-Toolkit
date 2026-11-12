@@ -107,6 +107,17 @@ Layout (user, 2026-11-12; mobile first): the stories, then the Top 25 in the mai
 - **Playoff picture** (`playoffPicture`): the format from the season flags (CFP 12, CFP 24 bit 2, CFP 4 bit 3, BCS 2 bit 4; none without the postseason bit). The game's seeds once set; before that, as the game picks the field: CFP 12 and 24 take the Power 4 conference champions and the best-ranked Group of 6 champion (each conference's leader standing in before the title games), CFP 12 also Notre Dame in the top 12, then the best-ranked teams; seeds by rank. CFP 4 and BCS 2 take the top teams. CFP 24 shows the eight byes and the last four in; all show the first four out.
 - **Heisman watch** (`heismanWatch`): points from the season's stats: passing yards / 20, passing TD × 4, interceptions × −2, rushing and receiving yards / 10, their TDs × 6, plus 2 per team win. Top five.
 
+## Stories
+
+`news.ts` writes the front page's stories from the latest import (user, 2026-11-12, for more variety):
+
+- **Results of the last week:** upsets of ranked teams, Top 25 games, routs, your games, conference titles, the champion; a new No. 1, the unbeaten teams, the playoff field; the national leaders.
+- **Upsets by rating:** up to two wins by a team rated at least 8 points lower (team OVR, offense and defense averaged) that aren't already a ranked upset.
+- **Streaks:** 5-0, 8-0, 10-0 and 12-0 starts; a losing streak of five or more ended; a winning streak of six or more snapped.
+- **Milestones** (since the previous import, any gap): a player passes 2,000/3,000/4,000 passing yards, 20/30/40 TD passes, 1,000/1,500/2,000 rushing yards, 1,000/1,500 receiving yards, 15/20/25 rushing TDs, 10/15 sacks or 6/9 interceptions; at most four, your players first.
+- **Players of the week** (only when the latest import is exactly one week after the one before, with none of that week's results in it): the game keeps season totals only, so the week's stats are the difference between the two imports. Offense: passing yards / 20 + TD × 4 − INT × 2 + rushing and receiving yards / 10 + TD × 6; defense: tackles + sacks × 3 + interceptions × 4. With a longer gap between imports, only the other stories.
+- **Wording:** two or three phrasings per story type, picked by the story (the same story always reads the same).
+
 ## Names and skin tones
 
 `appearance.ts` (user, 2026-11-12). Players are White or Black in the app; that decides the skin tone and, for generated players, which names fit together. Nothing of it goes into the ROM (the game has one skin tone); the tones are for the app's portraits.

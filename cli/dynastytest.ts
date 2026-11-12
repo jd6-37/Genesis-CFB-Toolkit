@@ -363,6 +363,35 @@ ok('season rosters written to the dynasty area and read back');
 assert.throws(() => importSave(o5, srm), /the 2026 ROM, and the dynasty is in 2027/);
 ok('a new season refuses the last season\'s save');
 
+// ---- weekly stories: two imports a week apart give the week's stats (player of the week)
+{
+  // The save before the last week: its results cleared, its stats at 60% (fields the stories use).
+  const lastWeek = Math.max(...save.season!.games.filter((g) => g.vs !== null).map((g) => g.week));
+  const before = srm.slice();
+  const win = before[1] === 0x6f;
+  const at = (o: number) => (win ? o : o >> 1); // window offset → file offset
+  for (const g of save.season!.games) if (g.week === lastWeek) for (const k of [0, 2]) before[at(0xe01 + 2 * (0x200 + 4 * g.index + k))] = 0xff;
+  const scaleWord = (o: number) => { const raw = (before[at(o)] << 8) | before[at(o + 2)]; const v = Math.trunc((((raw << 16) >> 16)) * 0.6) & 0xffff; before[at(o)] = v >> 8; before[at(o + 2)] = v & 255; };
+  const scaleByte = (o: number) => { before[at(o)] = Math.floor(before[at(o)] * 0.6); };
+  for (let t = 0; t < 138; t++) {
+    const base = 0x3951 + 2 * 0xb8 * t, b = (j: number) => base + 2 * j;
+    scaleWord(b(4)); scaleByte(b(6)); scaleByte(b(7));
+    for (let k = 0; k < 4; k++) { scaleWord(b(8 + 8 * k + 2)); scaleByte(b(8 + 8 * k + 7)); }
+    for (let k = 0; k < 9; k++) { scaleWord(b(40 + 8 * k)); scaleWord(b(40 + 8 * k + 2)); scaleByte(b(40 + 8 * k + 7)); }
+    for (let k = 0; k < 15; k++) { scaleWord(b(124 + 4 * k)); scaleByte(b(124 + 4 * k + 2)); scaleByte(b(124 + 4 * k + 3)); }
+  }
+  const w1 = importSave(d0, before).dynasty;
+  const w2 = importSave(w1, srm).dynasty;
+  const st = stories(w2);
+  const potw = st.filter((x) => x.kind === 'potw');
+  assert.equal(potw.length, 2, 'offensive and defensive player of the week');
+  assert.ok(potw.every((x) => / (win over|loss to|tie with) /.test(x.dek) && !/\d{4,}/.test(x.dek)), potw.map((x) => x.dek).join(' | '));
+  // A gap of more than a week (no import in between): no week's stats, the season-total stories only.
+  assert.equal(stories(importSave(d0, srm).dynasty).filter((x) => x.kind === 'potw').length, 0);
+  const kinds = [...new Set(st.map((x) => x.kind))].join(', ');
+  ok(`weekly stories: ${potw.map((x) => `"${x.headline}" (${x.dek})`).join('; ')}; kinds ${kinds}`);
+}
+
 // ---- names and skin tones
 {
   const black = (p: { skin: number }) => p.skin >= 2;
