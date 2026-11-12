@@ -246,6 +246,7 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
               <PlayerList rows={of('walkon').filter((e) => e.team === u).map((e) => ({ p: pl(e.player) }))} />
               <p className="dy-small dy-dim">Most improved in offseason training</p>
               <PlayerList rows={st.growth.filter((g) => pl(g.player).team === u).sort((a, b) => b.to - b.from - (a.to - a.from)).slice(0, 5).map((g) => ({ p: pl(g.player), extra: `${g.from} → ${g.to}` }))} />
+              <p className="dy-small"><a href={href(`training/${u}-${st.year + 1}`)}>All training results</a></p>
             </div>
           ))}
           <p>

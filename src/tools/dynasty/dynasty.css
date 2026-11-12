@@ -419,3 +419,24 @@
   .dy-training-row { grid-template-columns: 11em 1fr 2.5em; }
   .dy-training-row span { grid-column: auto; }
 }
+
+/* Training results (phones first: one card per player; wide: three columns) */
+.dy-train-pick { display: flex; flex-wrap: wrap; gap: 10px 16px; margin: 8px 0 4px; }
+.dy-train-pick label { display: flex; flex-direction: column; gap: 4px; font-weight: 600; }
+.dy-train-pick select { min-width: 12em; font: inherit; padding: 6px 8px; }
+.dy-train-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.dy-train-list > li { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; padding: 10px 0; border-bottom: 1px solid var(--rule); }
+.dy-train-who { display: flex; flex-direction: column; min-width: 0; }
+.dy-train-who a { font-weight: 600; }
+.dy-train-who .dy-dim { font-size: 0.85em; }
+.dy-train-ovr { display: flex; flex-direction: column; align-items: flex-end; font-variant-numeric: tabular-nums; }
+.dy-train-up { color: #1b6e2f; font-weight: 700; }
+.dy-train-down { color: #7d1a14; font-weight: 700; }
+.dy-train-chips { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; list-style: none; margin: 0; padding: 0; }
+.dy-train-chips li { font-size: 0.8em; padding: 2px 6px; border-radius: 3px; background: #e6f4ea; color: #1b4d27; font-variant-numeric: tabular-nums; }
+.dy-train-chips li.dy-train-chip-down { background: #fdecea; color: #7d1a14; }
+@media (min-width: 760px) {
+  .dy-train-list > li { grid-template-columns: 16em 7em 1fr; align-items: center; }
+  .dy-train-ovr { align-items: flex-start; flex-direction: row; gap: 8px; }
+  .dy-train-chips { grid-column: auto; }
+}

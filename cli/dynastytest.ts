@@ -22,7 +22,7 @@ import * as Sim from '../src/core/dynasty/sim';
 import { DEFAULT_RULES as RD, readRulesFile, rulesFileText, rulesOf, setRules } from '../src/core/dynasty/rules';
 import { academicsOf, CFB27_ACADEMICS } from '../src/core/dynasty/academics';
 import { SCHOOL_STATE, stateCode } from '../src/core/dynasty/schoolStates';
-import { experienceOf, recordRatings } from '../src/core/dynasty/career';
+import { experienceOf, recordRatings, trainingResults, trainingYears } from '../src/core/dynasty/career';
 import { randomBench } from '../src/core/dynasty/bench';
 import { gameText, dynastyAreaProblem, dynastyHeaderValid, dynastyRomId, DYN_AREA, DYN_END, hasDynastyHooks, readStamp } from '../src/core/dynasty/dynastyArea';
 import { simFromOvr } from '../src/core/teamRatings';
@@ -556,6 +556,19 @@ assert.equal(g2.offseason!.recruiting!.week, RD.weeks);
 assert.equal(g2.offseason!.step, 'recruiting', 'signing day stays a step');
 const g3 = Sim.simCuts(Rec.finishRecruiting(g2, tpl), tpl);
 assert.equal(g3.offseason!.step, 'ready');
+{
+  // Training results: the offseason at its last step, then the same rows once the season is set up.
+  const y = g3.offseason!.year + 1;
+  assert.deepEqual(trainingYears(g3), [y]);
+  const tr = trainingResults(g3, user, y);
+  const gainOf = (x: (typeof tr)[number]) => x.ovr - x.before.ovr;
+  assert.ok(tr.length > 20 && tr.every((x, i) => i === 0 || gainOf(tr[i - 1]) >= gainOf(x)), 'most improved first');
+  assert.ok(tr.every((x) => x.player.recruit?.year !== y), 'no new signees');
+  const fin = Off.finishOffseason(g3);
+  const tr2 = trainingResults(fin, user, y);
+  assert.deepEqual(tr2.map((x) => [x.player.id, x.ovr]), tr.map((x) => [x.player.id, x.ovr]), 'the same after the season starts');
+  ok(`training results: ${tr.length} returning players, best ${tr[0].before.ovr} → ${tr[0].ovr}`);
+}
 assert.ok(g3.offseason!.growth.length > 3000, `players develop with the cuts (${g3.offseason!.growth.length})`);
 assert.ok(g3.offseason!.growth.every((g) => !g3.offseason!.events.some((e) => (e.kind === 'signed' || e.kind === 'walkon') && e.player === g.player)), 'new signees and walk-ons don\'t');
 assert.ok(act(g3).filter((p) => p.team === user).length <= Off.ROSTER_LIMIT, 'user team cut to the limit');

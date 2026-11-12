@@ -14,7 +14,7 @@ import type { SaveGame } from '../../core/dynasty/save';
 import type { DPlayer } from '../../core/dynasty/model';
 import { nibbleToRating, nibbleToWeight, type Attr } from '../../core/rosterLayouts';
 import { progressOf } from '../../core/dynasty/ratings';
-import { experienceOf } from '../../core/dynasty/career';
+import { trainingYears, experienceOf } from '../../core/dynasty/career';
 import { seasonDone } from '../../core/dynasty/offseason';
 import type { Dynasty } from '../../core/dynasty/model';
 import { backupLabel, isBackup, lineupLock, moveToSpot, slotKind, slotOfSpot, spotLabel, spotsFor, SPOTS } from '../../core/dynasty/lineup';
@@ -482,7 +482,10 @@ export function Team({ team }: { team: number }) {
       </div>
 
       <h3 className="dy-sub">Active Roster</h3>
-      <p className="dy-dim dy-small">The {roster.length} players in Bill Walsh '95 this season.</p>
+      <p className="dy-dim dy-small">
+        The {roster.length} players in Bill Walsh '95 this season.
+        {trainingYears(d).length > 0 && <> <a href={href(`training/${team}-${trainingYears(d)[0]}`)}>Training results</a></>}
+      </p>
       {edit && <p className="dy-small">Choose a player's position to move him: the player there takes his place. ★ marks the Active Roster spots. A player can change position once a season (HB and FB, FB and TE, DE and OLB, OLB and MLB, K and P).</p>}
       {lock && mine && <p className="dy-dim dy-small">{lock}</p>}
       {mine && v.season.lineupEdited && (

@@ -1,5 +1,6 @@
 // The Dynasty section (#dynasty): a news site for the user's dynasty, kept in the browser, with its
 // own pages. Spec: docs/dynasty.md.
+import { TrainingResults } from './TrainingPage';
 import { Rules } from './RulesPage';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { openRom } from '../../core/romfile';
@@ -278,10 +279,11 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       case 'history': return <History />;
       case 'offseason': return <Offseason actions={offActions} busy={busy} />;
       case 'rules': return <Rules actions={offActions} busy={busy} />;
+      case 'training': return <TrainingResults arg={arg} />;
       default: return <Home />;
     }
   })();
-  const navPage = page === 'team' || page === 'player' ? (page === 'team' ? 'teams' : 'stats') : page === 'rules' ? 'manage' : page;
+  const navPage = page === 'team' || page === 'player' ? (page === 'team' ? 'teams' : 'stats') : page === 'rules' ? 'manage' : page === 'training' ? 'offseason' : page;
   const week = d?.offseason ? 'Offseason' : v && v.save ? (v.currentWeek < v.weeks ? weekName(v, v.currentWeek) : 'Season complete') : d && d.seasons.length > 1 ? 'Preseason' : null;
 
   return (
