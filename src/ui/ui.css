@@ -4,12 +4,12 @@
   min-height: 40px; padding: var(--sp-2) var(--sp-4);
   border: 2px solid var(--accent); border-radius: var(--radius);
   background: var(--accent); color: var(--on-accent);
-  font: 600 var(--fs-3)/1.2 var(--font-body); text-decoration: none; cursor: pointer;
+  font: 700 var(--fs-4)/1.1 var(--font-display); text-transform: uppercase; letter-spacing: 0.03em; text-decoration: none; cursor: pointer;
 }
 .ui-button:hover { text-decoration: none; filter: brightness(1.12); }
 .ui-button:disabled, .ui-button[aria-disabled='true'] { opacity: 0.5; cursor: default; filter: none; }
 .ui-button:focus-visible, .ui-field select:focus-visible, .ui-field input:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
-.ui-button-quiet { background: transparent; color: var(--text); border-color: var(--rule); }
+.ui-button-quiet { background: transparent; color: var(--text); border-color: var(--rule-strong); }
 .ui-button-quiet:hover { border-color: var(--text); filter: none; }
 .ui-button-danger { background: transparent; color: var(--bad); border-color: var(--bad); }
 
@@ -18,39 +18,46 @@
 .ui-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-3); }
 
 .ui-note {
-  margin: var(--sp-3) 0; padding: var(--sp-3) var(--sp-4); border-radius: var(--radius);
+  margin: var(--sp-3) 0; padding: var(--sp-3) var(--sp-4); border-radius: var(--radius); border-left: var(--rule-w-strong) solid var(--rule-strong);
   background: var(--surface-sunken); color: var(--text); font-size: var(--fs-2);
 }
-.ui-note-ok { background: var(--good-wash); }
-.ui-note-error { background: var(--bad-wash); }
+.ui-note-ok { background: var(--good-wash); border-left-color: var(--good); }
+.ui-note-error { background: var(--bad-wash); border-left-color: var(--bad); }
 
 .ui-pagehead { margin: var(--sp-5) 0 var(--sp-4); display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-2) var(--sp-4); }
-.ui-pagehead h2 { margin: 0; font: 700 var(--fs-6)/1.05 var(--font-display); color: var(--text); }
+.ui-pagehead { border-bottom: var(--rule-w-strong) solid var(--rule-strong); padding-bottom: var(--sp-2); }
+.ui-pagehead h2 { margin: 0; font: 900 var(--fs-7)/1 var(--font-display); text-transform: uppercase; color: var(--text); }
 .ui-pagehead p { margin: 0; flex-basis: 100%; color: var(--text-muted); }
 .ui-pagehead-actions { margin-left: auto; display: flex; flex-wrap: wrap; gap: var(--sp-2); }
-.ui-sub { margin: var(--sp-5) 0 var(--sp-2); font: 700 var(--fs-5)/1.1 var(--font-display); color: var(--text); }
+/* A section heading: a bar with reversed type, like a manual's section tab. */
+.ui-sub {
+  margin: var(--sp-5) 0 var(--sp-2); padding: var(--sp-1) var(--sp-3);
+  background: var(--bar); color: var(--on-bar);
+  font: 900 var(--fs-5)/1.2 var(--font-display); text-transform: uppercase; letter-spacing: 0.04em;
+}
 
-.ui-field { display: grid; gap: var(--sp-1); font-size: var(--fs-2); color: var(--text-muted); }
+.ui-field { display: grid; gap: var(--sp-1); font: 700 var(--fs-2)/1.2 var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
 .ui-field select, .ui-field input {
   min-height: 40px; padding: var(--sp-2) var(--sp-3); max-width: 100%;
-  border: var(--rule-w) solid var(--rule); border-radius: var(--radius);
-  background: var(--field); color: var(--text); font: 400 var(--fs-3)/1.2 var(--font-body);
+  border: 2px solid var(--rule-strong); border-radius: var(--radius);
+  background: var(--field); color: var(--text); font: 400 var(--fs-3)/1.2 var(--font-body); text-transform: none; letter-spacing: 0;
 }
 
 .ui-table-wrap { overflow-x: auto; }
 .ui-table { width: 100%; border-collapse: collapse; font-size: var(--fs-2); color: var(--text); }
 .ui-table th {
-  padding: var(--sp-2); text-align: right; font-weight: 600; font-size: var(--fs-1); color: var(--text-muted);
-  border-bottom: 2px solid var(--rule-strong); white-space: nowrap;
+  padding: var(--sp-2); text-align: right; font: 700 var(--fs-2)/1.2 var(--font-display); text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--text-muted); border-bottom: var(--rule-w-strong) solid var(--rule-strong); white-space: nowrap;
 }
-.ui-table td { padding: var(--sp-2); text-align: right; border-bottom: var(--rule-w) solid var(--rule); }
+.ui-table td { padding: var(--sp-2); text-align: right; border-bottom: var(--rule-w) dotted var(--rule); }
+.ui-table .ui-num { font: 400 var(--fs-5)/1 var(--font-num); }
 .ui-table .ui-left { text-align: left; }
 .ui-table tr.ui-row-mine td { background: var(--highlight); }
 .ui-table-empty { color: var(--text-muted); }
 
-.ui-stat { padding: var(--sp-3) var(--sp-4); border: var(--rule-w) solid var(--rule); border-radius: var(--radius); background: var(--surface-raised); }
-.ui-stat-label { font-size: var(--fs-2); color: var(--text-muted); }
-.ui-stat-value { font: 700 var(--fs-7)/1 var(--font-display); color: var(--text); }
+.ui-stat { padding: var(--sp-3) var(--sp-4); border: 2px solid var(--rule-strong); border-radius: var(--radius); background: var(--surface-raised); }
+.ui-stat-label { font: 700 var(--fs-2)/1.2 var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+.ui-stat-value { font: 400 var(--fs-8)/0.9 var(--font-num); color: var(--text); }
 .ui-stat-note { font-size: var(--fs-1); color: var(--text-muted); }
 
 .ui-empty { margin: var(--sp-7) auto; max-width: 520px; text-align: center; color: var(--text-muted); }
@@ -58,9 +65,9 @@
 .ui-modal-back { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: var(--sp-4); background: var(--scrim); }
 .ui-modal {
   width: 100%; max-width: 480px; max-height: 90vh; overflow: auto; padding: var(--sp-5);
-  border: var(--rule-w) solid var(--rule); border-radius: var(--radius); background: var(--surface-raised); color: var(--text);
+  border: var(--rule-w-strong) solid var(--rule-strong); border-radius: var(--radius); background: var(--surface-raised); color: var(--text);
 }
-.ui-modal h2 { margin: 0 0 var(--sp-3); font: 700 var(--fs-6)/1.05 var(--font-display); }
+.ui-modal h2 { margin: 0 0 var(--sp-3); font: 900 var(--fs-6)/1.05 var(--font-display); text-transform: uppercase; }
 .ui-modal-actions { margin-top: var(--sp-4); }
 
 @media (min-width: 640px) {

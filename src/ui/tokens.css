@@ -7,6 +7,8 @@
 :root {
   --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
   --font-body: 'Barlow', system-ui, sans-serif;
+  /* Pixel numerals: scores, ratings and table figures only (never words). */
+  --font-num: 'Jersey 15', 'Barlow Condensed', sans-serif;
 
   /* Type scale (px): small print, labels, body, lead, then headings. */
   --fs-1: 12px;
@@ -16,6 +18,7 @@
   --fs-5: 22px;
   --fs-6: 32px;
   --fs-7: 44px;
+  --fs-8: 56px;
 
   /* Spacing: 4 px steps up to the 8 px tile, then tiles. */
   --sp-1: 4px;
@@ -26,8 +29,10 @@
   --sp-6: 32px;
   --sp-7: 48px;
 
-  --radius: 4px;
+  /* Shape: square corners, hairline rules between rows, a heavy rule under headings. */
+  --radius: 0;
   --rule-w: 1px;
+  --rule-w-strong: 4px;
 
   /* Breakpoints (mobile first; use these two in min-width queries): 640px tablet, 960px desktop. */
 }
@@ -41,6 +46,9 @@
   --text-muted: #b9b5e8;
   --rule: rgba(242, 240, 255, 0.16);
   --rule-strong: #f2f0ff;
+  --bar: #0f0c45;
+  --on-bar: #f6d84a;
+  --bar-on: #ffffff;
   --accent: #f6d84a;
   --on-accent: #0f0c45;
   --field: #0f0c45;
@@ -53,44 +61,51 @@
   color-scheme: dark;
 }
 
-/* Dynasty, light: white paper, black ink; the only color on a page is a team's. */
+/* Dynasty, light: the booklet from the game box. White paper, black ink and bars; the only color on a page
+   is a team's. Grays are Genesis palette values (channel steps of 36). */
 [data-brand='dynasty'] {
   --surface: #ffffff;
   --surface-raised: #ffffff;
-  --surface-sunken: #f3f3f7;
+  --surface-sunken: #f2f2f2;
   --text: #000000;
-  --text-muted: #5a5870;
-  --rule: #dddce6;
+  --text-muted: #49496d;
+  --rule: #929292;
   --rule-strong: #000000;
-  --accent: #262626;
+  --bar: #000000;
+  --on-bar: #ffffff;
+  --bar-on: #ffdb49;
+  --accent: #242424;
   --on-accent: #ffffff;
   --field: #ffffff;
-  --highlight: #fff8d6;
-  --good: #11703a;
-  --good-wash: #e6f4ea;
-  --bad: #b3261e;
-  --bad-wash: #fdecea;
+  --highlight: #fff6c8;
+  --good: #006d24;
+  --good-wash: #dbf2db;
+  --bad: #b62424;
+  --bad-wash: #ffdbdb;
   --scrim: rgba(0, 0, 0, 0.5);
   color-scheme: light;
 }
 
-/* Dynasty, dark. Provisional values (Genesis palette grays), to be settled with the visual direction. */
+/* Dynasty, dark: the same booklet as a negative. */
 [data-brand='dynasty'][data-theme='dark'] {
   --surface: #242424;
-  --surface-raised: #2f2f2f;
-  --surface-sunken: #1a1a1a;
+  --surface-raised: #363636;
+  --surface-sunken: #121212;
   --text: #ffffff;
   --text-muted: #b6b6b6;
-  --rule: #494949;
+  --rule: #6d6d6d;
   --rule-strong: #ffffff;
+  --bar: #ffffff;
+  --on-bar: #000000;
+  --bar-on: #b62400;
   --accent: #ffffff;
   --on-accent: #000000;
-  --field: #1a1a1a;
+  --field: #121212;
   --highlight: #49491f;
   --good: #6ddb92;
-  --good-wash: #1d3a27;
-  --bad: #ff9a8a;
-  --bad-wash: #45201c;
+  --good-wash: #12361f;
+  --bad: #ff9292;
+  --bad-wash: #491212;
   --scrim: rgba(0, 0, 0, 0.7);
   color-scheme: dark;
 }

@@ -6,6 +6,8 @@ import '@fontsource/barlow/500.css';
 import '@fontsource/barlow/600.css';
 import '@fontsource/barlow-condensed/700.css';
 import '@fontsource/barlow-condensed/800-italic.css';
+import '@fontsource/barlow-condensed/900.css';
+import '@fontsource/jersey-15/400.css';
 import '../src/ui/tokens.css';
 import '../src/ui/ui.css';
 

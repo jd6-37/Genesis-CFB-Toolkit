@@ -4,6 +4,17 @@ One set of tokens and components for both apps in this repo: the **Mod Toolkit**
 
 Owner's goal (2026-11-12): a documented system and component library, so any session, including cheaper models, produces consistent code and a consistent look.
 
+## The look (owner, 2026-11-12)
+
+Picked from three Figma mockups (file "CFB-Toolkit", page "Directions"): **"B's structure with A's pixel numerals."**
+
+- **Dynasty is the booklet from the game box:** white paper, black ink, black bars with reversed uppercase condensed type for section headings, a heavy rule under page titles and table headings, dotted rules between rows, square corners.
+- **Pixel numerals** (Jersey 15, `--font-num`) for figures only: scores, ratings, table numbers. Never for words.
+- **The Mod Toolkit keeps its indigo and yellow** and takes the same components ("yes, toolkit too").
+- **The Mod Toolkit's tab menu is "the subtle retro design"** (mockup A's toolkit frame): Barlow Condensed as today, square corners, 2 px rules and hard offset shadows. No pixel menu text and no chrome selection bar.
+- **Dark mode is for Dynasty only** ("the blue design of the toolkit is enough").
+- **Colors:** prefer Genesis palette values (each channel one of 0, 36, 73, 109, 146, 182, 219, 255) for solid UI colors. It's a guide that keeps the palette small and close to the game's art, not a hard rule.
+
 ## Where things are
 
 | What | Where |
@@ -30,10 +41,10 @@ Run `npm run storybook` to browse the components (port 6006).
 ## Tokens
 
 - **Brand and theme** are set with `data-brand="toolkit|dynasty"` and `data-theme="light|dark"` on a wrapper element. The toolkit has one look today.
-- **Colors:** `--surface`, `--surface-raised`, `--surface-sunken`, `--text`, `--text-muted`, `--rule`, `--rule-strong`, `--accent`, `--on-accent`, `--field`, `--highlight`, `--good`, `--good-wash`, `--bad`, `--bad-wash`, `--scrim`.
-- **Type:** `--font-display` (Barlow Condensed), `--font-body` (Barlow); sizes `--fs-1` (12 px) to `--fs-7` (44 px).
+- **Colors:** `--surface`, `--surface-raised`, `--surface-sunken`, `--text`, `--text-muted`, `--rule`, `--rule-strong`, `--bar`, `--on-bar`, `--bar-on` (section bars and the nav), `--accent`, `--on-accent`, `--field`, `--highlight`, `--good`, `--good-wash`, `--bad`, `--bad-wash`, `--scrim`.
+- **Type:** `--font-display` (Barlow Condensed), `--font-body` (Barlow), `--font-num` (Jersey 15, figures only); sizes `--fs-1` (12 px) to `--fs-8` (56 px).
 - **Spacing:** `--sp-1` (4 px) to `--sp-7` (48 px), built on the Genesis' 8 px tile.
-- **Shape:** `--radius`, `--rule-w`.
+- **Shape:** `--radius` (0), `--rule-w` (1 px), `--rule-w-strong` (4 px).
 
 ## Components
 
@@ -42,9 +53,9 @@ Run `npm run storybook` to browse the components (port 6006).
 | `Button` | An action, or a link that looks like one (`href`). `variant`: `primary` (one per view), `quiet`, `danger`. |
 | `Row` | Buttons or controls side by side; wraps on phones. |
 | `Note` | A message about what happened or what to do next. `kind`: `info`, `ok`, `error`. |
-| `PageHead`, `SubHead` | A page's title with its line of text and controls; a section heading. |
+| `PageHead`, `SubHead` | A page's title with its line of text and controls; a section heading (a bar with reversed type). |
 | `Select` | A labeled dropdown (`hideLabel` keeps the label for screen readers). |
-| `DataTable` | Any table of records: columns, rows, `mine` to mark the user's rows, `empty` text. Scrolls sideways inside itself on phones. |
+| `DataTable` | Any table of records: columns (`left` for text, `num` for figures in pixel numerals), rows, `mine` to mark the user's rows, `empty` text. Scrolls sideways inside itself on phones. |
 | `Stat` | One number with a label (an OVR, a record). |
 | `Empty` | A page with nothing yet: say what to do next. |
 | `Modal` | A window for one decision. Escape or a click outside closes it. |
@@ -53,5 +64,5 @@ Run `npm run storybook` to browse the components (port 6006).
 
 - Built: tokens, the components above, Storybook, the token check, the Chromatic workflow.
 - **Not moved yet:** the apps' pages still use the older stylesheets (`src/styles.css`, `src/tools/dynasty/dynasty.css`) and hand-written markup. `npm run lint:design` prints how many raw colors and font sizes they still have. Pages move onto the components in later pull requests.
-- **Provisional:** the Dynasty dark colors, and the toolkit's good/bad colors. The visual direction (how retro, pixel type, dither) is still to be decided with the owner; mockups go in Figma first.
+- The tokens and components have the chosen look (Storybook shows it). The toolkit's good/bad colors are still provisional.
 - Dark mode toggle: not built. It needs the pages on the tokens first.
