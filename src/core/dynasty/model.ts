@@ -146,6 +146,8 @@ export interface Dynasty {
   offseason?: import('./offseason').OffseasonState;
   /** The offseason rules the user changed from the defaults (rules.ts; user, 2026-11-12). */
   rules?: Partial<import('./rules').OffseasonRules>;
+  /** Each user team's training focus for the next offseason (training.ts; user, 2026-11-12). */
+  training?: Record<number, import('./training').Training>;
 }
 
 // ---- small helpers

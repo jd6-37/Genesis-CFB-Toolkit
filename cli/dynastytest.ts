@@ -33,6 +33,7 @@ import { applyEdits, playersCsv, readPlayersCsv } from '../src/core/dynasty/edit
 import { blackShare, MAX_FIRST, MAX_LAST, SKIN_TONES } from '../src/core/dynasty/appearance';
 import { backupLabel, lineupLock, moveToSpot, SPOTS, spotLabel, spotsFor } from '../src/core/dynasty/lineup';
 import { nextPrestige, tierOfRank } from '../src/core/dynasty/prestige';
+import { EVEN_TRAINING, trainingFactor, trainingOf, trainingProblems } from '../src/core/dynasty/training';
 import { openRosterRom, readPlayer, getRating, jerseyNumber, teamLayout } from '../src/core/rosterRom';
 
 const [romPath, savePath] = process.argv.slice(2);
@@ -511,6 +512,26 @@ if (user !== undefined) {
   const rawC = Object.entries(f.weights).reduce((t, [a, w]) => t + (w / 100) * f.scale * (((gc.ratings as Record<string, number>)[a] ?? 0) - ((capped.ratings as Record<string, number>)[a] ?? 0)), 0);
   assert.equal(gc.ratings.Awareness, 100);
   assert.ok(Math.abs(rawC - 4) < 0.2, `a rating at 100 passes its share to the others (${rawC.toFixed(2)})`);
+  // Training focus: 25 = normal, the cap +20%, 0 −20%; the OVR gain stays the same.
+  assert.equal(trainingFactor(RD, 25), 1);
+  assert.ok(Math.abs(trainingFactor(RD, RD.trainingMax) - (1 + RD.trainingEffect)) < 1e-9 && Math.abs(trainingFactor(RD, 0) - (1 - RD.trainingEffect)) < 1e-9);
+  assert.deepEqual(trainingProblems(RD, EVEN_TRAINING), []);
+  assert.equal(trainingProblems(RD, { strength: 45, speed: 25, technique: 15, knowledge: 15 }).length, 1, 'over the cap');
+  assert.equal(trainingProblems(RD, { strength: 40, speed: 40, technique: 20, knowledge: 0 }).length, 0);
+  assert.equal(trainingProblems(RD, { strength: 40, speed: 40, technique: 10, knowledge: 5 }).length, 1, 'not 100');
+  const fast = Off.develop(hb, 4, half, RD, { strength: 20, speed: 40, technique: 20, knowledge: 20 });
+  const upF = (a: 'Speed' | 'Awareness') => (fast.ratings[a] ?? 0) - (hb.ratings[a] ?? 0);
+  assert.ok(upF('Speed') > up('Speed') && upF('Awareness') < up('Awareness'), 'speed focus: more Speed, less Awareness');
+  const rawF = Object.entries(f.weights).reduce((t, [a, w]) => t + (w / 100) * f.scale * (((fast.ratings as Record<string, number>)[a] ?? 0) - ((hb.ratings as Record<string, number>)[a] ?? 0)), 0);
+  assert.ok(Math.abs(rawF - 4) < 0.2, 'same OVR gain');
+  const cpu = d0.teams.findIndex((_, t) => !d0.userTeams.includes(t));
+  const dt = { ...d0, training: { [cpu]: { strength: 40, speed: 40, technique: 20, knowledge: 0 } } };
+  assert.deepEqual(trainingOf(dt, RD, cpu), EVEN_TRAINING, 'computer teams train evenly');
+  if (d0.userTeams.length) {
+    const u0 = d0.userTeams[0], mine = { strength: 40, speed: 40, technique: 20, knowledge: 0 };
+    assert.deepEqual(trainingOf({ ...d0, training: { [u0]: mine } }, RD, u0), mine);
+  }
+  ok(`training focus: Speed development 40 gives SPD +${upF('Speed').toFixed(1)} (even +${up('Speed').toFixed(1)}), AWR +${upF('Awareness').toFixed(1)} (even +${up('Awareness').toFixed(1)}), same OVR gain`);
   ok(`development paces: an HB's +4 OVR year gives AWR +${up('Awareness').toFixed(1)}, POW +${up('Power').toFixed(1)}, QUI +${up('Quickness').toFixed(1)}, SPD +${up('Speed').toFixed(1)}`);
 }
 

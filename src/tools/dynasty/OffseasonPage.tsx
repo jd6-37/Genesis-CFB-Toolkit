@@ -7,6 +7,7 @@ import {
 } from '../../core/dynasty/offseason';
 import { openRecruiting } from '../../core/dynasty/recruiting';
 import { rulesOf } from '../../core/dynasty/rules';
+import { EVEN_TRAINING, TRAINING_AREAS, TRAINING_POINTS, trainingProblems, type Training } from '../../core/dynasty/training';
 import { simCuts, simOffseason } from '../../core/dynasty/sim';
 import { DEPTH_SLOTS, confirmDepth, projectedDepth, projectedProblems } from '../../core/dynasty/offseason';
 import { slotPosition } from '../../core/dynasty/depth';
@@ -84,6 +85,47 @@ function PlayerList({ rows, note, limit = 8 }: { rows: { p: DPlayer; extra?: str
   );
 }
 
+const trainingBad = (d: Dynasty) => d.userTeams.some((u) => trainingProblems(rulesOf(d), d.training?.[u] ?? EVEN_TRAINING).length > 0);
+
+/**
+ * Training focus (user, 2026-11-12): each of your teams splits 100 points over four areas before the
+ * offseason, which shapes how its players develop. What each area affects is left unsaid here.
+ */
+function TrainingFocus({ actions, busy }: { actions: OffseasonActions; busy: string | null }) {
+  const { d } = useDyn();
+  const R = rulesOf(d);
+  const set = (team: number, t: Training) => actions.commit({ ...d, training: { ...d.training, [team]: t } });
+  return (
+    <section className="dy-training">
+      <h3>Training focus</h3>
+      <p>Where your staff puts its time this offseason: {TRAINING_POINTS} points, at most {R.trainingMax} in one area. Even (25 each) is a balanced program.</p>
+      {d.userTeams.map((u) => {
+        const t = d.training?.[u] ?? EVEN_TRAINING;
+        const total = TRAINING_AREAS.reduce((s, a) => s + t[a.key], 0);
+        const problems = trainingProblems(R, t);
+        return (
+          <div key={u} className="dy-training-team">
+            {d.userTeams.length > 1 && <h4><TeamLink team={u} /></h4>}
+            {TRAINING_AREAS.map((a) => (
+              <label key={a.key} className="dy-training-row">
+                <span>{a.label}</span>
+                <input type="range" min={0} max={R.trainingMax} step={1} value={t[a.key]} disabled={!!busy}
+                  onChange={(e) => set(u, { ...t, [a.key]: Number(e.target.value) })} />
+                <b>{t[a.key]}</b>
+              </label>
+            ))}
+            <div className="dy-training-foot">
+              <span className={total === TRAINING_POINTS ? '' : 'dy-training-off'}>{total} of {TRAINING_POINTS} points</span>
+              <button type="button" className="dy-button dy-quiet" disabled={!!busy} onClick={() => set(u, EVEN_TRAINING)}>Even</button>
+            </div>
+            {problems.length > 0 && <p className="dy-note dy-note-error">{problems.join(' ')}</p>}
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
 export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: string | null }) {
   const { d, v } = useDyn();
   const st = d.offseason;
@@ -112,9 +154,10 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
                 ? `The ${season.year} season is over. The offseason takes your dynasty to ${season.year + 1}: seniors leave, players develop, the transfer portal opens, every team signs a class and cuts to ${ROSTER_LIMIT}.`
                 : `The offseason starts once the ${season.year} season is over: import the save after the last game. ${v.save ? `So far ${v.games.filter((g) => g.vs !== null).length} of ${v.games.length} games are played.` : ''}`}
             </p>
+            {users.length > 0 && <TrainingFocus actions={actions} busy={busy} />}
             <div className="dy-row">
               {done && (
-                <button type="button" className="dy-button" disabled={!!busy} onClick={() => actions.run('Ending the season…', () => actions.commit(startOffseason(d)))}>Start the offseason</button>
+                <button type="button" className="dy-button" disabled={!!busy || trainingBad(d)} onClick={() => actions.run('Ending the season…', () => actions.commit(startOffseason(d)))}>Start the offseason</button>
               )}
               {done && <SimOffseason actions={actions} busy={busy} />}
             </div>

@@ -29,6 +29,7 @@ import { rosterLayout } from '../rosterLayouts';
 import { roleOfSlot } from './ovr';
 import { recordYear } from './career';
 import { DEFAULT_RULES, growthRate, rulesOf, type OffseasonRules } from './rules';
+import { areaOf, EVEN_TRAINING, trainingFactor, trainingOf, type Training } from './training';
 import { ovrOf, roleOfPos, type Ratings } from './ratings';
 import { blackShare, firstOdds, lastOdds, MAX_FIRST, MAX_LAST, namePool, pickName, skinFor, type NamePool } from './appearance';
 
@@ -134,8 +135,12 @@ export function seasonDone(d: Dynasty): boolean {
 
 // ---- 1. departures, classes, development
 
-/** How fast a rating grows compared with the others (Offseason rules, Development). */
-export function paceOf(R: OffseasonRules, a: string): number {
+/** How fast a rating grows compared with the others (Offseason rules, Development), with the team's training focus. */
+export function paceOf(R: OffseasonRules, a: string, t: Training = EVEN_TRAINING): number {
+  const area = areaOf(a);
+  return basePace(R, a) * (area ? trainingFactor(R, t[area]) : 1);
+}
+function basePace(R: OffseasonRules, a: string): number {
   switch (a) {
     case 'Speed': return R.speedPace;
     case 'Quickness': return R.paceQuickness;
@@ -153,16 +158,16 @@ export function paceOf(R: OffseasonRules, a: string): number {
  * rating's pace (Awareness fastest, Speed slowest; user, 2026-11-12: "SPD shouldn't be able to progress
  * as much as AWR"), scaled so his OVR still moves by the gain. Bigger players also put on a few pounds.
  */
-export function develop(p: DPlayer, gain: number, r: Rand, R: OffseasonRules = DEFAULT_RULES): DPlayer {
+export function develop(p: DPlayer, gain: number, r: Rand, R: OffseasonRules = DEFAULT_RULES, t: Training = EVEN_TRAINING): DPlayer {
   const role = roleOfPos(p.pos);
   const f = OVR_FORMULAS[role];
   if (!f || Math.abs(gain) < 0.25) return p;
   const per = gain / f.scale; // the weighted average moves by this many points
   const ws = (Object.entries(f.weights) as [keyof Ratings, number][]).filter(([, w]) => w > 0);
-  const norm = ws.reduce((t, [a, w]) => t + w * paceOf(R, a), 0) / ws.reduce((t, [, w]) => t + w, 0) || 1; // the weighted average pace
+  const norm = ws.reduce((s, [a, w]) => s + w * paceOf(R, a, t), 0) / ws.reduce((s, [, w]) => s + w, 0) || 1; // the weighted average pace
   const ratings: Ratings = { ...p.ratings };
   // Each rating's share, then a rating at 0 or 100 passes what it can't take to the others (by weight × pace).
-  let want = new Map(ws.map(([a]) => [a, per * (paceOf(R, a) / norm) * between(r, 0.6, 1.4)] as const));
+  let want = new Map(ws.map(([a]) => [a, per * (paceOf(R, a, t) / norm) * between(r, 0.6, 1.4)] as const));
   for (let round = 0; round < 4 && want.size; round++) {
     let left = 0;
     const open: [keyof Ratings, number][] = [];
@@ -171,7 +176,7 @@ export function develop(p: DPlayer, gain: number, r: Rand, R: OffseasonRules = D
       ratings[a] = Math.round(to * 10) / 10;
       const w = ws.find(([x]) => x === a)![1];
       left += (step - (to - was)) * w;
-      if (to > 0 && to < 100) open.push([a, w * paceOf(R, a)]);
+      if (to > 0 && to < 100) open.push([a, w * paceOf(R, a, t)]);
     }
     const tot = open.reduce((t, [, x]) => t + x, 0);
     if (Math.abs(left) < 0.01 || !tot) break;
@@ -224,7 +229,7 @@ export function startOffseason(d: Dynasty, opt: { seed?: number; force?: boolean
     const from = p.ovr;
     const room = (p.pot ?? p.ovr) - p.ovr;
     const gain = room * growthRate(R, p.cls) * between(r, R.growthMin, R.growthMax) + (inGame.has(p.id) ? R.starterBonus : 0) + gauss(r);
-    p = develop({ ...p, cls: CLASSES[Math.min(4, CLASSES.indexOf(p.cls) + 1)] }, gain, r, R);
+    p = develop({ ...p, cls: CLASSES[Math.min(4, CLASSES.indexOf(p.cls) + 1)] }, gain, r, R, trainingOf(d, R, team));
     if (p.ovr > (p.pot ?? 99)) p = { ...p, pot: p.ovr };
     st.growth.push({ player: p.id, from, to: p.ovr });
     return p;
