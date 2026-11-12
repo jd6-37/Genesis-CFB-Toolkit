@@ -25,6 +25,7 @@ import { readRating } from '../teamRatings';
 import { DYNASTY_EDITION, dynastyAreaProblem, dynastyRomId, writeDynastyArea, type DynastyName } from './dynastyArea';
 import { TEAM_SIZE } from './rosters';
 import { depthChart, teamDepth } from './depth';
+import { recordYear } from './career';
 import { ovrOf, roleOfPos, type Ratings } from './ratings';
 import { blackShare, firstOdds, lastOdds, MAX_FIRST, MAX_LAST, namePool, pickName, skinFor, type NamePool } from './appearance';
 
@@ -602,7 +603,7 @@ export function finishOffseason(d: Dynasty): Dynasty {
     imports: [],
     events: st.events,
   };
-  return { ...withNumbers, seasons: [...d.seasons, season], offseason: undefined };
+  return { ...withNumbers, players: recordYear(players, season.year), seasons: [...d.seasons, season], offseason: undefined };
 }
 
 /** A signing class ranking (from the events of the offseason in progress or a season's offseason). */

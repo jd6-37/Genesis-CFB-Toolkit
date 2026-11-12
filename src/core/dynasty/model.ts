@@ -16,6 +16,7 @@ import { buildRosters } from './rosters';
 import { ovrOf, ratingsFromSlot, type Ratings } from './ratings';
 import { nibbleToRating } from '../rosterLayouts';
 import { assignBlack, skinFor } from './appearance';
+import { recordYear, type YearRecord } from './career';
 import { DYNASTY_EDITION, dynastyRomId, hasDynastyHooks, readStamp } from './dynastyArea';
 
 /** Version 2 (2026-11-12): players keep the Bill Walsh '95 ratings (ratings.ts); version 1 dynasties (CFB 27 ratings) aren't supported. */
@@ -66,6 +67,8 @@ export interface DPlayer {
   transfers?: { year: number; from: number; to: number | null }[];
   /** His last position change in the lineup editor: the season's year and the position he had. */
   posChange?: { year: number; from: string };
+  /** His ratings each season he was on a team, oldest first (career.ts). */
+  years?: YearRecord[];
 }
 
 export interface SaveImport {
@@ -274,7 +277,7 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
     startYear,
     userTeams: opt.userTeams ?? [],
     teams,
-    players,
+    players: recordYear(players, startYear),
     seasons: [{ index: 0, year: startYear, conf: season.conf, confNames: season.names, slots, bw, bench, benchBw, teamOvr, prestige: startingPrestige(teams.map((t) => t.school), teamOvr), imports: [] }],
   };
 }

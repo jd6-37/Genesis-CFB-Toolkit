@@ -15,6 +15,7 @@ import { olPlusOf, teamDepth } from './depth';
 import { SLOT_DEFS } from './lineup';
 import { blackShare, nameScore } from './appearance';
 import { POSITIONS } from './offseason';
+import { recordYear } from './career';
 
 const DEFS_SLOTS = 32;
 const logit = (p: number) => Math.log(p / (1 - p));
@@ -93,7 +94,8 @@ export function applyEdits(d: Dynasty, edits: Map<number, PlayerEdit>, adds: DPl
   }
   const next: Dynasty = { ...d, players };
   if (d.offseason || (!touched.size && !moved.size)) return next;
-  return { ...next, seasons: [...d.seasons.slice(0, -1), followSeason(next, d.seasons[d.seasons.length - 1], touched, moved)] };
+  const s = d.seasons[d.seasons.length - 1];
+  return { ...next, players: recordYear(players, s.year), seasons: [...d.seasons.slice(0, -1), followSeason(next, s, touched, moved)] };
 }
 
 /** The preseason's lineups and ratings after edits (see applyEdits). */

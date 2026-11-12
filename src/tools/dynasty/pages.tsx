@@ -2,7 +2,7 @@
 // stat leaders and history.
 import { useMemo, useState } from 'react';
 import {
-  champions, leaders, playerLines, playerName, RECORD_STATS, seasonRecords, standings, statValue, teamHistory, weekName,
+  champions, leaders, playerLines, playerName, RECORD_STATS, seasonRecords, seasonView, standings, statValue, teamHistory, weekName,
   INDEPENDENT, type PlayerLine, type StatCategory,
 } from '../../core/dynasty/derive';
 import { offseasonStories, stories } from '../../core/dynasty/news';
@@ -558,7 +558,12 @@ export function Player({ id }: { id: number }) {
   const p = d.players[id - 1];
   const seasons = useMemo(() => {
     if (!p) return [];
-    return [{ year: v.season.year, lines: playerLines(v).filter((l) => l.player === p.id) }];
+    // Every season he has stats in, newest first, with the school he played for (transfers show).
+    return d.seasons.slice().reverse().map((s) => {
+      const sv = s === v.season ? v : seasonView(d, s);
+      const lines = playerLines(sv).filter((l) => l.player === p.id);
+      return { year: s.year, team: lines[0]?.team ?? null, lines };
+    });
   }, [d, v, p]);
   if (!p) return <Empty><p>There's no such player.</p></Empty>;
   const team = p.team;
@@ -585,6 +590,7 @@ export function Player({ id }: { id: number }) {
             <span>{heightText(p.heightIn)}, {p.weight} lb</span>
             {team !== null && <a href={href(`team/${team}`)}>{d.teams[team].school}</a>}
             {p.hometown && <span>{hometownText(p)}</span>}
+            {(p.transfers ?? []).filter((x) => x.to !== null).map((x) => <span key={`${x.year}-${x.from}`}>Transferred from {d.teams[x.from].school} ({x.year + 1})</span>)}
           </p>
         </div>
         </div>
@@ -596,7 +602,7 @@ export function Player({ id }: { id: number }) {
       </header>
       {seasons.map((s) => s.lines.length > 0 && (
         <div key={s.year}>
-          <h3 className="dy-sub">{s.year} season</h3>
+          <h3 className="dy-sub">{s.year} season{s.team !== null && <span className="dy-sub-team"> at <TeamLink team={s.team} rank={false} /></span>}</h3>
           <StatTables lines={s.lines} />
         </div>
       ))}

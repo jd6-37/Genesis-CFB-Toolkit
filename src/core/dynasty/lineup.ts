@@ -13,6 +13,7 @@ import { olPlusOf } from './depth';
 import { bwSlotOf, ovrOf } from './ratings';
 import { playerOvr } from './ovr';
 import { SLOTS } from './rosters';
+import { recordYear } from './career';
 
 /** The 138-team edition's 32 slots in the game's roster order (every team plays the 4-3). */
 export const SLOT_DEFS = rosterLayout('bw95', false, true);
@@ -174,5 +175,5 @@ export function moveToSpot(d: Dynasty, team: number, id: number, spot: number): 
   // A new roster version once the last downloaded ROM is out of date (the save's stamp tells them apart).
   const rosterVersion = s.lineupEdited ? s.rosterVersion ?? 1 : (s.rosterVersion ?? 1) + 1;
   const season: DSeason = { ...s, slots, bench, bw, benchBw, teamOvr, lineupEdited: true, rosterVersion };
-  return { ...next, seasons: [...d.seasons.slice(0, -1), season] };
+  return { ...next, players: recordYear(players, s.year), seasons: [...d.seasons.slice(0, -1), season] };
 }

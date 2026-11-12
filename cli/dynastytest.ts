@@ -19,6 +19,7 @@ import { readRating } from '../src/core/teamRatings';
 import * as Off from '../src/core/dynasty/offseason';
 import * as Rec from '../src/core/dynasty/recruiting';
 import * as Sim from '../src/core/dynasty/sim';
+import { recordRatings } from '../src/core/dynasty/career';
 import { randomBench } from '../src/core/dynasty/bench';
 import { gameText, dynastyAreaProblem, dynastyHeaderValid, dynastyRomId, DYN_AREA, DYN_END, hasDynastyHooks, readStamp } from '../src/core/dynasty/dynastyArea';
 import { simFromOvr } from '../src/core/teamRatings';
@@ -315,6 +316,16 @@ for (const t of o4.teams) {
   for (const g of Off.GROUP_MIN) assert.ok(roster.filter((p) => g.positions.includes(p.pos)).length >= g.min, `${t.school} ${g.name}`);
 }
 const o5 = Off.finishOffseason(o4);
+// Career records: a record per season on a team, ratings as set up for the season.
+const y26 = d1.seasons[0].year, y27 = o5.seasons[1].year;
+assert.ok(d1.players.filter((p) => p.status === 'active' && p.team !== null).every((p) => p.years?.length === 1 && p.years[0].year === y26 && p.years[0].ovr === p.ovr), 'every starting player has his first season');
+const stayed = act(o5).filter((p) => p.years?.some((y) => y.year === y26));
+assert.ok(stayed.length > 1000 && stayed.every((p) => p.years!.at(-1)!.year === y27 && p.years!.at(-1)!.ovr === p.ovr && p.years!.at(-1)!.team === p.team), 'returning players get the new season');
+const gone = o5.players.filter((p) => p.status !== 'active');
+assert.ok(gone.every((p) => !p.years?.some((y) => y.year === y27)), 'players who left keep their old seasons only');
+const ex = stayed[0];
+assert.deepEqual(Object.keys(recordRatings(ex.years![0])).length, 10);
+ok(`career records: ${stayed.length} players with ${y26} and ${y27}; file grows ${((dynastyFileText(o5).length - dynastyFileText({ ...o5, players: o5.players.map((p) => ({ ...p, years: undefined })) }).length) / 1e6).toFixed(1)} MB`);
 const walkons = o5.players.filter((p) => p.recruit?.stars === 0);
 const diamonds = walkons.filter((p) => (p.pot ?? 0) >= Off.DIAMOND_POT[0]);
 assert.ok(diamonds.length > 0 && diamonds.length < walkons.length * 0.08, `a few walk-ons are diamonds in the rough (${diamonds.length} of ${walkons.length})`);
@@ -516,6 +527,8 @@ ok('a new season refuses the last season\'s save');
   const T = 5, qb = d0.seasons[0].slots[T][0]!;
   const e1 = applyEdits(d0, new Map([[qb, { ratings: { Awareness: 100, Quickness: 100 }, first: 'Edited' }]]));
   assert.equal(e1.players[qb - 1].first, 'Edited');
+  assert.equal(e1.players[qb - 1].years!.length, 1);
+  assert.equal(recordRatings(e1.players[qb - 1].years![0]).Awareness, 100, 'a preseason edit updates the season record');
   assert.equal(e1.seasons[0].bw![T][0]!.steps[e1.seasons[0].bw![T][0]!.attrs.indexOf('Awareness')], 15);
   assert.ok(e1.seasons[0].teamOvr![T].off >= d0.seasons[0].teamOvr![T].off && e1.seasons[0].lineupEdited);
   assert.throws(() => applyEdits(importSave(d0, srm).dynasty, new Map([[qb, { first: 'X' }]])), /offseason/);
