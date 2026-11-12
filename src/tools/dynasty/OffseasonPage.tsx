@@ -6,6 +6,7 @@ import {
   seasonDone, startOffseason, ROSTER_LIMIT, type RecruitTemplates,
 } from '../../core/dynasty/offseason';
 import { WEEKS, openRecruiting } from '../../core/dynasty/recruiting';
+import { simCuts, simOffseason } from '../../core/dynasty/sim';
 import { Recruiting } from './RecruitingPage';
 import { playerName } from '../../core/dynasty/derive';
 import { TeamLink, hometownText, href, useDyn } from './ui';
@@ -28,6 +29,30 @@ const STEP_OF = { portal: 0, recruiting: 1, signing: 1, cuts: 2, ready: 3 } as c
 export const getTemplates = async (d: Dynasty): Promise<RecruitTemplates> => recruitTemplates(d);
 
 const stars = (n: number) => (n ? `${n}★` : 'Walk-on');
+
+/**
+ * Sims the rest of the offseason for every team, yours included (it can't be undone once the next season is
+ * set up, so it asks first).
+ */
+export function SimOffseason({ actions, busy }: { actions: OffseasonActions; busy: string | null }) {
+  const { d } = useDyn();
+  const [ask, setAsk] = useState(false);
+  const year = (d.offseason?.year ?? d.seasons[d.seasons.length - 1].year) + 1;
+  const mine = d.userTeams.length === 1 ? d.teams[d.userTeams[0]].school : 'your teams';
+  if (!ask) return <button type="button" className="dy-button dy-quiet" disabled={!!busy} onClick={() => setAsk(true)}>Sim the offseason</button>;
+  return (
+    <div className="dy-sim-ask">
+      <p>The computer plays the rest of the offseason for {mine} as for every other team: it recruits, makes the cuts and sets the depth charts. The {year} season is then ready to download, and this can't be undone.</p>
+      <div className="dy-row">
+        <button type="button" className="dy-button" disabled={!!busy} onClick={() => actions.run('Simming the offseason…', async () => {
+          await actions.commit(simOffseason(d, await getTemplates(d)), `The ${year} season is ready. Download its ROM below.`);
+          setAsk(false);
+        })}>Sim to {year}</button>
+        <button type="button" className="dy-button dy-quiet" onClick={() => setAsk(false)}>Cancel</button>
+      </div>
+    </div>
+  );
+}
 
 function PlayerList({ rows, note, limit = 8 }: { rows: { p: DPlayer; extra?: string }[]; note?: string; limit?: number }) {
   const [all, setAll] = useState(false);
@@ -86,6 +111,7 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
               {done && (
                 <button type="button" className="dy-button" disabled={!!busy} onClick={() => actions.run('Ending the season…', () => actions.commit(startOffseason(d)))}>Start the offseason</button>
               )}
+              {done && <SimOffseason actions={actions} busy={busy} />}
             </div>
           </>
         )}
@@ -131,6 +157,7 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
             <button type="button" className="dy-button" disabled={!!busy} onClick={() => actions.run('Opening recruiting…', async () => actions.commit(openRecruiting(d, await getTemplates(d))))}>Recruit for {WEEKS} weeks</button>
             <button type="button" className="dy-button dy-quiet" disabled={!!busy} onClick={() => actions.run('Running the transfer portal…', () => actions.commit(runPortal(d)))}>Random classes</button>
           </div>
+          <div className="dy-row"><SimOffseason actions={actions} busy={busy} /></div>
         </>
       )}
 
@@ -150,6 +177,7 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
           <h4>Biggest moves</h4>
           <PlayerList rows={of('transfer').filter((e) => e.to !== null).sort((a, b) => b.ovr - a.ovr).slice(0, 10).map((e) => ({ p: pl(e.player), extra: `${d.teams[e.from].school} to ${d.teams[e.to!].school}` }))} />
           <Next busy={busy} label="Signing day" onClick={() => actions.run('Signing the classes…', async () => actions.commit(runSigningDay(d, await getTemplates(d))))} />
+          <div className="dy-row"><SimOffseason actions={actions} busy={busy} /></div>
         </>
       )}
 
@@ -277,6 +305,10 @@ function SigningAndCuts({ actions, busy }: { actions: OffseasonActions; busy: st
           void actions.run('Making the cuts…', async () => actions.commit(applyCuts(d, cuts, await getTemplates(d))));
         }}
       />
+      <div className="dy-row">
+        <button type="button" className="dy-button dy-quiet" disabled={!!busy} onClick={() => actions.run('Making the cuts…', async () => actions.commit(simCuts(d, await getTemplates(d))))}>Sim the cuts</button>
+        <SimOffseason actions={actions} busy={busy} />
+      </div>
     </>
   );
 }

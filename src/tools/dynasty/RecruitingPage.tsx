@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import type { Dynasty } from '../../core/dynasty/model';
 import {
   BOARD_SIZE, MAX_PER_PROSPECT, SCOUT_COST, WEEKLY_POINTS, WEEKS, finishRecruiting, interestRanking, planProblems, reach, recruitingWeek,
-  scoutCost, scoutLevel, scoutProspect, type Prospect, type RecruitingState, type ScoutLevel, type TeamPlan,
+  scoutCost, scoutLevel, scoutProspect, simRecruiting, type Prospect, type RecruitingState, type ScoutLevel, type TeamPlan,
 } from '../../core/dynasty/recruiting';
 import { POSITIONS, POS_TARGET, prestigeStars } from '../../core/dynasty/offseason';
 import { closeness } from '../../core/dynasty/schoolStates';
@@ -11,7 +11,7 @@ import { playerName } from '../../core/dynasty/derive';
 import { GROUP_COLUMNS } from '../../core/rosterLayouts';
 import { GROUP_OF_ROLE, roleOfPos, shownOf } from '../../core/dynasty/ratings';
 import { TeamLink, heightText, hometownText, useDyn } from './ui';
-import { getTemplates, type OffseasonActions } from './OffseasonPage';
+import { SimOffseason, getTemplates, type OffseasonActions } from './OffseasonPage';
 
 const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
 const starText = (n: number) => `${n}★`;
@@ -129,6 +129,12 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
     });
   };
 
+  /** The computer recruits for the user teams for `weeks` weeks (the board isn't used). */
+  const sim = (weeks: number) => void actions.run(weeks === 1 ? `Simming week ${rs.week + 1}…` : 'Simming recruiting…', async () => {
+    await actions.commit(simRecruiting(d, weeks));
+    setPlans((all) => Object.fromEntries(Object.entries(all).map(([u, p]) => [u, { ...p, offers: [] }])));
+  });
+
   const thisWeek = rs.log.filter((l) => l.week === rs.week);
   return (
     <>
@@ -204,6 +210,12 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
           <div className="dy-row dy-next">
             <button type="button" className="dy-button" disabled={!!busy} onClick={runWeek}>Run week {rs.week + 1}</button>
           </div>
+          <div className="dy-row">
+            <button type="button" className="dy-button dy-quiet" disabled={!!busy} onClick={() => sim(1)}>Sim week {rs.week + 1}</button>
+            {rs.week + 1 < WEEKS && <button type="button" className="dy-button dy-quiet" disabled={!!busy} onClick={() => sim(WEEKS)}>Sim the rest of recruiting</button>}
+            <SimOffseason actions={actions} busy={busy} />
+          </div>
+          <p className="dy-small dy-dim">Simming lets the computer recruit for {users.length > 1 ? 'your teams' : d.teams[team].school} that week, as for every other team (your board isn't used).</p>
           <ProspectSearch team={team} onAdd={add} board={new Set(Object.keys(plan.points).map(Number))} full={Object.keys(plan.points).length >= BOARD_SIZE} left={left} onScout={scout} />
         </>
       )}
@@ -211,6 +223,7 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
       {rs.week >= WEEKS && (
         <div className="dy-row dy-next">
           <button type="button" className="dy-button" disabled={!!busy} onClick={() => actions.run('Signing day…', async () => actions.commit(finishRecruiting(d, await getTemplates(d))))}>Signing day</button>
+          <SimOffseason actions={actions} busy={busy} />
         </div>
       )}
     </>

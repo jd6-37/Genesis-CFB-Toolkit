@@ -252,7 +252,7 @@ export function planProblems(plan: TeamPlan, scoutSpent = 0): string[] {
  * One week of recruiting: every team spends its points (CPU teams by their own plan, user teams by
  * theirs), interest grows, prospects commit or flip. Returns the new state (the input is left as it is).
  */
-export function runRecruitingWeek(d: Dynasty, rs0: RecruitingState, userPlans: Record<number, TeamPlan>, seed: number): RecruitingState {
+export function runRecruitingWeek(d: Dynasty, rs0: RecruitingState, userPlans: Record<number, TeamPlan>, seed: number, sim: number[] = []): RecruitingState {
   if (rs0.week >= WEEKS) throw new Error('Recruiting is over: it\'s signing day.');
   for (const [t, p] of Object.entries(userPlans)) {
     const bad = planProblems(p, rs0.scoutSpent?.[Number(t)] ?? 0);
@@ -264,7 +264,11 @@ export function runRecruitingWeek(d: Dynasty, rs0: RecruitingState, userPlans: R
   const byId = new Map(rs.prospects.map((p) => [p.id, p]));
   // Plans: user teams as given, the rest by the computer.
   const plans = new Map<number, TeamPlan>();
-  for (const t of d.teams) plans.set(t.index, d.userTeams.includes(t.index) ? (userPlans[t.index] ?? { points: {}, offers: [] }) : cpuPlan(d, rs, ctx, t.index, r));
+  // Simmed user teams (`sim`) recruit as the computer does.
+  for (const t of d.teams) {
+    const own = d.userTeams.includes(t.index) && !sim.includes(t.index);
+    plans.set(t.index, own ? (userPlans[t.index] ?? { points: {}, offers: [] }) : cpuPlan(d, rs, ctx, t.index, r));
+  }
   for (const [team, plan] of plans) {
     for (const id of plan.offers) {
       const p = byId.get(id);
@@ -387,11 +391,18 @@ export function openRecruiting(d: Dynasty, tpl: RecruitTemplates): Dynasty {
   return { ...d, offseason: { ...st, step: 'recruiting', mode: 'full', recruiting } };
 }
 
-/** One recruiting week with the user teams' plans. */
-export function recruitingWeek(d: Dynasty, userPlans: Record<number, TeamPlan>): Dynasty {
+/** One recruiting week with the user teams' plans; teams in `sim` let the computer recruit for them. */
+export function recruitingWeek(d: Dynasty, userPlans: Record<number, TeamPlan>, sim: number[] = []): Dynasty {
   const st = d.offseason;
   if (!st || st.step !== 'recruiting' || !st.recruiting) throw new Error('It isn\'t recruiting time.');
-  return { ...d, offseason: { ...st, recruiting: runRecruitingWeek(d, st.recruiting, userPlans, st.seed) } };
+  return { ...d, offseason: { ...st, recruiting: runRecruitingWeek(d, st.recruiting, userPlans, st.seed, sim) } };
+}
+
+/** Sims recruiting weeks for every user team (all that are left, or `weeks` of them); signing day stays a step. */
+export function simRecruiting(d: Dynasty, weeks = WEEKS): Dynasty {
+  let x = d;
+  for (let i = 0; i < weeks && x.offseason?.recruiting && x.offseason.recruiting.week < WEEKS; i++) x = recruitingWeek(x, {}, x.userTeams);
+  return x;
 }
 
 /** After the last week: signing day, then the cuts. */

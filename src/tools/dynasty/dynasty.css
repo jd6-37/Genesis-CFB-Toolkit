@@ -294,6 +294,8 @@
 .dy-board-ctl label { display: inline-flex; align-items: center; gap: 6px; }
 .dy-board-ctl input { width: 76px; border: 1px solid #b9b8c8; border-radius: 4px; padding: 6px 8px; }
 .dy-filters select { flex: 1 1 140px; }
+.dy-sim-ask { border: 1px solid #d6d5e0; border-radius: 6px; padding: 12px 14px; margin: 8px 0; }
+.dy-sim-ask p { margin-top: 0; }
 .dy-scout-ratings { display: flex; flex-wrap: wrap; gap: 2px 12px; }
 @media (min-width: 640px) {
   .dy-board li { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }

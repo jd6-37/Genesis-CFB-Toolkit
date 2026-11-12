@@ -18,6 +18,7 @@ import { OVR_FORMULAS, playerOvr, roleOfSlot } from '../src/core/dynasty/ovr';
 import { readRating } from '../src/core/teamRatings';
 import * as Off from '../src/core/dynasty/offseason';
 import * as Rec from '../src/core/dynasty/recruiting';
+import * as Sim from '../src/core/dynasty/sim';
 import { randomBench } from '../src/core/dynasty/bench';
 import { gameText, dynastyAreaProblem, dynastyHeaderValid, dynastyRomId, DYN_AREA, DYN_END, hasDynastyHooks, readStamp } from '../src/core/dynasty/dynastyArea';
 import { simFromOvr } from '../src/core/teamRatings';
@@ -349,6 +350,24 @@ assert.ok(f3.players.filter((p) => rsEnd.prospects.some((q) => q.id === p.id)).e
 const f5 = Off.finishOffseason(Off.applyCuts(f3, {}, tpl));
 assert.equal(f5.seasons[1].slots.flat().filter((x) => x !== null).length, 138 * 32);
 ok(`full recruiting: ${rs0.prospects.length} prospects, ${rsEnd.prospects.filter((p) => p.committed !== null).length} committed in ${Rec.WEEKS} weeks, ${fSigned.length} signed; ${user === undefined ? '' : `${f3.teams[user].school} landed ${targets.filter((t) => rsEnd.prospects.find((p) => p.id === t.id)!.committed === user).length} of its 10 targets`}`);
+
+// Simming for the user teams: a week, the rest of recruiting, the cuts, the whole offseason.
+const g1 = Rec.simRecruiting(f1, 1);
+assert.equal(g1.offseason!.recruiting!.week, 1);
+assert.ok(Object.values(g1.offseason!.recruiting!.prospects).some((p) => p.interest[user] > 0), 'the computer recruited for the user team');
+const g2 = Rec.simRecruiting(g1);
+assert.equal(g2.offseason!.recruiting!.week, Rec.WEEKS);
+assert.equal(g2.offseason!.step, 'recruiting', 'signing day stays a step');
+const g3 = Sim.simCuts(Rec.finishRecruiting(g2, tpl), tpl);
+assert.equal(g3.offseason!.step, 'ready');
+assert.ok(act(g3).filter((p) => p.team === user).length <= Off.ROSTER_LIMIT, 'user team cut to the limit');
+assert.throws(() => Sim.simOffseason(d1, tpl), /isn.t over/);
+const g4 = Sim.simOffseason(o1, tpl);
+assert.equal(g4.offseason, undefined);
+assert.equal(g4.seasons.length, 2);
+assert.equal(g4.seasons[1].slots[user].filter((x) => x !== null).length, 32);
+assert.equal(Sim.simOffseason(f1, tpl).seasons.length, 2, 'from the middle of recruiting');
+ok(`sim: a recruiting week, the rest, the cuts, the whole offseason (${act(g4).filter((p) => p.team === user).length} players for ${g4.teams[user].school} in ${g4.seasons[1].year})`);
 
 // A second offseason: only players with two seasons on the bench may transfer.
 const y1 = Off.runPortal(Off.startOffseason(o5, { seed: 4, force: true }));
