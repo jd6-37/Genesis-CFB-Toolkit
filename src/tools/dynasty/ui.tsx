@@ -125,3 +125,7 @@ export function Empty({ children }: { children: React.ReactNode }) {
 }
 
 export const heightText = (inches: number) => (inches ? `${Math.floor(inches / 12)}'${inches % 12}"` : '');
+
+/** "Town, State" (CFB 27 writes "Non-US" as the state of players from abroad: just the town then). */
+export const hometownText = (p: { hometown: string; state: string }) =>
+  [p.hometown, p.state && p.state !== 'Non-US' ? p.state : ''].filter(Boolean).join(', ');

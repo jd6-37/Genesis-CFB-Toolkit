@@ -302,6 +302,15 @@ export function importSave(d: Dynasty, file: Uint8Array, opt: { at?: string; all
   }
   const played = playedOf(save);
   const last = season.imports[season.imports.length - 1];
+  // A new season's first import: not the save of the season before (its results would all be there).
+  const prevSeason = d.seasons[d.seasons.length - 2];
+  const prevLast = prevSeason?.imports[prevSeason.imports.length - 1];
+  if (!last && prevLast && !opt.allowOlder) {
+    const prev = readDynastySave(fromBase64(prevLast.data));
+    const same = prev.season && prev.season.games.length === save.season.games.length && prev.season.games.some((g) => g.vs !== null) &&
+      prev.season.games.every((g, i) => g.vs === null || (g.vs === save.season!.games[i].vs && g.hs === save.season!.games[i].hs && g.visitor === save.season!.games[i].visitor));
+    if (same) throw new Error(`This is the ${prevSeason.year} season's save. Start a New Season in the game with the ${season.year} ROM, play, then import.`);
+  }
   if (last && !opt.allowOlder) {
     const prev = readDynastySave(fromBase64(last.data));
     if (played < last.played) {

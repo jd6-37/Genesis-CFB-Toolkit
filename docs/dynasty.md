@@ -79,6 +79,20 @@ The pages use each school's official primary and secondary colors (`src/core/dyn
 
 IndexedDB database `genesis-cfb-dynasty`: store `dynasties` (the dynasty and when it changed) and store `art` (each team's logo, helmet and wordmark drawn from the user's ROM). The dynasty file is the dynasty as JSON with `app: "genesis-cfb-toolkit"`, `tool: "dynasty"`, `version: 1`; it never carries the art. A file from a newer version is refused.
 
+## The offseason
+
+`src/core/dynasty/offseason.ts`, pure steps that each return a new dynasty; seeded, so the same choices give the same offseason. `Dynasty.offseason` holds the step, the seed, the events (for the news and the next season's `events`) and the players as they were at the start (Start the offseason over).
+
+1. **startOffseason** (needs every game played, or "End the season early"): SR+ leave; seniors go pro (chance (OVR − 80) / 14, up to 85%), else come back as SR+ (30%) or graduate; juniors go pro (chance (OVR − 84) / 12, up to 70%). Everyone else moves up a class and develops: gain = (potential − OVR) × rate (FR 0.45, SO 0.40, JR 0.35, SR 0.30) × random 0.5-1.5, +1 for one of the team's 32, ± noise. The gain goes to the ratings that count in his position's CFB 27-style Overall (speed-type ratings at 40%). Potential is hidden: given at the first offseason (OVR + 6-18 for a FR … 0-3 for an SR+) or by stars when signed.
+2. **runPortal**: players outside their team's 32 may enter (4%, +18% for a 72+ player with at most two better at his position, +5% when buried behind four); teams that need the position take them, best players first, stronger programs first in line for the good ones, at most four per team. Nobody takes him: he leaves the dynasty.
+3. **runSigningDay**: each team signs 85 − roster (3-25), plus 1-3 extra for some (more often for strong programs). Position: the biggest need against the targets (QB 4, HB 6, FB 1, WR 10, TE 4, five OL spots 3 each, LE 4, RE 4, DT 6, LOLB 3, MLB 4, ROLB 3, CB 9, FS 4, SS 4, K 2, P 2 = 85). Stars by prestige (last season's rank, record, title, roster strength). A recruit is a CFB 27 freshman of that position from the star's Overall band (5★ top 3%, 4★ next 17%, 3★ 35-80%, 2★ 5-35%, 1★ bottom 5%), every rating ±3, a new name and a US hometown from the built-in file. Class points: 5★ 100, 4★ 60, 3★ 30, 2★ 12, 1★ 4.
+4. **applyCuts**: down to 85, lowest value first (OVR + half the room to potential + years left), never below a position minimum (QB 2, HB 3, WR 5, TE 2, each OL spot 2, LE 2, RE 2, DT 3, LOLB 1, MLB 2, ROLB 1, CB 5, FS 2, SS 2, K 1, P 1). User teams choose (the suggestion is checked). Then walk-ons up to the minimums and to 65 players.
+5. **finishOffseason** (needs the ROM, kept in the browser): unique jersey numbers per team (the best player keeps his), the 32 per team, their game ratings and team OVRs through the Rosters tool's CFB 27 conversion of all the dynasty's players (team OVRs from the starters' game-rating OVRs, so the scale holds from year to year), and the next season.
+
+**Season ROM** (`seasonRom`): the season's 32 per team (numbers and ratings) and team OVRs written into a copy of the ROM, checksums fixed. For the first season it gives the ROM back byte for byte.
+
+A new season's first import is refused when it's the season before's save (same results).
+
 ## Next phases
 
 1. ROM interface with the Elevated mod: an ID stamp in the season block (grow it to 0x1340, stamp at +0x1330) so a save names its dynasty and season, and a second roster set so Exhibition keeps the 2026 rosters while Season uses the dynasty's. The 0x3E0000-0x3FFFFF area is free in v2.0.0.

@@ -283,7 +283,8 @@ export function recruitTemplates(d: Pick<Dynasty, 'attrKeys'>, csvText: string):
     const pos = row[cPos].trim().replace(/^LEDG$/, 'LE').replace(/^REDG$/, 'RE');
     if (row[cFirst]?.trim()) first.add(row[cFirst].trim());
     if (row[cLast]?.trim()) last.add(row[cLast].trim());
-    if (row[cTown]?.trim()) towns.push({ hometown: row[cTown].trim(), state: (row[cState] ?? '').trim() });
+    // Hometowns in the US (CFB 27 writes "Non-US" as the state of the others).
+    if (row[cTown]?.trim() && row[cState]?.trim() && row[cState].trim() !== 'Non-US') towns.push({ hometown: row[cTown].trim(), state: row[cState].trim() });
     if (!/^freshman$/i.test(row[cCls]?.trim() ?? '')) continue;
     (byPos[pos] ??= []).push({ attrs: ks.map((k) => Number(row[k]) || 0), ovr: Number(row[cOvr]) || 0, heightIn: Number(row[cH]) || 72, weight: Number(row[cW]) || 200 });
   }

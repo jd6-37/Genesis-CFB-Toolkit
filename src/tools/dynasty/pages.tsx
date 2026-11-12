@@ -5,11 +5,11 @@ import {
   champions, leaders, playerLines, playerName, RECORD_STATS, seasonRecords, standings, statValue, teamHistory, weekName,
   INDEPENDENT, type PlayerLine, type StatCategory,
 } from '../../core/dynasty/derive';
-import { stories } from '../../core/dynasty/news';
+import { offseasonStories, stories } from '../../core/dynasty/news';
 import type { SaveGame } from '../../core/dynasty/save';
 import { nibbleToRating, nibbleToWeight, rosterLayout } from '../../core/rosterLayouts';
 import { playerOvr, roleOfSlot } from '../../core/dynasty/ovr';
-import { Empty, StoryArt, TeamLink, TeamMark, href, heightText, inkColor, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
+import { Empty, StoryArt, TeamLink, TeamMark, href, heightText, hometownText, inkColor, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
 
 // ---- front page
 
@@ -66,14 +66,19 @@ function Ticker() {
 
 export function Home() {
   const { d, v } = useDyn();
-  const list = useMemo(() => stories(d, v), [d, v]);
-  if (!v.save) return <NoResults />;
+  // In the offseason (and before the first game of a season) the news is the offseason's.
+  const offEvents = d.offseason ? d.offseason.events : !v.save ? v.season.events : undefined;
+  const list = useMemo(
+    () => (offEvents?.length ? offseasonStories(d, offEvents, d.offseason ? d.offseason.year : v.season.year - 1) : stories(d, v)),
+    [d, v, offEvents],
+  );
+  if (!list.length) return <NoResults />;
   const [lead, ...rest] = list;
   const second = rest.slice(0, 3);
   const heads = rest.slice(3);
   return (
     <>
-      <Ticker />
+      {v.save && !d.offseason && <Ticker />}
       <div className="dy-front">
         <div className="dy-front-main">
           {lead && (
@@ -107,10 +112,12 @@ export function Home() {
             </section>
           )}
           <YourTeams />
-          <section>
-            <h2 className="dy-side-head">Top 25</h2>
-            <Top25 compact />
-          </section>
+          {v.save && (
+            <section>
+              <h2 className="dy-side-head">Top 25</h2>
+              <Top25 compact />
+            </section>
+          )}
         </aside>
       </div>
     </>
@@ -426,7 +433,7 @@ export function Team({ team }: { team: number }) {
                 <td>{p.cls}</td>
                 <td className="dy-wide">{heightText(p.heightIn)}</td>
                 <td className="dy-wide">{p.weight || ''}</td>
-                <td className="dy-left dy-dim dy-wide">{[p.hometown, p.state].filter(Boolean).join(', ')}</td>
+                <td className="dy-left dy-dim dy-wide">{hometownText(p)}</td>
               </tr>
             ))}
           </tbody>
@@ -462,7 +469,7 @@ export function Player({ id }: { id: number }) {
             <span>{p.cls}</span>
             <span>{heightText(p.heightIn)}, {p.weight} lb</span>
             {team !== null && <a href={href(`team/${team}`)}>{d.teams[team].school}</a>}
-            {p.hometown && <span>{p.hometown}{p.state ? `, ${p.state}` : ''}</span>}
+            {p.hometown && <span>{hometownText(p)}</span>}
           </p>
         </div>
         </div>

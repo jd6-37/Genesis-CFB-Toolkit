@@ -262,5 +262,8 @@ for (let t = 0; t < 138; t++) {
   assert.deepEqual(readRating(rom2, t), next.teamOvr![t]);
 }
 ok('season rosters written to the ROM and read back');
+// The new season doesn't take last season's save.
+assert.throws(() => importSave(o5, srm), /2026 season's save/);
+ok('a new season refuses the last season\'s save');
 
 console.log(`\n${passed} passed`);

@@ -334,10 +334,11 @@ The import follows the rules of CFB-Walsh.exe ("Genesis College Football Editor 
 
 ## Dynasty
 
-A companion site for playing seasons of the 138-team 2026 Season Edition (Bill Walsh '95 Elevated v2.0.0 or later). The app owns the players; the game plays the games. This first version keeps your season's record; offseasons (graduation, progression, signing classes, the transfer portal and new rosters written into the ROM) come next.
+A companion site for playing seasons of the 138-team 2026 Season Edition (Bill Walsh '95 Elevated v2.0.0 or later). The app owns the players; the game plays the games. It keeps every season's record, runs the offseason (graduation, progression, the transfer portal, random signing classes, cuts) and writes the next season's rosters into your ROM.
 
 1. **Start a dynasty** on the Manage page: name it and choose your ROM. The players come from the built-in CFB 27 ratings (2026 season, Week 9), 60 to 85 a team; a redshirted player starts one class up (RS FR is a SO, RS SR a SR+). The team logos are read from your ROM and stay in your browser.
 2. **Play** a season in the game (New Season, any schedule).
+4. **Run the offseason** on the Offseason page, download the new season's ROM, and start a New Season with it. Repeat.
 3. **Import your save** after you play: the `.srm` battery save from RetroArch's Genesis Plus GX core. The app reads every result, the game's Top 25, the playoff field and each team's season stats, and marks the teams you play as. Import again as often as you like; a save with fewer results than the last import is refused (it's older, or another season), unless you tick the box.
 
 The pages:
@@ -346,9 +347,10 @@ The pages:
 - **Scores** by week, **Standings** by conference, the **Top 25** with movement.
 - **Teams:** each team's offense and defense OVR (the ROM's), schedule and results, history, season stats and its 32 players in Bill Walsh '95, in the game's roster order, with an OVR for each worked out from his game ratings (formulas in [docs/dynasty.md](docs/dynasty.md)). Each **player** has a page with his stats and his Bill Walsh '95 ratings: the numbers the game shows, a meter of the game's 15 steps, his rank among everyone at his position on every team (HB1 and HB2 together, all five linemen, all four receivers and so on), and a shape of his ratings against their average.
 - **Stats:** the national leaders. **History:** national champions, single-season records and your teams by season.
+- **Offseason:** after the national championship (or earlier, if you end the season early), step by step: departures (SR+ graduate; seniors go pro, come back as SR+ or graduate; juniors may go pro), development, the transfer portal, signing day (random classes by need and program prestige), cuts to 85 (you choose for your teams, with a suggestion), walk-ons, and the next season's depth charts. Then **Download the ROM** for the new season: every team's 32 players and the team OVRs written into your ROM (until the Elevated mod gets a separate dynasty roster set, Exhibition plays them too). Start a New Season in the game with it.
 - **Manage:** import saves, choose your teams, download the dynasty file (a backup, or to move it to another computer; it has no game art, so load your ROM again there for the logos), and open, rename or delete dynasties.
 
-Dynasties are kept in your browser (IndexedDB). Clearing the site's data deletes them, so download the dynasty file now and then.
+Dynasties are kept in your browser (IndexedDB), with your ROM for the offseason and the season ROMs (the ROM is never in the dynasty file). Clearing the site's data deletes them, so download the dynasty file now and then.
 
 ### How it works
 
