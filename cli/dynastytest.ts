@@ -15,6 +15,8 @@ import { dynastyFileName, dynastyFileText, readDynastyFile } from '../src/core/d
 import { CFB27_LATEST } from '../src/core/cfb27Latest';
 import { OVR_FORMULAS, playerOvr, roleOfSlot } from '../src/core/dynasty/ovr';
 import { readRating } from '../src/core/teamRatings';
+import * as Off from '../src/core/dynasty/offseason';
+import { openRosterRom, readPlayer, getRating, teamLayout } from '../src/core/rosterRom';
 
 const [romPath, savePath] = process.argv.slice(2);
 if (!romPath || !savePath) {
@@ -203,5 +205,62 @@ const art = teamArt(rom);
 assert.equal(art.length, 138);
 assert.ok(art.every((a) => a.logo && a.logo.width > 0 && a.helmet && a.word));
 ok('team art from the ROM');
+
+// ---- offseason
+assert.throws(() => Off.startOffseason(d1, { seed: 3 }), /isn't over/);
+const o1 = Off.startOffseason(d1, { seed: 3, force: true });
+const act = (x: typeof d1) => x.players.filter((p) => p.status === 'active' && p.team !== null);
+assert.equal(act(o1).filter((p) => p.cls === 'SR+').length, o1.offseason!.events.filter((e) => e.kind === 'returns').length, 'only returning seniors are SR+');
+assert.ok(d1.players.filter((p) => p.cls === 'SR+').every((p) => o1.players[p.id - 1].status === 'graduated'), 'every SR+ leaves');
+assert.ok(act(o1).every((p) => p.pot !== undefined && p.pot >= p.ovr));
+assert.deepEqual(Off.startOffseason(d1, { seed: 3, force: true }), o1, 'same seed, same offseason');
+assert.deepEqual(Off.cancelOffseason(o1).players, d1.players);
+const o2 = Off.runPortal(o1);
+const moves = o2.offseason!.events.filter((e) => e.kind === 'transfer');
+assert.ok(moves.length > 0);
+for (const m of moves) if (m.kind === 'transfer') assert.equal(o2.players[m.player - 1].team, m.to);
+const tpl = Off.recruitTemplates(o2, csv);
+const o3 = Off.runSigningDay(o2, tpl);
+const signed = o3.offseason!.events.filter((e) => e.kind === 'signed');
+for (const t of o3.teams) {
+  const n = signed.filter((e) => e.kind === 'signed' && e.team === t.index).length;
+  assert.ok(n >= 3 && n <= Off.CLASS_MAX, `${t.school} signs ${n}`);
+}
+assert.ok(signed.every((e) => e.kind === 'signed' && e.stars >= 1 && e.stars <= 5));
+assert.equal(Off.classRankings(o3.offseason!.events).length, 138);
+const user = o3.userTeams[0];
+const sug = o3.offseason!.suggestedCuts![user];
+assert.deepEqual(Off.cutProblems(o3, user, sug), []);
+const o4 = Off.applyCuts(o3, {}, tpl);
+for (const t of o4.teams) {
+  const roster = act(o4).filter((p) => p.team === t.index);
+  assert.ok(roster.length >= Off.ROSTER_MIN && roster.length <= Off.ROSTER_LIMIT, `${t.school} has ${roster.length}`);
+  for (const pos of Off.POSITIONS) assert.ok(roster.filter((p) => p.pos === pos).length >= Off.POS_MIN[pos], `${t.school} ${pos}`);
+}
+const o5 = Off.finishOffseason(o4, rom);
+const next = o5.seasons[1];
+assert.equal(o5.offseason, undefined);
+assert.equal(next.year, 2027);
+assert.equal(next.slots.flat().filter((x) => x !== null).length, 138 * 32, 'every slot filled');
+for (const t of o5.teams) {
+  const nums = act(o5).filter((p) => p.team === t.index).map((p) => p.jersey);
+  assert.equal(new Set(nums).size, nums.length, `${t.school} numbers are unique`);
+  next.slots[t.index].forEach((id) => assert.equal(o5.players[id! - 1].team, t.index));
+}
+ok(`offseason: ${o1.offseason!.events.filter((e) => e.kind !== 'returns').length} departures, ${moves.length} transfers, ${signed.length} signed, ${o4.offseason!.events.filter((e) => e.kind === 'cut').length} cut, ${o4.offseason!.events.filter((e) => e.kind === 'walkon').length} walk-ons; ${act(o5).length} players in ${next.year}`);
+
+// The season's rosters in the ROM: the first season gives the ROM back unchanged; the next one reads back.
+assert.ok(Off.seasonRom(d0, first, rom).every((b, i) => b === rom[i]), 'season 1 written = the ROM');
+const rom2 = Off.seasonRom(o5, next, rom);
+const rr = openRosterRom(rom2);
+for (let t = 0; t < 138; t++) {
+  for (const def of teamLayout(rr, t)) {
+    const b = next.bw![t][def.slot]!;
+    const pl = readPlayer(rr, t, def.slot);
+    assert.deepEqual(b.attrs.map((a) => getRating(pl, def, a)), b.steps);
+  }
+  assert.deepEqual(readRating(rom2, t), next.teamOvr![t]);
+}
+ok('season rosters written to the ROM and read back');
 
 console.log(`\n${passed} passed`);

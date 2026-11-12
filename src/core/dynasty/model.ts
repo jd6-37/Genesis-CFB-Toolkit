@@ -50,6 +50,14 @@ export interface DPlayer {
   status: 'active' | 'graduated' | 'pro' | 'transferred' | 'cut';
   /** The CFB 27 player ID for the starting players. */
   srcId?: number;
+  /** Hidden ceiling of his OVR (CFB 27 scale), set at the first offseason or when he signs. */
+  pot?: number;
+  /** Signed in a dynasty signing class (stars 1-5; 0 = walk-on), and the year he signed. */
+  recruit?: { stars: number; year: number };
+  /** Year he left (graduated, went pro, transferred out, cut). */
+  leftYear?: number;
+  /** Moves through the transfer portal. */
+  transfers?: { year: number; from: number; to: number | null }[];
 }
 
 export interface SaveImport {
@@ -78,7 +86,17 @@ export interface DSeason {
   teamOvr?: TeamRating[];
   /** Imports of this season's save, oldest first; one per number of completed weeks (the newest kept). */
   imports: SaveImport[];
+  /** What happened in the offseason before this season (departures, transfers, signings …), for the news. */
+  events?: OffseasonEvent[];
 }
+
+export type OffseasonEvent =
+  | { kind: 'graduated' | 'pro' | 'returns'; player: number; team: number; ovr: number }
+  | { kind: 'transfer'; player: number; from: number; to: number | null; ovr: number }
+  | { kind: 'signed'; player: number; team: number; stars: number; ovr: number }
+  | { kind: 'cut'; player: number; team: number; ovr: number }
+  | { kind: 'walkon'; player: number; team: number; ovr: number }
+  | { kind: 'class'; team: number; rank: number; signed: number; points: number };
 
 /** A roster slot's ratings in the game: 0-15 steps, in the roster screen's column order. */
 export interface BwSlot {
@@ -104,6 +122,8 @@ export interface Dynasty {
   attrKeys: string[];
   players: DPlayer[];
   seasons: DSeason[];
+  /** The offseason in progress (after the last season, before the next one). */
+  offseason?: import('./offseason').OffseasonState;
 }
 
 // ---- small helpers
