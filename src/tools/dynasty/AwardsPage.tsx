@@ -1,5 +1,6 @@
 // Season awards (awards.ts; user, 2026-11-12): the Heisman, position awards, the All-American teams and each
 // conference's first team, for any finished season. Mobile first: one column of tables on phones.
+import { PageHead, Select, SubHead } from '../../ui';
 import { useMemo, useState } from 'react';
 import { AWARD_SPOTS, seasonAwards, type Candidate } from '../../core/dynasty/awards';
 import { playerName } from '../../core/dynasty/derive';
@@ -45,14 +46,10 @@ export function Awards({ arg }: { arg?: string }) {
   const wp = winner ? playerOf(d, winner.player) : undefined;
   return (
     <section className="dy-awards">
-      <div className="dy-pagehead">
-        <h2>{a.year} awards</h2>
-        {all.length > 1 && (
-          <select aria-label="Season" value={a.year} onChange={(e) => { location.hash = href(`awards/${e.target.value}`); }}>
-            {all.slice().reverse().map((x) => <option key={x.s.year} value={x.s.year}>{x.s.year}</option>)}
-          </select>
-        )}
-      </div>
+      <PageHead
+        title={`${a.year} awards`}
+        actions={all.length > 1 ? <Select label="Season" hideLabel value={a.year} options={all.slice().reverse().map((x) => ({ value: x.s.year, label: `${x.s.year}` }))} onChange={(x) => { location.hash = href(`awards/${x}`); }} /> : undefined}
+      />
       <p className="dy-dim dy-small">Worked out from the season's stats and the players' OVR: the leaders by stats are considered, then the better players win out (offensive linemen, who have no stats, by OVR and team wins).</p>
       {wp && winner && (
         <div className="dy-heisman">
@@ -64,19 +61,19 @@ export function Awards({ arg }: { arg?: string }) {
           )}
         </div>
       )}
-      <h3 className="dy-sub">Position awards</h3>
+      <SubHead>Position awards</SubHead>
       <TeamTable list={a.position.flatMap((x) => (x.winner ? [{ ...x.winner, role: x.label }] : []))} />
       <div className="dy-team-cols">
         <div>
-          <h3 className="dy-sub">All-American first team</h3>
+          <SubHead>All-American first team</SubHead>
           <TeamTable list={a.allAmerican[0]} />
         </div>
         <div>
-          <h3 className="dy-sub">All-American second team</h3>
+          <SubHead>All-American second team</SubHead>
           <TeamTable list={a.allAmerican[1]} />
         </div>
       </div>
-      <h3 className="dy-sub">All-Conference first teams</h3>
+      <SubHead>All-Conference first teams</SubHead>
       <select aria-label="Conference" value={c} onChange={(e) => setConf(Number(e.target.value))}>
         {confs.map((x) => <option key={x} value={x}>{pick.s.confNames[x]}</option>)}
       </select>

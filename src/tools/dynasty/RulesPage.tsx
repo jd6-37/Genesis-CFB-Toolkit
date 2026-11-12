@@ -1,5 +1,6 @@
 // Offseason rules (user, 2026-11-12): every number the computer's offseason uses, behind a spoiler warning,
 // with each section's reset, a reset for everything, and rules files to move them between dynasties.
+import { Button, Note, PageHead, SubHead } from '../../ui';
 import { useRef, useState } from 'react';
 import {
   DEFAULT_RULES, RULE_SECTIONS, changedRules, readRulesFile, ruleProblems, rulesFileText, rulesOf, setRules,
@@ -47,8 +48,8 @@ export function Rules({ actions, busy }: { actions: OffseasonActions; busy: stri
             </p>
             <p>You can change any of them for this dynasty.</p>
             <div className="dy-row">
-              <button type="button" className="dy-button" onClick={() => { try { sessionStorage.setItem(SEEN_KEY, '1'); } catch { /* private mode */ } setOk(true); }}>Show me the rules</button>
-              <a className="dy-button dy-quiet" href={href('manage')}>Go back</a>
+              <Button onClick={() => { try { sessionStorage.setItem(SEEN_KEY, '1'); } catch { /* private mode */ } setOk(true); }}>Show me the rules</Button>
+              <Button variant="quiet" href={href('manage')}>Go back</Button>
             </div>
           </div>
         </div>
@@ -68,19 +69,19 @@ export function Rules({ actions, busy }: { actions: OffseasonActions; busy: stri
 
   return (
     <section className="dy-rules">
-      <div className="dy-pagehead"><h2>Offseason rules</h2></div>
+      <PageHead title="Offseason rules" />
       <p>
         Every number the offseason uses, for this dynasty. Changes apply from the next offseason step; nothing already decided is redone.
         {changedCount ? ` ${changedCount} ${changedCount === 1 ? 'rule differs' : 'rules differ'} from the defaults.` : ' All rules are the defaults.'}
       </p>
       <div className="dy-row">
-        <button type="button" className="dy-button" disabled={!dirty || !!busy} onClick={() => save(draft, 'The rules are saved.')}>Save changes</button>
-        <button type="button" className="dy-button dy-quiet" disabled={!dirty} onClick={() => { setDraft(saved); setMsg(null); }}>Undo changes</button>
-        <button type="button" className="dy-button dy-quiet" disabled={!!busy} onClick={() => { setDraft(DEFAULT_RULES); save(DEFAULT_RULES, 'Every rule is back to its default.'); }}>Reset everything</button>
+        <Button disabled={!dirty || !!busy} onClick={() => save(draft, 'The rules are saved.')}>Save changes</Button>
+        <Button variant="quiet" disabled={!dirty} onClick={() => { setDraft(saved); setMsg(null); }}>Undo changes</Button>
+        <Button variant="quiet" disabled={!!busy} onClick={() => { setDraft(DEFAULT_RULES); save(DEFAULT_RULES, 'Every rule is back to its default.'); }}>Reset everything</Button>
       </div>
       <div className="dy-row">
-        <button type="button" className="dy-button dy-quiet" onClick={() => download(`${d.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'dynasty'}-offseason-rules.json`, rulesFileText(d))}>Export rules</button>
-        <button type="button" className="dy-button dy-quiet" disabled={!!busy} onClick={() => fileRef.current?.click()}>Import rules</button>
+        <Button variant="quiet" onClick={() => download(`${d.name.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'dynasty'}-offseason-rules.json`, rulesFileText(d))}>Export rules</Button>
+        <Button variant="quiet" disabled={!!busy} onClick={() => fileRef.current?.click()}>Import rules</Button>
         <input ref={fileRef} type="file" accept=".json" hidden onChange={async (e) => {
           const f = e.target.files?.[0];
           e.target.value = '';
@@ -95,13 +96,13 @@ export function Rules({ actions, busy }: { actions: OffseasonActions; busy: stri
           }
         }} />
       </div>
-      {msg && <p className={`dy-note dy-note-${msg.kind}`} role={msg.kind === 'error' ? 'alert' : 'status'}>{msg.text}</p>}
+      {msg && <Note kind={msg.kind}>{msg.text}</Note>}
 
       {RULE_SECTIONS.map((sec) => {
         const secChanged = sec.fields.some((f) => JSON.stringify(draft[f.key]) !== JSON.stringify(DEFAULT_RULES[f.key]));
         return (
           <section key={sec.title} className="dy-rule-sec">
-            <h3 className="dy-sub">{sec.title}</h3>
+            <SubHead>{sec.title}</SubHead>
             <p className="dy-small dy-dim">{sec.intro}</p>
             {sec.fields.map((f) => {
               const v = draft[f.key] as number | number[];
@@ -143,7 +144,7 @@ export function Rules({ actions, busy }: { actions: OffseasonActions; busy: stri
         );
       })}
       <div className="dy-row dy-next">
-        <button type="button" className="dy-button" disabled={!dirty || !!busy} onClick={() => save(draft, 'The rules are saved.')}>Save changes</button>
+        <Button disabled={!dirty || !!busy} onClick={() => save(draft, 'The rules are saved.')}>Save changes</Button>
       </div>
     </section>
   );

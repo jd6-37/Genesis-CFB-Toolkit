@@ -1,5 +1,6 @@
 // Roster editing on the player and team pages (edit.ts). Mobile first: one column of fields on phones.
 
+import { Button, Note, SubHead } from '../../ui';
 import { useState } from 'react';
 import { applyEdits, editLock, editLook, newSkin, type PlayerEdit } from '../../core/dynasty/edit';
 import { BEARD_LABELS, BEARD_STYLES, HAIR_COLOR_LABELS, HAIR_STYLE_LABELS, HAIR_STYLES, lookChoices, MOUTH_LABELS, MOUTHS, type LookEdit } from '../../core/dynasty/headshot';
@@ -36,7 +37,7 @@ export function EditPlayer({ p }: { p: DPlayer }) {
   };
   // The ratings his position uses, and any others he has (the related group's, for position changes).
   const uses = new Set(GROUP_COLUMNS[GROUP_OF_ROLE[roleOfPos(String(val('pos')))]] ?? []);
-  if (!open) return <button type="button" className="dy-button dy-quiet" onClick={() => setOpen(true)}>Edit player</button>;
+  if (!open) return <Button variant="quiet" onClick={() => setOpen(true)}>Edit player</Button>;
   const text = (k: 'first' | 'last' | 'hometown' | 'state', label: string) => (
     <label>{label}<input value={String(val(k) ?? '')} onChange={(e) => set(k, e.target.value)} /></label>
   );
@@ -45,7 +46,7 @@ export function EditPlayer({ p }: { p: DPlayer }) {
   );
   return (
     <form className="dy-edit" onSubmit={(e) => { e.preventDefault(); void save(form); }}>
-      <h3 className="dy-sub">Edit {p.first} {p.last}</h3>
+      <SubHead>Edit {p.first} {p.last}</SubHead>
       <div className="dy-edit-grid">
         {text('first', 'First name')}
         {text('last', 'Last name')}
@@ -67,7 +68,7 @@ export function EditPlayer({ p }: { p: DPlayer }) {
           </select>
         </label>
       </div>
-      <h3 className="dy-sub">Ratings</h3>
+      <SubHead>Ratings</SubHead>
       <p className="dy-dim dy-small">As the game's Team Rosters shows them. Every point counts in games (the fine-ratings mod); the game shows whole numbers up to 99.</p>
       <div className="dy-edit-grid">
         {RATINGS.filter((a) => uses.has(a) || p.ratings[a] !== undefined).map((a) => {
@@ -82,11 +83,11 @@ export function EditPlayer({ p }: { p: DPlayer }) {
           );
         })}
       </div>
-      {error && <p className="dy-note dy-note-error dy-small" role="alert">{error}</p>}
+      {error && <Note kind="error">{error}</Note>}
       <div className="dy-row">
-        <button type="submit" className="dy-button">Save</button>
-        <button type="button" className="dy-button dy-quiet" onClick={() => { setOpen(false); setForm({}); setError(null); }}>Cancel</button>
-        <button type="button" className="dy-button dy-danger" onClick={() => void save({ team: null })}>Release him</button>
+        <Button type="submit">Save</Button>
+        <Button variant="quiet" onClick={() => { setOpen(false); setForm({}); setError(null); }}>Cancel</Button>
+        <Button variant="danger" onClick={() => void save({ team: null })}>Release him</Button>
       </div>
     </form>
   );
@@ -108,7 +109,7 @@ export function AddPlayer({ team }: { team: number }) {
   return (
     <div className="dy-row">
       <select aria-label="Position" value={pos} onChange={(e) => setPos(e.target.value)}>{POSITIONS.map((x) => <option key={x}>{x}</option>)}</select>
-      <button type="button" className="dy-button dy-quiet" onClick={() => void add()}>Add a player</button>
+      <Button variant="quiet" onClick={() => void add()}>Add a player</Button>
     </div>
   );
 }
@@ -124,7 +125,7 @@ export function EditLook({ p }: { p: DPlayer }) {
   const [look, setLook] = useState<Required<LookEdit>>(() => lookChoices(p));
   const [error, setError] = useState<string | null>(null);
   if (!open) {
-    return <button type="button" className="dy-button dy-quiet" onClick={() => { setSkin(p.skin); setLook(lookChoices(p)); setOpen(true); }}>Edit appearance</button>;
+    return <Button variant="quiet" onClick={() => { setSkin(p.skin); setLook(lookChoices(p)); setOpen(true); }}>Edit appearance</Button>;
   }
   const draft: DPlayer = { ...p, skin, look };
   const save = async (change: Parameters<typeof editLook>[2]) => {
@@ -139,7 +140,7 @@ export function EditLook({ p }: { p: DPlayer }) {
   const pick = <K extends keyof LookEdit>(k: K, v: Required<LookEdit>[K]) => setLook({ ...look, [k]: v });
   return (
     <form className="dy-edit dy-look" onSubmit={(e) => { e.preventDefault(); void save({ skin, look }); }}>
-      <h3 className="dy-sub">Appearance</h3>
+      <SubHead>Appearance</SubHead>
       <p className="dy-dim dy-small">Only the app's portrait: nothing here changes the game.</p>
       <div className="dy-look-body">
         <Headshot p={draft} size={120} />
@@ -162,11 +163,11 @@ export function EditLook({ p }: { p: DPlayer }) {
           <label className="dy-check"><input type="checkbox" checked={look.eyeBlack} onChange={(e) => pick('eyeBlack', e.target.checked)} /> Eye black</label>
         </div>
       </div>
-      {error && <p className="dy-note dy-note-error dy-small" role="alert">{error}</p>}
+      {error && <Note kind="error">{error}</Note>}
       <div className="dy-row">
-        <button type="submit" className="dy-button">Save</button>
-        <button type="button" className="dy-button dy-quiet" onClick={() => setOpen(false)}>Cancel</button>
-        {p.look && <button type="button" className="dy-button dy-quiet" onClick={() => void save({ look: null })}>Back to his original look</button>}
+        <Button type="submit">Save</Button>
+        <Button variant="quiet" onClick={() => setOpen(false)}>Cancel</Button>
+        {p.look && <Button variant="quiet" onClick={() => void save({ look: null })}>Back to his original look</Button>}
       </div>
     </form>
   );

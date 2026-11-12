@@ -1,5 +1,6 @@
 // The records book (records.ts): single-season and career player records and team records,
 // league-wide or one school's. Mobile first: the tables stack on phones.
+import { PageHead, SubHead } from '../../ui';
 import { useMemo, useState } from 'react';
 import { playerName, RECORD_STATS, seasonRecords } from '../../core/dynasty/derive';
 import { careerRecords, teamRecords } from '../../core/dynasty/records';
@@ -20,10 +21,7 @@ export function Records({ arg }: { arg?: string }) {
   };
   return (
     <section className="dy-records">
-      <div className="dy-pagehead">
-        <h2>Records book</h2>
-        <p>{school !== undefined ? `${d.teams[school].school} records` : 'League records'} since {d.startYear}.</p>
-      </div>
+      <PageHead title="Records book">{school !== undefined ? `${d.teams[school].school} records` : 'League records'} since {d.startYear}.</PageHead>
       <div className="dy-row dy-records-pick">
         <select aria-label="School" value={school ?? ''} onChange={(e) => { location.hash = href(e.target.value === '' ? 'records' : `records/${e.target.value}`); }}>
           <option value="">Whole league</option>
@@ -37,7 +35,7 @@ export function Records({ arg }: { arg?: string }) {
       </div>
       <div className="dy-team-cols">
         <div>
-          <h3 className="dy-sub">{st.label} in a season</h3>
+          <SubHead>{st.label} in a season</SubHead>
           {season.length ? (
             <table className="dy-table">
               <tbody>
@@ -54,7 +52,7 @@ export function Records({ arg }: { arg?: string }) {
           ) : <p className="dy-dim">No stats yet.</p>}
         </div>
         <div>
-          <h3 className="dy-sub">{st.label} in a career</h3>
+          <SubHead>{st.label} in a career</SubHead>
           {career.length ? (
             <table className="dy-table">
               <tbody>
@@ -71,7 +69,7 @@ export function Records({ arg }: { arg?: string }) {
           ) : <p className="dy-dim">No stats yet.</p>}
         </div>
       </div>
-      <h3 className="dy-sub">Team records</h3>
+      <SubHead>Team records</SubHead>
       <div className="dy-records-teams">
         {teams.map((t) => (
           <div key={t.label}>

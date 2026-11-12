@@ -2,6 +2,7 @@
 // the side column, the playoff picture, the national leaders and your conference in a band across the page
 // below; in the offseason, your commitments and the class rankings in the side column.
 
+import { SubHead } from '../../ui';
 import { useMemo } from 'react';
 import { INDEPENDENT, leaders, playerLines, playerName, standings, statValue, weekName, type PlayerLine, type StatCategory } from '../../core/dynasty/derive';
 import { bigGames, heismanWatch, playoffPicture } from '../../core/dynasty/outlook';
@@ -64,7 +65,7 @@ function BigGames() {
   if (!games.length) return null;
   return (
     <section>
-      <h2 className="dy-side-head">{weekName(v, week)}'s big games</h2>
+      <SubHead level={2}>{weekName(v, week)}'s big games</SubHead>
       <ul className="dy-side-list dy-side-games">
         {games.map((g) => (
           <li key={g.index}>
@@ -95,7 +96,7 @@ function Playoff() {
   const shown = pic.size === 24 ? [...pic.field.slice(0, 8).map((t, i) => row(t, i + 1))] : pic.field.map((t, i) => row(t, i + 1));
   return (
     <section>
-      <h2 className="dy-side-head">Playoff picture</h2>
+      <SubHead level={2}>Playoff picture</SubHead>
       <p className="dy-dim dy-small">{pic.final ? `The ${name} field.` : `${name}, if the season ended today: conference leaders take the automatic bids, the rest by the Top 25.`}</p>
       {pic.size === 24 && <h3 className="dy-side-sub">Byes</h3>}
       <ol className="dy-side-rank">{shown}</ol>
@@ -138,7 +139,7 @@ function Heisman() {
   if (!list.length) return null;
   return (
     <section>
-      <h2 className="dy-side-head">Heisman watch</h2>
+      <SubHead level={2}>Heisman watch</SubHead>
       <ol className="dy-side-rank">
         {list.map((e, i) => (
           <li key={e.player} className="dy-side-player">
@@ -162,7 +163,7 @@ function NationalLeaders() {
   if (!lines.length) return null;
   return (
     <section>
-      <h2 className="dy-side-head"><a href={href('stats')}>National leaders</a></h2>
+      <SubHead level={2}><a href={href('stats')}>National leaders</a></SubHead>
       {LEADER_CATS.map(([cat, label]) => {
         const top = leaders(lines, cat, 'yds', 3);
         if (!top.length) return null;
@@ -196,7 +197,7 @@ function YourConferences() {
     <>
       {confs.map((c) => (
         <section key={c}>
-          <h2 className="dy-side-head"><a href={href('standings')}>{v.season.confNames[c]}</a></h2>
+          <SubHead level={2}><a href={href('standings')}>{v.season.confNames[c]}</a></SubHead>
           <table className="dy-table dy-side-table">
             <thead><tr><th className="dy-left">Team</th><th>Conf</th><th>Overall</th></tr></thead>
             <tbody>
@@ -221,7 +222,7 @@ function Commitments() {
   if (!rs || !d.userTeams.length) return null;
   return (
     <section>
-      <h2 className="dy-side-head"><a href={href('offseason')}>Your commitments</a></h2>
+      <SubHead level={2}><a href={href('offseason')}>Your commitments</a></SubHead>
       {d.userTeams.map((t) => {
         const mine = rs.prospects.filter((p) => p.committed === t).sort((a, b) => b.stars - a.stars || a.player.last.localeCompare(b.player.last));
         return (
@@ -263,7 +264,7 @@ function ClassRankings({ events }: { events: Parameters<typeof classRankings>[0]
   if (!rows.length) return null;
   return (
     <section>
-      <h2 className="dy-side-head">{title}</h2>
+      <SubHead level={2}>{title}</SubHead>
       <ol className="dy-side-rank">
         {rows.slice(0, 10).map((r, i) => (
           <li key={r.team}>

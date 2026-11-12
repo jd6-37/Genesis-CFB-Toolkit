@@ -64,6 +64,8 @@ Run `npm run storybook` to browse the components (port 6006).
 ## Status (2026-11-12)
 
 - Built: tokens, the components above, Storybook, the token check, Chromatic on pull requests.
-- **Dynasty colors are on the tokens and it has a dark mode** (the switch in the masthead). `dynasty.css` maps its own names (`--paper`, `--ink` …) to the tokens; only team-color overlays and the star color are still raw.
-- **Not moved yet:** the pages' markup. Dynasty and the Mod Toolkit still use hand-written elements and the older stylesheets (`src/styles.css`, `src/tools/dynasty/dynasty.css`), so the look's structure (bars, pixel numerals, square corners) shows only where a page already uses a component. Pages move onto the components in later pull requests: Dynasty first, then the Mod Toolkit.
+- **Dynasty:** colors on the tokens, dark mode, and its pages use `Button`, `SubHead`, `PageHead`, `Note`, `Empty`, `Select` (page heads) and `ThemeToggle`. Corners are square and scores, OVRs and rating tiles use the pixel numerals.
+- **Dynasty, not moved yet:** tables (still `.dy-table`, restyled to match; they become `DataTable`), selects inside pages and tables, the two modals, the rating tiles (`Stat`), the masthead, nav and ticker. `dynasty.css` still has its own font sizes.
+- **Mod Toolkit, not moved yet:** everything except the Teams tab's "Alternate uniforms" section. It still uses `src/styles.css`.
 - Team colors in charts: use `inkColor(d, team, dark)` so the color shows on the page in both themes.
+- `Button` takes `title` (a tooltip) and `label` (the name for screen readers); a link button with `disabled` has no address. `SubHead` takes `level={2}` for a section that isn't under a page title.

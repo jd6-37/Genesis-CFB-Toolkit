@@ -128,9 +128,7 @@ export function StoryArt({ teams, big = false }: { teams: number[]; big?: boolea
   );
 }
 
-export function Empty({ children }: { children: React.ReactNode }) {
-  return <div className="dy-empty">{children}</div>;
-}
+export { Empty } from '../../ui';
 
 export const heightText = (inches: number) => (inches ? `${Math.floor(inches / 12)}'${inches % 12}"` : '');
 

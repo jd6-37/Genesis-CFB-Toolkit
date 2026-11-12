@@ -1,4 +1,5 @@
 // The offseason, step by step: departures, the transfer portal, signing day, cuts, the next season.
+import { Button, Note, PageHead, SubHead } from '../../ui';
 import { useMemo, useState } from 'react';
 import type { DPlayer, Dynasty, OffseasonEvent } from '../../core/dynasty/model';
 import {
@@ -44,16 +45,16 @@ export function SimOffseason({ actions, busy }: { actions: OffseasonActions; bus
   const [ask, setAsk] = useState(false);
   const year = (d.offseason?.year ?? d.seasons[d.seasons.length - 1].year) + 1;
   const mine = d.userTeams.length === 1 ? d.teams[d.userTeams[0]].school : 'your teams';
-  if (!ask) return <button type="button" className="dy-button dy-quiet" disabled={!!busy} onClick={() => setAsk(true)}>Sim the offseason</button>;
+  if (!ask) return <Button variant="quiet" disabled={!!busy} onClick={() => setAsk(true)}>Sim the offseason</Button>;
   return (
     <div className="dy-sim-ask">
       <p>The computer plays the rest of the offseason for {mine} as for every other team: it recruits, makes the cuts and sets the depth charts. The {year} season is then ready to download, and this can't be undone.</p>
       <div className="dy-row">
-        <button type="button" className="dy-button" disabled={!!busy} onClick={() => actions.run('Simming the offseason…', async () => {
+        <Button disabled={!!busy} onClick={() => actions.run('Simming the offseason…', async () => {
           await actions.commit(simOffseason(d, await getTemplates(d)), `The ${year} season is ready. Download its ROM below.`);
           setAsk(false);
-        })}>Sim to {year}</button>
-        <button type="button" className="dy-button dy-quiet" onClick={() => setAsk(false)}>Cancel</button>
+        })}>Sim to {year}</Button>
+        <Button variant="quiet" onClick={() => setAsk(false)}>Cancel</Button>
       </div>
     </div>
   );
@@ -116,9 +117,9 @@ function TrainingFocus({ actions, busy }: { actions: OffseasonActions; busy: str
             ))}
             <div className="dy-training-foot">
               <span className={total === TRAINING_POINTS ? '' : 'dy-training-off'}>{total} of {TRAINING_POINTS} points</span>
-              <button type="button" className="dy-button dy-quiet" disabled={!!busy} onClick={() => set(u, EVEN_TRAINING)}>Even</button>
+              <Button variant="quiet" disabled={!!busy} onClick={() => set(u, EVEN_TRAINING)}>Even</Button>
             </div>
-            {problems.length > 0 && <p className="dy-note dy-note-error">{problems.join(' ')}</p>}
+            {problems.length > 0 && <Note kind="error">{problems.join(' ')}</Note>}
           </div>
         );
       })}
@@ -140,12 +141,12 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
     const startedNew = season.imports.length === 0 && d.seasons.length > 1;
     return (
       <section className="dy-off">
-        <div className="dy-pagehead"><h2>Offseason</h2></div>
+        <PageHead title="Offseason" />
         {startedNew ? (
           <>
             <p>The {season.year} season is ready. Set your final depth chart on your team's page (the Pos menus), then download its ROM, start a New Season in the game with it, and import the save after you play.</p>
-            <div className="dy-row">{users.map((u) => <a key={u} className="dy-button dy-quiet" href={href(`team/${u}`)}>{d.teams[u].school} depth chart</a>)}</div>
-            <button type="button" className="dy-button" onClick={() => actions.downloadRom(season.year)}>Download the {season.year} ROM</button>
+            <div className="dy-row">{users.map((u) => <Button variant="quiet" key={u}  href={href(`team/${u}`)}>{d.teams[u].school} depth chart</Button>)}</div>
+            <Button onClick={() => actions.downloadRom(season.year)}>Download the {season.year} ROM</Button>
           </>
         ) : (
           <>
@@ -157,7 +158,7 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
             {users.length > 0 && <TrainingFocus actions={actions} busy={busy} />}
             <div className="dy-row">
               {done && (
-                <button type="button" className="dy-button" disabled={!!busy} onClick={() => actions.run('Ending the season…', () => actions.commit(startOffseason(d)))}>Start the offseason</button>
+                <Button disabled={!!busy} onClick={() => actions.run('Ending the season…', () => actions.commit(startOffseason(d)))}>Start the offseason</Button>
               )}
               {done && <SimOffseason actions={actions} busy={busy} />}
             </div>
@@ -170,7 +171,7 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
   const step = STEP_OF[st.step];
   return (
     <section className="dy-off">
-      <div className="dy-pagehead"><h2>Offseason {st.year}</h2></div>
+      <PageHead title={`Offseason ${st.year}`} />
       <ol className="dy-steps">
         {STEPS.map((s0, i) => (st.mode === 'full' && i === 2 ? 'Recruiting' : s0)).map((s, i) => <li key={s} className={i < step ? 'dy-done' : i === step ? 'dy-now' : ''} aria-current={i === step ? 'step' : undefined}>{s}</li>)}
       </ol>
@@ -180,7 +181,7 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
       {/* What happened so far, newest step first */}
       {st.step === 'portal' && (
         <>
-          <h3 className="dy-sub">Players leaving</h3>
+          <SubHead>Players leaving</SubHead>
           {users.map((u) => {
             const team = (k: 'graduated' | 'pro' | 'returns') => of(k).filter((e) => e.team === u).map((e) => ({ p: pl(e.player) }));
             return (
@@ -203,8 +204,8 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
           </p>
           <p>Next: the transfer portal and signing day. Either quickly, with random signing classes for every team, or by recruiting yourself for {rulesOf(d).weeks} weeks (high-school players and the transfer portal).</p>
           <div className="dy-row dy-next">
-            <button type="button" className="dy-button" disabled={!!busy} onClick={() => actions.run('Opening recruiting…', async () => actions.commit(openRecruiting(d, await getTemplates(d))))}>Recruit for {rulesOf(d).weeks} weeks</button>
-            <button type="button" className="dy-button dy-quiet" disabled={!!busy} onClick={() => actions.run('Running the transfer portal…', () => actions.commit(runPortal(d)))}>Random classes</button>
+            <Button disabled={!!busy} onClick={() => actions.run('Opening recruiting…', async () => actions.commit(openRecruiting(d, await getTemplates(d))))}>Recruit for {rulesOf(d).weeks} weeks</Button>
+            <Button variant="quiet" disabled={!!busy} onClick={() => actions.run('Running the transfer portal…', () => actions.commit(runPortal(d)))}>Random classes</Button>
           </div>
           <div className="dy-row"><SimOffseason actions={actions} busy={busy} /></div>
         </>
@@ -212,7 +213,7 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
 
       {st.step === 'signing' && (
         <>
-          <h3 className="dy-sub">Transfer portal</h3>
+          <SubHead>Transfer portal</SubHead>
           {users.map((u) => (
             <div key={u} className="dy-off-team">
               <h4><TeamLink team={u} rank={false} /></h4>
@@ -236,7 +237,7 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
 
       {st.step === 'ready' && (
         <>
-          <h3 className="dy-sub">Cuts, walk-ons and training</h3>
+          <SubHead>Cuts, walk-ons and training</SubHead>
           {users.map((u) => (
             <div key={u} className="dy-off-team">
               <h4><TeamLink team={u} rank={false} /></h4>
@@ -272,7 +273,7 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
 }
 
 function Next({ label, onClick, busy }: { label: string; onClick: () => void; busy: string | null }) {
-  return <div className="dy-row dy-next"><button type="button" className="dy-button" disabled={!!busy} onClick={onClick}>{label}</button></div>;
+  return <div className="dy-row dy-next"><Button disabled={!!busy} onClick={onClick}>{label}</Button></div>;
 }
 
 function SigningAndCuts({ actions, busy }: { actions: OffseasonActions; busy: string | null }) {
@@ -293,7 +294,7 @@ function SigningAndCuts({ actions, busy }: { actions: OffseasonActions; busy: st
   };
   return (
     <>
-      <h3 className="dy-sub">Signing day</h3>
+      <SubHead>Signing day</SubHead>
       {d.userTeams.map((u) => {
         const r = ranks.find((x) => x.team === u);
         return (
@@ -316,7 +317,7 @@ function SigningAndCuts({ actions, busy }: { actions: OffseasonActions; busy: st
         })}
       </ol>
 
-      <h3 className="dy-sub">Cuts</h3>
+      <SubHead>Cuts</SubHead>
       <p>
         Every team cuts to {ROSTER_LIMIT}. The computer cuts for the other teams the same way it suggests yours, which are checked already: next season's
         Active Roster (★) stays, and backups go first by what they'll be worth when they could start (expected OVR the next two seasons, so seniors
@@ -352,7 +353,7 @@ function SigningAndCuts({ actions, busy }: { actions: OffseasonActions; busy: st
         );
       })}
       <TrainingFocus actions={actions} busy={busy} />
-      {err && <p className="dy-note dy-note-error" role="alert">{err}</p>}
+      {err && <Note kind="error">{err}</Note>}
       <Next
         busy={busy}
         label="Make the cuts and train"
@@ -364,7 +365,7 @@ function SigningAndCuts({ actions, busy }: { actions: OffseasonActions; busy: st
         }}
       />
       <div className="dy-row">
-        <button type="button" className="dy-button dy-quiet" disabled={!!busy} onClick={() => actions.run('Making the cuts…', async () => actions.commit(simCuts(d, await getTemplates(d))))}>Sim the cuts</button>
+        <Button variant="quiet" disabled={!!busy} onClick={() => actions.run('Making the cuts…', async () => actions.commit(simCuts(d, await getTemplates(d))))}>Sim the cuts</Button>
         <SimOffseason actions={actions} busy={busy} />
       </div>
     </>
@@ -398,7 +399,7 @@ function ProjectedDepth({ actions, busy }: { actions: OffseasonActions; busy: st
   };
   return (
     <>
-      <h3 className="dy-sub">Projected depth chart</h3>
+      <SubHead>Projected depth chart</SubHead>
       <p>
         Your {st.year + 1} depth chart as it stands after graduation and early entries ({of('graduated').length.toLocaleString('en-US')} graduates and{' '}
         {of('pro').length} early entries across the country; your teams' are listed in the next step). Players who start (★) are much less likely
@@ -439,13 +440,13 @@ function ProjectedDepth({ actions, busy }: { actions: OffseasonActions; busy: st
           </div>
         );
       })}
-      {err && <p className="dy-note dy-note-error" role="alert">{err}</p>}
+      {err && <Note kind="error">{err}</Note>}
       <div className="dy-row dy-next">
-        <button type="button" className="dy-button" disabled={!!busy} onClick={() => {
+        <Button disabled={!!busy} onClick={() => {
           const bad = d.userTeams.flatMap((u) => projectedProblems(d, u, charts[u]).map((m) => `${d.teams[u].school}: ${m}`));
           if (bad.length) return setErr(bad.join(' '));
           void actions.run('Players leaving…', async () => actions.commit(confirmDepth(d, charts)));
-        }}>Next: players leaving</button>
+        }}>Next: players leaving</Button>
         <SimOffseason actions={actions} busy={busy} />
       </div>
     </>

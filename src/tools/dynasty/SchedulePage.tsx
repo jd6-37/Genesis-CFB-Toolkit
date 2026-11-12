@@ -1,6 +1,7 @@
 // The schedule editor (user, 2026-11-12: "Generate each year, and then the user can edit … We don't need to edit
 // cpu teams, only the dynasty team(s)"; "I would like to be able to edit conference games too"). From the second
 // season, before its first import: a user team's 12 weeks, each with its opponent, site and week.
+import { Button, Note, PageHead, Select } from '../../ui';
 import { useMemo, useState } from 'react';
 import { INDEPENDENT } from '../../core/dynasty/derive';
 import { rivalryOf } from '../../core/dynasty/rivalries';
@@ -72,25 +73,21 @@ export function ScheduleEditor({ arg }: { arg?: string }) {
 
   return (
     <section className="dy-sched">
-      <div className="dy-pagehead">
-        <h2>{season.year} schedule</h2>
-        {d.userTeams.length > 1 && (
-          <select aria-label="Team" value={team} onChange={(e) => { location.hash = href(`schedule/${e.target.value}`); }}>
-            {d.userTeams.map((t) => <option key={t} value={t}>{name(t)}</option>)}
-          </select>
-        )}
-      </div>
+      <PageHead
+        title={`${season.year} schedule`}
+        actions={d.userTeams.length > 1 ? <Select label="Team" hideLabel value={team} options={d.userTeams.map((t) => ({ value: t, label: name(t) }))} onChange={(x) => { location.hash = href(`schedule/${x}`); }} /> : undefined}
+      />
       <p className="dy-small dy-dim">
         Made with the game's rules for random schedules, with the traditional rivalries kept every season.
         {lock ? '' : ' Change an opponent, a week or home and away: the teams your change leaves without a game that week play each other, so everyone still plays every week.'}
       </p>
-      {lock && <p className="dy-note dy-small">{lock}</p>}
-      {note && <p className={`dy-note dy-note-${note.kind} dy-small`} role="status">{note.text}</p>}
+      {lock && <Note>{lock}</Note>}
+      {note && <Note kind={note.kind}>{note.text}</Note>}
       {!lock && season.romDownloaded && season.lineupEdited && (
-        <p className="dy-note dy-small">
+        <Note>
           You changed the schedule or lineup after downloading the ROM. Download the {season.year} ROM again before you start the New Season.{' '}
-          <button type="button" className="dy-button dy-quiet" onClick={() => downloadRom(season.year)}>Download the {season.year} ROM</button>
-        </p>
+          <Button variant="quiet" onClick={() => downloadRom(season.year)}>Download the {season.year} ROM</Button>
+        </Note>
       )}
 
       <p className="dy-sched-sum">
@@ -98,8 +95,8 @@ export function ScheduleEditor({ arg }: { arg?: string }) {
         <span>{check.confGames[team]} conference games{confTarget ? ` (the conference plays ${confTarget})` : ''}</span>
         <span>{check.homeGames[team]} at home</span>
       </p>
-      {myMissing.length > 0 && <p className="dy-note dy-small">Not on the schedule: {myMissing.map(([a, b]) => rivalryOf(name(a), name(b)) ?? `${name(a)} vs. ${name(b)}`).join(', ')}.</p>}
-      {myRepeats.length > 0 && <p className="dy-note dy-small">Plays twice: {myRepeats.map(([a, b]) => name(a === team ? b : a)).join(', ')}.</p>}
+      {myMissing.length > 0 && <Note>Not on the schedule: {myMissing.map(([a, b]) => rivalryOf(name(a), name(b)) ?? `${name(a)} vs. ${name(b)}`).join(', ')}.</Note>}
+      {myRepeats.length > 0 && <Note>Plays twice: {myRepeats.map(([a, b]) => name(a === team ? b : a)).join(', ')}.</Note>}
 
       <ol className="dy-sched-list">
         {rows.map((g, w) => {
@@ -116,10 +113,7 @@ export function ScheduleEditor({ arg }: { arg?: string }) {
                   <span>{g.home ? 'vs.' : 'at'} <TeamLink team={g.opp} rank={false} /></span>
                 ) : (
                   <div className="dy-sched-edit">
-                    <button type="button" className="dy-button dy-quiet dy-sched-site" aria-label={`Week ${w + 1}: ${g.home ? 'home' : 'away'}, switch`}
-                      onClick={() => void change((s) => flipHome(s, w, team), () => `Week ${w + 1}: ${g.home ? 'at' : 'vs.'} ${name(g.opp)}.`)}>
-                      {g.home ? 'vs.' : 'at'}
-                    </button>
+                    <Button variant="quiet" label={`Week ${w + 1}: ${g.home ? 'home' : 'away'}, switch`} onClick={() => void change((s) => flipHome(s, w, team), () => `Week ${w + 1}: ${g.home ? 'at' : 'vs.'} ${name(g.opp)}.`)}>{g.home ? 'vs.' : 'at'}</Button>
                     <select aria-label={`Week ${w + 1} opponent`} value={g.opp} onChange={(e) => pickOpponent(w, Number(e.target.value))}>
                       <optgroup label="Conference">{confTeams.map((t) => <option key={t.index} value={t.index}>{t.school}</option>)}</optgroup>
                       <optgroup label="Other teams">{restTeams.map((t) => <option key={t.index} value={t.index}>{t.school}</option>)}</optgroup>
@@ -140,11 +134,11 @@ export function ScheduleEditor({ arg }: { arg?: string }) {
           {confirmNew ? (
             <>
               <span className="dy-small">Every team gets new games, and your changes are gone.</span>
-              <button type="button" className="dy-button" onClick={() => void remake()}>Make a new schedule</button>
-              <button type="button" className="dy-button dy-quiet" onClick={() => setConfirmNew(false)}>Keep this one</button>
+              <Button onClick={() => void remake()}>Make a new schedule</Button>
+              <Button variant="quiet" onClick={() => setConfirmNew(false)}>Keep this one</Button>
             </>
           ) : (
-            <button type="button" className="dy-button dy-quiet" onClick={() => setConfirmNew(true)}>Make a new schedule…</button>
+            <Button variant="quiet" onClick={() => setConfirmNew(true)}>Make a new schedule…</Button>
           )}
         </div>
       )}

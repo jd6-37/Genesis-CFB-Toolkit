@@ -21,7 +21,7 @@
 .dy a { color: inherit; text-decoration: none; }
 .dy a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .dy select, .dy input:not([type]), .dy input[type='text'] {
-  border: 1px solid var(--rule); border-radius: 4px; padding: 7px 10px; background: var(--field); color: var(--ink);
+  border: 1px solid var(--rule); border-radius: var(--radius); padding: 7px 10px; background: var(--field); color: var(--ink);
 }
 
 /* Masthead */
@@ -67,7 +67,7 @@
 .dy-tick-row { display: grid; grid-template-columns: 18px 18px 1fr auto; align-items: center; gap: 4px; font-weight: 600; }
 .dy-tick-rank { color: var(--gray); font-size: 12px; text-align: right; }
 .dy-tick-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.dy-tick-pts { font-variant-numeric: tabular-nums; font-weight: 600; }
+.dy-tick-pts { font: 400 20px/1 var(--font-num); }
 .dy-tick-state { font-size: 12px; color: var(--gray); }
 .dy-lost { color: var(--gray); font-weight: 400; }
 
@@ -83,7 +83,6 @@
 .dy-second p { margin: 0; color: var(--gray); font-size: 15px; }
 .dy-front-side > section { padding-bottom: 20px; margin-bottom: 20px; border-bottom: 1px solid var(--rule); }
 .dy-front-side > section:last-child { border-bottom: 0; }
-.dy-side-head { font-family: var(--display); font-weight: 700; font-size: 24px; margin: 0 0 8px; }
 .dy-headlines { list-style: none; margin: 0; padding: 0; }
 .dy-headlines li { padding: 9px 0; border-top: 1px solid var(--rule); font-weight: 600; line-height: 1.3; }
 .dy-headlines li:first-child { border-top: 0; padding-top: 0; }
@@ -102,22 +101,18 @@
 .dy-mark { display: inline-flex; align-items: center; justify-content: center; vertical-align: middle; }
 .dy-mark .sprite { max-height: 100%; width: auto !important; }
 .dy-chip {
-  display: inline-flex; align-items: center; justify-content: center; border-radius: 3px; font-weight: 700; flex: none;
+  display: inline-flex; align-items: center; justify-content: center; border-radius: var(--radius); font-weight: 700; flex: none;
   vertical-align: middle; letter-spacing: -0.02em;
 }
 .dy-team { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
 .dy-rank { color: var(--gray); font-size: 13px; font-weight: 500; }
 
 /* Page heads and tables */
-.dy-pagehead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 12px; margin: 32px 0 20px; }
-.dy-pagehead h2 { font-family: var(--display); font-weight: 700; font-size: 44px; line-height: 1; margin: 0; }
-.dy-pagehead p { margin: 0; color: var(--gray); flex-basis: 100%; }
 .dy-weeknav { display: flex; gap: 8px; align-items: center; }
-.dy-sub { font-family: var(--display); font-weight: 700; font-size: 26px; margin: 32px 0 10px; }
 .dy-table { border-collapse: collapse; width: 100%; font-size: 15px; font-variant-numeric: tabular-nums; }
 .dy-table caption { text-align: left; font-family: var(--display); font-weight: 700; font-size: 21px; padding-bottom: 6px; }
-.dy-table th { font-size: 13px; color: var(--gray); font-weight: 600; text-align: right; padding: 6px 8px; border-bottom: 2px solid var(--ink); }
-.dy-table td { text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--rule); }
+.dy-table th { font: 700 14px/1.2 var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink); text-align: right; padding: 6px 8px; border-bottom: var(--rule-w-strong) solid var(--ink); }
+.dy-table td { text-align: right; padding: 6px 8px; border-bottom: 1px dotted var(--rule); }
 .dy-table .dy-left { text-align: left; }
 .dy-table tbody tr:hover { background: var(--wash); }
 .dy-dim { color: var(--gray); }
@@ -136,7 +131,7 @@
 .dy-game-row { display: grid; grid-template-columns: 1fr auto 36px; gap: 8px; align-items: center; color: var(--gray); }
 .dy-game-row .dy-team { color: var(--gray); font-weight: 500; }
 .dy-won .dy-team, .dy-won .dy-game-pts { color: var(--ink); font-weight: 700; }
-.dy-game-pts { text-align: right; font-variant-numeric: tabular-nums; font-size: 18px; }
+.dy-game-pts { text-align: right; font: 400 26px/1 var(--font-num); }
 .dy-game-state { font-size: 12px; color: var(--gray); margin-top: 2px; }
 
 /* Standings, rankings, teams */
@@ -166,10 +161,10 @@
 .dy-teamhead p { margin: 6px 0 0; display: flex; flex-wrap: wrap; gap: 2px 16px; font-size: 15px; }
 .dy-teamhead-helmet { display: none; }
 .dy-teamovr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
-.dy-teamovr > div { background: rgba(0, 0, 0, 0.2); border-radius: 6px; padding: 8px 12px; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.dy-teamovr > div { background: rgba(0, 0, 0, 0.2); border-radius: var(--radius); padding: 8px 12px; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .dy-teamovr.dy-on-light > div { background: rgba(255, 255, 255, 0.45); }
 .dy-teamovr dt { font-size: 14px; font-weight: 600; }
-.dy-teamovr dd { margin: 0; font-family: var(--display); font-weight: 700; font-size: 40px; line-height: 1; }
+.dy-teamovr dd { margin: 0; font: 400 48px/0.9 var(--font-num); }
 @media (min-width: 760px) {
   .dy-teamhead { flex-direction: row; align-items: center; gap: 24px; padding: 24px 28px; margin-top: 28px; }
   .dy-teamhead-id { flex: 1; gap: 24px; }
@@ -177,7 +172,7 @@
   .dy-teamhead-helmet { display: block; }
   .dy-teamovr { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 112px; }
   .dy-teamovr > div { flex-direction: column-reverse; align-items: center; gap: 2px; padding: 10px 12px; }
-  .dy-teamovr dd { font-size: 52px; }
+  .dy-teamovr dd { font-size: 60px; }
 }
 .dy-team-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 40px; }
 .dy-stat-tables { display: grid; gap: 24px; }
@@ -192,26 +187,13 @@
 .dy-panel .dy-table { margin-top: 12px; max-width: 520px; }
 .dy-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .dy-check { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; color: var(--gray); }
-.dy-button {
-  display: inline-block; border: 0; border-radius: 4px; padding: 8px 16px; font-weight: 600; cursor: pointer;
-  background: var(--button); color: var(--on-accent) !important; text-decoration: none !important;
-}
-.dy-button:hover { filter: brightness(0.85); }
-.dy-button:disabled, .dy-button[aria-disabled='true'] { opacity: 0.4; cursor: default; pointer-events: none; }
-.dy-quiet { background: transparent; color: var(--ink) !important; box-shadow: inset 0 0 0 1px var(--rule); }
-.dy-quiet:hover { background: var(--wash); }
-.dy-danger { background: var(--loss); }
 .dy-chips { list-style: none; padding: 0; margin: 0 0 10px; display: flex; flex-wrap: wrap; gap: 8px; }
-.dy-chips li { display: inline-flex; gap: 8px; align-items: center; background: var(--wash); border-radius: 4px; padding: 4px 6px 4px 10px; font-weight: 600; }
+.dy-chips li { display: inline-flex; gap: 8px; align-items: center; background: var(--wash); border-radius: var(--radius); padding: 4px 6px 4px 10px; font-weight: 600; }
 .dy-chips button { border: 0; background: none; color: var(--gray); font-size: 13px; cursor: pointer; text-decoration: underline; }
 .dy-list { list-style: none; margin: 0; padding: 0; }
 .dy-list li { display: flex; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--rule); }
 .dy-list li > span { flex: 1; }
-.dy-note { margin: 20px 0; padding: 10px 14px; border-radius: 4px; background: var(--wash); }
-.dy-note-ok { background: var(--good-wash); }
-.dy-note-error { background: var(--bad-wash); }
-.dy-empty { margin: 64px auto; max-width: 52ch; text-align: center; font-size: 18px; }
-.dy-empty .dy-button { margin-top: 8px; }
+.dy-note { margin: 20px 0; padding: 10px 14px; border-radius: var(--radius); background: var(--wash); }
 
 @media (max-width: 900px) {
   .dy-front, .dy-team-cols { grid-template-columns: 1fr; }
@@ -235,15 +217,15 @@
 .dy-shape-avg { fill: none; stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 4 3; }
 .dy-shape-him { fill-opacity: 0.35; stroke-width: 2; }
 .dy-shape figcaption { display: flex; gap: 18px; font-size: 13px; color: var(--gray); margin-top: 8px; }
-.dy-shape figcaption i { display: inline-block; width: 18px; height: 8px; border-radius: 2px; margin-right: 4px; opacity: 0.6; }
-.dy-shape figcaption .dy-key-avg { opacity: 1; height: 0; border-top: 1.5px dashed var(--ink); border-radius: 0; vertical-align: middle; }
+.dy-shape figcaption i { display: inline-block; width: 18px; height: 8px; border-radius: var(--radius); margin-right: 4px; opacity: 0.6; }
+.dy-shape figcaption .dy-key-avg { opacity: 1; height: 0; border-top: 1.5px dashed var(--ink); border-radius: var(--radius); vertical-align: middle; }
 .dy-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
-.dy-tile { border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px; }
+.dy-tile { border: 1px solid var(--rule); border-radius: var(--radius); padding: 12px 14px; }
 .dy-tile-top { display: flex; justify-content: space-between; align-items: baseline; color: var(--gray); font-size: 14px; }
-.dy-tile-top strong { font-family: var(--display); font-weight: 700; font-size: 38px; line-height: 1; color: var(--ink); }
+.dy-tile-top strong { font: 400 44px/0.9 var(--font-num); color: var(--ink); }
 .dy-tile-top span { font-family: var(--display); font-weight: 700; font-size: 26px; line-height: 1; color: var(--ink); }
 .dy-pips { position: relative; display: flex; gap: 2px; margin: 8px 0 6px; }
-.dy-pips span { flex: 1; height: 12px; border-radius: 2px; background: var(--wash); }
+.dy-pips span { flex: 1; height: 12px; border-radius: var(--radius); background: var(--wash); }
 .dy-pips i { position: absolute; top: -3px; width: 2px; height: 18px; background: var(--ink); }
 .dy-tile-note { font-size: 13px; color: var(--gray); }
 .dy-tile-note strong { color: var(--ink); font-weight: 600; }
@@ -270,7 +252,7 @@
 .dy-classes { margin: 0; padding-left: 22px; }
 .dy-classes li { padding: 5px 0; border-bottom: 1px solid var(--rule); }
 .dy-classes li .dy-small { display: block; }
-.dy-cutlist { list-style: none; margin: 8px 0 0; padding: 0; max-height: 420px; overflow-y: auto; border: 1px solid var(--rule); border-radius: 6px; }
+.dy-cutlist { list-style: none; margin: 8px 0 0; padding: 0; max-height: 420px; overflow-y: auto; border: 1px solid var(--rule); border-radius: var(--radius); }
 .dy-cutlist label { display: grid; grid-template-columns: 24px 1fr auto auto 32px; gap: 8px; align-items: center; padding: 8px 10px; border-bottom: 1px solid var(--rule); cursor: pointer; }
 .dy-cutlist input { width: 18px; height: 18px; }
 .dy-cutlist .dy-strong { text-align: right; }
@@ -291,7 +273,7 @@
 .dy-board-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
 .dy-board-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .dy-board-ctl label { display: inline-flex; align-items: center; gap: 6px; }
-.dy-board-ctl input { width: 76px; border: 1px solid var(--rule); border-radius: 4px; padding: 6px 8px; }
+.dy-board-ctl input { width: 76px; border: 1px solid var(--rule); border-radius: var(--radius); padding: 6px 8px; }
 .dy-filters select { flex: 1 1 140px; }
 .dy-exp-btn { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: help; text-decoration: underline dotted; text-underline-offset: 3px; }
 .dy-exp-help { display: block; flex-basis: 100%; font-size: 0.85em; margin-top: 4px; opacity: 0.9; }
@@ -300,7 +282,7 @@
 .dy-needs summary { cursor: pointer; font-weight: 600; margin: 8px 0; }
 .dy-needs table { max-width: 420px; }
 .dy-top-schools { margin-top: 2px; }
-.dy-sim-ask { border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px; margin: 8px 0; }
+.dy-sim-ask { border: 1px solid var(--rule); border-radius: var(--radius); padding: 12px 14px; margin: 8px 0; }
 .dy-sim-ask p { margin-top: 0; }
 .dy-scout-ratings { display: flex; flex-wrap: wrap; gap: 2px 12px; }
 @media (min-width: 640px) {
@@ -314,13 +296,11 @@
 .dy-bench td.dy-strong { color: var(--ink); }
 
 /* Lineup editor: a position menu in the roster's Pos column. */
-.dy-pos { font: inherit; font-weight: 600; padding: 4px 2px; min-height: 32px; border: 1px solid var(--rule); border-radius: 4px; background: var(--field); color: inherit; }
-.dy-note .dy-button { margin-left: 4px; }
+.dy-pos { font: inherit; font-weight: 600; padding: 4px 2px; min-height: 32px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--field); color: inherit; }
 
 /* Front page Top 25 (mobile first): phones get one list; from 600 px the top four are cards and the rest
    run in columns (two, then three from 900 px). */
 .dy-poll { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--rule); }
-.dy-poll .dy-side-head a { color: inherit; }
 .dy-poll ol { list-style: none; margin: 0; padding: 0; }
 .dy-poll li { display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 10px; padding: 4px 0; font-size: 15px; }
 .dy-poll-big, .dy-poll-top .dy-move { display: none; }
@@ -328,7 +308,7 @@
   .dy-poll-top { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
   .dy-poll-top li {
     grid-template-columns: auto 1fr; grid-template-areas: 'n mark' 'team team' 'rec move';
-    gap: 6px 10px; padding: 14px; border: 1px solid var(--rule); border-radius: 6px;
+    gap: 6px 10px; padding: 14px; border: 1px solid var(--rule); border-radius: var(--radius);
   }
   .dy-poll-top .dy-top-n { grid-area: n; font-family: var(--display); font-weight: 700; font-size: 34px; line-height: 1; }
   .dy-poll-big { display: block; grid-area: mark; justify-self: end; }
@@ -345,7 +325,6 @@
 }
 
 /* Front page side column lists (mobile first: the column stacks under the main one on phones). */
-.dy-side-head a { color: inherit; }
 .dy-side-sub { font-size: 13px; font-weight: 700; color: var(--gray); margin: 12px 0 4px; }
 .dy-side-list, .dy-side-rank { list-style: none; margin: 0; padding: 0; }
 .dy-side-list li { padding: 5px 0; border-top: 1px solid var(--rule); font-size: 15px; }
@@ -355,7 +334,7 @@
 .dy-side-player { align-items: start !important; }
 .dy-side-player > span:nth-child(2) { display: flex; flex-direction: column; font-weight: 600; }
 .dy-side-meta { font-weight: 400; font-size: 13px; color: var(--gray); }
-.dy-tag { font-size: 11px; font-weight: 700; color: var(--gray); border: 1px solid var(--rule); border-radius: 3px; padding: 0 4px; }
+.dy-tag { font-size: 11px; font-weight: 700; color: var(--gray); border: 1px solid var(--rule); border-radius: var(--radius); padding: 0 4px; }
 .dy-side-table { width: 100%; font-size: 15px; }
 .dy-side-mine td { background: var(--highlight); }
 .dy-stars { color: #b8860b; letter-spacing: -1px; }
@@ -367,32 +346,32 @@
 
 /* Player editor (mobile first: one column, two from 600 px, three from 900 px). */
 .dy-edit-wrap { margin: 16px 0; }
-.dy-edit { border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px; }
-.dy-edit .dy-sub { margin-top: 4px; }
+.dy-edit { border: 1px solid var(--rule); border-radius: var(--radius); padding: 12px 14px; }
+.dy-edit .ui-sub { margin-top: 4px; }
 .dy-edit-grid { display: grid; gap: 10px 16px; }
 .dy-edit-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; font-weight: 600; }
-.dy-edit-grid input, .dy-edit-grid select { font: inherit; font-weight: 400; padding: 8px; min-height: 40px; border: 1px solid var(--rule); border-radius: 4px; }
+.dy-edit-grid input, .dy-edit-grid select { font: inherit; font-weight: 400; padding: 8px; min-height: 40px; border: 1px solid var(--rule); border-radius: var(--radius); }
 .dy-changes { max-height: 320px; overflow: auto; padding-left: 18px; }
 @media (min-width: 600px) { .dy-edit-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 900px) { .dy-edit-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
 /* Player headshots (headshot.ts): crisp pixels. */
-.dy-headshot { image-rendering: pixelated; image-rendering: crisp-edges; border-radius: 6px; border: 2px solid var(--rule); flex: none; display: block; }
+.dy-headshot { image-rendering: pixelated; image-rendering: crisp-edges; border-radius: var(--radius); border: 2px solid var(--rule); flex: none; display: block; }
 
 /* Offseason rules (RulesPage.tsx): phone first, two columns from 640 px. */
 .dy-modal-back { position: fixed; inset: 0; background: var(--scrim); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
-.dy-modal { background: var(--surface-raised); color: var(--ink); border-radius: 8px; padding: 20px; max-width: 460px; width: 100%; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3); }
+.dy-modal { background: var(--surface-raised); color: var(--ink); border-radius: var(--radius); padding: 20px; max-width: 460px; width: 100%; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3); }
 .dy-modal h2 { margin-top: 0; }
 .dy-rule-sec { border-top: 1px solid var(--rule); margin-top: 18px; }
 .dy-rule { display: grid; gap: 6px; padding: 10px 0; border-bottom: 1px dotted var(--rule); }
 .dy-rule-label { display: flex; flex-direction: column; gap: 2px; }
-.dy-rule-flag { align-self: flex-start; font-size: 0.75em; font-weight: 600; background: var(--highlight); border-radius: 3px; padding: 0 5px; }
+.dy-rule-flag { align-self: flex-start; font-size: 0.75em; font-weight: 600; background: var(--highlight); border-radius: var(--radius); padding: 0 5px; }
 .dy-rule-changed .dy-rule-label > span:first-child { font-weight: 600; }
 .dy-rule-inputs { display: flex; flex-wrap: wrap; gap: 8px 12px; }
 .dy-rule-in { display: inline-flex; align-items: center; gap: 4px; }
-.dy-rule-in input { width: 84px; border: 1px solid var(--rule); border-radius: 4px; padding: 6px 8px; }
+.dy-rule-in input { width: 84px; border: 1px solid var(--rule); border-radius: var(--radius); padding: 6px 8px; }
 .dy-reactions { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 4px; }
-.dy-reactions span { border-radius: 3px; padding: 0 5px; }
+.dy-reactions span { border-radius: var(--radius); padding: 0 5px; }
 .dy-react-good { background: var(--good-wash); color: var(--good); }
 .dy-react-ok { background: var(--wash); color: var(--gray); }
 .dy-react-bad { background: var(--bad-wash); color: var(--bad); }
@@ -432,7 +411,7 @@
 .dy-train-up { color: var(--good); font-weight: 700; }
 .dy-train-down { color: var(--bad); font-weight: 700; }
 .dy-train-chips { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 4px; list-style: none; margin: 0; padding: 0; }
-.dy-train-chips li { font-size: 0.8em; padding: 2px 6px; border-radius: 3px; background: var(--good-wash); color: var(--good); font-variant-numeric: tabular-nums; }
+.dy-train-chips li { font-size: 0.8em; padding: 2px 6px; border-radius: var(--radius); background: var(--good-wash); color: var(--good); font-variant-numeric: tabular-nums; }
 .dy-train-chips li.dy-train-chip-down { background: var(--bad-wash); color: var(--bad); }
 @media (min-width: 760px) {
   .dy-train-list > li { grid-template-columns: 16em 7em 1fr; align-items: center; }
@@ -475,7 +454,7 @@
 
 /* Progression: one small line per rating, two columns on phones, more on wider screens */
 .dy-prog { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 8px 0 16px; }
-.dy-prog-tile { margin: 0; border: 1px solid var(--rule); border-radius: 8px; padding: 8px 10px; min-width: 0; }
+.dy-prog-tile { margin: 0; border: 1px solid var(--rule); border-radius: var(--radius); padding: 8px 10px; min-width: 0; }
 .dy-prog-tile figcaption { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
 .dy-prog-tile figcaption > span:first-child { font-family: var(--display); font-weight: 700; font-size: 18px; line-height: 1.1; color: var(--ink); }
 .dy-prog-nums { font-variant-numeric: tabular-nums; color: var(--gray); }
@@ -487,7 +466,7 @@
 @media (min-width: 900px) { .dy-prog { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 
 /* Season awards (AwardsPage.tsx) and player honors. */
-.dy-heisman { border: 2px solid var(--rule); border-radius: 8px; padding: 12px 14px; margin: 12px 0; }
+.dy-heisman { border: 2px solid var(--rule); border-radius: var(--radius); padding: 12px 14px; margin: 12px 0; }
 .dy-heisman p { margin: 2px 0; }
 .dy-heisman-title { font-weight: 700; font-size: 14px; color: var(--gray); }
 .dy-heisman-name { font-size: 24px; font-weight: 800; }
