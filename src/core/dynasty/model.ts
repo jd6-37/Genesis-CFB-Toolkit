@@ -13,6 +13,7 @@ import { ratingProblems, readRating, type TeamRating } from '../teamRatings';
 import { readDynastySave, type DynastySave } from './save';
 import { startingPrestige } from './prestige';
 import { buildRosters } from './rosters';
+import { dynastyRomId, readStamp } from './dynastyArea';
 
 export const DYNASTY_FILE = { app: 'genesis-cfb-toolkit', tool: 'dynasty', version: 1 } as const;
 
@@ -97,6 +98,8 @@ export interface DSeason {
   events?: OffseasonEvent[];
   /** A user changed a team's lineup after the ROM was last written (download it again). */
   lineupEdited?: boolean;
+  /** Roster version in the season ROM's ID block: 1, then one more for each lineup change after a download. */
+  rosterVersion?: number;
 }
 
 export type OffseasonEvent =
@@ -276,6 +279,8 @@ export interface ImportResult {
   newGames: number;
   /** Teams the save marks as the user's that the dynasty didn't have yet. */
   newUserTeams: number[];
+  /** Something to tell the user about the save (an out-of-date ROM). */
+  warning?: string;
 }
 
 const packed = (file: Uint8Array, save: DynastySave): Uint8Array => {
@@ -306,6 +311,19 @@ export function importSave(d: Dynasty, file: Uint8Array, opt: { at?: string; all
   const season = d.seasons[d.seasons.length - 1];
   if (save.season.games.some((g) => (g.visitor !== null && g.visitor >= d.teams.length) || (g.home !== null && g.home >= d.teams.length))) {
     throw new Error("This save's games use teams this dynasty doesn't have.");
+  }
+  // A season started with a ROM the app wrote (Elevated v2.0.1 on) carries the dynasty's ID block.
+  const stamp = readStamp(save.stamp);
+  let warning: string | undefined;
+  if (stamp) {
+    if (stamp.dynasty !== dynastyRomId(d.id)) throw new Error("This save's season was started with a ROM of another dynasty.");
+    if (stamp.season !== season.index + 1) {
+      const year = d.seasons[stamp.season - 1]?.year;
+      throw new Error(`This save's season was started with the ${year ?? 'another season\'s'} ROM, and the dynasty is in ${season.year}.${year !== undefined && year < season.year ? ` Start a New Season in the game with the ${season.year} ROM.` : ''}`);
+    }
+    if (stamp.rosterVersion !== (season.rosterVersion ?? 1)) {
+      warning = `This season was started with an earlier ${season.year} ROM, from before your last lineup change: its stats are counted for the lineup the app has now.`;
+    }
   }
   const played = playedOf(save);
   const last = season.imports[season.imports.length - 1];
@@ -343,6 +361,7 @@ export function importSave(d: Dynasty, file: Uint8Array, opt: { at?: string; all
     played,
     newGames: played - (last?.played ?? 0),
     newUserTeams,
+    warning,
   };
 }
 

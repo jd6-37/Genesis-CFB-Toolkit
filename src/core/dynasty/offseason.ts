@@ -23,7 +23,8 @@ import { GROUP_ATTRS } from '../rosterLayouts';
 import CFB_OVR from './cfbOvr.json';
 import { MAX_PRESTIGE, nextPrestige, seasonPrestige } from './prestige';
 import { playerOvr } from './ovr';
-import { ratingProblems, starterOvr, writeRating } from '../teamRatings';
+import { ratingProblems, readRating, starterOvr, writeRating } from '../teamRatings';
+import { dynastyAreaProblem, dynastyRomId, hasDynastyHooks, writeDynastyArea } from './dynastyArea';
 import { buildRosters, TEAM_SIZE } from './rosters';
 
 /** A team is 64 players: the 32 in the game and one backup for each (rosters.ts). */
@@ -562,32 +563,60 @@ export function classRankings(events: OffseasonEvent[]) {
 
 // ---- the season's rosters in the ROM
 
+/** Whether a season ROM goes into the dynasty area (Elevated v2.0.1 on) or replaces the 2026 rosters. */
+export const writesDynastyArea = (rom: Uint8Array) => hasDynastyHooks(rom);
+
 /**
  * A copy of the user's ROM with a season's 32 per team (jersey numbers and game ratings) and team
- * OVRs written in, checksums fixed: what the Rosters and Teams tabs write, so the game plays the
- * dynasty's rosters. (Until the Elevated mod has a separate dynasty roster set, Exhibition uses
- * them too.)
+ * OVRs written in, checksums fixed. With the Elevated mod's dynasty support (v2.0.1 on) they go into
+ * the dynasty area, which Season mode reads, with the ID block New Season stamps into the save;
+ * Exhibition keeps the real 2026 rosters. Older ROMs get them in the 2026 data (what the Rosters and
+ * Teams tabs write), so Exhibition plays them too.
  */
-export function seasonRom(d: Dynasty, season: DSeason, rom: Uint8Array): Uint8Array {
+export function seasonRom(d: Dynasty, season: DSeason, rom: Uint8Array, now = Date.now()): Uint8Array {
   const out = openRosterRom(rom);
   if (!out.wide) throw new Error("This isn't the 138-team 2026 Season Edition.");
   if (ratingProblems(out.data).length) throw new Error(`This ROM's team ratings can't be written: ${ratingProblems(out.data).join('; ')}.`);
+  const area = hasDynastyHooks(out.data);
+  if (area) {
+    const problem = dynastyAreaProblem(out.data);
+    if (problem) throw new Error(problem);
+  }
+  const records: Uint8Array[] = [];
+  const ovr: { off: number; def: number }[] = [];
   for (let t = 0; t < d.teams.length; t++) {
     const layout = teamLayout(out, t);
+    const rec = new Uint8Array(128);
     for (const def of layout) {
+      // The 2026 record, with the season's player in it.
+      const p = readPlayer(out, t, def.slot);
       const id = season.slots[t][def.slot];
       const b = season.bw?.[t]?.[def.slot];
-      if (!id || !b) continue;
-      const p = readPlayer(out, t, def.slot);
-      p.numberByte = jerseyByte(d.players[id - 1].jersey);
-      for (const attr of GROUP_ATTRS[def.group]) {
-        const i = b.attrs.indexOf(attr);
-        if (i >= 0) setRating(p, def, attr, b.steps[i]);
+      if (id && b) {
+        p.numberByte = jerseyByte(d.players[id - 1].jersey);
+        for (const attr of GROUP_ATTRS[def.group]) {
+          const i = b.attrs.indexOf(attr);
+          if (i >= 0) setRating(p, def, attr, b.steps[i]);
+        }
       }
-      writePlayer(out, t, def.slot, p);
+      if (area) {
+        const r = p.ratings.map((x) => Math.max(0, Math.min(15, x | 0)));
+        rec.set([p.numberByte & 255, (r[0] << 4) | r[1], (r[2] << 4) | r[3], (r[4] << 4) | r[5]], 4 * def.slot);
+      } else {
+        writePlayer(out, t, def.slot, p);
+      }
     }
-    const o = season.teamOvr?.[t];
-    if (o) writeRating(out.data, t, o);
+    records.push(rec);
+    const o = season.teamOvr?.[t] ?? readRating(out.data, t);
+    ovr.push(o);
+    if (!area && season.teamOvr?.[t]) writeRating(out.data, t, o);
+  }
+  if (area) {
+    writeDynastyArea(out.data, {
+      stamp: { dynasty: dynastyRomId(d.id), season: season.index + 1, rosterVersion: season.rosterVersion ?? 1, time: Math.floor(now / 1000) },
+      records,
+      ovr,
+    });
   }
   fixChecksums(out.data, out.game);
   return out.data;

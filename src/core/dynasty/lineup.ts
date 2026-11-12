@@ -217,6 +217,8 @@ export function moveToSpot(d: Dynasty, team: number, id: number, spot: number): 
     const clamp = (n: number) => Math.max(0, Math.min(99, n));
     teamOvr = teamOvr.map((o, t) => (t === team ? { off: clamp(o.off + now.off - old.off), def: clamp(o.def + now.def - old.def) } : o));
   }
-  const season: DSeason = { ...s, slots, bench, bw, benchBw, teamOvr, lineupEdited: true };
+  // A new roster version once the last downloaded ROM is out of date (the save's stamp tells them apart).
+  const rosterVersion = s.lineupEdited ? s.rosterVersion ?? 1 : (s.rosterVersion ?? 1) + 1;
+  const season: DSeason = { ...s, slots, bench, bw, benchBw, teamOvr, lineupEdited: true, rosterVersion };
   return { ...next, seasons: [...d.seasons.slice(0, -1), season] };
 }

@@ -13,7 +13,7 @@ import {
 import { Ctx, href, TeamMark, type DynCtx } from './ui';
 import { History, Home, Leaders, Player, Rankings, Scores, Standings, Team, Teams } from './pages';
 import { Offseason, getTemplates, type OffseasonActions } from './OffseasonPage';
-import { seasonRom } from '../../core/dynasty/offseason';
+import { seasonRom, writesDynastyArea } from '../../core/dynasty/offseason';
 import { canReplaceBench, randomBench } from '../../core/dynasty/bench';
 import './dynasty.css';
 
@@ -158,7 +158,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       setArt(pics);
       setCurrent(dyn.id);
       await refresh();
-      setNote({ kind: 'ok', text: `${dyn.name} is ready: ${dyn.players.length.toLocaleString('en-US')} players on ${dyn.teams.length} teams. Import your save after you play a week.` });
+      setNote({ kind: 'ok', text: `${dyn.name} is ready: ${dyn.players.length.toLocaleString('en-US')} players on ${dyn.teams.length} teams. ${writesDynastyArea(rom) ? `Download the ${dyn.seasons[0].year} ROM (Season ROM, below), start a New Season with it, and import` : 'Import'} your save after you play a week.` });
     }),
     importSave: (f, allowOlder) => run('Importing the save…', async () => {
       if (!d) return;
@@ -169,7 +169,8 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       setNote({
         kind: 'ok',
         text: `Imported: ${r.played} games played${r.newGames > 0 ? ` (${r.newGames} new)` : ''}, next up ${nv.currentWeek < nv.weeks ? weekName(nv, nv.currentWeek) : 'nothing (the season is over)'}.` +
-          (added.length ? ` Your ${added.length > 1 ? 'teams' : 'team'}: ${added.join(', ')}.` : ''),
+          (added.length ? ` Your ${added.length > 1 ? 'teams' : 'team'}: ${added.join(', ')}.` : '') +
+          (r.warning ? ` ${r.warning}` : ''),
       });
     }),
     addArt: (romFile) => run('Reading team art…', async () => {
@@ -211,6 +212,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
     setUserTeams: (teams) => run('Saving…', async () => {
       if (d) await commit({ ...d, userTeams: teams });
     }),
+    downloadRom: (year) => dlRef.current(year),
     randomBench: () => run('Making random backups…', async () => {
       if (!d) return;
       const rom = await getRom();
@@ -246,7 +248,12 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       const slug = d.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'dynasty';
       download(`${slug}-${year}.md`, seasonRom(d, season, rom) as Uint8Array<ArrayBuffer>, 'application/octet-stream');
       if (season.lineupEdited) await commit({ ...d, seasons: d.seasons.map((x) => (x === season ? { ...x, lineupEdited: false } : x)) });
-      setNote({ kind: 'ok', text: `Downloaded the ${year} ROM. Start a New Season with it in the game.` });
+      setNote({
+        kind: 'ok',
+        text: writesDynastyArea(rom)
+          ? `Downloaded the ${year} ROM. Start a New Season with it in the game: Season mode plays the dynasty's rosters, Exhibition keeps the real 2026 ones.`
+          : `Downloaded the ${year} ROM. Start a New Season with it in the game. This ROM has no dynasty support (Elevated 2026 Season Edition v2.0.1 or later), so the rosters replace the real 2026 ones in Exhibition too.`,
+      });
     }),
   };
   dlRef.current = offActions.downloadRom;
@@ -306,6 +313,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
 
 interface ManageActions {
   create: (name: string, rom: File) => void;
+  downloadRom: (year: number) => void;
   importSave: (f: File, allowOlder: boolean) => void;
   addArt: (rom: File) => void;
   exportFile: () => void;
@@ -432,6 +440,21 @@ function Manage({ d, art, list, busy, note, actions }: {
             </select>
             <button type="button" className="dy-button" disabled={addTeam === ''} onClick={() => { actions.setUserTeams([...d.userTeams, Number(addTeam)]); setAddTeam(''); }}>Add team</button>
           </div>
+
+          {!d.offseason && (() => {
+            const year = d.seasons[d.seasons.length - 1].year;
+            return (
+              <>
+                <h3>Season ROM</h3>
+                <p>
+                  The {year} rosters and team OVRs written into your ROM. With the Elevated 2026 Season Edition v2.0.1 or later they go into the
+                  ROM's dynasty area: Season mode plays them, Exhibition keeps the real 2026 rosters, and New Season marks the save with the
+                  dynasty and season. Start the {year} season in the game with this ROM.
+                </p>
+                <button type="button" className="dy-button" disabled={!!busy} onClick={() => actions.downloadRom(year)}>Download the {year} ROM</button>
+              </>
+            );
+          })()}
 
           {canReplaceBench(d) && <BenchChoice onRandom={actions.randomBench} busy={!!busy} />}
 

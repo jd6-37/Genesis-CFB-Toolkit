@@ -90,6 +90,16 @@ IndexedDB database `genesis-cfb-dynasty`: store `dynasties` (the dynasty and whe
 - **Team OVRs** move by the change in `starterOvr` of the team's starters (season one's are the ROM's own).
 - **When:** user teams only, outside the offseason, before any imported save has a result (stats belong to slots). `DSeason.lineupEdited` shows a reminder to download the season's ROM again (cleared by the download). The next offseason's `depthChart` sets every lineup again from the players' positions.
 
+## The season ROM
+
+`seasonRom` (`offseason.ts`) writes a season's 32 per team (jersey numbers and game ratings, on the 2026 record of each slot) and the team OVRs into a copy of the user's ROM, checksums fixed.
+
+- **With the dynasty support** (Elevated 2026 Season Edition v2.0.1-test8 on: the mark `BW95DYN` + version at `0x2B0000`; `dynastyArea.ts`): everything goes into the dynasty area `0x3E0000`-`0x3FFFFF`, which Season mode reads and Exhibition never does. Header: the ID block (`DYN1`, dynasty ID = FNV-1a of the dynasty's app ID, season number = season index + 1, roster version, export time in Unix seconds), format word 1, team count 138, then the addresses of the roster set (`0x3E0100`, 138 × 32 game records), the OVR table (`0x3E4600`, `OVR1` + OFF/DEF bytes) and the sim words (`0x3E4800`, `simFromOvr`). The ID block is written last. The area must be all `0xFF` or hold a valid header (`DYN1`, `0x0001008A` at +0x10); the 2026 data stays as it is. Season one's sets equal the ROM's own rosters and OVRs.
+- **Without it** (v2.0.0 to v2.0.1-test7): the rosters and OVRs replace the 2026 ones in the team blocks and the OVR table (Exhibition plays them too); season one's ROM is byte-identical to the user's.
+- **Roster version:** 1, then one more when the lineup changes after the last download (`DSeason.rosterVersion`, lineup editor).
+- **The save stamp:** New Season copies the ID block into the season block's +0x1330. `importSave` refuses a stamp of another dynasty or another season, and warns when the roster version is older than the season's (the season was started before the last lineup change). Saves without a stamp (older ROMs, or a season started on a ROM the app didn't write) import as before.
+- The Manage page has a Download button for the current season's ROM (the first season's too, so its save gets the stamp); the Offseason page has one for the next season; the lineup editor reminds the user to download again.
+
 ## Prestige
 
 `src/core/dynasty/prestige.ts`. Every school has 1-6 stars per season (`DSeason.prestige`). Scale (user, 2026-11-12): final poll top 10 = 6, top 20 = 5, top 35 = 4, top 70 = 3, top 100 = 2, else 1; when the season ends a school moves at most one star toward the tier it finished in. Start: College Football 27's prestige at launch (0-5 in half stars, `CFB27_PRESTIGE`); schools are ranked by it (ties by team OVR in the ROM) and given the tier of their place, so the first season has 10 six-star, 10 five-star, 15 four-star, 35 three-star, 30 two-star and 38 one-star programs. Recruiting and the portal read prestige as (stars − 1) / 5.
@@ -116,6 +126,6 @@ A new season's first import is refused when it's the season before's save (same 
 
 ## Next phases
 
-1. ROM interface with the Elevated mod: an ID stamp in the season block (grow it to 0x1340, stamp at +0x1330) so a save names its dynasty and season, and a second roster set so Exhibition keeps the 2026 rosters while Season uses the dynasty's. The 0x3E0000-0x3FFFFF area is free in v2.0.0.
+1. ~~ROM interface~~ Done: see "The season ROM" above (Elevated v2.0.1-test8 on).
 2. Offseason: ratings progression, seniors leave (or return as SR+ under the 5-in-5 rule; every SR+ leaves after that year), juniors may go pro, the transfer portal, random signing classes, roster cuts (automatic for the computer, suggested for the user's teams), depth charts, roster editing and writing the next season's rosters and OFF/DEF into the ROM.
 3. Recruiting, coach careers, recolored game sprites and pixel-art portraits on the news pages, a schedule editor, and Everdrive saves.
