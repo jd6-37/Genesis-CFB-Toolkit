@@ -16,7 +16,7 @@ import { nibbleToRating, nibbleToWeight, type Attr } from '../../core/rosterLayo
 import { progressOf } from '../../core/dynasty/ratings';
 import { backupLabel, isBackup, lineupLock, moveToSpot, slotKind, slotOfSpot, spotLabel, spotsFor, SPOTS } from '../../core/dynasty/lineup';
 import { playerOvr, roleOfSlot } from '../../core/dynasty/ovr';
-import { Empty, StoryArt, TeamLink, TeamMark, href, heightText, hometownText, inkColor, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
+import { Empty, Headshot, StoryArt, TeamLink, TeamMark, href, heightText, hometownText, inkColor, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
 
 // ---- front page
 
@@ -574,7 +574,7 @@ export function Player({ id }: { id: number }) {
     <section>
       <header className="dy-teamhead" style={team !== null ? { background: teamCss(c), color: onColor(c) } : undefined}>
         <div className="dy-teamhead-id">
-        {team !== null && <TeamMark team={team} size={64} />}
+        <Headshot p={p} size={120} />
         <div>
           <h2>{playerName(p)}</h2>
           <p>

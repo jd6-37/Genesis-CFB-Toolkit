@@ -365,3 +365,6 @@
 .dy-changes { max-height: 320px; overflow: auto; padding-left: 18px; }
 @media (min-width: 600px) { .dy-edit-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (min-width: 900px) { .dy-edit-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* Player headshots (headshot.ts): crisp pixels. */
+.dy-headshot { image-rendering: pixelated; image-rendering: crisp-edges; border-radius: 6px; flex: none; display: block; }

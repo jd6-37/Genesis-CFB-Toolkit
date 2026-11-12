@@ -58,6 +58,13 @@ Week names follow the game: with the Real 2026 schedule the first week is Week 0
 - **Depth charts** (`depth.ts`): each slot goes to the player of its position with the best OVR at the slot's role, the Active Roster first, then the backups; then close positions (HB: FB, WR; DE: the other DE, DT; CB: FS, SS …), then anyone. A kicker can also punt when a team has no punter.
 - **New players** (`makeRecruit`, `recruitTemplates`): modeled on a league player of the position at the star rating's place (5★ top 3%, 4★ next 17%, 3★ 35-80%, 2★ 5-35%, 1★ bottom 5%; walk-ons bottom 8%), younger by 7-13 OVR points (spread over the ratings his OVR counts, Speed at 40%), every rating ±3. Names and hometowns from the starting players. In a six-season run (2026-2032, random classes) the starters' average OVR stays at 75-78.
 
+### Headshots
+
+`headshot.ts`, `Headshot` in `ui.tsx` (user, 2026-11-12: "16-bit headshots on the player page"; the shaded style; "plain gray. maybe darker?"). The player page shows a 40 × 40 pixel portrait drawn in a canvas and scaled up with crisp pixels. Nothing is stored: `lookOf` makes the look from the player every time, so it never changes.
+- **From the player:** his skin tone (the four tones), and his build from his position: wide neck and shoulders for OL and DL, medium for HB, FB, TE and LB, slim for the rest.
+- **From his ID** (seeded, the same every time): hair style (short with a side part, buzz, fade, curls, afro, locs, flowing, twists, mohawk, bald) and hair color, facial hair (freshmen and sophomores get stubble at most), mouth (neutral, smile, smirk, serious with lowered brows, grin) and eye black (3 in 10).
+- **Drawing:** the jersey in the team's recorded main color with a V collar in its second color (gray and white for a player without a team); light from the left with shaded right sides; ears set against the head's outermost columns; eyes looking straight ahead and the face mirrored about its center; long hair (flowing, locs) falls behind the head onto the shoulders. Background: a plain darker gray gradient (a logo behind the player was too busy).
+
 ### Editing
 
 `edit.ts`, `EditPlayer.tsx` (user, 2026-11-12: "full capabilities like we have in the mod toolkit"; every team). In the offseason and before a season's first results are imported (`editLock`):
