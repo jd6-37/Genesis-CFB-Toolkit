@@ -120,9 +120,35 @@ IndexedDB database `genesis-cfb-dynasty`: store `dynasties` (the dynasty and whe
 `seasonRom` (`offseason.ts`) writes a season's 32 per team (jersey numbers and game ratings, on the 2026 record of each slot) and the team OVRs into a copy of the user's ROM, checksums fixed.
 
 - **Only ROMs with the dynasty support and Team Rosters' names** (Elevated 2026 Season Edition v2.0.1-test9 on, user 2026-11-12: the mark `BW95DYN` + version at `0x2B0000`, the 2026 names table `NAM1` at `0x2C0000` and the names view's row hook at `0x06AFC0`; `hasDynastyHooks` in `dynastyArea.ts`); older ROMs and saves aren't supported before the first public release (user, 2026-11-12: "things are changing fast and big"). Everything goes into the dynasty area `0x3E0000`-`0x3FFFFF`, which Season mode reads and Exhibition never does. Header: the ID block (`DYN1`, dynasty ID = FNV-1a of the dynasty's app ID, season number = season index + 1, roster version, export time in Unix seconds), format word 1, team count 138, then the addresses of the roster set (`0x3E0100`, 138 × 32 game records), the OVR table (`0x3E4600`, `OVR1` + OFF/DEF bytes), the sim words (`0x3E4800`, `simFromOvr`) and (+0x20) the names set (`0x3E5000`, `NAM1`: team count, a long per team, then per slot class byte 0-4, first name, NUL, last name, NUL; Team Rosters' names view in v2.0.1-test9 on; season one's set equals the ROM's own 2026 names table at `0x2C0000`). The ID block is written last. The area must be all `0xFF` or hold a valid header (`DYN1`, `0x0001008A` at +0x10); the 2026 data stays as it is. Season one's sets equal the ROM's own rosters and OVRs.
-- **Roster version:** 1, then one more when the lineup changes after the last download (`DSeason.rosterVersion`, lineup editor).
+- **Roster version:** 1, then one more when the lineup or the schedule changes after the last download (`DSeason.rosterVersion`, lineup and schedule editors).
+- **Schedule** (from the second season): header +0x28 → `SCH1` set at 0x3FF000 (see "Schedules"); 0xFFFFFFFF in the first season.
 - **The save stamp:** New Season copies the ID block into the season block's +0x1330. `importSave` only takes stamped saves: another dynasty's or season's are refused (this also refuses last season's save in a new season), and an older roster version than the season's gives a warning (the season was started before the last lineup change). Exception: the first season's save without a stamp (started with the plain 2026 ROM, which has the same rosters as the app's first-season ROM) is taken with a warning (user's save, 2026-11-12); later seasons need the stamp.
 - The Manage page has a Download button for the current season's ROM (the first season's too, so its save gets the stamp); the Offseason page has one for the next season; the lineup editor reminds the user to download again.
+
+## Schedules
+
+From the second season the app makes each season's schedule (`schedule.ts`; user, 2026-11-12: "Generate each year, and then the user can edit … Basically use same rules"). The first season plays the one chosen in the game (Real 2026 or Random).
+
+- **Rules** (the season engine's Random schedule, `GEN`):
+  - 12 weeks, and every team plays every week.
+  - Each conference plays its conference games as circle-method rounds of a shuffled order. The number of games and the first week come from the ROM's CWN/CWS tables, read when the dynasty is created and kept in `DSeason.confWeeks`. Dynasties made before that use the released values.
+  - Everyone else is paired at random: another conference first, then no repeats.
+  - Home and away: rivalry games switch sites from last season. Otherwise the team with fewer home games hosts, evened out so every team has 5-7.
+- **Protected rivalries** (`PROTECTED` in `rivalries.ts`, 45 pairs; user: "Alabama should always play Auburn (ideally, last week of season). Michigan should always play Ohio State, even though there are 18 teams in the Big Ten").
+  - Inside a conference, the rounds are picked so they hold the conference's protected games.
+  - 20 season finales go in week 12 (Iron Bowl, The Game, Egg Bowl, Clean, Old-Fashioned Hate, Army-Navy …). When a finale isn't there, its two teams leave their week-12 games, and those games move to a week where both teams are free.
+  - Protected games across conferences go in a week where both teams are free.
+  - Which pairs are protected, and which are finales, was Claude's pick.
+  - Checked: every protected game on the schedule and every finale in week 12, over 30 schedules.
+- **Editing** (`SchedulePage.tsx`, `#dynasty/schedule/<team>`, linked from a user team's page and the new-season ROM window; user: "We don't need to edit cpu teams, only the dynasty team(s)"; "I would like to be able to edit conference games too"):
+  - Per week, the user can change his team's opponent, conference teams included (`setOpponent`). His old opponent then plays the new opponent's old opponent, so everyone still plays once a week.
+  - He can move the game to another week (`moveGame`, two such swaps; choosing an opponent he already plays moves that game), or switch home and away (`flipHome`).
+  - The page shows conference games, home games, rivalries, games played twice and protected rivalries no longer on the schedule.
+  - "Make a new schedule" makes another one for everyone.
+  - Locked once the season has an import. A change after the ROM download raises the roster version and asks for a new download (like a lineup change).
+- **In the ROM:** header +0x28 points to the schedule set at 0x3FF000. The set is `SCH1`, weeks, then per week a count and visitor/home bytes, the format of the ROM's real 2026 table (see "The season ROM"). The game needs a change to play it (New Season reads it instead of making one); the handoff is `claude/bw95-dynasty-schedule-handoff.md` in the claude.ai project. Until then New Season ignores it.
+- **Import:** a save whose regular-season games aren't the dynasty's schedule gets a warning. The results count as played.
+- Before the season's first import, the pages show the dynasty's schedule (unplayed games).
 
 ## The front page
 
@@ -223,4 +249,4 @@ A new season's first import is refused when it's the season before's save (same 
 
 1. ~~ROM interface~~ Done: see "The season ROM" above (Elevated v2.0.1-test9 on).
 2. Offseason: ratings progression, seniors leave (or return as SR+ under the 5-in-5 rule; every SR+ leaves after that year), juniors may go pro, the transfer portal, random signing classes, roster cuts (automatic for the computer, suggested for the user's teams), depth charts, roster editing and writing the next season's rosters and OFF/DEF into the ROM.
-3. Recruiting, coach careers, recolored game sprites and pixel-art portraits on the news pages, a schedule editor, and Everdrive saves.
+3. Recruiting, coach careers, recolored game sprites and pixel-art portraits on the news pages, and Everdrive saves. (The schedule editor is built: see "Schedules".)

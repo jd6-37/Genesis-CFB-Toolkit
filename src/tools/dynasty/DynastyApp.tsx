@@ -16,6 +16,7 @@ import {
 import { Ctx, href, TeamMark, type DynCtx } from './ui';
 import { Awards } from './AwardsPage';
 import { Records } from './RecordsPage';
+import { ScheduleEditor } from './SchedulePage';
 import { History, Home, Leaders, Player, Rankings, Scores, Standings, Team, Teams } from './pages';
 import { Offseason, type OffseasonActions } from './OffseasonPage';
 import { seasonRom } from '../../core/dynasty/offseason';
@@ -282,13 +283,14 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       case 'history': return <History />;
       case 'awards': return <Awards arg={arg} />;
       case 'records': return <Records arg={arg} />;
+      case 'schedule': return <ScheduleEditor arg={arg} />;
       case 'offseason': return <Offseason actions={offActions} busy={busy} />;
       case 'rules': return <Rules actions={offActions} busy={busy} />;
       case 'training': return <TrainingResults arg={arg} />;
       default: return <Home />;
     }
   })();
-  const navPage = page === 'team' || page === 'player' ? (page === 'team' ? 'teams' : 'stats') : page === 'rules' ? 'manage' : page === 'training' ? 'offseason' : page === 'awards' || page === 'records' ? 'history' : page;
+  const navPage = page === 'team' || page === 'player' || page === 'schedule' ? (page === 'player' ? 'stats' : 'teams') : page === 'rules' ? 'manage' : page === 'training' ? 'offseason' : page === 'awards' || page === 'records' ? 'history' : page;
   const week = d?.offseason ? 'Offseason' : v && v.save ? (v.currentWeek < v.weeks ? weekName(v, v.currentWeek) : 'Season complete') : d && d.seasons.length > 1 ? 'Preseason' : null;
 
   return (
@@ -326,10 +328,11 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
             <div className="dy-modal-back" role="presentation">
               <div className="dy-modal" role="dialog" aria-modal="true" aria-labelledby="dy-rom-title">
                 <h2 id="dy-rom-title">Download the {s.year} ROM</h2>
-                <p>The {s.year} season is set up. Download its ROM and start a <b>New Season</b> in the game with it: it has the new rosters, and the app can only import saves of seasons started with it.</p>
-                <p className="dy-small dy-dim">You can still change your depth chart first (your team's page); then download it again.</p>
+                <p>The {s.year} season is set up. Download its ROM and start a <b>New Season</b> in the game with it: it has the new rosters{s.schedule ? ' and schedule' : ''}, and the app can only import saves of seasons started with it.</p>
+                <p className="dy-small dy-dim">You can still change your depth chart{s.schedule ? ' or your schedule' : ''} first (your team's page); then download it again.</p>
                 <div className="dy-row">
                   <button type="button" className="dy-button" disabled={!!busy} onClick={() => offActions.downloadRom(s.year)}>Download the {s.year} ROM</button>
+                  {s.schedule && d.userTeams.length > 0 && <button type="button" className="dy-button dy-quiet" onClick={() => { setRomLater(s.year); location.hash = href(`schedule/${d.userTeams[0]}`); }}>See the schedule first</button>}
                   <button type="button" className="dy-button dy-quiet" onClick={() => setRomLater(s.year)}>Later</button>
                 </div>
               </div>

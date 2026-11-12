@@ -37,8 +37,9 @@ export interface TeamRecord {
 export function seasonView(d: Dynasty, season: DSeason): SeasonView {
   const save = latestSave(season);
   const s = save?.season ?? null;
-  const games = s?.games ?? [];
-  const weeks = s?.weeks ?? 0;
+  // Before the first import of a season with a dynasty schedule, its games (unplayed).
+  const games: SaveGame[] = s?.games ?? (season.schedule?.games ?? []).map((g, index) => ({ index, week: g.week, visitor: g.visitor, home: g.home, vs: null, hs: null, hold: false }));
+  const weeks = s?.weeks ?? (season.schedule ? 12 : 0);
   const n = d.teams.length;
   const { order, rank } = s ? ranksFromPower(s.power) : { order: d.teams.map((t) => t.index), rank: d.teams.map(() => 0) };
   let currentWeek = weeks;
@@ -62,7 +63,7 @@ export function seasonView(d: Dynasty, season: DSeason): SeasonView {
     ? (final[0].vs > final[0].hs ? final[0].visitor : final[0].home)
     : null;
   return {
-    season, save, games, weeks, lastRegularWeek: s?.lastRegularWeek ?? 0, currentWeek, rank, order, records, champion,
+    season, save, games, weeks, lastRegularWeek: s?.lastRegularWeek ?? (season.schedule ? 11 : 0), currentWeek, rank, order, records, champion,
     done: !!s && games.length > 0 && games.every((g) => g.vs !== null),
   };
 }

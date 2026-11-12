@@ -505,3 +505,16 @@
 @media (min-width: 700px) { .dy-records-teams { grid-template-columns: repeat(2, 1fr); } }
 @media (min-width: 1100px) { .dy-records-teams { grid-template-columns: repeat(3, 1fr); } }
 .dy-heisman-team { display: flex; align-items: center; gap: 8px; }
+
+/* Schedule editor (SchedulePage.tsx). Phones: week above the game; wider: side by side. */
+.dy-sched-sum { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; margin: 12px 0; }
+.dy-sched-list { list-style: none; padding: 0; margin: 8px 0 16px; }
+.dy-sched-list li { display: grid; gap: 4px; padding: 10px 0; border-bottom: 1px solid var(--line, #ddd); }
+.dy-sched-week { font-weight: 700; }
+.dy-sched-game { display: grid; gap: 4px; }
+.dy-sched-edit { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.dy-sched-edit select { max-width: 100%; }
+.dy-sched-site { min-width: 48px; }
+@media (min-width: 700px) {
+  .dy-sched-list li { grid-template-columns: 90px 1fr; align-items: center; }
+}

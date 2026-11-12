@@ -84,6 +84,7 @@ export const RIVALRIES: [string, string, string][] = [
   ['Charlotte', 'App State', 'the Charlotte-App State game'],
   ['UCF', 'South Florida', "the War on I-4"],
   ['Liberty', 'James Madison', 'the Liberty-James Madison game'],
+  ['Notre Dame', 'Navy', 'the Notre Dame-Navy game'],
 ];
 
 /** The rivalry name for a pair of schools, if they have one (the first listed wins). */
@@ -91,3 +92,59 @@ export function rivalryOf(a: string, b: string): string | null {
   const hit = RIVALRIES.find(([x, y]) => (x === a && y === b) || (x === b && y === a));
   return hit ? hit[2] : null;
 }
+
+/**
+ * Rivalries the dynasty's schedules keep every season (user, 2026-11-12: "let's keep protected rivalries …
+ * Alabama should always play Auburn (ideally, last week of season). Michigan should always play Ohio State").
+ * `last`: played in the last regular-season week when it can be (the traditional season finales). Claude's
+ * pick of the pairs; each school has at most one finale.
+ */
+export const PROTECTED: { a: string; b: string; last?: boolean }[] = [
+  // Finales
+  { a: 'Alabama', b: 'Auburn', last: true },
+  { a: 'Ohio State', b: 'Michigan', last: true },
+  { a: 'Ole Miss', b: 'Mississippi St.', last: true },
+  { a: 'Texas', b: 'Texas A&M', last: true },
+  { a: 'Georgia', b: 'Georgia Tech', last: true },
+  { a: 'Florida', b: 'Florida State', last: true },
+  { a: 'Clemson', b: 'South Carolina', last: true },
+  { a: 'Kentucky', b: 'Louisville', last: true },
+  { a: 'Virginia', b: 'Virginia Tech', last: true },
+  { a: 'North Carolina', b: 'NC State', last: true },
+  { a: 'Indiana', b: 'Purdue', last: true },
+  { a: 'Minnesota', b: 'Wisconsin', last: true },
+  { a: 'Iowa', b: 'Nebraska', last: true },
+  { a: 'USC', b: 'UCLA', last: true },
+  { a: 'Washington', b: 'Washington State', last: true },
+  { a: 'Oregon', b: 'Oregon State', last: true },
+  { a: 'Arizona', b: 'Arizona State', last: true },
+  { a: 'Kansas', b: 'Kansas State', last: true },
+  { a: 'Army', b: 'Navy', last: true },
+  { a: 'Cal', b: 'Stanford', last: true },
+  // Every season, any week
+  { a: 'Texas', b: 'Oklahoma' },
+  { a: 'Alabama', b: 'Tennessee' },
+  { a: 'Alabama', b: 'LSU' },
+  { a: 'Auburn', b: 'Georgia' },
+  { a: 'Florida', b: 'Georgia' },
+  { a: 'Arkansas', b: 'LSU' },
+  { a: 'Michigan', b: 'Michigan State' },
+  { a: 'Minnesota', b: 'Iowa' },
+  { a: 'BYU', b: 'Utah' },
+  { a: 'Notre Dame', b: 'USC' },
+  { a: 'Notre Dame', b: 'Navy' },
+  { a: 'Iowa', b: 'Iowa State' },
+  { a: 'Pitt', b: 'West Virginia' },
+  { a: 'Miami', b: 'Florida State' },
+  { a: 'Air Force', b: 'Army' },
+  { a: 'Air Force', b: 'Navy' },
+  { a: 'Colorado', b: 'Colorado State' },
+  { a: 'Boise State', b: 'Fresno State' },
+  { a: 'Texas State', b: 'UTSA' },
+  { a: 'App State', b: 'Georgia Southern' },
+  { a: 'Toledo', b: 'Bowling Green' },
+  { a: 'Ohio', b: 'Miami of Ohio' },
+  { a: 'Western Kentucky', b: 'Middle Tennessee' },
+  { a: 'UCF', b: 'South Florida' },
+  { a: 'Cincinnati', b: 'Louisville' },
+];

@@ -1,6 +1,7 @@
 // The Dynasty's reading pages: the news front page, scores, standings, rankings, teams, players,
 // stat leaders and history.
 import { playerHonors, seasonAwards } from '../../core/dynasty/awards';
+import { scheduleLock } from '../../core/dynasty/schedule';
 import { useEffect, useMemo, useState } from 'react';
 import {
   champions, leaders, playerLines, playerName, seasonView, standings, statValue, teamHistory, weekName,
@@ -494,6 +495,7 @@ export function Team({ team }: { team: number }) {
       <div className="dy-team-cols">
         <div>
           <h3 className="dy-sub">Schedule</h3>
+          {mine && v.season.schedule && !scheduleLock(v.season) && <p className="dy-small"><a href={href(`schedule/${team}`)}>Change the schedule</a></p>}
           {games.length ? (
             <table className="dy-table">
               <tbody>

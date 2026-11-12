@@ -4,6 +4,7 @@
 // save is a Genesis Plus GX (RetroArch) .srm of the 138-team edition with a season started and at least one week
 // played; the test puts its dynasty's mark (the ID block New Season copies) into it.
 import { careerRecords, teamRecords } from '../src/core/dynasty/records';
+import { checkSchedule, editSchedule, flipHome, moveGame, protectedPairs, remakeSchedule, SCHED_WEEKS, setOpponent, teamSchedule, type SchedGame } from '../src/core/dynasty/schedule';
 import { AWARD_SPOTS, AWARD_STATS_WEIGHT, POSITION_AWARDS, awardsOf, candidates, playerHonors, seasonAwards } from '../src/core/dynasty/awards';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { basename } from 'node:path';
@@ -27,7 +28,7 @@ import { academicsOf, CFB27_ACADEMICS } from '../src/core/dynasty/academics';
 import { SCHOOL_STATE, stateCode } from '../src/core/dynasty/schoolStates';
 import { experienceOf, recordRatings, trainingResults, trainingYears } from '../src/core/dynasty/career';
 import { randomBench } from '../src/core/dynasty/bench';
-import { gameText, dynastyAreaProblem, dynastyHeaderValid, dynastyRomId, DYN_AREA, DYN_END, hasDynastyHooks, readStamp } from '../src/core/dynasty/dynastyArea';
+import { gameText, dynastyAreaProblem, dynastyHeaderValid, dynastyRomId, DYN_AREA, DYN_END, hasDynastyHooks, readStamp, scheduleAddress } from '../src/core/dynasty/dynastyArea';
 import { simFromOvr } from '../src/core/teamRatings';
 import { parseCsv } from '../src/core/rosterSheet';
 import { rosterLayout } from '../src/core/rosterLayouts';
@@ -661,6 +662,58 @@ for (let t = 0; t < 138; t++) {
 }
 assert.deepEqual(readStamp(rom2.subarray(DYN_AREA, DYN_AREA + 16))!.season, 2);
 ok('season rosters written to the dynasty area and read back');
+
+// Schedules from the second season (user, 2026-11-12: "Generate each year, and then the user can edit";
+// "keep protected rivalries"): the game's Random rules, every protected rivalry in, the finales in the last week.
+{
+  assert.equal(first.schedule, undefined, 'the first season plays the game\'s schedule');
+  const sc = next.schedule!;
+  const schools = o5.teams.map((t) => t.school);
+  const ck = checkSchedule(sc, schools, next.conf);
+  assert.equal(ck.broken.length, 0, ck.broken[0]);
+  assert.equal(ck.missing.length, 0, 'every protected rivalry');
+  assert.ok(ck.repeats.length <= 2, `repeats ${ck.repeats.length}`);
+  const pairs = protectedPairs(schools);
+  assert.ok(pairs.length >= 40, `protected pairs (${pairs.length})`);
+  const inLast = (a: number, b: number) => sc.games.some((g) => g.week === SCHED_WEEKS - 1 && ((g.visitor === a && g.home === b) || (g.visitor === b && g.home === a)));
+  const finales = pairs.filter((p) => p.last);
+  assert.ok(finales.every((p) => inLast(p.a, p.b)), 'the finales in the last week');
+  const cw = next.confWeeks!;
+  const short = schools.filter((_, t) => next.conf[t] !== INDEPENDENT && ck.confGames[t] < cw.games[next.conf[t]] - 1);
+  assert.equal(short.length, 0, `conference games (${short.slice(0, 3).join(', ')})`);
+  assert.ok(Math.min(...ck.homeGames) >= 4 && Math.max(...ck.homeGames) <= 8, `home games ${Math.min(...ck.homeGames)}-${Math.max(...ck.homeGames)}`);
+  // Conference games in the conference's weeks (the moved ones from a finale aside).
+  const early = sc.games.filter((g) => next.conf[g.home] === next.conf[g.visitor] && next.conf[g.home] !== INDEPENDENT && g.week < cw.start[next.conf[g.home]]).length;
+  // Editing: every team keeps one game a week.
+  const ts = schools.indexOf('Texas State'), ut = schools.indexOf('Texas');
+  let e = setOpponent(sc, 1, ts, ut);
+  assert.deepEqual(teamSchedule(e, ts)[1]!.opp, ut);
+  e = moveGame(e, ts, 1, 6);
+  assert.equal(teamSchedule(e, ts)[6]!.opp, ut, 'the game moved');
+  e = flipHome(e, 6, ts);
+  assert.equal(checkSchedule(e, schools, next.conf).broken.length, 0, 'still one game a week');
+  // The dynasty: edits after the download need a new ROM (roster version up); none once games are in.
+  const o6 = { ...o5, seasons: o5.seasons.map((x, i) => (i === 1 ? { ...x, romDownloaded: true } : x)) };
+  const ed = editSchedule(o6, (x) => setOpponent(x, 1, ts, ut));
+  assert.ok(ed.seasons[1].lineupEdited && ed.seasons[1].rosterVersion === (next.rosterVersion ?? 1) + 1);
+  assert.throws(() => editSchedule(d0, (x) => x), /first season/);
+  const re = remakeSchedule(o5, 99);
+  assert.equal(checkSchedule(re.seasons[1].schedule!, schools, next.conf).missing.length, 0);
+  assert.notDeepEqual(re.seasons[1].schedule!.games, sc.games, 'a new schedule');
+  // In the ROM: header +0x28 → "SCH1", weeks, per week count + visitor/home.
+  const at = scheduleAddress(rom2)!;
+  assert.ok(at, 'schedule set');
+  let k = at + 4, back: SchedGame[] = [];
+  const weeks = rom2[k++];
+  for (let w = 0; w < weeks; w++) for (let c = rom2[k++]; c > 0; c--) { back.push({ week: w, visitor: rom2[k], home: rom2[k + 1] }); k += 2; }
+  assert.deepEqual(back, sc.games, 'the ROM\'s schedule = the dynasty\'s');
+  assert.equal(scheduleAddress(Off.seasonRom(d0, first, rom)), null, 'none for the first season');
+  // The preseason pages show it before any import.
+  const pv = seasonView(o5, next);
+  assert.ok(pv.games.length === sc.games.length && pv.currentWeek === 0 && !pv.done);
+  const fin = finales.map((p) => `${schools[p.a]}-${schools[p.b]}`);
+  ok(`schedule: ${sc.games.length} games, ${pairs.length} protected rivalries, ${finales.length} finales in week 12 (e.g. ${fin.slice(0, 3).join(', ')}), ${ck.repeats.length} repeats, home games ${Math.min(...ck.homeGames)}-${Math.max(...ck.homeGames)}, ${early} conference games moved early; edits keep one game a week; in the ROM at 0x${at.toString(16).toUpperCase()}`);
+}
 // The new season doesn't take last season's save.
 assert.throws(() => importSave(o5, srm), /the 2026 ROM, and the dynasty is in 2027/);
 ok('a new season refuses the last season\'s save');
@@ -711,7 +764,9 @@ ok('a new season refuses the last season\'s save');
     const a1 = importSave(d0, before).dynasty;
     const o = Off.startOffseason(a1, { seed: 5, force: true });
     const n2 = Sim.simOffseason(o, Off.recruitTemplates(o));
-    const b2 = importSave(n2, stampSave(rawSrm, dynastyRomId('test'), 2, 1)).dynasty;
+    const ib2 = importSave(n2, stampSave(rawSrm, dynastyRomId('test'), 2, 1));
+    assert.match(ib2.warning ?? '', /isn't the dynasty's 2027 schedule/, 'a save that played another schedule warns');
+    const b2 = ib2.dynasty;
     const rec = stories(b2).filter((x) => x.kind === 'record');
     assert.ok(rec.length > 0 && rec.length <= RECORD_STATS.length && rec.every((x) => x.player && /sets the record/.test(x.headline)), `records broken (${rec.length})`);
     assert.equal(new Set(rec.map((x) => x.headline.replace(/^.* sets /, ''))).size, rec.length, 'one new holder per record');

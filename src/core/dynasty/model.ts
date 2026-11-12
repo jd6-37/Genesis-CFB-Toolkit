@@ -6,6 +6,7 @@
 import { openRosterRom } from '../rosterRom';
 import { parseCsv, type Sheet } from '../rosterSheet';
 import { readWideSeason, wideSeasonProblems } from '../seasonWide';
+import type { ConfWeeks, DSchedule } from './schedule';
 import { parseBw95 } from '../bw95';
 import { teamsOf } from '../wide';
 import type { Attr, Group } from '../rosterLayouts';
@@ -112,6 +113,10 @@ export interface DSeason {
   rosterVersion?: number;
   /** The season's ROM has been downloaded (the "download the ROM" window stops asking). */
   romDownloaded?: boolean;
+  /** The ROM's conference week settings (first conference week and conference games per conference). */
+  confWeeks?: ConfWeeks;
+  /** From the second season: the dynasty's schedule (schedule.ts), written into the season ROM. */
+  schedule?: DSchedule;
 }
 
 export type OffseasonEvent =
@@ -286,7 +291,7 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
     userTeams: opt.userTeams ?? [],
     teams,
     players: recordYear(players, startYear),
-    seasons: [{ index: 0, year: startYear, conf: season.conf, confNames: season.names, slots, bw, bench, benchBw, teamOvr, prestige: startingPrestige(teams.map((t) => t.school), teamOvr), imports: [] }],
+    seasons: [{ index: 0, year: startYear, conf: season.conf, confNames: season.names, confWeeks: { start: season.start, games: season.games }, slots, bw, bench, benchBw, teamOvr, prestige: startingPrestige(teams.map((t) => t.school), teamOvr), imports: [] }],
   };
 }
 
@@ -348,7 +353,14 @@ export function importSave(d: Dynasty, file: Uint8Array, opt: { at?: string; all
     throw new Error(`This save's season was started with the ${year ?? 'another season\'s'} ROM, and the dynasty is in ${season.year}.${year !== undefined && year < season.year ? ` Start a New Season in the game with the ${season.year} ROM.` : ''}`);
   }
   if (stamp && stamp.rosterVersion !== (season.rosterVersion ?? 1)) {
-    warning = `This season was started with an earlier ${season.year} ROM, from before your last lineup change: its stats are counted for the lineup the app has now.`;
+    warning = `This season was started with an earlier ${season.year} ROM, from before your last lineup or schedule change: its stats are counted for the lineup the app has now.`;
+  }
+  // The dynasty's schedule (second season on): the save's regular season should be the same games.
+  if (season.schedule && !warning) {
+    const want = new Set(season.schedule.games.map((g) => `${g.week}/${g.visitor}/${g.home}`));
+    const reg = save.season.games.filter((g) => g.week <= save.season!.lastRegularWeek);
+    const same = reg.length === want.size && reg.every((g) => want.has(`${g.week}/${g.visitor}/${g.home}`));
+    if (!same) warning = `This season's schedule isn't the dynasty's ${season.year} schedule: the season was started with another ROM, or a ROM that doesn't read dynasty schedules yet. The results count as they were played.`;
   }
   const played = playedOf(save);
   const last = season.imports[season.imports.length - 1];

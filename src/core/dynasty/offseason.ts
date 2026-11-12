@@ -15,6 +15,7 @@
 // Pure functions: each returns a new dynasty. Randomness is seeded, so the same choices give the
 // same offseason. The players before the offseason are kept so it can be started over.
 
+import { lastGames, makeSchedule, RELEASE_CONF_WEEKS, scheduleSet } from './schedule';
 import { CLASSES, rng, type ClassYear, type DPlayer, type DSeason, type Dynasty, type OffseasonEvent } from './model';
 import { playerLines, seasonView } from './derive';
 import { fixChecksums, jerseyByte, openRosterRom, readPlayer, setRating, teamLayout } from '../rosterRom';
@@ -791,11 +792,21 @@ export function finishOffseason(d: Dynasty): Dynasty {
   const players = fixJerseys(d.players, r);
   const withNumbers = { ...d, players };
   const prev = lastSeason(d);
+  const confWeeks = prev.confWeeks ?? RELEASE_CONF_WEEKS;
   const season: DSeason = {
     index: prev.index + 1,
     year: prev.year + 1,
     conf: prev.conf.slice(),
     confNames: prev.confNames.slice(),
+    confWeeks,
+    // The next season's schedule (user, 2026-11-12: "Generate each year, and then the user can edit").
+    schedule: makeSchedule({
+      schools: d.teams.map((t) => t.school),
+      conf: prev.conf,
+      confWeeks,
+      last: lastGames(d, prev),
+      seed: Math.floor(r() * 0x7fffffff),
+    }),
     ...depthChart(withNumbers),
     prestige: st.prestige ?? seasonPrestige(d, prev),
     imports: [],
@@ -851,6 +862,7 @@ export function seasonRom(d: Dynasty, season: DSeason, rom: Uint8Array, now = Da
     records,
     ovr,
     names,
+    schedule: season.schedule ? scheduleSet(season.schedule) : undefined,
   });
   fixChecksums(out.data, out.game);
   return out.data;
