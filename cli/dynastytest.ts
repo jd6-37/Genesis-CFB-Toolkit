@@ -497,6 +497,23 @@ if (user !== undefined) {
   ok(`pitching: ${tgt.player.first} ${tgt.player.last}'s interests ${ints.join(', ')}; reactions ${ints.map((k) => Rec.pitchReaction(RD, tgt, sc, k)).join(', ')}, the rest ✗`);
 }
 
+// Development paces: Awareness grows fastest, Speed slowest; the OVR still moves by the gain.
+{
+  const hb = d0.players.find((p) => p.pos === 'HB' && (p.ratings.Speed ?? 100) < 85 && (p.ratings.Awareness ?? 100) < 85)!;
+  const half = () => 0.5;
+  const g = Off.develop(hb, 4, half);
+  const up = (a: 'Speed' | 'Awareness' | 'Quickness' | 'Power') => (g.ratings[a] ?? 0) - (hb.ratings[a] ?? 0);
+  assert.ok(up('Awareness') > up('Power') && up('Power') > up('Quickness') && up('Quickness') > up('Speed') && up('Speed') > 0, 'Awareness > Power > Quickness > Speed');
+  assert.ok(Math.abs(up('Awareness') / up('Speed') - RD.paceAwareness / RD.speedPace) < 0.2, 'by the paces');
+  const f = OVR_FORMULAS.HB, raw = Object.entries(f.weights).reduce((t, [a, w]) => t + (w / 100) * f.scale * up(a as 'Speed'), 0);
+  assert.ok(Math.abs(raw - 4) < 0.2, `the ratings move by the gain before steps (${raw.toFixed(2)})`);
+  const capped = { ...hb, ratings: { ...hb.ratings, Awareness: 99 } }, gc = Off.develop(capped, 4, half);
+  const rawC = Object.entries(f.weights).reduce((t, [a, w]) => t + (w / 100) * f.scale * (((gc.ratings as Record<string, number>)[a] ?? 0) - ((capped.ratings as Record<string, number>)[a] ?? 0)), 0);
+  assert.equal(gc.ratings.Awareness, 100);
+  assert.ok(Math.abs(rawC - 4) < 0.2, `a rating at 100 passes its share to the others (${rawC.toFixed(2)})`);
+  ok(`development paces: an HB's +4 OVR year gives AWR +${up('Awareness').toFixed(1)}, POW +${up('Power').toFixed(1)}, QUI +${up('Quickness').toFixed(1)}, SPD +${up('Speed').toFixed(1)}`);
+}
+
 // Simming for the user teams: a week, the rest of recruiting, the cuts, the whole offseason.
 const g1 = Rec.simRecruiting(f1, 1);
 assert.equal(g1.offseason!.recruiting!.week, 1);

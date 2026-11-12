@@ -134,21 +134,48 @@ export function seasonDone(d: Dynasty): boolean {
 
 // ---- 1. departures, classes, development
 
+/** How fast a rating grows compared with the others (Offseason rules, Development). */
+export function paceOf(R: OffseasonRules, a: string): number {
+  switch (a) {
+    case 'Speed': return R.speedPace;
+    case 'Quickness': return R.paceQuickness;
+    case 'Range': return R.paceRange;
+    case 'Power': return R.pacePower;
+    case 'Awareness': return R.paceAwareness;
+    case 'Hands': case 'Blocking': case 'Tackling': case 'Accuracy': return R.paceTechnique;
+    default: return 1;
+  }
+}
+
 /**
- * Grows a player toward his potential: an OVR gain raises the ratings his position's OVR formula counts
- * (Speed at half the pace), by the shown numbers, so he can be part of the way to the next step. Bigger
- * players also put on a few pounds.
+ * Grows a player toward his potential: an OVR gain raises the ratings his position's OVR formula counts,
+ * by the shown numbers, so he can be part of the way to the next step. The gain is shared out by each
+ * rating's pace (Awareness fastest, Speed slowest; user, 2026-11-12: "SPD shouldn't be able to progress
+ * as much as AWR"), scaled so his OVR still moves by the gain. Bigger players also put on a few pounds.
  */
-export function develop(p: DPlayer, gain: number, r: Rand, speedPace = DEFAULT_RULES.speedPace): DPlayer {
+export function develop(p: DPlayer, gain: number, r: Rand, R: OffseasonRules = DEFAULT_RULES): DPlayer {
   const role = roleOfPos(p.pos);
   const f = OVR_FORMULAS[role];
   if (!f || Math.abs(gain) < 0.25) return p;
   const per = gain / f.scale; // the weighted average moves by this many points
+  const ws = (Object.entries(f.weights) as [keyof Ratings, number][]).filter(([, w]) => w > 0);
+  const norm = ws.reduce((t, [a, w]) => t + w * paceOf(R, a), 0) / ws.reduce((t, [, w]) => t + w, 0) || 1; // the weighted average pace
   const ratings: Ratings = { ...p.ratings };
-  for (const [a, w] of Object.entries(f.weights) as [keyof Ratings, number][]) {
-    if (!w) continue;
-    const pace = a === 'Speed' ? speedPace : 1.15;
-    ratings[a] = clamp(Math.round(((ratings[a] ?? 0) + per * pace * between(r, 0.6, 1.4)) * 10) / 10, 0, 100);
+  // Each rating's share, then a rating at 0 or 100 passes what it can't take to the others (by weight × pace).
+  let want = new Map(ws.map(([a]) => [a, per * (paceOf(R, a) / norm) * between(r, 0.6, 1.4)] as const));
+  for (let round = 0; round < 4 && want.size; round++) {
+    let left = 0;
+    const open: [keyof Ratings, number][] = [];
+    for (const [a, step] of want) {
+      const was = ratings[a] ?? 0, to = clamp(was + step, 0, 100);
+      ratings[a] = Math.round(to * 10) / 10;
+      const w = ws.find(([x]) => x === a)![1];
+      left += (step - (to - was)) * w;
+      if (to > 0 && to < 100) open.push([a, w * paceOf(R, a)]);
+    }
+    const tot = open.reduce((t, [, x]) => t + x, 0);
+    if (Math.abs(left) < 0.01 || !tot) break;
+    want = new Map(open.map(([a, x]) => [a, (left * x) / tot / ws.find(([y]) => y === a)![1]] as const));
   }
   let weight = p.weight;
   if (gain > 0 && ['OL', 'DE', 'DT', 'TE', 'LB', 'FB'].includes(role)) {
@@ -197,7 +224,7 @@ export function startOffseason(d: Dynasty, opt: { seed?: number; force?: boolean
     const from = p.ovr;
     const room = (p.pot ?? p.ovr) - p.ovr;
     const gain = room * growthRate(R, p.cls) * between(r, R.growthMin, R.growthMax) + (inGame.has(p.id) ? R.starterBonus : 0) + gauss(r);
-    p = develop({ ...p, cls: CLASSES[Math.min(4, CLASSES.indexOf(p.cls) + 1)] }, gain, r, R.speedPace);
+    p = develop({ ...p, cls: CLASSES[Math.min(4, CLASSES.indexOf(p.cls) + 1)] }, gain, r, R);
     if (p.ovr > (p.pot ?? 99)) p = { ...p, pot: p.ovr };
     st.growth.push({ player: p.id, from, to: p.ovr });
     return p;

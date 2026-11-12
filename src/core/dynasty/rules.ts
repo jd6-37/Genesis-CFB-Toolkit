@@ -23,8 +23,8 @@ export interface OffseasonRules {
   growthMin: number; growthMax: number;
   /** Extra OVR for players on last season's Active Roster. */
   starterBonus: number;
-  /** How fast Speed grows compared with the other ratings. */
-  speedPace: number;
+  /** How fast each rating grows compared with the others (user, 2026-11-12: "SPD shouldn't be able to progress as much as AWR"). A year's OVR gain is spread by these. */
+  speedPace: number; paceQuickness: number; paceRange: number; pacePower: number; paceTechnique: number; paceAwareness: number;
   // Transfers
   transferStarter: number; transferDepth: number; transferBackup: number;
   /** Added when next season's (projected) depth chart has him out of a starting spot. */
@@ -92,7 +92,7 @@ export interface OffseasonRules {
 
 export const DEFAULT_RULES: OffseasonRules = {
   proSeniorBase: 80, proSeniorScale: 14, proSeniorMax: 0.85, srPlusReturn: 0.3, proJuniorBase: 84, proJuniorScale: 12, proJuniorMax: 0.7,
-  growthFR: 0.45, growthSO: 0.4, growthJR: 0.35, growthSR: 0.3, growthSRPlus: 0.25, growthMin: 0.5, growthMax: 1.5, starterBonus: 1, speedPace: 0.5,
+  growthFR: 0.45, growthSO: 0.4, growthJR: 0.35, growthSR: 0.3, growthSRPlus: 0.25, growthMin: 0.5, growthMax: 1.5, starterBonus: 1, speedPace: 0.5, paceQuickness: 0.7, paceRange: 0.8, pacePower: 1, paceTechnique: 1.2, paceAwareness: 1.4,
   transferStarter: 0.01, transferDepth: 0.08, transferBackup: 0.12, transferBlocked: 0.1, transferSenior: 0.05, playingTimeCut: 0.8, playingTimeShare: 0.5, transfersPerTeam: 4,
   weeks: 5, userPoints: 1000, cpuPoints: 1000, maxPerProspect: 60, boardSize: 35, scoutOvr: 10, scoutRatings: 20, offerBoost: 1.2, noOffer: 0.6,
   commitThreshold: [40, 60, 100, 160, 230, 320], firstWeek: [1, 1, 2, 2, 3, 4], portalThreshold: 0.7, commitLead: 1.25, flipMargin: 1.5, flipChance: 0.5,
@@ -158,7 +158,12 @@ export const RULE_SECTIONS: RuleSection[] = [
       { key: 'growthMin', label: 'Worst year (× the usual growth)', help: 'Each year is random between this and the next number.', kind: 'num', min: 0, max: 3 },
       { key: 'growthMax', label: 'Best year (× the usual growth)', help: '', kind: 'num', min: 0, max: 3 },
       { key: 'starterBonus', label: 'Extra OVR for Active Roster players', help: 'Playing time helps development.', kind: 'num', min: 0, max: 10 },
-      { key: 'speedPace', label: 'Speed grows at (× the others)', help: 'Speed is hard to add.', kind: 'num', min: 0, max: 2 },
+      { key: 'paceAwareness', label: 'Awareness grows at', help: 'How a year\'s gain is shared out: a rating at 1.4 grows twice as fast as one at 0.7. The year\'s total OVR gain stays the same.', kind: 'num', min: 0, max: 3 },
+      { key: 'paceTechnique', label: 'Hands, Blocking, Tackling and Accuracy grow at', help: 'Technique.', kind: 'num', min: 0, max: 3 },
+      { key: 'pacePower', label: 'Power grows at', help: 'Strength program.', kind: 'num', min: 0, max: 3 },
+      { key: 'paceRange', label: 'Range grows at', help: 'QB arm, kicking range.', kind: 'num', min: 0, max: 3 },
+      { key: 'paceQuickness', label: 'Quickness grows at', help: 'Also kick distance for kickers and punters.', kind: 'num', min: 0, max: 3 },
+      { key: 'speedPace', label: 'Speed grows at', help: 'Speed is hard to add.', kind: 'num', min: 0, max: 3 },
     ],
   },
   {
