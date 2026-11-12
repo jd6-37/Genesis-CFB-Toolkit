@@ -53,7 +53,7 @@ export function Awards({ arg }: { arg?: string }) {
           </select>
         )}
       </div>
-      <p className="dy-dim dy-small">Worked out from the season's stats (offensive linemen, who have none, by OVR and team wins).</p>
+      <p className="dy-dim dy-small">Worked out from the season's stats and the players' OVR: the leaders by stats are considered, then the better players win out (offensive linemen, who have no stats, by OVR and team wins).</p>
       {wp && winner && (
         <div className="dy-heisman">
           <p className="dy-heisman-title">Heisman Trophy</p>

@@ -43,6 +43,9 @@ export interface Candidate {
   role: string;
   ovr: number;
   score: number;
+  /** Where his stat score and his OVR rank among the players of his award spot, 0 (last) to 1 (first). */
+  statPct: number;
+  ovrPct: number;
   /** A short line of his season ("1,204 rushing yards, 14 TD"). */
   line: string;
 }
@@ -120,16 +123,47 @@ export function candidates(v: SeasonView): Candidate[] {
         return;
     }
     // Ties (common for linemen) go to the better OVR.
-    out.push({ player, team, slot, role, ovr, score: score + ovr / 1000, line });
+    if (role !== 'OL' && ovr) line += `; ${ovr} OVR`;
+    out.push({ player, team, slot, role, ovr, score: score + ovr / 1000, statPct: 0, ovrPct: 0, line });
   }));
+  // Percentiles within each award spot (HB and FB together, all linemen together, and so on).
+  for (const spot of AWARD_SPOTS) {
+    const group = out.filter((c) => spot.roles.includes(c.role));
+    const scores = group.filter((c) => c.score > 0).map((c) => c.score).sort((a, b) => a - b);
+    const ovrs = group.map((c) => c.ovr).sort((a, b) => a - b);
+    for (const c of group) { c.statPct = pct(c.score, scores); c.ovrPct = pct(c.ovr, ovrs); }
+  }
   return out;
+}
+
+/** The share of the list below the value (ties count half), 0-1. */
+function pct(x: number, sorted: number[]): number {
+  if (sorted.length < 2) return 1;
+  let below = 0, same = 0;
+  for (const y of sorted) { if (y < x) below++; else if (y === x) same++; }
+  return Math.min(1, (below + Math.max(0, same - 1) / 2) / (sorted.length - 1));
+}
+
+/**
+ * Stats and OVR together (user, 2026-11-12: "stats are very important in the decision-making, they aren't
+ * everything"): only the leaders by stats are considered (the shortlist), then stats and OVR are blended.
+ * The Heisman and the position awards lean 60/40, the All-American and All-Conference teams 70/30 ("a little
+ * bit more stats based").
+ */
+export const AWARD_STATS_WEIGHT = 0.6;
+export const TEAM_STATS_WEIGHT = 0.7;
+const blend = (c: Candidate, w: number) => w * c.statPct + (1 - w) * c.ovrPct;
+/** The top `n` by stats, then ordered by the blend. */
+function shortlist(pool: Candidate[], n: number, w: number): Candidate[] {
+  return pool.filter((c) => c.score > 0).sort((a, b) => b.score - a.score).slice(0, n)
+    .sort((a, b) => blend(b, w) - blend(a, w) || b.score - a.score);
 }
 
 /** The best at each spot, skipping players already picked (a kicker who also punts counts once per team). */
 function pickTeam(pool: Candidate[], skip: Set<number>): Candidate[] {
   const team: Candidate[] = [];
   for (const spot of AWARD_SPOTS) {
-    const best = pool.filter((c) => spot.roles.includes(c.role) && !skip.has(c.player) && c.score > 0).sort((a, b) => b.score - a.score).slice(0, spot.n);
+    const best = shortlist(pool.filter((c) => spot.roles.includes(c.role) && !skip.has(c.player)), Math.max(6, 4 * spot.n), TEAM_STATS_WEIGHT).slice(0, spot.n);
     best.forEach((c) => skip.add(c.player));
     team.push(...best);
   }
@@ -153,12 +187,18 @@ export function awardsOf(v: SeasonView): SeasonAwards {
     if (c === INDEPENDENT) continue;
     allConference[c] = pickTeam(all.filter((x) => season.conf[x.team] === c), new Set());
   }
-  const bestOf = (roles: string[]) => all.filter((c) => roles.includes(c.role) && c.score > 0).sort((a, b) => b.score - a.score)[0] ?? null;
+  const bestOf = (roles: string[]) => shortlist(all.filter((c) => roles.includes(c.role)), 10, AWARD_STATS_WEIGHT)[0] ?? null;
   const position = POSITION_AWARDS.map((a) => ({
     key: a.key, label: a.label,
     winner: a.spot === 'DEF' ? bestOf(['DE', 'DT', 'LB', 'CB', 'S']) : bestOf(AWARD_SPOTS.find((s) => s.label === a.spot)!.roles),
   }));
-  const heisman = heismanWatch(v, 5).map((h) => ({ player: h.player, team: h.team, score: h.score }));
+  // The Heisman: the 15 at the top of the Heisman watch (stats and team wins), blended with OVR.
+  const byPlayer = new Map(all.map((c) => [c.player, c]));
+  const watch = heismanWatch(v, 15);
+  const heisman = watch
+    .map((h, i) => ({ player: h.player, team: h.team, score: h.score, r: AWARD_STATS_WEIGHT * (watch.length > 1 ? 1 - i / (watch.length - 1) : 1) + (1 - AWARD_STATS_WEIGHT) * (byPlayer.get(h.player)?.ovrPct ?? 0) }))
+    .sort((a, b) => b.r - a.r || b.score - a.score).slice(0, 5)
+    .map(({ player, team, score }) => ({ player, team, score }));
   return { year: season.year, heisman, position, allAmerican: [first, second], allConference };
 }
 

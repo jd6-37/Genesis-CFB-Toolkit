@@ -4,7 +4,7 @@
 // save is a Genesis Plus GX (RetroArch) .srm of the 138-team edition with a season started and at least one week
 // played; the test puts its dynasty's mark (the ID block New Season copies) into it.
 import { careerRecords, teamRecords } from '../src/core/dynasty/records';
-import { AWARD_SPOTS, awardsOf, playerHonors, seasonAwards } from '../src/core/dynasty/awards';
+import { AWARD_SPOTS, AWARD_STATS_WEIGHT, POSITION_AWARDS, awardsOf, candidates, playerHonors, seasonAwards } from '../src/core/dynasty/awards';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { strict as assert } from 'node:assert';
@@ -725,14 +725,31 @@ ok('a new season refuses the last season\'s save');
     assert.ok(first.length === spots && second.length === spots, `full All-American teams (${first.length}, ${second.length} of ${spots})`);
     assert.equal(new Set([...first, ...second].map((c) => c.player)).size, 2 * spots, 'nobody on both teams');
     for (const x of AWARD_SPOTS) assert.equal(first.filter((c) => x.roles.includes(c.role)).length, x.n, `${x.label} spots`);
-    const qb = first.find((c) => c.role === 'QB')!;
-    assert.ok(aw.position[0].winner && aw.position[0].winner.player === qb.player, 'best quarterback is the first-team QB');
+    const qb = aw.position[0].winner!;
+    // Stats and OVR (user: "stats are very important … they aren't everything"): the winner is among the top 10 QBs
+    // by stats and has the best 60/40 blend of them.
+    const qbs = candidates(v2).filter((c) => c.role === 'QB' && c.score > 0).sort((a, b) => b.score - a.score).slice(0, 10);
+    const bl = (c: { statPct: number; ovrPct: number }) => AWARD_STATS_WEIGHT * c.statPct + (1 - AWARD_STATS_WEIGHT) * c.ovrPct;
+    assert.ok(qbs.some((c) => c.player === qb.player) && qbs.every((c) => bl(c) <= bl(qb) + 1e-9), 'best quarterback: top 10 by stats, best blend');
+    const leader = qbs[0];
+    {
+      // How the blend changed the picks (stats alone vs stats and OVR), for the log.
+      const all = candidates(v2), diffs: string[] = [];
+      for (const pa of aw.position) {
+        const roles = pa.key === 'def' ? ['DE', 'DT', 'LB', 'CB', 'S'] : AWARD_SPOTS.find((x) => x.label === POSITION_AWARDS.find((y) => y.key === pa.key)!.spot)!.roles;
+        const top = all.filter((c) => roles.includes(c.role) && c.score > 0).sort((a, b) => b.score - a.score)[0];
+        if (top && pa.winner && top.player !== pa.winner.player) diffs.push(`${pa.label}: ${playerName(w2.players[pa.winner.player - 1])} (${pa.winner.ovr} OVR) over stat leader ${playerName(w2.players[top.player - 1])} (${top.ovr} OVR)`);
+      }
+      ok(`blend changes: ${diffs.join('; ') || 'none'}`);
+    }
+    ok(`award blend: QB stat leader ${playerName(w2.players[leader.player - 1])} (${leader.ovr} OVR, ${bl(leader).toFixed(2)}), winner ${playerName(w2.players[qb.player - 1])} (${qb.ovr} OVR, ${bl(qb).toFixed(2)})`);
+    assert.ok(first.some((c) => c.role === 'QB'), 'a first-team QB');
     const confs = Object.keys(aw.allConference).map(Number);
     assert.ok(confs.length > 5 && !confs.includes(INDEPENDENT) && confs.every((c) => aw.allConference[c].every((x) => w2.seasons[0].conf[x.team] === c)), 'All-Conference teams by conference');
     assert.equal(seasonAwards(w2, w2.seasons[0]), null, 'no awards before the season ends');
     const h = playerHonors(w2, qb.player, [aw]);
-    assert.ok(h.some((x) => x.label === 'All-American, first team') && h.some((x) => x.label === 'Best quarterback') && h.some((x) => x.label.startsWith('All-')), 'honors on the player page');
-    ok(`awards: Heisman ${aw.heisman[0] ? playerName(w2.players[aw.heisman[0].player - 1]) : '-'}; first-team QB ${playerName(w2.players[qb.player - 1])} (${qb.line}); ${confs.length} All-Conference teams; honors ${h.map((x) => x.label).join(', ')}`);
+    assert.ok(h.some((x) => x.label === 'Best quarterback') && h.some((x) => x.label.startsWith('All-')), 'honors on the player page');
+    ok(`awards: Heisman ${aw.heisman[0] ? playerName(w2.players[aw.heisman[0].player - 1]) : '-'}; best QB ${playerName(w2.players[qb.player - 1])} (${qb.line}); ${confs.length} All-Conference teams; honors ${h.map((x) => x.label).join(', ')}`);
   }
   {
     // The records book: career totals add up the seasons; a school's only count what was done there.
