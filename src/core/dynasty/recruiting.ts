@@ -18,7 +18,7 @@
 // best prospects don't decide before week 3 (4★) or 4 (5★).
 
 import { rng, type DPlayer, type Dynasty, type OffseasonEvent } from './model';
-import { CLASS_MAX, POSITIONS, POS_TARGET, ROSTER_LIMIT, STAR_POINTS, benchSeasons, drawStars, fillMinimums, makeRecruit, prestige, prestigeStars, suggestCuts, transferChance, type RecruitTemplates } from './offseason';
+import { CLASS_MAX, POSITIONS, POS_TARGET, ROSTER_LIMIT, STAR_POINTS, chooseTransfers, drawStars, fillMinimums, makeRecruit, prestige, prestigeStars, suggestCuts, type RecruitTemplates } from './offseason';
 import { closeness } from './schoolStates';
 
 export const WEEKS = 5;
@@ -78,9 +78,14 @@ type Rand = () => number;
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 const seeded = (seed: number, salt: number) => rng((seed ^ Math.imul(salt + 11, 0x85ebca6b)) >>> 0);
 
-/** Random priorities that add up to 1. */
-function wants(r: Rand) {
-  const a = -Math.log(1 - r()), b = -Math.log(1 - r()), c = -Math.log(1 - r());
+/**
+ * What a prospect cares about (his pitches), adding up to 1: random, then by stars (user, 2026-11-12: "3
+ * star and lower should have more chance of Location pitch. Higher star recruits, Program Prestige").
+ */
+const HOME_BY_STARS = [1.6, 1.6, 1.5, 1.3, 0.8, 0.6];
+const PRESTIGE_BY_STARS = [0.6, 0.6, 0.7, 0.9, 1.4, 1.7];
+function wants(r: Rand, stars = 3) {
+  const a = -Math.log(1 - r()), b = -Math.log(1 - r()) * PRESTIGE_BY_STARS[stars], c = -Math.log(1 - r()) * HOME_BY_STARS[stars];
   const s = a + b + c;
   return { pt: a / s, prestige: b / s, home: c / s };
 }
@@ -92,11 +97,9 @@ const roster = (d: Dynasty, team: number) => d.players.filter((p) => p.status ==
 
 // ---- 1. the portal: who leaves
 
-/** Who enters the portal (full recruiting): the same rule as the random version (transferChance). */
+/** Who enters the portal (full recruiting): the players chosen with the departures (transferChance). */
 export function portalEntries(d: Dynasty, seed: number): DPlayer[] {
-  const r = seeded(seed, 21);
-  const benched = benchSeasons(d);
-  return d.players.filter((p) => p.status === 'active' && p.team !== null && r() < transferChance(d, p, benched));
+  return (d.offseason?.portal ?? chooseTransfers(d, seed)).map((id) => d.players[id - 1]).filter((p) => p.status === 'active' && p.team !== null);
 }
 
 // ---- 2. the pool
@@ -123,7 +126,7 @@ export function startRecruiting(d: Dynasty, tpl: RecruitTemplates, portal: DPlay
     for (const p of POSITIONS) if ((x -= need[p]) <= 0) { pos = p; break; }
     const stars = drawStars(r, 0.45);
     const player = makeRecruit(d, tpl, r, tempId, -1, pos, stars, year);
-    prospects.push({ id: tempId--, player: { ...player, team: null }, stars, from: null, wants: wants(r), interest: {}, offers: [], committed: null });
+    prospects.push({ id: tempId--, player: { ...player, team: null }, stars, from: null, wants: wants(r, stars), interest: {}, offers: [], committed: null });
   }
   for (const p of portal) {
     prospects.push({ id: p.id, player: p, stars: portalStars(p.ovr), from: p.team, wants: { ...wants(r), pt: 0.5 + 0.5 * r() }, interest: {}, offers: [], committed: null });
@@ -133,7 +136,40 @@ export function startRecruiting(d: Dynasty, tpl: RecruitTemplates, portal: DPlay
     const s = pr.wants.pt + pr.wants.prestige + pr.wants.home;
     pr.wants = { pt: pr.wants.pt / s, prestige: pr.wants.prestige / s, home: pr.wants.home / s };
   }
-  return { week: 0, prospects, spots, log: [], plans: {}, scouted: {}, scoutSpent: {} };
+  topSchools(d, prospects, r);
+  // A user team's own players in the portal start on its board (user: "i should have a good chance at
+  // being able to recruit him back").
+  const plans: Record<number, TeamPlan> = {};
+  for (const u of d.userTeams) {
+    const own = prospects.filter((pr) => pr.from === u);
+    if (own.length) plans[u] = { points: Object.fromEntries(own.map((pr) => [pr.id, 0])), offers: [] };
+  }
+  return { week: 0, prospects, spots, log: [], plans, scouted: {}, scoutSpent: {} };
+}
+
+/** Starting interest of a prospect's five top schools, best first (a share of what he needs to commit). */
+const TOP_START = [0.5, 0.45, 0.4, 0.35, 0.3];
+
+/**
+ * Every prospect starts with five interested schools (user, 2026-11-12: "every recruit should start with a
+ * list of his interested/top schools. Maybe 5?"): schools whose prestige reaches him, close to home, that
+ * need his position, with chance. A portal player's old school is his third (user: "Players transferring
+ * from a school should have that school somewhere in their top schools. 3rd?").
+ */
+function topSchools(d: Dynasty, prospects: Prospect[], r: Rand) {
+  const stars = new Map(d.teams.map((t) => [t.index, prestigeStars(d, t.index)]));
+  const counts = new Map(d.teams.map((t) => [t.index, new Map<string, number>()]));
+  for (const p of d.players) if (p.status === 'active' && p.team !== null) counts.get(p.team)!.set(p.pos, (counts.get(p.team)!.get(p.pos) ?? 0) + 1);
+  for (const pr of prospects) {
+    const need = THRESHOLD[pr.stars] * (pr.id > 0 ? 0.7 : 1);
+    const scored = d.teams.filter((t) => t.index !== pr.from).map((t) => {
+      const short = (POS_TARGET[pr.player.pos] ?? 0) - (counts.get(t.index)!.get(pr.player.pos) ?? 0) > 0;
+      return { t: t.index, w: reach(pr.stars, stars.get(t.index)!) * (0.4 + closeness(pr.player.state, t.school)) * (short ? 1.3 : 1) * (0.5 + r()) };
+    }).sort((a, b) => b.w - a.w);
+    const top = scored.slice(0, 5).map((x) => x.t);
+    if (pr.from !== null) top.splice(2, 0, pr.from), top.pop();
+    top.forEach((t, i) => { pr.interest[t] = Math.round(TOP_START[i] * need); });
+  }
 }
 
 // ---- 3. a week
@@ -171,7 +207,7 @@ export function fit(d: Dynasty, ctx: WeekContext, pr: Prospect, team: number): n
   const pt = ahead < starters ? 1 : ahead < starters + 1 ? 0.65 : ahead < starters + 3 ? 0.35 : 0.15;
   const home = closeness(pr.player.state, d.teams[team].school);
   const v = pr.wants.pt * pt + pr.wants.prestige * ctx.prestige.get(team)! + pr.wants.home * home;
-  return pr.from === team ? v * 0.3 : v; // a portal player rarely goes back
+  return v; // his old school too (user: "i should have a good chance at being able to recruit him back")
 }
 
 /** A CPU team's plan for the week: targets by need and level, points by fit and stars. */
@@ -358,11 +394,11 @@ export function signingDay(d: Dynasty, rs: RecruitingState, year: number): { pla
   for (const p of prs) {
     if (p.id > 0) {
       // A portal player.
+      // Nobody signed him, or his old school got him back: he stays (no transfer).
       const old = players[p.id - 1];
       const to = p.committed;
-      players[p.id - 1] = to === null
-        ? { ...old, team: null, status: 'transferred', leftYear: year - 1, transfers: [...(old.transfers ?? []), { year: year - 1, from: old.team!, to: null }] }
-        : { ...old, team: to, transfers: [...(old.transfers ?? []), { year: year - 1, from: old.team!, to }] };
+      if (to === null || to === old.team) continue;
+      players[p.id - 1] = { ...old, team: to, transfers: [...(old.transfers ?? []), { year: year - 1, from: old.team!, to }] };
       events.push({ kind: 'transfer', player: p.id, from: old.team!, to, ovr: old.ovr });
     } else if (p.committed !== null) {
       const id = nextId++;

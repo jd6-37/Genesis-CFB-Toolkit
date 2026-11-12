@@ -24,6 +24,7 @@ import { randomBench } from '../src/core/dynasty/bench';
 import { gameText, dynastyAreaProblem, dynastyHeaderValid, dynastyRomId, DYN_AREA, DYN_END, hasDynastyHooks, readStamp } from '../src/core/dynasty/dynastyArea';
 import { simFromOvr } from '../src/core/teamRatings';
 import { parseCsv } from '../src/core/rosterSheet';
+import { rosterLayout } from '../src/core/rosterLayouts';
 import { bwSlotOf, ovrOf, progressOf, stepOf } from '../src/core/dynasty/ratings';
 import { applyEdits, playersCsv, readPlayersCsv } from '../src/core/dynasty/edit';
 import { blackShare, MAX_FIRST, MAX_LAST, SKIN_TONES } from '../src/core/dynasty/appearance';
@@ -274,10 +275,42 @@ o1.offseason!.prestige!.forEach((to, t) => {
   assert.equal(Math.sign(to - p0[t]), Math.sign(tierOfRank(vEnd.rank[t]) - p0[t]));
 });
 assert.deepEqual(Off.cancelOffseason(o1).players, d1.players);
-const o2 = Off.runPortal(o1);
+// Projected depth chart first (step 'depth'), then who enters the portal (Players Leaving).
+assert.equal(o1.offseason!.step, 'depth');
+assert.throws(() => Off.runPortal(o1), /after the season/);
+const ctx1 = Off.portalContext(o1);
+const depthGuy = act(o1).find((p) => ctx1.role.get(p.id) === 'depth' && !ctx1.nextStarters.has(p.id) && Off.playingTime(ctx1, p) === 0 && p.cls !== 'SR' && p.cls !== 'SR+')!;
+assert.ok(Math.abs(Off.transferChance(o1, depthGuy, ctx1) - 0.18) < 1e-9, 'a blocked depth player with no touches: 8% + 10%');
+const busy = { ...ctx1, touches: new Map(ctx1.touches).set(depthGuy.id, 1000) };
+assert.ok(Math.abs(Off.transferChance(o1, depthGuy, busy) - 0.18 * 0.2) < 1e-9, 'full playing time: 80% less');
+// Promoting him to a starting spot on the projected depth chart takes away the "blocked" 10%.
+const team1 = depthGuy.team!;
+const chart = Off.projectedDepth(o1, team1).slice();
+const lay = rosterLayout('bw95', false, true);
+const spot = lay.findIndex((def, k) => !Off.DEPTH_SLOTS.has(def.label) && chart[k] !== null && o1.players[chart[k]! - 1].pos === depthGuy.pos);
+if (spot >= 0) {
+  const was = chart.indexOf(depthGuy.id);
+  if (was >= 0) chart[was] = chart[spot];
+  chart[spot] = depthGuy.id;
+  const promoted = { ...o1, offseason: { ...o1.offseason!, projected: { [team1]: chart } } };
+  assert.ok(Math.abs(Off.transferChance(promoted, depthGuy) - 0.08) < 1e-9, 'a promised starting job: no longer blocked');
+}
+assert.ok(Off.projectedProblems(o1, team1, [...chart.slice(0, 31), 999999]).length > 0, 'a player from elsewhere is refused');
+const o1p = Off.confirmDepth(o1);
+assert.equal(o1p.offseason!.step, 'portal');
+const entering = o1p.offseason!.portal!;
+assert.ok(entering.length > 50 && entering.every((id) => o1p.players[id - 1].status === 'active'), `${entering.length} enter the portal`);
+assert.ok(entering.filter((id) => ctx1.role.get(id) === 'starter').length < entering.length * 0.2, 'few starters leave');
+const o2 = Off.runPortal(o1p);
 const moves = o2.offseason!.events.filter((e) => e.kind === 'transfer');
-assert.equal(moves.length, 0, 'nobody transfers after one season on the bench');
-for (const m of moves) if (m.kind === 'transfer') assert.equal(o2.players[m.player - 1].team, m.to);
+const ctx2 = Off.portalContext(o1p);
+for (const m of moves) if (m.kind === 'transfer') {
+  assert.equal(o2.players[m.player - 1].team, m.to);
+  assert.ok(m.to !== null && m.to !== m.from && o1p.players[m.player - 1].ovr > (ctx2.starterBar.get(m.to)!.get(o1p.players[m.player - 1].pos) ?? 0), 'only to a starting job');
+}
+const stayedHome = entering.filter((id) => !moves.some((m) => m.kind === 'transfer' && m.player === id));
+assert.ok(stayedHome.every((id) => o2.players[id - 1].team === o1p.players[id - 1].team && o2.players[id - 1].status === 'active'), 'nobody would start him: he stays');
+ok(`transfers: ${entering.length} enter the portal, ${moves.length} find a starting job, ${stayedHome.length} stay`);
 const tpl = Off.recruitTemplates(o2);
 const o3 = Off.runSigningDay(o2, tpl);
 const signed = o3.offseason!.events.filter((e) => e.kind === 'signed');
@@ -354,10 +387,17 @@ for (const t of o5.teams) {
 ok(`offseason: ${o1.offseason!.events.filter((e) => e.kind !== 'returns').length} departures, ${moves.length} transfers, ${signed.length} signed, ${o4.offseason!.events.filter((e) => e.kind === 'cut').length} cut, ${o4.offseason!.events.filter((e) => e.kind === 'walkon').length} walk-ons; ${act(o5).length} players in ${next.year}`);
 
 // Full recruiting: five weeks, then signing day; every team stays within its spots.
-const f1 = Rec.openRecruiting(o1, tpl);
+const f1 = Rec.openRecruiting(o1p, tpl);
 const rs0 = f1.offseason!.recruiting!;
 assert.equal(f1.offseason!.step, 'recruiting');
-assert.ok(rs0.prospects.some((p) => p.id < 0) && !rs0.prospects.some((p) => p.id > 0), 'high-school prospects; no portal players after one season');
+assert.ok(rs0.prospects.some((p) => p.id < 0) && rs0.prospects.filter((p) => p.id > 0).length === o1p.offseason!.portal!.length, 'high-school prospects and the portal players');
+// Five top schools from the start; a portal player's old school is his third; pitches by stars.
+assert.ok(rs0.prospects.every((p) => Rec.interestRanking(p).length === 5), 'five top schools each');
+const portalPr = rs0.prospects.filter((p) => p.from !== null);
+assert.ok(portalPr.every((p) => Rec.interestRanking(p)[2].team === p.from), 'old school third');
+const hsW = (k: number, w: 'home' | 'prestige') => { const xs = rs0.prospects.filter((p) => p.id < 0 && p.stars === k); return xs.reduce((a, p) => a + p.wants[w], 0) / xs.length; };
+assert.ok(hsW(2, 'home') > hsW(5, 'home') && hsW(5, 'prestige') > hsW(2, 'prestige'), 'low stars: home; high stars: prestige');
+if (user !== undefined) assert.ok(portalPr.filter((p) => p.from === user).every((p) => p.id in (rs0.plans[user]?.points ?? {})), 'own portal players start on the board');
 const targets = rs0.prospects.filter((p) => p.id < 0 && p.stars <= 3).slice(0, 10);
 const plan = { points: Object.fromEntries(targets.map((p) => [p.id, 60])), offers: targets.map((p) => p.id) };
 assert.deepEqual(Rec.planProblems(plan), []);
@@ -414,13 +454,11 @@ assert.equal(g4.seasons[1].slots[user].filter((x) => x !== null).length, 32);
 assert.equal(Sim.simOffseason(f1, tpl).seasons.length, 2, 'from the middle of recruiting');
 ok(`sim: a recruiting week, the rest, the cuts, the whole offseason (${act(g4).filter((p) => p.team === user).length} players for ${g4.teams[user].school} in ${g4.seasons[1].year})`);
 
-// A second offseason: only players with two seasons on the bench may transfer.
-const y1 = Off.runPortal(Off.startOffseason(o5, { seed: 4, force: true }));
-const benched = Off.benchSeasons(o5);
+// A second offseason: players signed in the first can transfer now; this year's class can't.
+const y1 = Off.runPortal(Off.confirmDepth(Off.startOffseason(o5, { seed: 4, force: true })));
 const y1moves = y1.offseason!.events.filter((e) => e.kind === 'transfer');
 assert.ok(y1moves.length > 0);
-assert.ok(y1moves.every((e) => e.kind === 'transfer' && (benched.get(e.player) ?? 0) >= 2 && !next.slots.some((sl) => sl.includes(e.player))));
-ok(`second offseason: ${y1moves.length} transfers, all after two seasons on the bench`);
+ok(`second offseason: ${y1moves.length} transfers`);
 
 // The dynasty area's sets (dynastyArea.ts).
 const u32at = (d: Uint8Array, a: number) => ((d[a] << 24) >>> 0) + (d[a + 1] << 16) + (d[a + 2] << 8) + d[a + 3];

@@ -17,8 +17,27 @@ const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['
 const starText = (n: number) => `${n}★`;
 
 /** Hometown (or the school he left) and size: what a team sees before scouting. */
-const aboutText = (p: Prospect, d: Dynasty) =>
-  `${p.from !== null ? `Transfer from ${d.teams[p.from].school}` : hometownText(p.player)}. ${heightText(p.player.heightIn)}, ${p.player.weight} lb`;
+const aboutText = (p: Prospect, d: Dynasty, team: number) =>
+  `${p.from === team ? 'Left your team (transfer portal)' : p.from !== null ? `Transfer from ${d.teams[p.from].school}` : hometownText(p.player)}. ${heightText(p.player.heightIn)}, ${p.player.weight} lb`;
+
+/** What he cares about most, then next (his best pitches). */
+const PITCH: Record<keyof Prospect['wants'], string> = { pt: 'playing time', prestige: 'program prestige', home: 'being close to home' };
+const pitchText = (p: Prospect) => {
+  const [a, b] = (Object.keys(p.wants) as (keyof Prospect['wants'])[]).sort((x, y) => p.wants[y] - p.wants[x]);
+  return `Cares most about ${PITCH[a]}, then ${PITCH[b]}`;
+};
+
+/** His five top schools by interest (yours marked). */
+function TopSchools({ p, team }: { p: Prospect; team: number }) {
+  const { d } = useDyn();
+  const top = interestRanking(p).slice(0, 5);
+  if (!top.length) return null;
+  return (
+    <div className="dy-small dy-dim dy-top-schools">
+      Top schools: {top.map((x, i) => <span key={x.team} className={x.team === team ? 'dy-strong' : undefined}>{i ? ', ' : ''}{d.teams[x.team].school}</span>)}
+    </div>
+  );
+}
 
 /** The ratings his position uses in the game, as it shows them (no Weight: his size is shown). */
 function RatingsLine({ p }: { p: Prospect }) {
@@ -105,14 +124,6 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
   const setPoints = (id: number, v: number) => setPlan((p) => ({ ...p, points: { ...p.points, [id]: Math.max(0, Math.min(MAX_PER_PROSPECT, Math.round(v) || 0)) } }));
   const offer = (id: number) => setPlan((p) => ({ ...p, offers: p.offers.includes(id) ? p.offers : [...p.offers, id] }));
 
-  // Needs: target minus roster (portal players out) minus commits.
-  const needs = useMemo(() => {
-    const portal = new Set(rs.prospects.filter((p) => p.id > 0).map((p) => p.id));
-    const c: Record<string, number> = {};
-    for (const p of d.players) if (p.status === 'active' && p.team === team && !portal.has(p.id)) c[p.pos] = (c[p.pos] ?? 0) + 1;
-    for (const p of commits) c[p.player.pos] = (c[p.player.pos] ?? 0) + 1;
-    return POSITIONS.map((pos) => ({ pos, n: POS_TARGET[pos] - (c[pos] ?? 0) })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n);
-  }, [d, rs, team, commits]);
 
   const runWeek = () => {
     // Points only for prospects still open; a user plan sends its new offers once.
@@ -144,7 +155,7 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
         Interest grows with points, with an offer, and with how well your school fits what a prospect wants: playing time, prestige and being close to home.
         Prospects rated above your program's prestige are harder to reach. A prospect commits when one school's interest is high enough and clearly
         ahead (the best ones not before week 3 or 4); at signing day the rest choose among the schools that offered. Players in the transfer portal are
-        prospects too. Scouting a high-school prospect shows his OVR ({SCOUT_COST[1]} points), then all his ratings ({SCOUT_COST[2]} more), out of the
+        prospects too; your own players in the portal start on your board, and their old school (you) is one of their top schools. Scouting a high-school prospect shows his OVR ({SCOUT_COST[1]} points), then all his ratings ({SCOUT_COST[2]} more), out of the
         week's points; what you scout stays known. Portal players show everything.
       </p>
       {users.length > 1 && (
@@ -170,7 +181,7 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
 
       <div className="dy-off-team">
         <h4><TeamLink team={team} rank={false} /> <span className="dy-dim dy-small">{commits.length} of {spots} spots filled</span></h4>
-        <p className="dy-small dy-dim">Needs: {needs.length ? needs.map((x) => `${x.pos} ${x.n}`).join(', ') : 'none'}</p>
+        <NeedsTable team={team} commits={commits} />
         {commits.length > 0 && (
           <ul className="dy-plist">
             {commits.sort((a, b) => b.stars - a.stars).map((p) => (
@@ -191,7 +202,8 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
               return (
                 <li key={p.id}>
                   <ProspectTop p={p} lv={lv} />
-                  <div className="dy-small dy-dim">{aboutText(p, d)}. {standing(p, team, d)}.</div>
+                  <div className="dy-small dy-dim">{aboutText(p, d, team)}. {standing(p, team, d)}. {pitchText(p)}.</div>
+                  <TopSchools p={p} team={team} />
                   {lv >= 2 && <RatingsLine p={p} />}
                   <div className="dy-board-ctl">
                     <label>
@@ -239,7 +251,7 @@ function ProspectSearch({ team, onAdd, board, full, left, onScout }: { team: num
   const [shown, setShown] = useState(30);
   const school = d.teams[team].school;
   const list = useMemo(() => rs.prospects
-    .filter((p) => p.committed === null && !board.has(p.id) && p.from !== team && (!pos || p.player.pos === pos) && p.stars >= minStars &&
+    .filter((p) => p.committed === null && !board.has(p.id) && (!pos || p.player.pos === pos) && p.stars >= minStars &&
       (kind === 'all' || (kind === 'hs' && p.id < 0) || (kind === 'portal' && p.id > 0) || (kind === 'near' && closeness(p.player.state, school) >= 0.6)))
     .sort((a, b) => b.stars - a.stars || knownOvr(rs, team, b) - knownOvr(rs, team, a) || a.player.last.localeCompare(b.player.last)),
     [rs, board, pos, minStars, kind, team, school]);
@@ -269,7 +281,8 @@ function ProspectSearch({ team, onAdd, board, full, left, onScout }: { team: num
           return (
             <li key={p.id}>
               <ProspectTop p={p} lv={lv} />
-              <div className="dy-small dy-dim">{aboutText(p, d)}. {standing(p, team, d)}.</div>
+              <div className="dy-small dy-dim">{aboutText(p, d, team)}. {standing(p, team, d)}. {pitchText(p)}.</div>
+              <TopSchools p={p} team={team} />
               {lv >= 2 && <RatingsLine p={p} />}
               <div className="dy-board-ctl">
                 <button type="button" className="dy-button dy-quiet" disabled={full} onClick={() => onAdd(p.id)}>Add to board</button>
@@ -294,5 +307,39 @@ function ProspectTop({ p, lv }: { p: Prospect; lv: ScoutLevel }) {
       <span className="dy-strong">{playerName(p.player)}</span>
       <span className="dy-dim">{starText(p.stars)} {p.player.pos} {lv >= 1 ? <span className="dy-strong">{p.player.ovr}</span> : <span title="Not scouted">OVR ?</span>}</span>
     </div>
+  );
+}
+
+/**
+ * Needs by position (user, 2026-11-12: "somewhere in recruiting we need a breakdown of our needs by
+ * position"): players returning (those in the portal not counted), commitments, the target (two per
+ * Active Roster spot) and what's still open.
+ */
+function NeedsTable({ team, commits }: { team: number; commits: Prospect[] }) {
+  const { d } = useDyn();
+  const rs = d.offseason!.recruiting!;
+  const portal = new Set(rs.prospects.filter((p) => p.id > 0).map((p) => p.id));
+  const rows = POSITIONS.map((pos) => {
+    const roster = d.players.filter((p) => p.status === 'active' && p.team === team && p.pos === pos);
+    const back = roster.filter((p) => !portal.has(p.id)).length;
+    const gone = roster.length - back;
+    const signed = commits.filter((p) => p.player.pos === pos).length;
+    const need = Math.max(0, POS_TARGET[pos] - back - signed);
+    return { pos, back, gone, signed, target: POS_TARGET[pos], need };
+  });
+  return (
+    <details className="dy-needs" open>
+      <summary>Needs by position: {rows.reduce((a, r) => a + r.need, 0)} open</summary>
+      <table className="dy-table">
+        <thead><tr><th className="dy-left">Pos</th><th title="Players returning">Back</th><th title="Players in the transfer portal">Portal</th><th title="Commitments">Commits</th><th title="Two for each Active Roster spot">Target</th><th>Need</th></tr></thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.pos}>
+              <td className="dy-left">{r.pos}</td><td>{r.back}</td><td>{r.gone || ''}</td><td>{r.signed || ''}</td><td>{r.target}</td><td className="dy-strong">{r.need || ''}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </details>
   );
 }

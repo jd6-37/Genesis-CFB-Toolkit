@@ -16,7 +16,7 @@
 // same offseason. The players before the offseason are kept so it can be started over.
 
 import { CLASSES, rng, type ClassYear, type DPlayer, type DSeason, type Dynasty, type OffseasonEvent } from './model';
-import { seasonView } from './derive';
+import { playerLines, seasonView } from './derive';
 import { fixChecksums, jerseyByte, openRosterRom, readPlayer, setRating, teamLayout } from '../rosterRom';
 import { GROUP_ATTRS } from '../rosterLayouts';
 import { MAX_PRESTIGE, nextPrestige, seasonPrestige } from './prestige';
@@ -24,7 +24,9 @@ import { OVR_FORMULAS } from './ovr';
 import { readRating } from '../teamRatings';
 import { DYNASTY_EDITION, dynastyAreaProblem, dynastyRomId, writeDynastyArea, type DynastyName } from './dynastyArea';
 import { TEAM_SIZE } from './rosters';
-import { depthChart, teamDepth } from './depth';
+import { depthChart, slotPosition, teamDepth } from './depth';
+import { rosterLayout } from '../rosterLayouts';
+import { roleOfSlot } from './ovr';
 import { recordYear } from './career';
 import { ovrOf, roleOfPos, type Ratings } from './ratings';
 import { blackShare, firstOdds, lastOdds, MAX_FIRST, MAX_LAST, namePool, pickName, skinFor, type NamePool } from './appearance';
@@ -62,7 +64,7 @@ export const GROUP_MIN: { name: string; positions: string[]; min: number }[] = [
 ];
 const groupOf = (pos: string) => GROUP_MIN.find((g) => g.positions.includes(pos));
 
-export type OffseasonStep = 'portal' | 'recruiting' | 'signing' | 'cuts' | 'ready';
+export type OffseasonStep = 'depth' | 'portal' | 'recruiting' | 'signing' | 'cuts' | 'ready';
 
 export interface OffseasonState {
   /** The season that just ended. */
@@ -74,6 +76,14 @@ export interface OffseasonState {
   events: OffseasonEvent[];
   /** Development of every returning player: OVR before and after. */
   growth: { player: number; from: number; to: number }[];
+  /** Players who enter the transfer portal (decided after the projected depth chart; Players Leaving lists them). */
+  portal?: number[];
+  /**
+   * The user teams' projected depth charts for next season (32 player IDs in slot order), as they set
+   * them before the portal (user, 2026-11-12: "move a HB2 to HB1 if we really want to ensure he doesn't
+   * transfer"). A player there in a starting spot counts as a starter for the transfer chances.
+   */
+  projected?: Record<number, (number | null)[]>;
   /** After signing day: the cuts suggested for each user team (the user can change them). */
   suggestedCuts?: Record<number, number[]>;
   /** Next season's prestige stars, set when the season ends (one star at most toward the final poll's tier). */
@@ -157,7 +167,7 @@ export function startOffseason(d: Dynasty, opt: { seed?: number; force?: boolean
   if (d.offseason) throw new Error('The offseason has already started.');
   if (!opt.force && !seasonDone(d)) throw new Error('The season isn\'t over yet: import the save after the last game first.');
   const year = lastSeason(d).year;
-  const st: OffseasonState = { year, step: 'portal', seed: opt.seed ?? (Date.now() >>> 0), before: d.players, events: [], growth: [] };
+  const st: OffseasonState = { year, step: 'depth', seed: opt.seed ?? (Date.now() >>> 0), before: d.players, events: [], growth: [] };
   // Prestige: one star toward the tier of the final poll place (no change without a save).
   const v = seasonView(d, lastSeason(d));
   const was = seasonPrestige(d, lastSeason(d));
@@ -190,6 +200,37 @@ export function startOffseason(d: Dynasty, opt: { seed?: number; force?: boolean
     return p;
   });
   return { ...d, players, offseason: st };
+}
+
+/** A team's projected depth chart for next season: the one the user set, else the computer's. */
+export function projectedDepth(d: Dynasty, team: number): (number | null)[] {
+  return d.offseason?.projected?.[team] ?? teamDepth(active(d).filter((p) => p.team === team)).slots;
+}
+
+/** Why a projected depth chart can't be used (empty when it can): his own players, each once. */
+export function projectedProblems(d: Dynasty, team: number, slots: (number | null)[]): string[] {
+  const ids = slots.filter((x): x is number => x !== null);
+  const out: string[] = [];
+  if (slots.length !== LAYOUT.length) out.push('The depth chart needs every spot.');
+  if (ids.some((id) => d.players[id - 1]?.team !== team || d.players[id - 1]?.status !== 'active')) out.push('Some of the players aren\'t on the team.');
+  // A player may hold two spots: before signing day rosters are thin, and the depth chart fills a spot
+  // with someone from a close position (as it does for a kicker who also punts).
+  return out;
+}
+
+/**
+ * After the projected depth chart: the user teams' charts are kept, and who enters the transfer portal is
+ * decided (Players Leaving shows them with the graduates and early entries).
+ */
+export function confirmDepth(d: Dynasty, projected: Record<number, (number | null)[]> = {}): Dynasty {
+  const st = d.offseason;
+  if (!st || st.step !== 'depth') throw new Error('The projected depth chart comes first in the offseason.');
+  for (const [t, slots] of Object.entries(projected)) {
+    const bad = projectedProblems(d, Number(t), slots);
+    if (bad.length) throw new Error(`${d.teams[Number(t)].school}: ${bad.join(' ')}`);
+  }
+  const next: Dynasty = { ...d, offseason: { ...st, projected: { ...st.projected, ...projected } } };
+  return { ...next, offseason: { ...next.offseason!, step: 'portal', portal: chooseTransfers(next, st.seed) } };
 }
 
 /** Starts the offseason over (the players as they were before it). */
@@ -225,15 +266,96 @@ export function benchSeasons(d: Dynasty): Map<number, number> {
  * players only after two seasons on the bench: 10%, +10% when the starter ahead of him stays, +10%
  * for a senior (graduate transfer).
  */
-export function transferChance(d: Dynasty, p: DPlayer, benched = benchSeasons(d)): number {
+/**
+ * Who may want to leave (user, 2026-11-12: "The third or fourth WR on a depth chart should try and find a
+ * starting job elsewhere"; "they should have lower chances of transferring if they actually get playing
+ * time … A player as the second WR who is still making a lot of catches and yards should be content").
+ * By his role last season: starters 1%, the Active Roster's depth spots (HB2, the 3rd and 4th WRs, TE2, DT2,
+ * MLB2, the 3rd and 4th CBs, FS2) 8%, backups 12%; +10% when next season's depth chart still has him
+ * behind someone, +5% for seniors; then up to 80% less with playing time: his touches (carries and catches,
+ * or tackles, sacks and interceptions) against half of what a typical starter at his position gets.
+ * Linemen and backups have no stats, so they keep the full chance. Players signed this offseason never.
+ */
+export function transferChance(d: Dynasty, p: DPlayer, ctx: PortalContext = portalContext(d)): number {
   if (p.status !== 'active' || p.team === null || p.recruit?.year === lastSeason(d).year + 1) return 0;
-  const season = lastSeason(d);
-  if (season.slots[p.team]?.includes(p.id)) return 0;
-  if ((benched.get(p.id) ?? 0) < 2) return 0;
-  const slot = season.bench?.[p.team]?.indexOf(p.id) ?? -1;
-  const starter = slot >= 0 ? season.slots[p.team][slot] : null;
-  const stays = starter !== null && d.players[starter - 1]?.status === 'active' && d.players[starter - 1]?.team === p.team;
-  return 0.1 + (stays ? 0.1 : 0) + (p.cls === 'SR' || p.cls === 'SR+' ? 0.1 : 0);
+  const role = ctx.role.get(p.id) ?? 'backup';
+  let c = role === 'starter' ? 0.01 : role === 'depth' ? 0.08 : 0.12;
+  if (!ctx.nextStarters.has(p.id)) c += 0.1;
+  if (p.cls === 'SR' || p.cls === 'SR+') c += 0.05;
+  return c * (1 - 0.8 * playingTime(ctx, p));
+}
+
+/** Labels of the Active Roster spots that aren't starting jobs. */
+export const DEPTH_SLOTS = new Set(['HB2', 'WR1', 'WR2', 'TE2', 'DT2', 'MLB2', 'LCB2', 'RCB2', 'FS2']);
+const LAYOUT = rosterLayout('bw95', false, true);
+
+export interface PortalContext {
+  /** His role last season. */
+  role: Map<number, 'starter' | 'depth' | 'backup'>;
+  /** Touches last season (carries + catches; tackles + sacks + interceptions). */
+  touches: Map<number, number>;
+  /** A typical starter's touches by role (HB, WR, LB …). */
+  typical: Map<string, number>;
+  /** Next season's projected starters (the depth chart the rosters would give now). */
+  nextStarters: Set<number>;
+  /** Per team and position, the weakest projected starter's OVR (who a transfer would have to beat). */
+  starterBar: Map<number, Map<string, number>>;
+}
+
+/** What the transfer rules need from last season and the current rosters. */
+export function portalContext(d: Dynasty): PortalContext {
+  const s = lastSeason(d);
+  const role = new Map<number, 'starter' | 'depth' | 'backup'>();
+  s.slots.forEach((team) => team.forEach((id, slot) => { if (id !== null) role.set(id, DEPTH_SLOTS.has(LAYOUT[slot].label) ? (role.get(id) === 'starter' ? 'starter' : 'depth') : 'starter'); }));
+  const touches = new Map<number, number>();
+  const starterTouches = new Map<string, number[]>();
+  const v = seasonView(d, s);
+  const per = new Map<string, number>(); // team:slot → touches
+  for (const l of playerLines(v)) {
+    const st = l.s as unknown as Record<string, number>;
+    const n = l.cat === 'rushing' ? st.att : l.cat === 'receiving' ? st.rec : l.cat === 'defense' ? st.tkl + st.sacks + st.int : 0;
+    if (!n) continue;
+    per.set(`${l.team}:${l.slot}`, (per.get(`${l.team}:${l.slot}`) ?? 0) + n);
+    if (l.player !== null) touches.set(l.player, (touches.get(l.player) ?? 0) + n);
+  }
+  s.slots.forEach((team, t) => team.forEach((id, slot) => {
+    if (id === null || DEPTH_SLOTS.has(LAYOUT[slot].label)) return;
+    const n = per.get(`${t}:${slot}`);
+    if (n === undefined) return;
+    const r = roleOfSlot(slot);
+    starterTouches.set(r, [...(starterTouches.get(r) ?? []), n]);
+  }));
+  const typical = new Map([...starterTouches].map(([r, xs]) => [r, xs.reduce((a, b) => a + b, 0) / xs.length]));
+  const nextStarters = new Set<number>();
+  const starterBar = new Map<number, Map<string, number>>();
+  for (const t of d.teams) {
+    const bar = new Map<string, number>();
+    projectedDepth(d, t.index).forEach((id, slot) => {
+      if (id === null || DEPTH_SLOTS.has(LAYOUT[slot].label)) return;
+      nextStarters.add(id);
+      const pos = slotPosition(LAYOUT[slot].label);
+      bar.set(pos, Math.min(bar.get(pos) ?? 99, d.players[id - 1].ovr));
+    });
+    starterBar.set(t.index, bar);
+  }
+  return { role, touches, typical, nextStarters, starterBar };
+}
+
+/** His playing time last season, 0-1 (1 = at least half of a typical starter's touches at his position). */
+export function playingTime(ctx: PortalContext, p: DPlayer): number {
+  const typ = ctx.typical.get(roleOfPos(p.pos));
+  const n = ctx.touches.get(p.id) ?? 0;
+  return typ ? clamp(n / (0.5 * typ), 0, 1) : 0;
+}
+
+/** Whether he'd start at a team (beats its weakest projected starter at his position). */
+export const wouldStart = (ctx: PortalContext, p: DPlayer, team: number) => p.ovr > (ctx.starterBar.get(team)?.get(p.pos) ?? 0);
+
+/** The players who enter the portal this offseason (decided once, at the start: Players Leaving lists them). */
+export function chooseTransfers(d: Dynasty, seed: number): number[] {
+  const r = rng((seed ^ 0x51ed27) >>> 0);
+  const ctx = portalContext(d);
+  return d.players.filter((p) => p.status === 'active' && p.team !== null && r() < transferChance(d, p, ctx)).map((p) => p.id);
 }
 
 /**
@@ -245,39 +367,38 @@ export function runPortal(d: Dynasty): Dynasty {
   if (!st || st.step !== 'portal') throw new Error('The transfer portal comes after the season ends.');
   const r = stepRand(st, 2);
   let players = d.players.slice();
+  const ctx = portalContext(d);
 
-  // Who enters: only bench players who have waited (transferChance).
-  const benched = benchSeasons(d);
-  const entries = players.filter((p) => p.status === 'active' && p.team !== null && r() < transferChance(d, p, benched));
+  // Who enters: decided with the departures (st.portal).
+  const entries = (st.portal ?? chooseTransfers(d, st.seed)).map((id) => players[id - 1]).filter((p) => p.status === 'active' && p.team !== null);
   entries.sort((a, b) => b.ovr - a.ovr || a.id - b.id);
 
-  // Where they go: teams that need the position, the better programs first in line.
+  // Where they go: only where they'd start (user, 2026-11-12: "find a starting job elsewhere, if
+  // available"), the better programs first in line; nobody would start him: he stays.
   const pres = new Map(d.teams.map((t) => [t.index, prestige(d, t.index)]));
   const took = new Map<number, number>();
-  const counts = new Map(d.teams.map((t) => [t.index, countBy(players, t.index)]));
   const events: OffseasonEvent[] = [];
-  const moved = new Map<number, number | null>();
+  const moved = new Map<number, number>();
   for (const p of entries) {
     const from = p.team!;
     const fits = d.teams
       .map((t) => t.index)
-      .filter((t) => t !== from && (took.get(t) ?? 0) < 4 && need(counts.get(t)!, p.pos) > 0)
-      .map((t) => ({ t, w: need(counts.get(t)!, p.pos) * (0.5 + pres.get(t)!) * between(r, 0.5, 1.5) * (p.ovr >= 78 ? 0.5 + pres.get(t)! : 1) }))
+      .filter((t) => t !== from && (took.get(t) ?? 0) < 4 && wouldStart(ctx, p, t))
+      .map((t) => ({ t, w: (0.5 + pres.get(t)!) * between(r, 0.5, 1.5) }))
       .sort((a, b) => b.w - a.w);
-    const to = fits.length ? fits[0].t : null;
+    if (!fits.length) continue;
+    const to = fits[0].t;
     moved.set(p.id, to);
-    counts.get(from)![p.pos]--;
-    if (to !== null) {
-      counts.get(to)![p.pos] = (counts.get(to)![p.pos] ?? 0) + 1;
-      took.set(to, (took.get(to) ?? 0) + 1);
-    }
+    took.set(to, (took.get(to) ?? 0) + 1);
+    // The job is his now: the next transfer at that position has to beat him.
+    const bar = ctx.starterBar.get(to)!;
+    bar.set(p.pos, Math.max(bar.get(p.pos) ?? 0, p.ovr));
     events.push({ kind: 'transfer', player: p.id, from, to, ovr: p.ovr });
   }
   players = players.map((p) => {
     if (!moved.has(p.id)) return p;
     const to = moved.get(p.id)!;
-    const transfers = [...(p.transfers ?? []), { year: st.year, from: p.team!, to }];
-    return to === null ? { ...p, team: null, status: 'transferred' as const, leftYear: st.year, transfers } : { ...p, team: to, transfers };
+    return { ...p, team: to, transfers: [...(p.transfers ?? []), { year: st.year, from: p.team!, to }] };
   });
   return { ...d, players, offseason: { ...st, step: 'signing', events: [...st.events, ...events] } };
 }

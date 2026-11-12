@@ -296,6 +296,11 @@
 .dy-filters select { flex: 1 1 140px; }
 .dy-exp-btn { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: help; text-decoration: underline dotted; text-underline-offset: 3px; }
 .dy-exp-help { display: block; flex-basis: 100%; font-size: 0.85em; margin-top: 4px; opacity: 0.9; }
+.dy-depth select { max-width: 100%; width: 100%; }
+.dy-depth td:first-child { white-space: nowrap; }
+.dy-needs summary { cursor: pointer; font-weight: 600; margin: 8px 0; }
+.dy-needs table { max-width: 420px; }
+.dy-top-schools { margin-top: 2px; }
 .dy-sim-ask { border: 1px solid #d6d5e0; border-radius: 6px; padding: 12px 14px; margin: 8px 0; }
 .dy-sim-ask p { margin-top: 0; }
 .dy-scout-ratings { display: flex; flex-wrap: wrap; gap: 2px 12px; }

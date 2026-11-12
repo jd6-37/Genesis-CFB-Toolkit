@@ -7,6 +7,9 @@ import {
 } from '../../core/dynasty/offseason';
 import { WEEKS, openRecruiting } from '../../core/dynasty/recruiting';
 import { simCuts, simOffseason } from '../../core/dynasty/sim';
+import { DEPTH_SLOTS, confirmDepth, projectedDepth, projectedProblems } from '../../core/dynasty/offseason';
+import { slotPosition } from '../../core/dynasty/depth';
+import { rosterLayout } from '../../core/rosterLayouts';
 import { Recruiting } from './RecruitingPage';
 import { playerName } from '../../core/dynasty/derive';
 import { TeamLink, hometownText, href, useDyn } from './ui';
@@ -22,8 +25,8 @@ export interface OffseasonActions {
 }
 
 /** The step whose results the page shows (the button below them runs the next one). */
-const STEPS = ['Departures', 'Transfer portal', 'Signing day and cuts', 'Next season'] as const;
-const STEP_OF = { portal: 0, recruiting: 1, signing: 1, cuts: 2, ready: 3 } as const;
+const STEPS = ['Depth chart', 'Players leaving', 'Transfer portal', 'Signing day and cuts', 'Next season'] as const;
+const STEP_OF = { depth: 0, portal: 1, recruiting: 2, signing: 2, cuts: 3, ready: 4 } as const;
 
 /** What new players are made from (the dynasty's own players). */
 export const getTemplates = async (d: Dynasty): Promise<RecruitTemplates> => recruitTemplates(d);
@@ -97,7 +100,8 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
         <div className="dy-pagehead"><h2>Offseason</h2></div>
         {startedNew ? (
           <>
-            <p>The {season.year} season is ready. Download its ROM, start a New Season in the game with it, and import the save after you play.</p>
+            <p>The {season.year} season is ready. Set your final depth chart on your team's page (the Pos menus), then download its ROM, start a New Season in the game with it, and import the save after you play.</p>
+            <div className="dy-row">{users.map((u) => <a key={u} className="dy-button dy-quiet" href={href(`team/${u}`)}>{d.teams[u].school} depth chart</a>)}</div>
             <button type="button" className="dy-button" onClick={() => actions.downloadRom(season.year)}>Download the {season.year} ROM</button>
           </>
         ) : (
@@ -124,13 +128,15 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
     <section className="dy-off">
       <div className="dy-pagehead"><h2>Offseason {st.year}</h2></div>
       <ol className="dy-steps">
-        {STEPS.map((s0, i) => (st.mode === 'full' && i === 1 ? 'Recruiting' : s0)).map((s, i) => <li key={s} className={i < step ? 'dy-done' : i === step ? 'dy-now' : ''} aria-current={i === step ? 'step' : undefined}>{s}</li>)}
+        {STEPS.map((s0, i) => (st.mode === 'full' && i === 2 ? 'Recruiting' : s0)).map((s, i) => <li key={s} className={i < step ? 'dy-done' : i === step ? 'dy-now' : ''} aria-current={i === step ? 'step' : undefined}>{s}</li>)}
       </ol>
+
+      {st.step === 'depth' && <ProjectedDepth actions={actions} busy={busy} />}
 
       {/* What happened so far, newest step first */}
       {st.step === 'portal' && (
         <>
-          <h3 className="dy-sub">Departures</h3>
+          <h3 className="dy-sub">Players leaving</h3>
           {users.map((u) => {
             const team = (k: 'graduated' | 'pro' | 'returns') => of(k).filter((e) => e.team === u).map((e) => ({ p: pl(e.player) }));
             const grew = st.growth.filter((g) => pl(g.player).team === u).sort((a, b) => b.to - b.from - (a.to - a.from)).slice(0, 5);
@@ -141,6 +147,8 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
                 <PlayerList rows={team('pro')} />
                 <p className="dy-small dy-dim">Graduating</p>
                 <PlayerList rows={team('graduated')} />
+                <p className="dy-small dy-dim">Entering the transfer portal</p>
+                <PlayerList rows={(st.portal ?? []).map(pl).filter((p) => p.team === u).map((p) => ({ p, extra: p.cls }))} />
                 <p className="dy-small dy-dim">Back for a fifth year (SR+)</p>
                 <PlayerList rows={team('returns')} />
                 <p className="dy-small dy-dim">Most improved</p>
@@ -149,8 +157,8 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
             );
           })}
           <p>
-            Across the country {of('graduated').length.toLocaleString('en-US')} players graduate, {of('pro').length} go pro and {of('returns').length} seniors
-            come back as SR+.
+            Across the country {of('graduated').length.toLocaleString('en-US')} players graduate, {of('pro').length} go pro, {(st.portal ?? []).length} enter the
+            transfer portal and {of('returns').length} seniors come back as SR+.
           </p>
           <p>Next: the transfer portal and signing day. Either quickly, with random signing classes for every team, or by recruiting yourself for {WEEKS} weeks (high-school players and the transfer portal).</p>
           <div className="dy-row dy-next">
@@ -311,6 +319,87 @@ function SigningAndCuts({ actions, busy }: { actions: OffseasonActions; busy: st
       />
       <div className="dy-row">
         <button type="button" className="dy-button dy-quiet" disabled={!!busy} onClick={() => actions.run('Making the cuts…', async () => actions.commit(simCuts(d, await getTemplates(d))))}>Sim the cuts</button>
+        <SimOffseason actions={actions} busy={busy} />
+      </div>
+    </>
+  );
+}
+
+const LAYOUT = rosterLayout('bw95', false, true);
+
+/**
+ * The projected depth chart (user, 2026-11-12: "a step for projected depth chart prior to players leaving.
+ * That way we can move a HB2 to HB1 if we really want to ensure he doesn't transfer"): next season's
+ * 32 for each of the user's teams after graduations and early entries. A player in a starting spot isn't
+ * "blocked", so he's less likely to enter the portal. The final depth chart comes after the offseason.
+ */
+function ProjectedDepth({ actions, busy }: { actions: OffseasonActions; busy: string | null }) {
+  const { d } = useDyn();
+  const st = d.offseason!;
+  const pl = (id: number) => d.players[id - 1];
+  const [charts, setCharts] = useState<Record<number, (number | null)[]>>(() => Object.fromEntries(d.userTeams.map((u) => [u, projectedDepth(d, u).slice()])));
+  const [err, setErr] = useState<string | null>(null);
+  const of = (k: 'graduated' | 'pro') => st.events.filter((e) => e.kind === k);
+  const pick = (u: number, slot: number, id: number) => {
+    setErr(null);
+    setCharts((all) => {
+      const c = all[u].slice();
+      const was = c.indexOf(id);
+      if (was >= 0) c[was] = c[slot]; // swap with the spot he had
+      c[slot] = id;
+      return { ...all, [u]: c };
+    });
+  };
+  return (
+    <>
+      <h3 className="dy-sub">Projected depth chart</h3>
+      <p>
+        Your {st.year + 1} depth chart as it stands after graduation and early entries ({of('graduated').length.toLocaleString('en-US')} graduates and{' '}
+        {of('pro').length} early entries across the country; your teams' are listed in the next step). Players who start (★) are much less likely
+        to enter the transfer portal, and players who got the ball last season are content too. You can change the depth chart again before the
+        season. Signing day hasn't happened yet, so a thin position may show a player in two spots.
+      </p>
+      {d.userTeams.map((u) => {
+        const roster = d.players.filter((p) => p.team === u && p.status === 'active');
+        const c = charts[u];
+        return (
+          <div key={u} className="dy-off-team">
+            <h4><TeamLink team={u} rank={false} /></h4>
+            <table className="dy-table dy-depth">
+              <thead><tr><th className="dy-left">Spot</th><th className="dy-left">Player</th><th>OVR</th></tr></thead>
+              <tbody>
+                {LAYOUT.map((def, slot) => {
+                  const pos = slotPosition(def.label);
+                  const here = c[slot] !== null ? pl(c[slot]!) : undefined;
+                  const cands = roster.filter((p) => p.pos === pos || p.id === here?.id).sort((a, b) => b.ovr - a.ovr);
+                  return (
+                    <tr key={slot}>
+                      <td className="dy-left">{def.label}{!DEPTH_SLOTS.has(def.label) && <span className="dy-dim" title="Starting spot"> ★</span>}</td>
+                      <td className="dy-left">
+                        <select aria-label={`${def.label}`} value={here?.id ?? ''} onChange={(e) => pick(u, slot, Number(e.target.value))}>
+                          {!here && <option value="">Nobody</option>}
+                          {cands.map((p) => {
+                            const at = c.indexOf(p.id);
+                            return <option key={p.id} value={p.id}>{playerName(p)}, {p.cls} {p.ovr}{at >= 0 && at !== slot ? ` (${LAYOUT[at].label})` : ''}</option>;
+                          })}
+                        </select>
+                      </td>
+                      <td className="dy-strong">{here?.ovr ?? ''}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        );
+      })}
+      {err && <p className="dy-note dy-note-error" role="alert">{err}</p>}
+      <div className="dy-row dy-next">
+        <button type="button" className="dy-button" disabled={!!busy} onClick={() => {
+          const bad = d.userTeams.flatMap((u) => projectedProblems(d, u, charts[u]).map((m) => `${d.teams[u].school}: ${m}`));
+          if (bad.length) return setErr(bad.join(' '));
+          void actions.run('Players leaving…', async () => actions.commit(confirmDepth(d, charts)));
+        }}>Next: players leaving</button>
         <SimOffseason actions={actions} busy={busy} />
       </div>
     </>
