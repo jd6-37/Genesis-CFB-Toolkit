@@ -330,15 +330,20 @@ export function importSave(d: Dynasty, file: Uint8Array, opt: { at?: string; all
     throw new Error("This save's games use teams this dynasty doesn't have.");
   }
   // The season must have been started with a ROM this app wrote: New Season copies its ID block into the save.
+  // Exception (user's save, 2026-11-12): the first season started with the plain 2026 ROM (no stamp) is taken,
+  // since that ROM has the same rosters as the app's first-season ROM, with a warning about lineup changes.
   const stamp = readStamp(save.stamp);
-  if (!stamp) throw new Error(`This save's season wasn't started with a ROM from this app. Download the ${season.year} ROM (Manage, Season ROM), start a New Season in the game with it, play, then import.`);
-  if (stamp.dynasty !== dynastyRomId(d.id)) throw new Error("This save's season was started with a ROM of another dynasty.");
-  if (stamp.season !== season.index + 1) {
+  let warning: string | undefined;
+  if (!stamp && d.seasons.length === 1) {
+    warning = `This season was started with the plain ${season.year} ROM, not the one from this app. That's fine for the first season: it has the same rosters. If you changed a lineup in the app, the stats are counted for the app's lineup.`;
+  } else if (!stamp) {
+    throw new Error(`This save's season wasn't started with a ROM from this app. Download the ${season.year} ROM (Manage, Season ROM), start a New Season in the game with it, play, then import.`);
+  } else if (stamp.dynasty !== dynastyRomId(d.id)) throw new Error("This save's season was started with a ROM of another dynasty.");
+  else if (stamp.season !== season.index + 1) {
     const year = d.seasons[stamp.season - 1]?.year;
     throw new Error(`This save's season was started with the ${year ?? 'another season\'s'} ROM, and the dynasty is in ${season.year}.${year !== undefined && year < season.year ? ` Start a New Season in the game with the ${season.year} ROM.` : ''}`);
   }
-  let warning: string | undefined;
-  if (stamp.rosterVersion !== (season.rosterVersion ?? 1)) {
+  if (stamp && stamp.rosterVersion !== (season.rosterVersion ?? 1)) {
     warning = `This season was started with an earlier ${season.year} ROM, from before your last lineup change: its stats are counted for the lineup the app has now.`;
   }
   const played = playedOf(save);

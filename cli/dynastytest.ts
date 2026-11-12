@@ -801,7 +801,8 @@ assert.ok(hasDynastyHooks(rom) && dynastyAreaProblem(rom) === null);
 {
   const id = dynastyRomId(d0.id);
   assert.ok(importSave(d0, stampSave(rawSrm, id, 1, 1)).warning === undefined);
-  assert.throws(() => importSave(d0, rawSrm), /wasn't started with a ROM from this app/);
+  assert.match(importSave(d0, rawSrm).warning ?? '', /plain 2026 ROM/, 'the first season takes a save from the plain ROM, with a warning');
+  assert.throws(() => importSave(g4, rawSrm), /wasn't started with a ROM from this app/, 'later seasons need the app\'s ROM');
   assert.throws(() => importSave(d0, stampSave(rawSrm, id ^ 1, 1, 1)), /another dynasty/);
   assert.throws(() => importSave(d0, stampSave(rawSrm, id, 2, 1)), /another season's ROM, and the dynasty is in 2026/);
   assert.match(importSave({ ...d0, seasons: [{ ...d0.seasons[0], rosterVersion: 2 }] }, srm).warning ?? '', /earlier 2026 ROM/);
