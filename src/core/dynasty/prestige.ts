@@ -34,12 +34,12 @@ export const CFB27_PRESTIGE: Record<string, number> = {
 export const MAX_PRESTIGE = 6;
 
 /** The prestige tier of a final poll place (1 = No. 1). */
-export function tierOfRank(rank: number): number {
-  return rank <= 10 ? 6 : rank <= 20 ? 5 : rank <= 35 ? 4 : rank <= 70 ? 3 : rank <= 100 ? 2 : 1;
+export function tierOfRank(rank: number, t: [number, number, number, number, number] = [10, 20, 35, 70, 100]): number {
+  return rank <= t[0] ? 6 : rank <= t[1] ? 5 : rank <= t[2] ? 4 : rank <= t[3] ? 3 : rank <= t[4] ? 2 : 1;
 }
 
 /** Next year's stars: one star toward the tier the school finished in, at most. */
-export const nextPrestige = (stars: number, finalRank: number) => stars + Math.sign(tierOfRank(finalRank) - stars);
+export const nextPrestige = (stars: number, finalRank: number, tiers?: [number, number, number, number, number]) => stars + Math.sign(tierOfRank(finalRank, tiers) - stars);
 
 /** Starting stars: schools ranked by CFB 27's prestige (then team OVR), each given the tier of its place. */
 export function startingPrestige(schools: string[], teamOvr: { off: number; def: number }[] | undefined): number[] {

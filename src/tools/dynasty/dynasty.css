@@ -379,3 +379,20 @@
 
 /* Player headshots (headshot.ts): crisp pixels. */
 .dy-headshot { image-rendering: pixelated; image-rendering: crisp-edges; border-radius: 6px; flex: none; display: block; }
+
+/* Offseason rules (RulesPage.tsx): phone first, two columns from 640 px. */
+.dy-modal-back { position: fixed; inset: 0; background: rgba(20, 20, 24, 0.55); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
+.dy-modal { background: #fff; color: #1d1c22; border-radius: 8px; padding: 20px; max-width: 460px; width: 100%; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3); }
+.dy-modal h2 { margin-top: 0; }
+.dy-rule-sec { border-top: 1px solid #e3e2ea; margin-top: 18px; }
+.dy-rule { display: grid; gap: 6px; padding: 10px 0; border-bottom: 1px solid #f0eff4; }
+.dy-rule-label { display: flex; flex-direction: column; gap: 2px; }
+.dy-rule-flag { align-self: flex-start; font-size: 0.75em; font-weight: 600; background: #fff3c4; border-radius: 3px; padding: 0 5px; }
+.dy-rule-changed .dy-rule-label > span:first-child { font-weight: 600; }
+.dy-rule-inputs { display: flex; flex-wrap: wrap; gap: 8px 12px; }
+.dy-rule-in { display: inline-flex; align-items: center; gap: 4px; }
+.dy-rule-in input { width: 84px; border: 1px solid #b9b8c8; border-radius: 4px; padding: 6px 8px; }
+.dy-pitch { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+@media (min-width: 640px) {
+  .dy-rule { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+}

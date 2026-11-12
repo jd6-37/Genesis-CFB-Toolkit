@@ -1,5 +1,6 @@
 // The Dynasty section (#dynasty): a news site for the user's dynasty, kept in the browser, with its
 // own pages. Spec: docs/dynasty.md.
+import { Rules } from './RulesPage';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { openRom } from '../../core/romfile';
 import { fetchCfb27Latest, CFB27_LATEST } from '../../core/cfb27Latest';
@@ -276,10 +277,11 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       case 'stats': return <Leaders />;
       case 'history': return <History />;
       case 'offseason': return <Offseason actions={offActions} busy={busy} />;
+      case 'rules': return <Rules actions={offActions} busy={busy} />;
       default: return <Home />;
     }
   })();
-  const navPage = page === 'team' || page === 'player' ? (page === 'team' ? 'teams' : 'stats') : page;
+  const navPage = page === 'team' || page === 'player' ? (page === 'team' ? 'teams' : 'stats') : page === 'rules' ? 'manage' : page;
   const week = d?.offseason ? 'Offseason' : v && v.save ? (v.currentWeek < v.weeks ? weekName(v, v.currentWeek) : 'Season complete') : d && d.seasons.length > 1 ? 'Preseason' : null;
 
   return (
@@ -475,6 +477,10 @@ function Manage({ d, art, list, busy, note, actions }: {
               <FileButton label="Load ROM for logos" accept=".md,.bin,.gen,.zip" disabled={!!busy} onFile={actions.addArt} />
             </>
           )}
+
+          <h3>Offseason rules</h3>
+          <p>Every number the computer's offseason uses (departures, development, transfers, recruiting, walk-ons, prestige), to change for this dynasty or move to another one. Spoilers.</p>
+          <div className="dy-row"><a className="dy-button dy-quiet" href={href('rules')}>Offseason rules</a></div>
 
           <h3>Keep a copy</h3>
           <p>Your dynasty lives in this browser. Download it to keep a backup or to move it to another computer.</p>

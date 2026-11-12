@@ -3,9 +3,10 @@ import { useMemo, useState } from 'react';
 import type { DPlayer, Dynasty, OffseasonEvent } from '../../core/dynasty/model';
 import {
   applyCuts, cancelOffseason, classRankings, cutOrder, cutProblems, finishOffseason, recruitTemplates, runPortal, runSigningDay,
-  seasonDone, startOffseason, GROUP_MIN, ROSTER_LIMIT, type RecruitTemplates,
+  seasonDone, startOffseason, groupMins, ROSTER_LIMIT, type RecruitTemplates,
 } from '../../core/dynasty/offseason';
-import { WEEKS, openRecruiting } from '../../core/dynasty/recruiting';
+import { openRecruiting } from '../../core/dynasty/recruiting';
+import { rulesOf } from '../../core/dynasty/rules';
 import { simCuts, simOffseason } from '../../core/dynasty/sim';
 import { DEPTH_SLOTS, confirmDepth, projectedDepth, projectedProblems } from '../../core/dynasty/offseason';
 import { slotPosition } from '../../core/dynasty/depth';
@@ -160,9 +161,9 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
             Across the country {of('graduated').length.toLocaleString('en-US')} players graduate, {of('pro').length} go pro, {(st.portal ?? []).length} enter the
             transfer portal and {of('returns').length} seniors come back as SR+.
           </p>
-          <p>Next: the transfer portal and signing day. Either quickly, with random signing classes for every team, or by recruiting yourself for {WEEKS} weeks (high-school players and the transfer portal).</p>
+          <p>Next: the transfer portal and signing day. Either quickly, with random signing classes for every team, or by recruiting yourself for {rulesOf(d).weeks} weeks (high-school players and the transfer portal).</p>
           <div className="dy-row dy-next">
-            <button type="button" className="dy-button" disabled={!!busy} onClick={() => actions.run('Opening recruiting…', async () => actions.commit(openRecruiting(d, await getTemplates(d))))}>Recruit for {WEEKS} weeks</button>
+            <button type="button" className="dy-button" disabled={!!busy} onClick={() => actions.run('Opening recruiting…', async () => actions.commit(openRecruiting(d, await getTemplates(d))))}>Recruit for {rulesOf(d).weeks} weeks</button>
             <button type="button" className="dy-button dy-quiet" disabled={!!busy} onClick={() => actions.run('Running the transfer portal…', () => actions.commit(runPortal(d)))}>Random classes</button>
           </div>
           <div className="dy-row"><SimOffseason actions={actions} busy={busy} /></div>
@@ -240,7 +241,7 @@ function SigningAndCuts({ actions, busy }: { actions: OffseasonActions; busy: st
   const [cuts, setCuts] = useState<Record<number, number[]>>(() => ({ ...(st.suggestedCuts ?? {}) }));
   const [err, setErr] = useState<string | null>(null);
   const rosters = useMemo(
-    () => Object.fromEntries(d.userTeams.map((u) => [u, cutOrder(d.players.filter((p) => p.team === u && p.status === 'active'))])),
+    () => Object.fromEntries(d.userTeams.map((u) => [u, cutOrder(d.players.filter((p) => p.team === u && p.status === 'active'), rulesOf(d))])),
     [d],
   );
   const toggle = (u: number, id: number) => {
@@ -276,7 +277,7 @@ function SigningAndCuts({ actions, busy }: { actions: OffseasonActions; busy: st
       <p>
         Every team cuts to {ROSTER_LIMIT}. The computer cuts for the other teams the same way it suggests yours, which are checked already: next season's
         Active Roster (★) stays, and backups go first by what they'll be worth when they could start (expected OVR the next two seasons, so seniors
-        go first). Keep at least {GROUP_MIN.map((g) => `${g.min} ${g.name}`).join(', ')}, and a player for every Active Roster spot.
+        go first). Keep at least {groupMins(rulesOf(d)).map((g) => `${g.min} ${g.name}`).join(', ')}, and a player for every Active Roster spot.
       </p>
       {d.userTeams.map((u) => {
         const { order: roster, active } = rosters[u];

@@ -18,25 +18,23 @@
 // best prospects don't decide before week 3 (4★) or 4 (5★).
 
 import { rng, type DPlayer, type Dynasty, type OffseasonEvent } from './model';
-import { CLASS_MAX, POSITIONS, POS_TARGET, ROSTER_LIMIT, STAR_POINTS, chooseTransfers, drawStars, fillMinimums, makeRecruit, prestige, prestigeStars, suggestCuts, type RecruitTemplates } from './offseason';
-import { closeness } from './schoolStates';
+import { rulesOf, type OffseasonRules } from './rules';
+import { academicsOf } from './academics';
+import { seasonView } from './derive';
+import { POSITIONS, POS_TARGET, ROSTER_LIMIT, STAR_POINTS, chooseTransfers, drawStars, fillMinimums, makeRecruit, prestige, prestigeStars, suggestCuts, type RecruitTemplates } from './offseason';
+import { SCHOOL_STATE, closeness, stateCode } from './schoolStates';
 
-export const WEEKS = 5;
-export const WEEKLY_POINTS = 1000;
-export const MAX_PER_PROSPECT = 60;
-export const BOARD_SIZE = 35;
+// The numbers below come from the dynasty's offseason rules (rules.ts): weeks, points, board, scouting,
+// thresholds, pitches. Defaults: 5 weeks, 1,000 points a week, 60 a prospect, a board of 35.
 /**
  * Scouting (user, 2026-11-12): a user team sees a high-school prospect's stars, position, hometown and
  * size; scouting reveals his OVR (10 points), then all his ratings (20 more; both in one week is fine).
  * The points come out of the week's 1,000 and don't count toward a prospect's 60. What's revealed stays
  * revealed. Portal players have played college ball: everything shows. CPU teams don't scout.
  */
-export const SCOUT_COST = [0, 10, 20] as const;
+/** Scouting costs by level (0, OVR, all ratings). */
+export const scoutCosts = (R: OffseasonRules) => [0, R.scoutOvr, R.scoutRatings];
 export type ScoutLevel = 0 | 1 | 2;
-/** Interest a prospect needs from a team before he commits, by stars (portal players decide sooner). */
-const THRESHOLD = [40, 60, 100, 160, 230, 320];
-/** The first week a prospect may commit, by stars (the best take their time; portal players a week sooner). */
-const FIRST_WEEK = [1, 1, 2, 2, 3, 4];
 
 export interface Prospect {
   /** Negative for high-school recruits (a player ID only when he signs), the player's ID for portal players. */
@@ -46,7 +44,7 @@ export interface Prospect {
   /** Team he left, for a portal player. */
   from: number | null;
   /** How much he cares about playing time, prestige and being close to home (they add up to 1). */
-  wants: { pt: number; prestige: number; home: number };
+  wants: Wants;
   interest: Record<number, number>;
   offers: number[];
   committed: number | null;
@@ -82,12 +80,13 @@ const seeded = (seed: number, salt: number) => rng((seed ^ Math.imul(salt + 11, 
  * What a prospect cares about (his pitches), adding up to 1: random, then by stars (user, 2026-11-12: "3
  * star and lower should have more chance of Location pitch. Higher star recruits, Program Prestige").
  */
-const HOME_BY_STARS = [1.6, 1.6, 1.5, 1.3, 0.8, 0.6];
-const PRESTIGE_BY_STARS = [0.6, 0.6, 0.7, 0.9, 1.4, 1.7];
-function wants(r: Rand, stars = 3) {
-  const a = -Math.log(1 - r()), b = -Math.log(1 - r()) * PRESTIGE_BY_STARS[stars], c = -Math.log(1 - r()) * HOME_BY_STARS[stars];
-  const s = a + b + c;
-  return { pt: a / s, prestige: b / s, home: c / s };
+export interface Wants { pt: number; prestige: number; home: number; academics: number; contender: number }
+const exp1 = (r: Rand) => -Math.log(1 - r());
+/** His pitches (rules: pitch weights by stars; academics and championship contender from 2026-11-12). */
+function wants(R: OffseasonRules, r: Rand, stars = 3, pt?: number): Wants {
+  const w = { pt: pt ?? exp1(r), prestige: exp1(r) * R.pitchPrestige[stars], home: exp1(r) * R.pitchHome[stars], academics: exp1(r) * R.pitchAcademics[stars], contender: exp1(r) * R.pitchContender[stars] };
+  const s = w.pt + w.prestige + w.home + w.academics + w.contender || 1;
+  return { pt: w.pt / s, prestige: w.prestige / s, home: w.home / s, academics: w.academics / s, contender: w.contender / s };
 }
 
 /** Stars a portal player counts as (by OVR). */
@@ -106,19 +105,20 @@ export function portalEntries(d: Dynasty, seed: number): DPlayer[] {
 
 /** The high-school pool and the portal players, as prospects with priorities. */
 export function startRecruiting(d: Dynasty, tpl: RecruitTemplates, portal: DPlayer[], seed: number, year: number): RecruitingState {
+  const R = rulesOf(d);
   const r = seeded(seed, 22);
   const portalIds = new Set(portal.map((p) => p.id));
   const spots: Record<number, number> = {};
   const need: Record<string, number> = {};
   for (const t of d.teams) {
     const team = roster(d, t.index).filter((p) => !portalIds.has(p.id));
-    spots[t.index] = clamp(ROSTER_LIMIT - team.length, 0, CLASS_MAX);
+    spots[t.index] = clamp(ROSTER_LIMIT - team.length, 0, R.classMax);
     for (const pos of POSITIONS) need[pos] = (need[pos] ?? 0) + Math.max(0, POS_TARGET[pos] - team.filter((p) => p.pos === pos).length);
   }
   const totalSpots = Object.values(spots).reduce((a, b) => a + b, 0);
   const totalNeed = Object.values(need).reduce((a, b) => a + b, 0) || 1;
   // About 1.4 prospects per open spot; positions in proportion to the country's needs.
-  const size = Math.round(totalSpots * 1.4) - portal.length;
+  const size = Math.round(totalSpots * R.poolPerSpot) - portal.length;
   const prospects: Prospect[] = [];
   let tempId = -1;
   for (let k = 0; k < size; k++) {
@@ -126,15 +126,10 @@ export function startRecruiting(d: Dynasty, tpl: RecruitTemplates, portal: DPlay
     for (const p of POSITIONS) if ((x -= need[p]) <= 0) { pos = p; break; }
     const stars = drawStars(r, 0.45);
     const player = makeRecruit(d, tpl, r, tempId, -1, pos, stars, year);
-    prospects.push({ id: tempId--, player: { ...player, team: null }, stars, from: null, wants: wants(r, stars), interest: {}, offers: [], committed: null });
+    prospects.push({ id: tempId--, player: { ...player, team: null }, stars, from: null, wants: wants(R, r, stars), interest: {}, offers: [], committed: null });
   }
   for (const p of portal) {
-    prospects.push({ id: p.id, player: p, stars: portalStars(p.ovr), from: p.team, wants: { ...wants(r), pt: 0.5 + 0.5 * r() }, interest: {}, offers: [], committed: null });
-  }
-  // Portal players' priorities: mostly playing time (renormalized).
-  for (const pr of prospects) {
-    const s = pr.wants.pt + pr.wants.prestige + pr.wants.home;
-    pr.wants = { pt: pr.wants.pt / s, prestige: pr.wants.prestige / s, home: pr.wants.home / s };
+    prospects.push({ id: p.id, player: p, stars: portalStars(p.ovr), from: p.team, wants: wants(R, r, portalStars(p.ovr), R.portalPlayingTime + 0.5 * r()), interest: {}, offers: [], committed: null });
   }
   topSchools(d, prospects, r);
   // A user team's own players in the portal start on its board (user: "i should have a good chance at
@@ -147,8 +142,8 @@ export function startRecruiting(d: Dynasty, tpl: RecruitTemplates, portal: DPlay
   return { week: 0, prospects, spots, log: [], plans, scouted: {}, scoutSpent: {} };
 }
 
-/** Starting interest of a prospect's five top schools, best first (a share of what he needs to commit). */
-const TOP_START = [0.5, 0.45, 0.4, 0.35, 0.3];
+/** Interest a prospect needs from a school to commit (portal players less: rules). */
+export const commitNeed = (R: OffseasonRules, pr: Pick<Prospect, 'stars' | 'id'>) => R.commitThreshold[pr.stars] * (pr.id > 0 ? R.portalThreshold : 1);
 
 /**
  * Every prospect starts with five interested schools (user, 2026-11-12: "every recruit should start with a
@@ -157,18 +152,19 @@ const TOP_START = [0.5, 0.45, 0.4, 0.35, 0.3];
  * from a school should have that school somewhere in their top schools. 3rd?").
  */
 function topSchools(d: Dynasty, prospects: Prospect[], r: Rand) {
+  const R = rulesOf(d);
   const stars = new Map(d.teams.map((t) => [t.index, prestigeStars(d, t.index)]));
   const counts = new Map(d.teams.map((t) => [t.index, new Map<string, number>()]));
   for (const p of d.players) if (p.status === 'active' && p.team !== null) counts.get(p.team)!.set(p.pos, (counts.get(p.team)!.get(p.pos) ?? 0) + 1);
   for (const pr of prospects) {
-    const need = THRESHOLD[pr.stars] * (pr.id > 0 ? 0.7 : 1);
+    const need = commitNeed(R, pr);
     const scored = d.teams.filter((t) => t.index !== pr.from).map((t) => {
       const short = (POS_TARGET[pr.player.pos] ?? 0) - (counts.get(t.index)!.get(pr.player.pos) ?? 0) > 0;
       return { t: t.index, w: reach(pr.stars, stars.get(t.index)!) * (0.4 + closeness(pr.player.state, t.school)) * (short ? 1.3 : 1) * (0.5 + r()) };
     }).sort((a, b) => b.w - a.w);
     const top = scored.slice(0, 5).map((x) => x.t);
     if (pr.from !== null) top.splice(2, 0, pr.from), top.pop();
-    top.forEach((t, i) => { pr.interest[t] = Math.round(TOP_START[i] * need); });
+    top.forEach((t, i) => { pr.interest[t] = Math.round(R.topStart[i] * need); });
   }
 }
 
@@ -186,6 +182,54 @@ export interface WeekContext {
   prestige: Map<number, number>;
   stars: Map<number, number>;
   portalIds: Set<number>;
+  /** Championship Contender, 0-1 (contenderScores). */
+  contender: Map<number, number>;
+  /** Each team's pipeline states (pipelineStates). */
+  pipelines: Map<number, Set<string>>;
+}
+
+/**
+ * Pipeline states (user, 2026-11-12: "if a team has 4(?) players from a state, it becomes a pipeline and
+ * slightly lowers (not as much as in-state) the recruiting cost"): states with at least pipelineMin players
+ * on the team (its active roster), with the count.
+ */
+export function pipelineStates(d: Dynasty, team: number): { state: string; n: number }[] {
+  const R = rulesOf(d);
+  const c = new Map<string, number>();
+  for (const p of d.players) if (p.status === 'active' && p.team === team) { const s = stateCode(p.state); if (s) c.set(s, (c.get(s) ?? 0) + 1); }
+  return [...c].filter(([, n]) => n >= R.pipelineMin).map(([state, n]) => ({ state, n })).sort((a, b) => b.n - a.n || a.state.localeCompare(b.state));
+}
+
+/** How far a school's points go with a prospect (user: "In-state recruits should have lower recruiting costs"). */
+export function pointValue(d: Dynasty, ctx: Pick<WeekContext, 'pipelines'>, pr: Prospect, team: number): number {
+  const R = rulesOf(d);
+  const s = stateCode(pr.player.state);
+  if (s && SCHOOL_STATE[d.teams[team].school] === s) return R.inStateBoost;
+  return s && ctx.pipelines.get(team)?.has(s) ? R.pipelineBoost : 1;
+}
+
+/**
+ * Championship Contender (user, 2026-11-12: "look at last year's results and the current roster so far,
+ * eg. a top returning class means the team has a shot"), 0-1 per team: last season's final poll place
+ * (top 4: 1, then less down to 0 at 64th) and the roster as it stands (its best 22 OVRs, commitments in,
+ * portal players out), ranked against the country; weighted by the rules (contenderLastSeason).
+ */
+export function contenderScores(d: Dynasty, depth: Map<number, Map<string, number[]>>): Map<number, number> {
+  const R = rulesOf(d);
+  const v = seasonView(d, d.seasons[d.seasons.length - 1]);
+  const strength = d.teams.map((t) => {
+    const all = [...depth.get(t.index)!.values()].flat().sort((a, b) => b - a).slice(0, 22);
+    return { t: t.index, s: all.reduce((a, b) => a + b, 0) / Math.max(1, all.length) };
+  }).sort((a, b) => b.s - a.s);
+  const n = strength.length;
+  const out = new Map<number, number>();
+  strength.forEach((x, i) => {
+    const rank = v.save ? v.rank[x.t] : 69;
+    const last = rank <= 4 ? 1 : clamp(1 - (rank - 4) / 60, 0, 1);
+    const now = (1 - i / (n - 1)) ** 2;
+    out.set(x.t, R.contenderLastSeason * last + (1 - R.contenderLastSeason) * now);
+  });
+  return out;
 }
 
 export function weekContext(d: Dynasty, rs: RecruitingState): WeekContext {
@@ -197,7 +241,7 @@ export function weekContext(d: Dynasty, rs: RecruitingState): WeekContext {
   };
   for (const p of d.players) if (p.status === 'active' && p.team !== null && !portalIds.has(p.id)) add(p.team, p.pos, p.ovr);
   for (const q of rs.prospects) if (q.committed !== null) add(q.committed, q.player.pos, q.player.ovr);
-  return { depth, prestige: new Map(d.teams.map((t) => [t.index, prestige(d, t.index)])), stars: new Map(d.teams.map((t) => [t.index, prestigeStars(d, t.index)])), portalIds };
+  return { depth, prestige: new Map(d.teams.map((t) => [t.index, prestige(d, t.index)])), stars: new Map(d.teams.map((t) => [t.index, prestigeStars(d, t.index)])), portalIds, contender: contenderScores(d, depth), pipelines: new Map(d.teams.map((t) => [t.index, new Set(pipelineStates(d, t.index).map((x) => x.state))])) };
 }
 
 /** How well a team fits what a prospect wants, 0-1. */
@@ -206,12 +250,14 @@ export function fit(d: Dynasty, ctx: WeekContext, pr: Prospect, team: number): n
   const starters = Math.max(1, Math.round((POS_TARGET[pr.player.pos] ?? 4) / 3));
   const pt = ahead < starters ? 1 : ahead < starters + 1 ? 0.65 : ahead < starters + 3 ? 0.35 : 0.15;
   const home = closeness(pr.player.state, d.teams[team].school);
-  const v = pr.wants.pt * pt + pr.wants.prestige * ctx.prestige.get(team)! + pr.wants.home * home;
+  const w = pr.wants;
+  const v = w.pt * pt + w.prestige * ctx.prestige.get(team)! + w.home * home + (w.academics ?? 0) * academicsOf(d.teams[team].school) + (w.contender ?? 0) * ctx.contender.get(team)!;
   return v; // his old school too (user: "i should have a good chance at being able to recruit him back")
 }
 
 /** A CPU team's plan for the week: targets by need and level, points by fit and stars. */
 export function cpuPlan(d: Dynasty, rs: RecruitingState, ctx: WeekContext, team: number, r: Rand): TeamPlan {
+  const R = rulesOf(d);
   const pres = ctx.prestige.get(team)!;
   const committed = rs.prospects.filter((p) => p.committed === team);
   const open = rs.spots[team] - committed.length;
@@ -221,16 +267,16 @@ export function cpuPlan(d: Dynasty, rs: RecruitingState, ctx: WeekContext, team:
   const maxStar = clamp(2 + Math.round(pres * 4), 1, 5);
   const minStar = Math.max(1, maxStar - 2);
   const cands = rs.prospects
-    .filter((p) => (p.committed === null || (p.committed !== team && p.stars >= 4 && ctx.stars.get(team)! > ctx.stars.get(p.committed)! + 1)) && p.stars <= maxStar && p.stars >= minStar && (POS_TARGET[p.player.pos] ?? 0) - (counts[p.player.pos] ?? 0) > 0 && p.from !== team)
+    .filter((p) => (p.committed === null || (p.committed !== team && p.stars >= 4 && ctx.stars.get(team)! > ctx.stars.get(p.committed)! + 1)) && p.stars <= maxStar && p.stars >= minStar && (POS_TARGET[p.player.pos] ?? 0) - (counts[p.player.pos] ?? 0) > 0)
     .map((p) => ({ p, score: (p.stars + 1) * (0.3 + fit(d, ctx, p, team)) * ((POS_TARGET[p.player.pos] ?? 0) - (counts[p.player.pos] ?? 0)) * (0.7 + 0.6 * r()) + (p.interest[team] ?? 0) / 400 }))
     .sort((a, b) => b.score - a.score)
-    .slice(0, Math.min(BOARD_SIZE, open + 6));
+    .slice(0, Math.min(R.boardSize, open + 6));
   // Points go mostly to the best targets (score squared), up to the most one prospect can take.
   const total = cands.reduce((a, c) => a + c.score * c.score, 0) || 1;
   const points: Record<number, number> = {};
-  let left = WEEKLY_POINTS;
+  let left = R.cpuPoints;
   for (const c of cands) {
-    const pts = Math.min(MAX_PER_PROSPECT, left, Math.round((WEEKLY_POINTS * c.score * c.score) / total));
+    const pts = Math.min(R.maxPerProspect, left, Math.round((R.cpuPoints * c.score * c.score) / total));
     if (pts <= 0) continue;
     points[c.p.id] = pts;
     left -= pts;
@@ -244,9 +290,10 @@ export const scoutLevel = (rs: RecruitingState, team: number, p: Prospect): Scou
   p.id > 0 ? 2 : rs.scouted?.[team]?.[p.id] ?? 0;
 
 /** Points to scout a prospect from where the team stands up to a level. */
-export function scoutCost(rs: RecruitingState, team: number, p: Prospect, level: ScoutLevel): number {
+export function scoutCost(R: OffseasonRules, rs: RecruitingState, team: number, p: Prospect, level: ScoutLevel): number {
   let c = 0;
-  for (let l = scoutLevel(rs, team, p) + 1; l <= level; l++) c += SCOUT_COST[l];
+  const costs = scoutCosts(R);
+  for (let l = scoutLevel(rs, team, p) + 1; l <= level; l++) c += costs[l];
   return c;
 }
 
@@ -257,14 +304,15 @@ export function scoutCost(rs: RecruitingState, team: number, p: Prospect, level:
 export function scoutProspect(d: Dynasty, team: number, id: number, level: ScoutLevel, planned = 0): Dynasty {
   const st = d.offseason;
   const rs = st?.recruiting;
-  if (!st || !rs || st.step !== 'recruiting' || rs.week >= WEEKS) throw new Error('Scouting is only during the recruiting weeks.');
+  const R = rulesOf(d);
+  if (!st || !rs || st.step !== 'recruiting' || rs.week >= R.weeks) throw new Error('Scouting is only during the recruiting weeks.');
   if (!d.userTeams.includes(team)) throw new Error('Only your teams scout.');
   const p = rs.prospects.find((x) => x.id === id);
   if (!p) throw new Error('No such prospect.');
-  const cost = scoutCost(rs, team, p, level);
+  const cost = scoutCost(R, rs, team, p, level);
   if (cost === 0) return d;
   const spent = rs.scoutSpent?.[team] ?? 0;
-  if (spent + cost + planned > WEEKLY_POINTS) throw new Error(`Scouting him costs ${cost} points: you have ${WEEKLY_POINTS - spent - planned} left this week.`);
+  if (spent + cost + planned > R.userPoints) throw new Error(`Scouting him costs ${cost} points: you have ${R.userPoints - spent - planned} left this week.`);
   const recruiting: RecruitingState = {
     ...rs,
     scouted: { ...rs.scouted, [team]: { ...rs.scouted?.[team], [id]: level } },
@@ -273,14 +321,14 @@ export function scoutProspect(d: Dynasty, team: number, id: number, level: Scout
   return { ...d, offseason: { ...st, recruiting } };
 }
 
-export function planProblems(plan: TeamPlan, scoutSpent = 0): string[] {
+export function planProblems(R: OffseasonRules, plan: TeamPlan, scoutSpent = 0): string[] {
   const out: string[] = [];
   const vals = Object.values(plan.points);
   const total = vals.reduce((a, b) => a + b, 0) + scoutSpent;
   if (vals.some((v) => v < 0 || !Number.isFinite(v))) out.push('Points must be zero or more.');
-  if (vals.some((v) => v > MAX_PER_PROSPECT)) out.push(`At most ${MAX_PER_PROSPECT} points for one prospect a week.`);
-  if (total > WEEKLY_POINTS) out.push(`That's ${total} points${scoutSpent ? `, ${scoutSpent} of them on scouting` : ''}: you have ${WEEKLY_POINTS} a week.`);
-  if (Object.keys(plan.points).length > BOARD_SIZE) out.push(`At most ${BOARD_SIZE} prospects on your board.`);
+  if (vals.some((v) => v > R.maxPerProspect)) out.push(`At most ${R.maxPerProspect} points for one prospect a week.`);
+  if (total > R.userPoints) out.push(`That's ${total} points${scoutSpent ? `, ${scoutSpent} of them on scouting` : ''}: you have ${R.userPoints} a week.`);
+  if (Object.keys(plan.points).length > R.boardSize) out.push(`At most ${R.boardSize} prospects on your board.`);
   return out;
 }
 
@@ -289,9 +337,10 @@ export function planProblems(plan: TeamPlan, scoutSpent = 0): string[] {
  * theirs), interest grows, prospects commit or flip. Returns the new state (the input is left as it is).
  */
 export function runRecruitingWeek(d: Dynasty, rs0: RecruitingState, userPlans: Record<number, TeamPlan>, seed: number, sim: number[] = []): RecruitingState {
-  if (rs0.week >= WEEKS) throw new Error('Recruiting is over: it\'s signing day.');
+  const R = rulesOf(d);
+  if (rs0.week >= R.weeks) throw new Error('Recruiting is over: it\'s signing day.');
   for (const [t, p] of Object.entries(userPlans)) {
-    const bad = planProblems(p, rs0.scoutSpent?.[Number(t)] ?? 0);
+    const bad = planProblems(R, p, rs0.scoutSpent?.[Number(t)] ?? 0);
     if (bad.length) throw new Error(`${d.teams[Number(t)].school}: ${bad.join(' ')}`);
   }
   const r = seeded(seed, 100 + rs0.week);
@@ -314,7 +363,7 @@ export function runRecruitingWeek(d: Dynasty, rs0: RecruitingState, userPlans: R
       const p = byId.get(Number(idS));
       if (!p || pts <= 0) continue;
       const f = fit(d, ctx, p, team);
-      p.interest[team] = (p.interest[team] ?? 0) + pts * (0.5 + f) * (p.offers.includes(team) ? 1.2 : 0.6) * reach(p.stars, ctx.stars.get(team)!) * (0.85 + 0.3 * r());
+      p.interest[team] = (p.interest[team] ?? 0) + pts * pointValue(d, ctx, p, team) * (0.5 + f) * (p.offers.includes(team) ? R.offerBoost : R.noOffer) * reach(p.stars, ctx.stars.get(team)!) * (0.85 + 0.3 * r());
     }
   }
   // Commitments and flips (best prospects decide first, so spots go to them).
@@ -326,15 +375,15 @@ export function runRecruitingWeek(d: Dynasty, rs0: RecruitingState, userPlans: R
     const top = ranked.find((x) => p.offers.includes(x.t) && (committedCount(x.t) < rs.spots[x.t] || p.committed === x.t));
     if (!top) continue;
     const second = ranked.find((x) => x.t !== top.t)?.v ?? 0;
-    const need = THRESHOLD[p.stars] * (p.id > 0 ? 0.7 : 1);
-    if (rs.week + 1 < FIRST_WEEK[p.stars] - (p.id > 0 ? 1 : 0)) continue;
+    const need = commitNeed(R, p);
+    if (rs.week + 1 < R.firstWeek[p.stars] - (p.id > 0 ? 1 : 0)) continue;
     if (p.committed === null) {
-      if (top.v >= need && top.v >= 1.25 * second) {
+      if (top.v >= need && top.v >= R.commitLead * second) {
         p.committed = top.t;
         count.set(top.t, committedCount(top.t) + 1);
         rs.log.push({ week: rs.week + 1, prospect: p.id, team: top.t });
       }
-    } else if (top.t !== p.committed && top.v >= 1.5 * (p.interest[p.committed] ?? 0) && r() < 0.5) {
+    } else if (top.t !== p.committed && top.v >= R.flipMargin * (p.interest[p.committed] ?? 0) && r() < R.flipChance) {
       rs.log.push({ week: rs.week + 1, prospect: p.id, team: top.t, flipFrom: p.committed });
       count.set(p.committed, committedCount(p.committed) - 1);
       count.set(top.t, committedCount(top.t) + 1);
@@ -375,7 +424,7 @@ export function signingDay(d: Dynasty, rs: RecruitingState, year: number): { pla
   // positions they need first (round by round, the stronger programs first in each round).
   const left = prs.filter((p) => p.committed === null && p.id < 0).sort((a, b) => b.stars - a.stars || b.player.ovr - a.player.ovr);
   const order = d.teams.map((t) => ({ t: t.index, pres: prestige(d, t.index) })).sort((a, b) => b.pres - a.pres).map((x) => x.t);
-  for (let round = 0; round < CLASS_MAX && left.length; round++) {
+  for (let round = 0; round < rulesOf(d).classMax && left.length; round++) {
     for (const t of order) {
       if ((count.get(t) ?? 0) >= rs.spots[t] || !left.length) continue;
       const c = counts.get(t)!;
@@ -435,9 +484,10 @@ export function recruitingWeek(d: Dynasty, userPlans: Record<number, TeamPlan>, 
 }
 
 /** Sims recruiting weeks for every user team (all that are left, or `weeks` of them); signing day stays a step. */
-export function simRecruiting(d: Dynasty, weeks = WEEKS): Dynasty {
+export function simRecruiting(d: Dynasty, weeks = Infinity): Dynasty {
+  const W = rulesOf(d).weeks;
   let x = d;
-  for (let i = 0; i < weeks && x.offseason?.recruiting && x.offseason.recruiting.week < WEEKS; i++) x = recruitingWeek(x, {}, x.userTeams);
+  for (let i = 0; i < weeks && x.offseason?.recruiting && x.offseason.recruiting.week < W; i++) x = recruitingWeek(x, {}, x.userTeams);
   return x;
 }
 
@@ -445,7 +495,8 @@ export function simRecruiting(d: Dynasty, weeks = WEEKS): Dynasty {
 export function finishRecruiting(d: Dynasty, tpl: RecruitTemplates): Dynasty {
   const st = d.offseason;
   if (!st || st.step !== 'recruiting' || !st.recruiting) throw new Error('It isn\'t recruiting time.');
-  if (st.recruiting.week < WEEKS) throw new Error(`Recruiting has ${WEEKS - st.recruiting.week} weeks left.`);
+  const W = rulesOf(d).weeks;
+  if (st.recruiting.week < W) throw new Error(`Recruiting has ${W - st.recruiting.week} weeks left.`);
   const { players: signed, events } = signingDay(d, st.recruiting, st.year + 1);
   const players = fillMinimums(d, signed, tpl, seeded(st.seed, 30), st.year + 1, events);
   const next: Dynasty = { ...d, players, offseason: { ...st, step: 'cuts', recruiting: undefined, events: [...st.events, ...events] } };

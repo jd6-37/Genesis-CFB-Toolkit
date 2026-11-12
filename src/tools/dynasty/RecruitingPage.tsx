@@ -2,13 +2,17 @@
 import { useMemo, useState } from 'react';
 import type { Dynasty } from '../../core/dynasty/model';
 import {
-  BOARD_SIZE, MAX_PER_PROSPECT, SCOUT_COST, WEEKLY_POINTS, WEEKS, finishRecruiting, interestRanking, planProblems, reach, recruitingWeek,
+  contenderScores, finishRecruiting, weekContext, interestRanking, planProblems, reach, recruitingWeek,
   scoutCost, scoutLevel, scoutProspect, simRecruiting, type Prospect, type RecruitingState, type ScoutLevel, type TeamPlan,
 } from '../../core/dynasty/recruiting';
 import { POSITIONS, POS_TARGET, prestigeStars } from '../../core/dynasty/offseason';
 import { closeness } from '../../core/dynasty/schoolStates';
 import { playerName } from '../../core/dynasty/derive';
-import { GROUP_COLUMNS } from '../../core/rosterLayouts';
+import { GROUP_COLUMNS, type Attr } from '../../core/rosterLayouts';
+import { rulesOf } from '../../core/dynasty/rules';
+import { academicGrade, gradeOf } from '../../core/dynasty/academics';
+import { pipelineStates } from '../../core/dynasty/recruiting';
+import { SCHOOL_STATE, stateCode } from '../../core/dynasty/schoolStates';
 import { GROUP_OF_ROLE, roleOfPos, shownOf } from '../../core/dynasty/ratings';
 import { TeamLink, heightText, hometownText, useDyn } from './ui';
 import { SimOffseason, getTemplates, type OffseasonActions } from './OffseasonPage';
@@ -17,13 +21,16 @@ const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['
 const starText = (n: number) => `${n}★`;
 
 /** Hometown (or the school he left) and size: what a team sees before scouting. */
-const aboutText = (p: Prospect, d: Dynasty, team: number) =>
-  `${p.from === team ? 'Left your team (transfer portal)' : p.from !== null ? `Transfer from ${d.teams[p.from].school}` : hometownText(p.player)}. ${heightText(p.player.heightIn)}, ${p.player.weight} lb`;
+const aboutText = (p: Prospect, d: Dynasty, team: number) => {
+  const st = stateCode(p.player.state);
+  const tag = p.from === team ? '' : st && SCHOOL_STATE[d.teams[team].school] === st ? ' (in-state)' : st && pipelineStates(d, team).some((x) => x.state === st) ? ' (pipeline state)' : '';
+  return `${p.from === team ? 'Left your team (transfer portal)' : `${p.from !== null ? `Transfer from ${d.teams[p.from].school}, from ` : ''}${hometownText(p.player)}${tag}`}. ${heightText(p.player.heightIn)}, ${p.player.weight} lb`;
+};
 
 /** What he cares about most, then next (his best pitches). */
-const PITCH: Record<keyof Prospect['wants'], string> = { pt: 'playing time', prestige: 'program prestige', home: 'being close to home' };
+const PITCH: Record<keyof Prospect['wants'], string> = { pt: 'playing time', prestige: 'program prestige', home: 'being close to home', academics: 'academics', contender: 'a shot at a championship' };
 const pitchText = (p: Prospect) => {
-  const [a, b] = (Object.keys(p.wants) as (keyof Prospect['wants'])[]).sort((x, y) => p.wants[y] - p.wants[x]);
+  const [a, b] = (Object.keys(PITCH) as (keyof Prospect['wants'])[]).sort((x, y) => (p.wants[y] ?? 0) - (p.wants[x] ?? 0));
   return `Cares most about ${PITCH[a]}, then ${PITCH[b]}`;
 };
 
@@ -54,6 +61,8 @@ function RatingsLine({ p }: { p: Prospect }) {
 }
 
 /** OVR if scouted, else a mark; the ratings once fully scouted. */
+const SORT_RATINGS: Attr[] = ['Speed', 'Quickness', 'Power', 'Awareness', 'Hands', 'Range', 'Accuracy', 'Blocking', 'Tackling'];
+
 const ovrText = (p: Prospect, lv: ScoutLevel) => (lv >= 1 ? `${p.player.ovr}` : '');
 
 /** Scout buttons: OVR (10), all ratings (20 more), or both at once. */
@@ -67,7 +76,7 @@ function ScoutButtons({ p, team, lv, left, onScout }: { p: Prospect; team: numbe
   return (
     <>
       {opts.map((o) => {
-        const cost = scoutCost(rs, team, p, o.level);
+        const cost = scoutCost(rulesOf(d), rs, team, p, o.level);
         return (
           <button key={o.level} type="button" className="dy-button dy-quiet" disabled={cost > left} onClick={() => onScout(p.id, o.level)}
             title={cost > left ? `${cost} points: you have ${left} left this week` : undefined}>
@@ -109,7 +118,8 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
   const board = Object.keys(plan.points).map(Number).map((id) => byId.get(id)!).filter((p) => p && (p.committed === null || p.committed === team));
   const spent = board.filter((p) => p.committed === null).reduce((a, p) => a + (plan.points[p.id] ?? 0), 0);
   const scoutSpent = rs.scoutSpent?.[team] ?? 0;
-  const left = WEEKLY_POINTS - spent - scoutSpent;
+  const R = rulesOf(d);
+  const left = R.userPoints - spent - scoutSpent;
   const scout = (id: number, level: ScoutLevel) =>
     void actions.run('Scouting…', async () => actions.commit(scoutProspect(d, team, id, level, spent)));
   const commits = rs.prospects.filter((p) => p.committed === team);
@@ -119,9 +129,9 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
     setErr(null);
     setPlans((all) => ({ ...all, [team]: f(all[team] ?? { points: {}, offers: [] }) }));
   };
-  const add = (id: number) => setPlan((p) => (Object.keys(p.points).length >= BOARD_SIZE ? p : { ...p, points: { ...p.points, [id]: 0 } }));
+  const add = (id: number) => setPlan((p) => (Object.keys(p.points).length >= R.boardSize ? p : { ...p, points: { ...p.points, [id]: 0 } }));
   const remove = (id: number) => setPlan((p) => { const points = { ...p.points }; delete points[id]; return { ...p, points }; });
-  const setPoints = (id: number, v: number) => setPlan((p) => ({ ...p, points: { ...p.points, [id]: Math.max(0, Math.min(MAX_PER_PROSPECT, Math.round(v) || 0)) } }));
+  const setPoints = (id: number, v: number) => setPlan((p) => ({ ...p, points: { ...p.points, [id]: Math.max(0, Math.min(R.maxPerProspect, Math.round(v) || 0)) } }));
   const offer = (id: number) => setPlan((p) => ({ ...p, offers: p.offers.includes(id) ? p.offers : [...p.offers, id] }));
 
 
@@ -132,7 +142,7 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
       const points = Object.fromEntries(Object.entries(p.points).filter(([id]) => byId.get(Number(id))?.committed === null));
       return [u, { points, offers: p.offers }];
     }));
-    const bad = users.flatMap((u) => planProblems(send[u], rs.scoutSpent?.[u] ?? 0).map((m) => `${d.teams[u].school}: ${m}`));
+    const bad = users.flatMap((u) => planProblems(R, send[u], rs.scoutSpent?.[u] ?? 0).map((m) => `${d.teams[u].school}: ${m}`));
     if (bad.length) return setErr(bad.join(' '));
     void actions.run(`Recruiting week ${rs.week + 1}…`, async () => {
       await actions.commit(recruitingWeek(d, send));
@@ -149,13 +159,13 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
   const thisWeek = rs.log.filter((l) => l.week === rs.week);
   return (
     <>
-      <h3 className="dy-sub">{rs.week < WEEKS ? `Recruiting, week ${rs.week + 1} of ${WEEKS}` : 'Recruiting is over'}</h3>
+      <h3 className="dy-sub">{rs.week < R.weeks ? `Recruiting, week ${rs.week + 1} of ${R.weeks}` : 'Recruiting is over'}</h3>
       <p>
-        Every week you have {WEEKLY_POINTS.toLocaleString('en-US')} points to spend on up to {BOARD_SIZE} prospects (at most {MAX_PER_PROSPECT} each).
-        Interest grows with points, with an offer, and with how well your school fits what a prospect wants: playing time, prestige and being close to home.
+        Every week you have {R.userPoints.toLocaleString('en-US')} points to spend on up to {R.boardSize} prospects (at most {R.maxPerProspect} each); they go further with prospects from your state and your pipeline states.
+        Interest grows with points, with an offer, and with how well your school fits what a prospect wants: playing time, program prestige, being close to home, academics and a shot at a championship.
         Prospects rated above your program's prestige are harder to reach. A prospect commits when one school's interest is high enough and clearly
         ahead (the best ones not before week 3 or 4); at signing day the rest choose among the schools that offered. Players in the transfer portal are
-        prospects too; your own players in the portal start on your board, and their old school (you) is one of their top schools. Scouting a high-school prospect shows his OVR ({SCOUT_COST[1]} points), then all his ratings ({SCOUT_COST[2]} more), out of the
+        prospects too; your own players in the portal start on your board, and their old school (you) is one of their top schools. Scouting a high-school prospect shows his OVR ({R.scoutOvr} points), then all his ratings ({R.scoutRatings} more), out of the
         week's points; what you scout stays known. Portal players show everything.
       </p>
       {users.length > 1 && (
@@ -181,6 +191,7 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
 
       <div className="dy-off-team">
         <h4><TeamLink team={team} rank={false} /> <span className="dy-dim dy-small">{commits.length} of {spots} spots filled</span></h4>
+        <SchoolPitch team={team} />
         <NeedsTable team={team} commits={commits} />
         {commits.length > 0 && (
           <ul className="dy-plist">
@@ -191,9 +202,9 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
         )}
       </div>
 
-      {rs.week < WEEKS && (
+      {rs.week < R.weeks && (
         <>
-          <h4>Your board <span className="dy-dim dy-small">{spent + scoutSpent} of {WEEKLY_POINTS} points{scoutSpent ? `, ${scoutSpent} on scouting` : ''}</span></h4>
+          <h4>Your board <span className="dy-dim dy-small">{spent + scoutSpent} of {R.userPoints} points{scoutSpent ? `, ${scoutSpent} on scouting` : ''}</span></h4>
           {board.filter((p) => p.committed === null).length === 0 && <p className="dy-dim">Add prospects from the list below.</p>}
           <ul className="dy-board">
             {board.filter((p) => p.committed === null).map((p) => {
@@ -208,7 +219,7 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
                   <div className="dy-board-ctl">
                     <label>
                       <span className="dy-small">Points</span>
-                      <input type="number" inputMode="numeric" min={0} max={MAX_PER_PROSPECT} step={10} value={plan.points[p.id] ?? 0} onChange={(e) => setPoints(p.id, Number(e.target.value))} />
+                      <input type="number" inputMode="numeric" min={0} max={R.maxPerProspect} step={10} value={plan.points[p.id] ?? 0} onChange={(e) => setPoints(p.id, Number(e.target.value))} />
                     </label>
                     {offered ? <span className="dy-small dy-w">Offered</span> : <button type="button" className="dy-button dy-quiet" onClick={() => offer(p.id)}>Offer</button>}
                     <ScoutButtons p={p} team={team} lv={lv} left={left} onScout={scout} />
@@ -224,15 +235,15 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
           </div>
           <div className="dy-row">
             <button type="button" className="dy-button dy-quiet" disabled={!!busy} onClick={() => sim(1)}>Sim week {rs.week + 1}</button>
-            {rs.week + 1 < WEEKS && <button type="button" className="dy-button dy-quiet" disabled={!!busy} onClick={() => sim(WEEKS)}>Sim the rest of recruiting</button>}
+            {rs.week + 1 < R.weeks && <button type="button" className="dy-button dy-quiet" disabled={!!busy} onClick={() => sim(R.weeks)}>Sim the rest of recruiting</button>}
             <SimOffseason actions={actions} busy={busy} />
           </div>
           <p className="dy-small dy-dim">Simming lets the computer recruit for {users.length > 1 ? 'your teams' : d.teams[team].school} that week, as for every other team (your board isn't used).</p>
-          <ProspectSearch team={team} onAdd={add} board={new Set(Object.keys(plan.points).map(Number))} full={Object.keys(plan.points).length >= BOARD_SIZE} left={left} onScout={scout} />
+          <ProspectSearch team={team} onAdd={add} board={new Set(Object.keys(plan.points).map(Number))} full={Object.keys(plan.points).length >= R.boardSize} left={left} onScout={scout} />
         </>
       )}
 
-      {rs.week >= WEEKS && (
+      {rs.week >= R.weeks && (
         <div className="dy-row dy-next">
           <button type="button" className="dy-button" disabled={!!busy} onClick={() => actions.run('Signing day…', async () => actions.commit(finishRecruiting(d, await getTemplates(d))))}>Signing day</button>
           <SimOffseason actions={actions} busy={busy} />
@@ -248,13 +259,26 @@ function ProspectSearch({ team, onAdd, board, full, left, onScout }: { team: num
   const [pos, setPos] = useState('');
   const [minStars, setMinStars] = useState(0);
   const [kind, setKind] = useState<'all' | 'hs' | 'portal' | 'near'>('all');
+  const [state, setState] = useState('');
+  const [sort, setSort] = useState('stars');
   const [shown, setShown] = useState(30);
   const school = d.teams[team].school;
+  const pipes = useMemo(() => new Set(pipelineStates(d, team).map((x) => x.state)), [d, team]);
+  const states = useMemo(() => [...new Set(rs.prospects.map((p) => stateCode(p.player.state)).filter(Boolean))].sort(), [rs]);
+  // Sorting by OVR or a rating only uses what's known (scouted; portal players fully): the rest go last.
+  const key = (p: Prospect): number => {
+    const lv = scoutLevel(rs, team, p);
+    if (sort === 'stars') return p.stars * 1000 + (lv >= 1 ? p.player.ovr : -1);
+    if (sort === 'ovr') return lv >= 1 ? p.player.ovr : -1;
+    return lv >= 2 ? shownOf(p.player.ratings[sort as Attr] ?? 0) : -1;
+  };
   const list = useMemo(() => rs.prospects
     .filter((p) => p.committed === null && !board.has(p.id) && (!pos || p.player.pos === pos) && p.stars >= minStars &&
-      (kind === 'all' || (kind === 'hs' && p.id < 0) || (kind === 'portal' && p.id > 0) || (kind === 'near' && closeness(p.player.state, school) >= 0.6)))
-    .sort((a, b) => b.stars - a.stars || knownOvr(rs, team, b) - knownOvr(rs, team, a) || a.player.last.localeCompare(b.player.last)),
-    [rs, board, pos, minStars, kind, team, school]);
+      (kind === 'all' || (kind === 'hs' && p.id < 0) || (kind === 'portal' && p.id > 0) || (kind === 'near' && closeness(p.player.state, school) >= 0.6)) &&
+      (!state || (state === 'pipeline' ? pipes.has(stateCode(p.player.state)) : stateCode(p.player.state) === state)))
+    .sort((a, b) => key(b) - key(a) || b.stars - a.stars || a.player.last.localeCompare(b.player.last)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rs, board, pos, minStars, kind, team, school, state, sort, pipes]);
   return (
     <>
       <h4>Prospects</h4>
@@ -273,8 +297,18 @@ function ProspectSearch({ team, onAdd, board, full, left, onScout }: { team: num
           <option value="portal">Transfer portal</option>
           <option value="near">Close to {school}</option>
         </select>
+        <select aria-label="State" value={state} onChange={(e) => { setState(e.target.value); setShown(30); }}>
+          <option value="">All states</option>
+          <option value="pipeline">Your pipeline states</option>
+          {states.map((x) => <option key={x} value={x}>{x}{pipes.has(x) ? ' (pipeline)' : ''}</option>)}
+        </select>
+        <select aria-label="Sort" value={sort} onChange={(e) => { setSort(e.target.value); setShown(30); }}>
+          <option value="stars">Sort by stars</option>
+          <option value="ovr">Sort by OVR (scouted)</option>
+          {SORT_RATINGS.map((a) => <option key={a} value={a}>Sort by {a} (scouted)</option>)}
+        </select>
       </div>
-      <p className="dy-small dy-dim">{list.length.toLocaleString('en-US')} uncommitted prospects.{full ? ` Your board is full (${BOARD_SIZE}).` : ''}</p>
+      <p className="dy-small dy-dim">{list.length.toLocaleString('en-US')} uncommitted prospects.{full ? ` Your board is full (${rulesOf(d).boardSize}).` : ''}</p>
       <ul className="dy-board">
         {list.slice(0, shown).map((p) => {
           const lv = scoutLevel(rs, team, p);
@@ -341,5 +375,26 @@ function NeedsTable({ team, commits }: { team: number; commits: Prospect[] }) {
         </tbody>
       </table>
     </details>
+  );
+}
+
+/**
+ * What the user's school offers (its pitches) and its pipeline states (user, 2026-11-12: "User needs to see
+ * what his pipeline states are when recruiting"). Contender changes as commitments come in.
+ */
+function SchoolPitch({ team }: { team: number }) {
+  const { d } = useDyn();
+  const rs = d.offseason!.recruiting!;
+  const ctx = useMemo(() => weekContext(d, rs), [d, rs]);
+  const school = d.teams[team].school;
+  const pipes = pipelineStates(d, team);
+  const R = rulesOf(d);
+  return (
+    <p className="dy-small dy-pitch">
+      <span>Prestige {'★'.repeat(prestigeStars(d, team))}</span>
+      <span>Academics {academicGrade(school)}</span>
+      <span>Championship contender {gradeOf(ctx.contender.get(team)!)}</span>
+      <span>Pipeline states: {pipes.length ? pipes.map((x) => `${x.state} (${x.n})`).join(', ') : `none yet (${R.pipelineMin} players from a state)`}</span>
+    </p>
   );
 }

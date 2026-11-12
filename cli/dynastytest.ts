@@ -19,6 +19,9 @@ import { readRating } from '../src/core/teamRatings';
 import * as Off from '../src/core/dynasty/offseason';
 import * as Rec from '../src/core/dynasty/recruiting';
 import * as Sim from '../src/core/dynasty/sim';
+import { DEFAULT_RULES as RD, readRulesFile, rulesFileText, rulesOf, setRules } from '../src/core/dynasty/rules';
+import { academicsOf, CFB27_ACADEMICS } from '../src/core/dynasty/academics';
+import { SCHOOL_STATE, stateCode } from '../src/core/dynasty/schoolStates';
 import { experienceOf, recordRatings } from '../src/core/dynasty/career';
 import { randomBench } from '../src/core/dynasty/bench';
 import { gameText, dynastyAreaProblem, dynastyHeaderValid, dynastyRomId, DYN_AREA, DYN_END, hasDynastyHooks, readStamp } from '../src/core/dynasty/dynastyArea';
@@ -263,7 +266,7 @@ assert.ok(act(o1).every((p) => p.pot !== undefined && p.pot >= p.ovr));
 assert.deepEqual(Off.startOffseason(d1, { seed: 3, force: true }), o1, 'same seed, same offseason');
 // Prestige: the starting stars follow the scale (10 six-star, 10 five, 15 four, 35 three, 30 two, 38 one);
 // at the season's end each school moves at most one star toward its final poll place's tier.
-assert.deepEqual([1, 10, 11, 20, 21, 35, 36, 70, 71, 100, 101].map(tierOfRank), [6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1]);
+assert.deepEqual([1, 10, 11, 20, 21, 35, 36, 70, 71, 100, 101].map((r) => tierOfRank(r)), [6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1]);
 assert.equal(nextPrestige(3, 5), 4);
 assert.equal(nextPrestige(3, 120), 2);
 assert.equal(nextPrestige(3, 50), 3);
@@ -400,23 +403,23 @@ assert.ok(hsW(2, 'home') > hsW(5, 'home') && hsW(5, 'prestige') > hsW(2, 'presti
 if (user !== undefined) assert.ok(portalPr.filter((p) => p.from === user).every((p) => p.id in (rs0.plans[user]?.points ?? {})), 'own portal players start on the board');
 const targets = rs0.prospects.filter((p) => p.id < 0 && p.stars <= 3).slice(0, 10);
 const plan = { points: Object.fromEntries(targets.map((p) => [p.id, 60])), offers: targets.map((p) => p.id) };
-assert.deepEqual(Rec.planProblems(plan), []);
-assert.ok(Rec.planProblems({ points: { [targets[0].id]: 61 }, offers: [] }).length > 0, 'at most 60 a prospect');
-assert.ok(Rec.planProblems({ points: Object.fromEntries(rs0.prospects.slice(0, 20).map((p) => [p.id, 60])), offers: [] }).length > 0, 'at most 1,000 a week');
+assert.deepEqual(Rec.planProblems(RD, plan), []);
+assert.ok(Rec.planProblems(RD, { points: { [targets[0].id]: 61 }, offers: [] }).length > 0, 'at most 60 a prospect');
+assert.ok(Rec.planProblems(RD, { points: Object.fromEntries(rs0.prospects.slice(0, 20).map((p) => [p.id, 60])), offers: [] }).length > 0, 'at most 1,000 a week');
 // Scouting (user teams): OVR 10, all ratings 20 more, out of the week's points; kept; portal players fully known.
 const sp = targets[0];
 assert.equal(Rec.scoutLevel(rs0, user, sp), 0);
-assert.equal(Rec.scoutCost(rs0, user, sp, 2), 30);
+assert.equal(Rec.scoutCost(RD, rs0, user, sp, 2), 30);
 let fs = Rec.scoutProspect(f1, user, sp.id, 1, 600);
 assert.equal(Rec.scoutLevel(fs.offseason!.recruiting!, user, sp), 1);
-assert.equal(Rec.scoutCost(fs.offseason!.recruiting!, user, sp, 2), 20);
+assert.equal(Rec.scoutCost(RD, fs.offseason!.recruiting!, user, sp, 2), 20);
 for (const t of targets) fs = Rec.scoutProspect(fs, user, t.id, 2, 600);
 assert.equal(fs.offseason!.recruiting!.scoutSpent[user], 300);
 assert.throws(() => Rec.scoutProspect(fs, user, targets[0].id - 1000000, 1, 600), /No such/);
 const other = rs0.prospects.find((p) => p.id < 0 && !targets.includes(p))!;
 assert.throws(() => Rec.scoutProspect(fs, user, other.id, 2, 700), /left this week/);
-assert.deepEqual(Rec.planProblems(plan, 300), []);
-assert.ok(Rec.planProblems(plan, 410).length > 0, 'scouting counts toward the 1,000');
+assert.deepEqual(Rec.planProblems(RD, plan, 300), []);
+assert.ok(Rec.planProblems(RD, plan, 410).length > 0, 'scouting counts toward the 1,000');
 assert.equal(Rec.scoutLevel(rs0, user, { ...sp, id: 5 }), 2, 'portal players show everything');
 const fsw = Rec.recruitingWeek(fs, { [user]: plan });
 assert.equal(fsw.offseason!.recruiting!.scoutSpent[user] ?? 0, 0, 'scouting points are per week');
@@ -424,7 +427,7 @@ assert.equal(Rec.scoutLevel(fsw.offseason!.recruiting!, user, sp), 2, 'scouting 
 ok('scouting: OVR 10 and all ratings 20 points, within the week\'s 1,000, kept across weeks');
 
 let f2 = f1;
-for (let w = 0; w < Rec.WEEKS; w++) f2 = Rec.recruitingWeek(f2, { [user]: w === 0 ? plan : { points: plan.points, offers: [] } });
+for (let w = 0; w < RD.weeks; w++) f2 = Rec.recruitingWeek(f2, { [user]: w === 0 ? plan : { points: plan.points, offers: [] } });
 assert.throws(() => Rec.recruitingWeek(f2, {}), /signing day/);
 const rsEnd = f2.offseason!.recruiting!;
 for (const t of f2.teams) assert.ok(rsEnd.prospects.filter((p) => p.committed === t.index).length <= rsEnd.spots[t.index]);
@@ -434,14 +437,44 @@ for (const t of f3.teams) assert.ok(fSigned.filter((e) => e.kind === 'signed' &&
 assert.ok(f3.players.filter((p) => rsEnd.prospects.some((q) => q.id === p.id)).every((p) => p.status === 'transferred' ? p.team === null : p.team !== null), 'portal players moved or left');
 const f5 = Off.finishOffseason(Off.applyCuts(f3, {}, tpl));
 assert.equal(f5.seasons[1].slots.flat().filter((x) => x !== null).length, 138 * 32);
-ok(`full recruiting: ${rs0.prospects.length} prospects, ${rsEnd.prospects.filter((p) => p.committed !== null).length} committed in ${Rec.WEEKS} weeks, ${fSigned.length} signed; ${user === undefined ? '' : `${f3.teams[user].school} landed ${targets.filter((t) => rsEnd.prospects.find((p) => p.id === t.id)!.committed === user).length} of its 10 targets`}`);
+ok(`full recruiting: ${rs0.prospects.length} prospects, ${rsEnd.prospects.filter((p) => p.committed !== null).length} committed in ${RD.weeks} weeks, ${fSigned.length} signed; ${user === undefined ? '' : `${f3.teams[user].school} landed ${targets.filter((t) => rsEnd.prospects.find((p) => p.id === t.id)!.committed === user).length} of its 10 targets`}`);
+
+const closenessState = (p: { player: { state: string } }) => (stateCode(p.player.state) === SCHOOL_STATE[f1.teams[user].school] ? 'same' : 'other');
+// Offseason rules: changed numbers take effect; only changes are stored; rules files round-trip and are checked.
+assert.equal(Object.keys(CFB27_ACADEMICS).length, 138);
+assert.ok(d1.teams.every((t) => CFB27_ACADEMICS[t.school]), 'every school has an academic grade');
+assert.ok(academicsOf('Stanford') > academicsOf('Alabama'));
+const ruled = setRules(f1, { ...RD, scoutOvr: 25, userPoints: 500, transferBackup: 0.5 });
+assert.deepEqual(ruled.rules, { scoutOvr: 25, userPoints: 500, transferBackup: 0.5 }, 'only the changes are stored');
+assert.equal(Rec.scoutCost(rulesOf(ruled), rs0, user, sp, 1), 25);
+assert.ok(Rec.planProblems(rulesOf(ruled), plan).length > 0, 'fewer points: the 600-point plan is too much');
+assert.throws(() => setRules(f1, { ...RD, srPlusReturn: 2 }), /between/);
+const back = readRulesFile(rulesFileText(ruled));
+assert.deepEqual(back, ruled.rules);
+assert.throws(() => readRulesFile('{"app":"genesis-cfb-toolkit","tool":"dynasty"}'), /isn't an offseason rules file/);
+assert.deepEqual(setRules(ruled, RD).rules, undefined, 'back to the defaults');
+const moreTransfers = Off.confirmDepth(setRules(o1, { ...RD, transferBackup: 0.6, transferDepth: 0.6 }));
+assert.ok(moreTransfers.offseason!.portal!.length > entering.length * 2, 'a higher transfer chance sends more players to the portal');
+// Pitches: five, academics and contender included; contender 0-1, last season's best teams near the top; pipelines.
+assert.ok(rs0.prospects.every((p) => Math.abs(p.wants.pt + p.wants.prestige + p.wants.home + p.wants.academics + p.wants.contender - 1) < 1e-9));
+const ctxW = Rec.weekContext(f1, rs0);
+const v26 = seasonView(f1, f1.seasons[0]);
+const no1 = d1.teams.findIndex((t) => v26.rank[t.index] === 1);
+assert.ok([...ctxW.contender.values()].every((x) => x >= 0 && x <= 1) && ctxW.contender.get(no1)! > 0.6, 'No. 1 is a contender');
+if (user !== undefined) {
+  const pipes = Rec.pipelineStates(f1, user);
+  assert.ok(pipes.every((x) => x.n >= RD.pipelineMin));
+  const inState = rs0.prospects.find((p) => p.id < 0 && closenessState(p) === 'same')!;
+  assert.equal(Rec.pointValue(f1, ctxW, inState, user), RD.inStateBoost, 'in-state points go further');
+}
+ok(`rules: changes stored and applied, files round-trip; academics for all 138; contender and pipelines${user !== undefined ? ` (${f1.teams[user].school}: ${Rec.pipelineStates(f1, user).map((x) => x.state).join(', ') || 'none'})` : ''}`);
 
 // Simming for the user teams: a week, the rest of recruiting, the cuts, the whole offseason.
 const g1 = Rec.simRecruiting(f1, 1);
 assert.equal(g1.offseason!.recruiting!.week, 1);
 assert.ok(Object.values(g1.offseason!.recruiting!.prospects).some((p) => p.interest[user] > 0), 'the computer recruited for the user team');
 const g2 = Rec.simRecruiting(g1);
-assert.equal(g2.offseason!.recruiting!.week, Rec.WEEKS);
+assert.equal(g2.offseason!.recruiting!.week, RD.weeks);
 assert.equal(g2.offseason!.step, 'recruiting', 'signing day stays a step');
 const g3 = Sim.simCuts(Rec.finishRecruiting(g2, tpl), tpl);
 assert.equal(g3.offseason!.step, 'ready');

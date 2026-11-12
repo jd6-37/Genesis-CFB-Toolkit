@@ -144,6 +144,8 @@ export interface Dynasty {
   seasons: DSeason[];
   /** The offseason in progress (after the last season, before the next one). */
   offseason?: import('./offseason').OffseasonState;
+  /** The offseason rules the user changed from the defaults (rules.ts; user, 2026-11-12). */
+  rules?: Partial<import('./rules').OffseasonRules>;
 }
 
 // ---- small helpers

@@ -28,12 +28,13 @@ import { depthChart, slotPosition, teamDepth } from './depth';
 import { rosterLayout } from '../rosterLayouts';
 import { roleOfSlot } from './ovr';
 import { recordYear } from './career';
+import { DEFAULT_RULES, growthRate, rulesOf, type OffseasonRules } from './rules';
 import { ovrOf, roleOfPos, type Ratings } from './ratings';
 import { blackShare, firstOdds, lastOdds, MAX_FIRST, MAX_LAST, namePool, pickName, skinFor, type NamePool } from './appearance';
 
 /** A team is 64 players: the 32 in the game and one backup for each (rosters.ts). */
 export const ROSTER_LIMIT = TEAM_SIZE;
-export const CLASS_MAX = 25;
+export const CLASS_MAX = DEFAULT_RULES.classMax;
 /** Walk-ons fill a team up to this many players. */
 export const ROSTER_MIN = TEAM_SIZE;
 
@@ -50,19 +51,22 @@ export const POSITIONS = Object.keys(POS_TARGET);
  * CBs? Maybe we set min per position"): every Active Roster spot plus a backup (two on the line); the
  * rest of the 64 is the team's choice. Cuts never go below these (nor below POS_MIN at a position).
  */
-export const GROUP_MIN: { name: string; positions: string[]; min: number }[] = [
-  { name: 'QBs', positions: ['QB'], min: 2 },
-  { name: 'HBs and FBs', positions: ['HB', 'FB'], min: 4 },
-  { name: 'WRs', positions: ['WR'], min: 5 },
-  { name: 'TEs', positions: ['TE'], min: 3 },
-  { name: 'offensive linemen', positions: ['LT', 'LG', 'C', 'RG', 'RT'], min: 7 },
-  { name: 'defensive linemen', positions: ['LE', 'RE', 'DT'], min: 5 },
-  { name: 'linebackers', positions: ['LOLB', 'MLB', 'ROLB'], min: 5 },
-  { name: 'CBs', positions: ['CB'], min: 5 },
-  { name: 'safeties', positions: ['FS', 'SS'], min: 4 },
-  { name: 'kickers and punters', positions: ['K', 'P'], min: 2 },
-];
-const groupOf = (pos: string) => GROUP_MIN.find((g) => g.positions.includes(pos));
+export function groupMins(R: OffseasonRules = DEFAULT_RULES): { name: string; positions: string[]; min: number }[] {
+  return [
+    { name: 'QBs', positions: ['QB'], min: R.minQB },
+    { name: 'HBs and FBs', positions: ['HB', 'FB'], min: R.minRB },
+    { name: 'WRs', positions: ['WR'], min: R.minWR },
+    { name: 'TEs', positions: ['TE'], min: R.minTE },
+    { name: 'offensive linemen', positions: ['LT', 'LG', 'C', 'RG', 'RT'], min: R.minOL },
+    { name: 'defensive linemen', positions: ['LE', 'RE', 'DT'], min: R.minDL },
+    { name: 'linebackers', positions: ['LOLB', 'MLB', 'ROLB'], min: R.minLB },
+    { name: 'CBs', positions: ['CB'], min: R.minCB },
+    { name: 'safeties', positions: ['FS', 'SS'], min: R.minS },
+    { name: 'kickers and punters', positions: ['K', 'P'], min: R.minKP },
+  ];
+}
+/** The defaults (rules.ts has the dynasty's own). */
+export const GROUP_MIN = groupMins();
 
 export type OffseasonStep = 'depth' | 'portal' | 'recruiting' | 'signing' | 'cuts' | 'ready';
 
@@ -135,7 +139,7 @@ export function seasonDone(d: Dynasty): boolean {
  * (Speed at half the pace), by the shown numbers, so he can be part of the way to the next step. Bigger
  * players also put on a few pounds.
  */
-export function develop(p: DPlayer, gain: number, r: Rand): DPlayer {
+export function develop(p: DPlayer, gain: number, r: Rand, speedPace = DEFAULT_RULES.speedPace): DPlayer {
   const role = roleOfPos(p.pos);
   const f = OVR_FORMULAS[role];
   if (!f || Math.abs(gain) < 0.25) return p;
@@ -143,7 +147,7 @@ export function develop(p: DPlayer, gain: number, r: Rand): DPlayer {
   const ratings: Ratings = { ...p.ratings };
   for (const [a, w] of Object.entries(f.weights) as [keyof Ratings, number][]) {
     if (!w) continue;
-    const pace = a === 'Speed' ? 0.5 : 1.15;
+    const pace = a === 'Speed' ? speedPace : 1.15;
     ratings[a] = clamp(Math.round(((ratings[a] ?? 0) + per * pace * between(r, 0.6, 1.4)) * 10) / 10, 0, 100);
   }
   let weight = p.weight;
@@ -156,8 +160,6 @@ export function develop(p: DPlayer, gain: number, r: Rand): DPlayer {
   return { ...q, ovr: ovrOf(q) };
 }
 
-/** How much of the room to his potential a player closes in one offseason, by the class he's leaving. */
-const GROWTH_RATE: Record<ClassYear, number> = { FR: 0.45, SO: 0.4, JR: 0.35, SR: 0.3, 'SR+': 0.25 };
 
 /**
  * Ends the season: SR+ leave; seniors go pro, come back as SR+ or graduate; juniors may go pro; the
@@ -171,7 +173,8 @@ export function startOffseason(d: Dynasty, opt: { seed?: number; force?: boolean
   // Prestige: one star toward the tier of the final poll place (no change without a save).
   const v = seasonView(d, lastSeason(d));
   const was = seasonPrestige(d, lastSeason(d));
-  st.prestige = was.map((stars, t) => (v.save ? nextPrestige(stars, v.rank[t]) : stars));
+  const R = rulesOf(d);
+  st.prestige = was.map((stars, t) => (v.save ? nextPrestige(stars, v.rank[t], [R.tier6, R.tier5, R.tier4, R.tier3, R.tier2]) : stars));
   st.prestige.forEach((to, t) => { if (to !== was[t]) st.events.push({ kind: 'prestige', team: t, from: was[t], to, finalRank: v.rank[t] }); });
   const r = stepRand(st, 1);
   const inGame = new Set(lastSeason(d).slots.flat().filter((x): x is number => x !== null));
@@ -185,16 +188,16 @@ export function startOffseason(d: Dynasty, opt: { seed?: number; force?: boolean
     };
     if (p.cls === 'SR+') return leave('graduated');
     if (p.cls === 'SR') {
-      if (r() < clamp((p.ovr - 80) / 14, 0, 0.85)) return leave('pro');
-      if (r() < 0.3) st.events.push({ kind: 'returns', player: p.id, team, ovr: p.ovr });
+      if (r() < clamp((p.ovr - R.proSeniorBase) / R.proSeniorScale, 0, R.proSeniorMax)) return leave('pro');
+      if (r() < R.srPlusReturn) st.events.push({ kind: 'returns', player: p.id, team, ovr: p.ovr });
       else return leave('graduated');
     }
-    if (p.cls === 'JR' && r() < clamp((p.ovr - 84) / 12, 0, 0.7)) return leave('pro');
+    if (p.cls === 'JR' && r() < clamp((p.ovr - R.proJuniorBase) / R.proJuniorScale, 0, R.proJuniorMax)) return leave('pro');
     // Moves up a class and develops.
     const from = p.ovr;
     const room = (p.pot ?? p.ovr) - p.ovr;
-    const gain = room * GROWTH_RATE[p.cls] * between(r, 0.5, 1.5) + (inGame.has(p.id) ? 1 : 0) + gauss(r);
-    p = develop({ ...p, cls: CLASSES[Math.min(4, CLASSES.indexOf(p.cls) + 1)] }, gain, r);
+    const gain = room * growthRate(R, p.cls) * between(r, R.growthMin, R.growthMax) + (inGame.has(p.id) ? R.starterBonus : 0) + gauss(r);
+    p = develop({ ...p, cls: CLASSES[Math.min(4, CLASSES.indexOf(p.cls) + 1)] }, gain, r, R.speedPace);
     if (p.ovr > (p.pot ?? 99)) p = { ...p, pot: p.ovr };
     st.growth.push({ player: p.id, from, to: p.ovr });
     return p;
@@ -278,11 +281,12 @@ export function benchSeasons(d: Dynasty): Map<number, number> {
  */
 export function transferChance(d: Dynasty, p: DPlayer, ctx: PortalContext = portalContext(d)): number {
   if (p.status !== 'active' || p.team === null || p.recruit?.year === lastSeason(d).year + 1) return 0;
+  const R = rulesOf(d);
   const role = ctx.role.get(p.id) ?? 'backup';
-  let c = role === 'starter' ? 0.01 : role === 'depth' ? 0.08 : 0.12;
-  if (!ctx.nextStarters.has(p.id)) c += 0.1;
-  if (p.cls === 'SR' || p.cls === 'SR+') c += 0.05;
-  return c * (1 - 0.8 * playingTime(ctx, p));
+  let c = role === 'starter' ? R.transferStarter : role === 'depth' ? R.transferDepth : R.transferBackup;
+  if (!ctx.nextStarters.has(p.id)) c += R.transferBlocked;
+  if (p.cls === 'SR' || p.cls === 'SR+') c += R.transferSenior;
+  return clamp(c * (1 - R.playingTimeCut * playingTime(ctx, p, R.playingTimeShare)), 0, 1);
 }
 
 /** Labels of the Active Roster spots that aren't starting jobs. */
@@ -342,10 +346,10 @@ export function portalContext(d: Dynasty): PortalContext {
 }
 
 /** His playing time last season, 0-1 (1 = at least half of a typical starter's touches at his position). */
-export function playingTime(ctx: PortalContext, p: DPlayer): number {
+export function playingTime(ctx: PortalContext, p: DPlayer, share = DEFAULT_RULES.playingTimeShare): number {
   const typ = ctx.typical.get(roleOfPos(p.pos));
   const n = ctx.touches.get(p.id) ?? 0;
-  return typ ? clamp(n / (0.5 * typ), 0, 1) : 0;
+  return typ ? clamp(n / (share * typ), 0, 1) : 0;
 }
 
 /** Whether he'd start at a team (beats its weakest projected starter at his position). */
@@ -383,7 +387,7 @@ export function runPortal(d: Dynasty): Dynasty {
     const from = p.team!;
     const fits = d.teams
       .map((t) => t.index)
-      .filter((t) => t !== from && (took.get(t) ?? 0) < 4 && wouldStart(ctx, p, t))
+      .filter((t) => t !== from && (took.get(t) ?? 0) < rulesOf(d).transfersPerTeam && wouldStart(ctx, p, t))
       .map((t) => ({ t, w: (0.5 + pres.get(t)!) * between(r, 0.5, 1.5) }))
       .sort((a, b) => b.w - a.w);
     if (!fits.length) continue;
@@ -438,16 +442,14 @@ export function recruitTemplates(d: Dynasty): RecruitTemplates {
 
 /** Where in the league's players of a position a recruit of each star rating is modeled on (OVR percentile), before the freshman gap. */
 const STAR_BAND: Record<number, [number, number]> = { 5: [0.97, 1], 4: [0.8, 0.97], 3: [0.35, 0.8], 2: [0.05, 0.35], 1: [0, 0.05], 0: [0, 0.08] };
-/** How far below the player he's modeled on a freshman starts (OVR points). */
-const FRESHMAN_GAP: [number, number] = [7, 13];
 /** Potential range by stars (walk-ons 0). */
 const STAR_POT: Record<number, [number, number]> = { 5: [86, 99], 4: [80, 93], 3: [72, 86], 2: [65, 79], 1: [58, 72], 0: [55, 70] };
 /**
  * A diamond in the rough (user, 2026-11-12: "a few rare ones would be cool"): a walk-on with the potential
  * of a top recruit. He starts as weak as any walk-on and grows fast (development is a share of his room).
  */
-export const DIAMOND_CHANCE = 0.03;
-export const DIAMOND_POT: [number, number] = [84, 96];
+export const DIAMOND_CHANCE = DEFAULT_RULES.diamondChance;
+export const DIAMOND_POT: [number, number] = [DEFAULT_RULES.diamondPotMin, DEFAULT_RULES.diamondPotMax];
 
 /** Stars for one recruit of a program with this prestige (0-1). */
 export function drawStars(r: Rand, pres: number): number {
@@ -466,7 +468,8 @@ export function makeRecruit(d: Dynasty, tpl: RecruitTemplates, r: Rand, id: numb
   const [lo, hi] = STAR_BAND[stars];
   const t = pool[Math.min(pool.length - 1, Math.floor(between(r, lo, hi) * pool.length))];
   const f = OVR_FORMULAS[roleOfPos(pos)];
-  const gap = between(r, ...FRESHMAN_GAP) / (f?.scale ?? 0.5);
+  const R = rulesOf(d);
+  const gap = between(r, R.freshmanGapMin, R.freshmanGapMax) / (f?.scale ?? 0.5);
   const ratings: Ratings = {};
   for (const [a, v] of Object.entries(t.ratings) as [keyof Ratings, number][]) {
     if (a === 'Weight') { ratings.Weight = clamp(Math.round(v + 8 * gauss(r)), 140, 380); continue; }
@@ -475,7 +478,7 @@ export function makeRecruit(d: Dynasty, tpl: RecruitTemplates, r: Rand, id: numb
     ratings[a] = clamp(Math.round(v - drop + 3 * gauss(r)), 0, 100);
   }
   const ovr = ovrOf({ pos, ratings });
-  const [plo, phi] = stars === 0 && r() < DIAMOND_CHANCE ? DIAMOND_POT : STAR_POT[stars];
+  const [plo, phi] = stars === 0 && r() < R.diamondChance ? [R.diamondPotMin, R.diamondPotMax] : STAR_POT[stars];
   const town = pick(r, tpl.towns);
   // White or Black by the position's share; names that fit, never a real player's full name.
   const black = r() < blackShare(pos);
@@ -511,7 +514,7 @@ export function runSigningDay(d: Dynasty, tpl: RecruitTemplates): Dynasty {
     const pres = prestige(d, t.index);
     const counts = countBy(players, t.index);
     const roster = Object.values(counts).reduce((a, b) => a + b, 0);
-    const n = clamp(ROSTER_LIMIT - roster, 0, CLASS_MAX);
+    const n = clamp(ROSTER_LIMIT - roster, 0, rulesOf(d).classMax);
     let points = 0;
     for (let k = 0; k < n; k++) {
       // The biggest need (ties at random).
@@ -553,7 +556,7 @@ export function fillMinimums(d: Dynasty, players: DPlayer[], tpl: RecruitTemplat
       }
     }
     // Then each group up to its minimum, at the group's position with the fewest players for its slots.
-    for (const g of GROUP_MIN) {
+    for (const g of groupMins(rulesOf(d))) {
       const c = countBy(out, t.index);
       for (let k = g.positions.reduce((a, pos) => a + (c[pos] ?? 0), 0); k < g.min; k++) {
         const pos = g.positions.slice().sort((a, b) => (c[a] ?? 0) / POS_MIN[a] - (c[b] ?? 0) / POS_MIN[b])[0];
@@ -573,34 +576,34 @@ export function fillMinimums(d: Dynasty, players: DPlayer[], tpl: RecruitTemplat
  * start count: his expected OVR next season and the one after (development by class and potential). A SR
  * or SR+ has no season left after this one: lowest of all, the better ones last.
  */
-export function keepValue(p: DPlayer): number {
+export function keepValue(p: DPlayer, R: OffseasonRules = DEFAULT_RULES): number {
   const i = CLASSES.indexOf(p.cls);
   const left = 3 - i; // seasons after this one: FR 3, SO 2, JR 1, SR 0, SR+ -1
   if (left <= 0) return p.ovr - 100;
   const pot = Math.max(p.pot ?? p.ovr, p.ovr);
-  const n1 = p.ovr + (pot - p.ovr) * GROWTH_RATE[p.cls];
+  const n1 = p.ovr + (pot - p.ovr) * growthRate(R, p.cls);
   if (left === 1) return n1;
-  const n2 = n1 + (pot - n1) * GROWTH_RATE[CLASSES[i + 1]];
+  const n2 = n1 + (pot - n1) * growthRate(R, CLASSES[i + 1]);
   return (n1 + n2) / 2;
 }
 
 /** Players under a team's minimums if these were cut (messages; empty when fine). */
-function minimumProblems(roster: DPlayer[], cut: Set<number>): string[] {
+function minimumProblems(roster: DPlayer[], cut: Set<number>, R: OffseasonRules): string[] {
   const c: Record<string, number> = {};
   for (const p of roster) if (!cut.has(p.id)) c[p.pos] = (c[p.pos] ?? 0) + 1;
   const out: string[] = [];
   const short = new Set<string>();
-  for (const g of GROUP_MIN) if (g.positions.reduce((a, pos) => a + (c[pos] ?? 0), 0) < g.min) { out.push(`Keep at least ${g.min} ${g.name}.`); g.positions.forEach((pos) => short.add(pos)); }
+  for (const g of groupMins(R)) if (g.positions.reduce((a, pos) => a + (c[pos] ?? 0), 0) < g.min) { out.push(`Keep at least ${g.min} ${g.name}.`); g.positions.forEach((pos) => short.add(pos)); }
   // A position below its Active Roster spots (said once: not again when its group is short already).
   for (const pos of POSITIONS) if ((c[pos] ?? 0) < POS_MIN[pos] && !short.has(pos)) out.push(`Keep ${POS_MIN[pos] === 1 ? `a ${pos}` : `${POS_MIN[pos]} ${pos}s`} for the Active Roster.`);
   return out;
 }
 
 /** The order a team would cut in: backups by value (lowest first), then the Active Roster by OVR. */
-export function cutOrder(roster: DPlayer[]): { order: DPlayer[]; active: Set<number> } {
+export function cutOrder(roster: DPlayer[], R: OffseasonRules = DEFAULT_RULES): { order: DPlayer[]; active: Set<number> } {
   const active = new Set(teamDepth(roster).slots.filter((x): x is number => x !== null));
   const order = [
-    ...roster.filter((p) => !active.has(p.id)).sort((a, b) => keepValue(a) - keepValue(b) || a.ovr - b.ovr || b.id - a.id),
+    ...roster.filter((p) => !active.has(p.id)).sort((a, b) => keepValue(a, R) - keepValue(b, R) || a.ovr - b.ovr || b.id - a.id),
     ...roster.filter((p) => active.has(p.id)).sort((a, b) => a.ovr - b.ovr || b.id - a.id),
   ];
   return { order, active };
@@ -616,10 +619,11 @@ export function suggestCuts(d: Dynasty, team: number): number[] {
   const extra = roster.length - ROSTER_LIMIT;
   if (extra <= 0) return [];
   const cut = new Set<number>();
-  for (const p of cutOrder(roster).order) {
+  const R = rulesOf(d);
+  for (const p of cutOrder(roster, R).order) {
     if (cut.size >= extra) break;
     cut.add(p.id);
-    if (minimumProblems(roster, cut).length) cut.delete(p.id);
+    if (minimumProblems(roster, cut, R).length) cut.delete(p.id);
   }
   return [...cut];
 }
@@ -632,7 +636,7 @@ export function cutProblems(d: Dynasty, team: number, cuts: number[]): string[] 
   if (cuts.some((c) => !ids.has(c))) out.push('Some of the players aren\'t on the team.');
   const left = roster.length - new Set(cuts).size;
   if (left > ROSTER_LIMIT) out.push(`${left} players are still too many: cut ${left - ROSTER_LIMIT} more (the limit is ${ROSTER_LIMIT}).`);
-  out.push(...minimumProblems(roster, new Set(cuts)));
+  out.push(...minimumProblems(roster, new Set(cuts), rulesOf(d)));
   return out;
 }
 
