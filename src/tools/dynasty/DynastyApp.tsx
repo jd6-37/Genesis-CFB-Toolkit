@@ -513,7 +513,7 @@ function Manage({ d, art, list, busy, note, actions }: {
       <section className="dy-panel">
         <h2>Start a new dynasty</h2>
         <p>
-          A dynasty needs the 138-team 2026 Season Edition of Bill Walsh '95 Elevated with dynasty support (v2.0.1-test8 or later). The players start from the
+          A dynasty needs the 138-team 2026 Season Edition of Bill Walsh '95 Elevated with dynasty support (v2.0.1-test9 or later). The players start from the
           built-in {CFB27_LATEST.label.replace('College Football 27', 'CFB 27')} rosters; redshirted players start one class up.
         </p>
         <form className="dy-row" onSubmit={(e) => e.preventDefault()}>

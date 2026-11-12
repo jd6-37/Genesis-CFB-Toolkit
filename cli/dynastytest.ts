@@ -511,6 +511,8 @@ assert.ok(hasDynastyHooks(rom) && dynastyAreaProblem(rom) === null);
   const noHooks = rom.slice(); noHooks[0x2b0000] = 0xff;
   assert.throws(() => createDynasty(noHooks, csv, { name: 'x', seed: 1 }), /dynasty support/);
   assert.throws(() => Off.seasonRom(d0, d0.seasons[0], noHooks), /dynasty support/);
+  const t8 = rom.slice(); t8.fill(0xff, 0x2c0000, 0x2c0004); // no names table: a test8 ROM
+  assert.throws(() => createDynasty(t8, csv, { name: 'x', seed: 1 }), /test9/);
   ok('dynasty area: header, ID block, season rosters, OVRs, sim words and names; 2026 data untouched; lineup changes; busy area and older ROMs refused');
 }
 

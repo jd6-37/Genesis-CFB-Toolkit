@@ -1,4 +1,4 @@
-// The dynasty area of the 138-team 2026 Season Edition (Elevated v2.0.1-test8 on; claude.ai project notes:
+// The dynasty area of the 138-team 2026 Season Edition (Elevated v2.0.1-test9 on; claude.ai project notes:
 // bw95-dynasty-spec.md, sections 4-5; the ROM side is the Elevated patch's dynasty.py).
 //
 // 0x3E0000-0x3FFFFF (all 0xFF until the app writes it), big-endian:
@@ -26,7 +26,7 @@ const MAGIC = [0x44, 0x59, 0x4e, 0x31]; // DYN1
 const FORMAT = 0x0001008a; // format 1, 138 teams
 export const DYN_TEAMS = 138;
 /** What a dynasty needs (no older ROMs or saves until the first public release, user 2026-11-12). */
-export const DYNASTY_EDITION = "the 138-team 2026 Season Edition with dynasty support (Bill Walsh '95 Elevated v2.0.1-test8 or later)";
+export const DYNASTY_EDITION = "the 138-team 2026 Season Edition with dynasty support (Bill Walsh '95 Elevated v2.0.1-test9 or later)";
 
 /** The sets' places (the patch's suggestion). */
 const ROSTERS = DYN_AREA + 0x100;
@@ -39,9 +39,14 @@ const u16 = (d: Uint8Array, a: number) => (d[a] << 8) | d[a + 1];
 const put32 = (d: Uint8Array, a: number, v: number) => { d[a] = v >>> 24; d[a + 1] = (v >>> 16) & 255; d[a + 2] = (v >>> 8) & 255; d[a + 3] = v & 255; };
 const put16 = (d: Uint8Array, a: number, v: number) => { d[a] = (v >> 8) & 255; d[a + 1] = v & 255; };
 
-/** Whether the ROM has the Season-mode hooks that read the dynasty area. */
+/**
+ * Whether the ROM has what a dynasty needs (v2.0.1-test9 on, user 2026-11-12): the Season-mode hooks that
+ * read the dynasty area (the mark at 0x2B0000) and Team Rosters' names view (its 2026 names table "NAM1"
+ * at 0x2C0000 and its row hook at 0x06AFC0).
+ */
 export const hasDynastyHooks = (d: Uint8Array) =>
-  d.length >= DYN_END && MARK.every((b, k) => d[DYN_MARK + k] === b) && d[DYN_MARK + 7] >= 1 && d[DYN_MARK + 7] !== 0xff;
+  d.length >= DYN_END && MARK.every((b, k) => d[DYN_MARK + k] === b) && d[DYN_MARK + 7] >= 1 && d[DYN_MARK + 7] !== 0xff &&
+  [0x4e, 0x41, 0x4d, 0x31].every((b, k) => d[0x2c0000 + k] === b) && d[0x06afc0] === 0x4e && d[0x06afc1] === 0xb9;
 
 /** Whether the area holds a header the game accepts. */
 export const dynastyHeaderValid = (d: Uint8Array) => MAGIC.every((b, k) => d[DYN_AREA + k] === b) && u32(d, DYN_AREA + 0x10) === FORMAT;
