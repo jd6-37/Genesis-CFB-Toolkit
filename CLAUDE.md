@@ -49,6 +49,7 @@ Read this before changing anything. More than one person or Claude session may b
 - ROM space: every area the app writes must be checked as free first, and every piece of code it patches as unchanged (like `swapProblems` in `src/core/build.ts`), because the tools also take modded ROMs. New areas must not overlap the areas the README lists or those used by Bill Walsh College Football '95 Elevated (formerly Rebalanced).
 - No ROMs, ROM data or game art in the repo. Everything is read from the user's own ROMs in the browser.
 - Update the README when anything a user sees changes.
+- Follow the design system (`docs/design-system.md`): build UI from the components in `src/ui`, use only its tokens for colors and sizes, add a story for anything new, and run `npm run lint:design`.
 - Design mobile-first, always: base styles for a phone, then `min-width` media queries for wider screens. Check every page at phone width.
 - US English spelling everywhere: code, UI labels, file names, docs ("color", "catalog").
 
@@ -56,4 +57,4 @@ Read this before changing anything. More than one person or Claude session may b
 
 - Small commits with a message that says what changed and why.
 - Claude sessions end each commit message with the attribution lines the session gives them.
-- Claude sessions also record each step and decision in the project notes of the claude.ai project "Bill Walsh 95 Genesis modding" (`claude/bw95-swap-webapp-notes.md` for the app and the Patch tab, `claude/bw95-roster-editor-notes.md` for rosters, `claude/bw95-season-schedule-notes.md` for the Season tool, `claude/bw95-offense-styles-notes.md`, `claude/bw95-defense-styles-notes.md` and `claude/bw95-team-ratings-notes.md` for the Teams tool).
+- Claude sessions also record each step and decision in the project notes of the claude.ai project "Bill Walsh 95 Genesis modding" (`claude/bw95-swap-webapp-notes.md` for the app and the Patch tab, `claude/bw95-roster-editor-notes.md` for rosters, `claude/bw95-season-schedule-notes.md` for the Season tool, `claude/bw95-offense-styles-notes.md`, `claude/bw95-defense-styles-notes.md` and `claude/bw95-team-ratings-notes.md` for the Teams tool, `claude/bw95-design-system-notes.md` for the design system).
