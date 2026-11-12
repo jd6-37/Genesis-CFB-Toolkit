@@ -1,15 +1,25 @@
 // The Dynasty's reading pages: the news front page, scores, standings, rankings, teams, players,
 // stat leaders and history.
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
-  champions, leaders, playerLines, playerName, RECORD_STATS, seasonRecords, standings, statValue, teamHistory, weekName,
+  champions, leaders, playerLines, playerName, RECORD_STATS, seasonRecords, seasonView, standings, statValue, teamHistory, weekName,
   INDEPENDENT, type PlayerLine, type StatCategory,
 } from '../../core/dynasty/derive';
-import { stories } from '../../core/dynasty/news';
+import { offseasonStories, stories, type Story } from '../../core/dynasty/news';
+import { OffseasonSide, SeasonMore, SeasonSide } from './HomeSide';
+import { AddPlayer, EditLook, EditPlayer } from './EditPlayer';
+import { prestigeStars } from '../../core/dynasty/offseason';
+import { MAX_PRESTIGE } from '../../core/dynasty/prestige';
 import type { SaveGame } from '../../core/dynasty/save';
-import { nibbleToRating, nibbleToWeight, rosterLayout } from '../../core/rosterLayouts';
+import type { DPlayer } from '../../core/dynasty/model';
+import { nibbleToRating, nibbleToWeight, type Attr } from '../../core/rosterLayouts';
+import { progressOf } from '../../core/dynasty/ratings';
+import { trainingYears, experienceOf } from '../../core/dynasty/career';
+import { seasonDone } from '../../core/dynasty/offseason';
+import type { Dynasty } from '../../core/dynasty/model';
+import { backupLabel, isBackup, lineupLock, moveToSpot, slotKind, slotOfSpot, spotLabel, spotsFor, SPOTS } from '../../core/dynasty/lineup';
 import { playerOvr, roleOfSlot } from '../../core/dynasty/ovr';
-import { Empty, StoryArt, TeamLink, TeamMark, href, heightText, inkColor, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
+import { Empty, Headshot, StoryArt, TeamLink, TeamMark, href, heightText, hometownText, inkColor, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
 
 // ---- front page
 
@@ -64,22 +74,79 @@ function Ticker() {
   );
 }
 
+/**
+ * A story's headline as a link (user, 2026-11-12): a player of the week opens a window with his game; stories
+ * about a player (stat leaders, milestones) go to his page; the rest to the team.
+ */
+function StoryLink({ s }: { s: Story }) {
+  const [open, setOpen] = useState(false);
+  if (s.box && s.player) {
+    return (
+      <>
+        <a href={href(`player/${s.player}`)} onClick={(e) => { e.preventDefault(); setOpen(true); }}>{s.headline}</a>
+        {open && <StoryBox s={s} onClose={() => setOpen(false)} />}
+      </>
+    );
+  }
+  return <a href={href(s.player ? `player/${s.player}` : `team/${s.teams[0]}`)}>{s.headline}</a>;
+}
+
+/** A player of the week's game: the result and his stat lines, with a link to his page. */
+function StoryBox({ s, onClose }: { s: Story; onClose: () => void }) {
+  const { d, v } = useDyn();
+  const p = d.players[s.player! - 1];
+  useEffect(() => {
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', esc);
+    return () => window.removeEventListener('keydown', esc);
+  }, [onClose]);
+  return (
+    <div className="dy-modal-back" role="presentation" onClick={onClose}>
+      <div className="dy-modal dy-box" role="dialog" aria-modal="true" aria-labelledby={`box-${s.id}`} onClick={(e) => e.stopPropagation()}>
+        <div className="dy-box-head">
+          <Headshot p={p} size={64} />
+          <div>
+            <h2 id={`box-${s.id}`}>{playerName(p)}</h2>
+            <p className="dy-small dy-dim">#{p.jersey} {p.pos}, <TeamLink team={s.teams[0]} rank={false} size={16} /></p>
+          </div>
+        </div>
+        <p className="dy-small">{s.headline}{s.box!.result ? `: ${s.box!.result}` : ''}.</p>
+        {s.box!.lines.map((l) => (
+          <table key={l.cat} className="dy-table dy-box-table">
+            <thead><tr><th className="dy-left">{l.cat}</th>{l.cells.map(([k]) => <th key={k}>{k}</th>)}</tr></thead>
+            <tbody><tr><td className="dy-left dy-dim">{weekName(v, s.week)}</td>{l.cells.map(([k, v]) => <td key={k}>{v}</td>)}</tr></tbody>
+          </table>
+        ))}
+        <div className="dy-row">
+          <a className="dy-button" href={href(`player/${p.id}`)} onClick={onClose}>Player page</a>
+          <button type="button" className="dy-button dy-quiet" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Home() {
   const { d, v } = useDyn();
-  const list = useMemo(() => stories(d, v), [d, v]);
-  if (!v.save) return <NoResults />;
+  // In the offseason (and before the first game of a season) the news is the offseason's.
+  const offEvents = d.offseason ? d.offseason.events : !v.save ? v.season.events : undefined;
+  const list = useMemo(
+    () => (offEvents?.length ? offseasonStories(d, offEvents, d.offseason ? d.offseason.year : v.season.year - 1) : stories(d, v)),
+    [d, v, offEvents],
+  );
+  if (!list.length) return <NoResults />;
   const [lead, ...rest] = list;
   const second = rest.slice(0, 3);
   const heads = rest.slice(3);
   return (
     <>
-      <Ticker />
+      {v.save && !d.offseason && <Ticker />}
       <div className="dy-front">
         <div className="dy-front-main">
           {lead && (
             <article className="dy-lead">
               <StoryArt teams={lead.teams} big />
-              <h2>{lead.headline}</h2>
+              <h2><StoryLink s={lead} /></h2>
               <p>{lead.dek}</p>
             </article>
           )}
@@ -87,11 +154,12 @@ export function Home() {
             {second.map((s) => (
               <article key={s.id} className="dy-second">
                 <StoryArt teams={s.teams} />
-                <h3>{s.headline}</h3>
+                <h3><StoryLink s={s} /></h3>
                 <p>{s.dek}</p>
               </article>
             ))}
           </div>
+          {v.save && <HomePoll />}
         </div>
         <aside className="dy-front-side">
           {heads.length > 0 && (
@@ -100,20 +168,59 @@ export function Home() {
               <ul className="dy-headlines">
                 {heads.map((s) => (
                   <li key={s.id}>
-                    <a href={href(`team/${s.teams[0]}`)}>{s.headline}</a>
+                    <StoryLink s={s} />
                   </li>
                 ))}
               </ul>
             </section>
           )}
           <YourTeams />
-          <section>
-            <h2 className="dy-side-head">Top 25</h2>
-            <Top25 compact />
-          </section>
+          <SeasonSide />
+          <OffseasonSide />
         </aside>
       </div>
+      <SeasonMore />
     </>
+  );
+}
+
+/** The Top 25 on the front page: on wider screens the top four as cards, the rest in columns. */
+function HomePoll() {
+  const { v } = useDyn();
+  const prev = v.save?.season?.lastRanks ?? [];
+  const row = (t: number, i: number) => {
+    const was = prev[t];
+    const move = was ? was - (i + 1) : 0;
+    return { was, move, text: !was || was > 25 ? 'New' : move > 0 ? `Up ${move}` : move < 0 ? `Down ${-move}` : 'No change' };
+  };
+  const top = v.order.slice(0, 25);
+  return (
+    <section className="dy-poll">
+      <h2 className="dy-side-head"><a href={href('top25')}>Top 25</a></h2>
+      <ol className="dy-poll-top">
+        {top.slice(0, 4).map((t, i) => {
+          const m = row(t, i);
+          return (
+            <li key={t}>
+              <span className="dy-top-n">{i + 1}</span>
+              <span className="dy-poll-big"><TeamMark team={t} size={48} /></span>
+              <TeamLink team={t} rank={false} />
+              <span className="dy-num">{recordText(v.records[t])}</span>
+              <span className={`dy-move${m.move > 0 ? ' dy-up' : m.move < 0 ? ' dy-down' : ''}`}>{m.text}</span>
+            </li>
+          );
+        })}
+      </ol>
+      <ol className="dy-poll-rest" start={5}>
+        {top.slice(4).map((t, k) => (
+          <li key={t}>
+            <span className="dy-top-n">{k + 5}</span>
+            <TeamLink team={t} rank={false} />
+            <span className="dy-num">{recordText(v.records[t])}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 
@@ -301,8 +408,14 @@ function StatTables({ lines }: { lines: PlayerLine[] }) {
 
 // ---- teams
 
-/** The 138-team edition's 32 roster slots in the game's order (every team plays the 4-3). */
-const SLOT_ORDER = rosterLayout('bw95', false, true);
+/** Prestige as stars out of six. */
+function Prestige({ stars }: { stars: number }) {
+  return (
+    <span className="dy-prestige" role="img" aria-label={`Prestige: ${stars} of ${MAX_PRESTIGE} stars`} title={`Prestige: ${stars} of ${MAX_PRESTIGE} stars`}>
+      {'★'.repeat(stars)}<span>{'★'.repeat(MAX_PRESTIGE - stars)}</span>
+    </span>
+  );
+}
 
 export function Teams() {
   const { d, v } = useDyn();
@@ -328,18 +441,27 @@ export function Teams() {
 }
 
 export function Team({ team }: { team: number }) {
-  const { d, v } = useDyn();
+  const { d, v, downloadRom } = useDyn();
   const lines = useMemo(() => playerLines(v).filter((l) => l.team === team), [v, team]);
+  const [moveError, setMoveError] = useState<string | null>(null);
   const t = d.teams[team];
   if (!t) return <Empty><p>There's no such team.</p></Empty>;
   const c = mainColor(d, team);
   const r = v.records[team];
-  // The team's 32 in the ROM, in the game's roster order (the kicker can also be the punter).
-  const roster = SLOT_ORDER.flatMap((def) => {
-    const p = playerOf(d, v.season.slots[team][def.slot]);
-    const bw = v.season.bw?.[team]?.[def.slot] ?? null;
-    return p ? [{ def, p, bw, label: bw?.label ?? def.label }] : [];
-  });
+  // The team's 32 in the ROM, in the game's roster order, then their backups (QB2, HB3 …), then anyone else.
+  const row = (spot: number) => {
+    const slot = slotOfSpot(spot);
+    const p = playerOf(d, isBackup(spot) ? v.season.bench?.[team]?.[slot] ?? null : v.season.slots[team][slot]);
+    const bw = (isBackup(spot) ? v.season.benchBw : v.season.bw)?.[team]?.[slot] ?? null;
+    return p ? [{ p, spot, label: spotLabel(spot), ovr: bw ? playerOvr(slot, bw) : null }] : [];
+  };
+  const roster = SPOTS.filter((x) => !isBackup(x)).flatMap(row);
+  const bench = SPOTS.filter(isBackup).flatMap(row);
+  const placed = new Set([...roster, ...bench].map((x) => x.p.id));
+  const reserves = d.players.filter((p) => p.team === team && p.status === 'active' && !placed.has(p.id));
+  const mine = d.userTeams.includes(team);
+  const lock = mine ? lineupLock(d, team) : null;
+  const edit = mine && !lock ? { team, onError: setMoveError } : undefined;
   const games = v.games.filter((g) => g.visitor === team || g.home === team);
   const ovr = v.season.teamOvr?.[team];
   const conf = v.season.conf[team];
@@ -352,6 +474,7 @@ export function Team({ team }: { team: number }) {
           <div>
             <h2>{t.school} {t.nickname}</h2>
             <p>
+              <Prestige stars={prestigeStars(d, team)} />
               <span>{conf === INDEPENDENT ? 'Independent' : v.season.confNames[conf]}</span>
               {v.save && <span>{recordText(r)}, {r.cw}-{r.cl} in conference</span>}
               {v.save && v.rank[team] <= 25 && <span>No. {v.rank[team]}</span>}
@@ -410,29 +533,79 @@ export function Team({ team }: { team: number }) {
         </div>
       </div>
 
-      <h3 className="dy-sub">Roster</h3>
-      <div className="dy-scroll">
-        <table className="dy-table dy-roster">
-          <thead>
-            <tr><th className="dy-left">Pos</th><th>#</th><th className="dy-left">Name</th><th>OVR</th><th>Class</th><th className="dy-wide">Ht</th><th className="dy-wide">Wt</th><th className="dy-left dy-wide">Hometown</th></tr>
-          </thead>
-          <tbody>
-            {roster.map(({ def, p, bw, label }) => (
-              <tr key={def.slot}>
-                <td className="dy-left dy-strong">{label}</td>
-                <td>{p.jersey}</td>
-                <td className="dy-left"><a href={href(`player/${p.id}`)}>{playerName(p)}</a></td>
-                <td className="dy-strong">{bw ? playerOvr(def.slot, bw) : ''}</td>
-                <td>{p.cls}</td>
-                <td className="dy-wide">{heightText(p.heightIn)}</td>
-                <td className="dy-wide">{p.weight || ''}</td>
-                <td className="dy-left dy-dim dy-wide">{[p.hometown, p.state].filter(Boolean).join(', ')}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <h3 className="dy-sub">Active Roster</h3>
+      <p className="dy-dim dy-small">
+        The {roster.length} players in Bill Walsh '95 this season.
+        {trainingYears(d).length > 0 && <> <a href={href(`training/${team}-${trainingYears(d)[0]}`)}>Training results</a></>}
+      </p>
+      {edit && <p className="dy-small">Choose a player's position to move him: the player there takes his place. ★ marks the Active Roster spots. A player can change position once a season (HB and FB, FB and TE, DE and OLB, OLB and MLB, K and P).</p>}
+      {lock && mine && <p className="dy-dim dy-small">{lock}</p>}
+      {mine && v.season.lineupEdited && (
+        <p className="dy-note dy-small">
+          You changed the lineup. Download the {v.season.year} ROM again before you start the New Season.{' '}
+          <button type="button" className="dy-button dy-quiet" onClick={() => downloadRom(v.season.year)}>Download the {v.season.year} ROM</button>
+        </p>
+      )}
+      {moveError && <p className="dy-note dy-note-error dy-small" role="alert">{moveError}</p>}
+      <RosterTable rows={roster} edit={edit} />
+      <h3 className="dy-sub">Backups</h3>
+      <p className="dy-dim dy-small">{bench.length + reserves.length} players who aren't on the Active Roster this season. Each backs up a spot and can move up when it opens.</p>
+      <RosterTable rows={[...bench, ...reserves.map((p) => ({ p, spot: null, label: p.pos, ovr: null }))]} edit={edit} />
+      <AddPlayer team={team} />
     </section>
+  );
+}
+
+type RosterRow = { p: DPlayer; spot: number | null; label: string; ovr: number | null };
+
+function RosterTable({ rows, edit }: { rows: RosterRow[]; edit?: { team: number; onError: (m: string | null) => void } }) {
+  const { d, commit } = useDyn();
+  const move = (p: DPlayer, spot: number) => {
+    try {
+      edit!.onError(null);
+      void commit(moveToSpot(d, edit!.team, p.id, spot));
+    } catch (e) {
+      edit!.onError((e as Error).message);
+    }
+  };
+  return (
+    <div className="dy-scroll">
+      <table className="dy-table dy-roster">
+        <thead>
+          <tr><th className="dy-left">Pos</th><th>#</th><th className="dy-left">Name</th><th>OVR</th><th>Class</th><th className="dy-wide">Ht</th><th className="dy-wide">Wt</th><th className="dy-left dy-wide">Hometown</th></tr>
+        </thead>
+        <tbody>
+          {rows.map(({ p, spot, label, ovr }) => (
+            <tr key={`${spot ?? label}-${p.id}`}>
+              <td className="dy-left dy-strong">
+                {edit ? (
+                  <select className="dy-pos" aria-label={`Position of ${playerName(p)}`} value={spot ?? ''} onChange={(e) => move(p, Number(e.target.value))}>
+                    {spot === null && <option value="" disabled>{label}</option>}
+                    {/* By position, Active Roster spots (★) before their backups. */}
+                    {(() => {
+                      const ok = spotsFor(d, edit.team, p);
+                      const kinds = [...new Set(ok.map((x) => slotKind(slotOfSpot(x))))];
+                      return kinds.map((k) => (
+                        <optgroup key={k} label={k}>
+                          {ok.filter((x) => slotKind(slotOfSpot(x)) === k).map((x) => <option key={x} value={x}>{spotLabel(x)}{isBackup(x) ? '' : ' ★'}</option>)}
+                        </optgroup>
+                      ));
+                    })()}
+                  </select>
+                ) : label}
+              </td>
+              <td>{p.jersey}</td>
+              <td className="dy-left"><a href={href(`player/${p.id}`)}>{playerName(p)}</a></td>
+              <td className="dy-strong">{ovr ?? ''}</td>
+              <td>{p.cls}</td>
+              <td className="dy-wide">{heightText(p.heightIn)}</td>
+              <td className="dy-wide">{p.weight || ''}</td>
+              <td className="dy-left dy-dim dy-wide">{hometownText(p)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -443,43 +616,59 @@ export function Player({ id }: { id: number }) {
   const p = d.players[id - 1];
   const seasons = useMemo(() => {
     if (!p) return [];
-    return [{ year: v.season.year, lines: playerLines(v).filter((l) => l.player === p.id) }];
+    // Every season he has stats in, newest first, with the school he played for (transfers show).
+    return d.seasons.slice().reverse().map((s) => {
+      const sv = s === v.season ? v : seasonView(d, s);
+      const lines = playerLines(sv).filter((l) => l.player === p.id);
+      return { year: s.year, team: lines[0]?.team ?? null, lines };
+    });
   }, [d, v, p]);
   if (!p) return <Empty><p>There's no such player.</p></Empty>;
   const team = p.team;
+  const experience = experienceOf(p, lastDoneYear(d), d.startYear);
   // His roster slots in the ROM this season (a kicker can also be the punter).
   const bwSlots = team === null ? [] : v.season.slots[team].flatMap((id, slot) => (id === p.id && v.season.bw?.[team]?.[slot] ? [slot] : []));
+  // Or the slots he backs up on the bench.
+  const benchSlots = team === null || bwSlots.length ? [] : (v.season.bench?.[team] ?? []).flatMap((id, slot) => (id === p.id && v.season.benchBw?.[team]?.[slot] ? [slot] : []));
+  const onBench = benchSlots.length > 0;
+  const shownSlots = onBench ? benchSlots : bwSlots;
+  const rated = (slot: number) => (onBench ? v.season.benchBw : v.season.bw)![team!][slot]!;
   const c = team !== null ? mainColor(d, team) : '#ffffff';
   return (
     <section>
       <header className="dy-teamhead" style={team !== null ? { background: teamCss(c), color: onColor(c) } : undefined}>
         <div className="dy-teamhead-id">
-        {team !== null && <TeamMark team={team} size={64} />}
+        <Headshot p={p} size={120} />
         <div>
           <h2>{playerName(p)}</h2>
           <p>
-            <span>#{p.jersey} {bwSlots.length ? bwSlots.map((x) => v.season.bw![team!][x]!.label).join(', ') : p.pos}</span>
+            <span>#{p.jersey} {shownSlots.length ? shownSlots.map((x) => (onBench ? backupLabel(x) : rated(x).label)).join(', ') : p.pos}</span>
+            {team !== null && <span className="dy-status">{bwSlots.length ? 'Active Roster' : 'Backup'}</span>}
             <span>{p.cls}</span>
+            <Experience p={p} />
+            {p.recruit && <span title={`Signed in ${p.recruit.year}`}>{p.recruit.stars ? `${'★'.repeat(p.recruit.stars)} recruit` : 'Walk-on'} ({p.recruit.year})</span>}
             <span>{heightText(p.heightIn)}, {p.weight} lb</span>
             {team !== null && <a href={href(`team/${team}`)}>{d.teams[team].school}</a>}
-            {p.hometown && <span>{p.hometown}{p.state ? `, ${p.state}` : ''}</span>}
+            {p.hometown && <span>{hometownText(p)}</span>}
+            {(p.transfers ?? []).filter((x) => x.to !== null && !(x.to === team && experience.label === 'TR')).map((x) => <span key={`${x.year}-${x.from}`}>Transferred from {d.teams[x.from].school} ({x.year + 1})</span>)}
           </p>
         </div>
         </div>
-        {bwSlots.length > 0 && (
+        {shownSlots.length > 0 && (
           <dl className={`dy-teamovr${team !== null && onColor(c) === '#000' ? ' dy-on-light' : ''}`}>
-            <div><dt>OVR</dt><dd>{playerOvr(bwSlots[0], v.season.bw![team!][bwSlots[0]]!)}</dd></div>
+            <div><dt>OVR</dt><dd>{playerOvr(shownSlots[0], rated(shownSlots[0]))}</dd></div>
           </dl>
         )}
       </header>
       {seasons.map((s) => s.lines.length > 0 && (
         <div key={s.year}>
-          <h3 className="dy-sub">{s.year} season</h3>
+          <h3 className="dy-sub">{s.year} season{s.team !== null && <span className="dy-sub-team"> at <TeamLink team={s.team} rank={false} /></span>}</h3>
           <StatTables lines={s.lines} />
         </div>
       ))}
+      <div className="dy-edit-wrap">{p.status === 'active' && team !== null && <EditPlayer key={p.id} p={p} />}<EditLook key={`look-${p.id}`} p={p} /></div>
       <h3 className="dy-sub">Bill Walsh '95 ratings</h3>
-      {bwSlots.length ? bwSlots.map((slot) => <BwRatings key={slot} team={team!} slot={slot} name={playerName(p)} />) : (
+      {shownSlots.length ? shownSlots.map((slot) => <BwRatings key={slot} team={team!} slot={slot} name={playerName(p)} bench={onBench} player={p} />) : (
         <p className="dy-dim">
           {v.season.bw ? `He isn't one of ${team !== null ? d.teams[team].school : 'his team'}'s 32 players in Bill Walsh '95 this season, so he has no ratings.` : 'Start this dynasty again to see the ratings (it was made before the app kept them).'}
         </p>
@@ -502,10 +691,10 @@ const ordinal = (n: number) => {
   return `${n}${t >= 11 && t <= 13 ? 'th' : u === 1 ? 'st' : u === 2 ? 'nd' : u === 3 ? 'rd' : 'th'}`;
 };
 
-function BwRatings({ team, slot, name }: { team: number; slot: number; name: string }) {
+function BwRatings({ team, slot, name, bench = false, player }: { team: number; slot: number; name: string; bench?: boolean; player?: DPlayer }) {
   const { d, v } = useDyn();
-  const b = v.season.bw![team][slot]!;
-  // The same slot on every team this season.
+  // A bench player is rated on the game's scale too (what he'd have if he played), against the players in the game.
+  const b = (bench ? v.season.benchBw : v.season.bw)![team][slot]!;
   // Everyone at his position on every team (the OVR's groups): HB1 and HB2 together, all five linemen …
   const role = roleOfSlot(slot);
   const league = v.season.bw!.flatMap((t) => t.filter((x, k): x is NonNullable<typeof x> => !!x && roleOfSlot(k) === role));
@@ -513,9 +702,10 @@ function BwRatings({ team, slot, name }: { team: number; slot: number; name: str
   const avg = b.attrs.map((_, i) => league.reduce((a, x) => a + x.steps[i], 0) / n);
   const rank = b.attrs.map((_, i) => 1 + league.filter((x) => x.steps[i] > b.steps[i]).length);
   // Others at his step (ratings come in 16 steps, so ties are common).
-  const tied = b.attrs.map((_, i) => league.filter((x) => x.steps[i] === b.steps[i]).length - 1);
+  const self = bench ? 0 : 1; // he's one of the league's players unless he's on the bench
+  const tied = b.attrs.map((_, i) => league.filter((x) => x.steps[i] === b.steps[i]).length - self);
   // Weight: the share of starters he outweighs, counting those at his step as half.
-  const heavier = b.attrs.map((_, i) => league.reduce((a, x) => a + (x.steps[i] < b.steps[i] ? 1 : x.steps[i] === b.steps[i] ? 0.5 : 0), 0) - 0.5);
+  const heavier = b.attrs.map((_, i) => league.reduce((a, x) => a + (x.steps[i] < b.steps[i] ? 1 : x.steps[i] === b.steps[i] ? 0.5 : 0), 0) - 0.5 * self);
   const color = inkColor(d, team); // a light primary wouldn't show on white
   const [one, who] = ROLE_NAMES[role] ?? [b.label, `${b.label}s`];
 
@@ -531,11 +721,18 @@ function BwRatings({ team, slot, name }: { team: number; slot: number; name: str
   const poly = (f: (i: number) => number) => axes.map((x, k) => pt(k, (f(x.i) / 15) * R).map((z) => z.toFixed(1)).join(',')).join(' ');
   // A kicker's or punter's Quick is his kick distance in the game.
   const label = (a: string) => (b.group === 'KP' && a === 'Quickness' ? 'Kick distance' : a);
+  // Progress toward the next step from his own numbers (ratings.ts), when they're the slot's step.
+  const growth = (a: Attr, step: number) => {
+    const value = player?.ratings[a];
+    if (value === undefined || a === 'Weight' || step >= 15) return 0;
+    const pr = progressOf(value);
+    return pr.step === step ? pr.frac : 0;
+  };
   const tiles = b.attrs.map((a, i) => ({ a, i })).sort((x, y) => Number(x.a === 'Weight' || flat[x.i]) - Number(y.a === 'Weight' || flat[y.i]) || rank[x.i] - rank[y.i]);
 
   return (
     <div className="dy-bw">
-      <p className="dy-dim">{d.teams[team].school}'s {b.label}, ranked among all {n} {who}.</p>
+      <p className="dy-dim">{bench ? `${d.teams[team].school}'s ${backupLabel(slot)}, not on the Active Roster this season: his ratings if he played, ranked against all ${n} active ${who}.` : `${d.teams[team].school}'s ${b.label}, ranked among all ${n} ${who}.`}</p>
       <div className="dy-bw-grid">
         <figure className="dy-shape">
           <svg viewBox="0 0 300 250" role="img" aria-label={`${name}'s ratings against the average ${one}`}>
@@ -562,11 +759,18 @@ function BwRatings({ team, slot, name }: { team: number; slot: number; name: str
               <div key={a} className="dy-tile">
                 <div className="dy-tile-top"><span>{label(a)}</span><strong>{shown}</strong></div>
                 <div className="dy-pips" role="img" aria-label={`Step ${b.steps[i]} of 15; average ${one} ${avg[i].toFixed(1)}`}>
-                  {Array.from({ length: 15 }, (_, k) => <span key={k} style={k < b.steps[i] ? { background: color } : undefined} />)}
+                  {Array.from({ length: 15 }, (_, k) => {
+                    // His progress toward the next step: that pip partly filled.
+                    const part = k === b.steps[i] ? growth(a, b.steps[i]) : 0;
+                    return <span key={k} style={k < b.steps[i] ? { background: color } : part > 0 ? { background: `linear-gradient(90deg, ${color} ${Math.round(part * 100)}%, transparent ${Math.round(part * 100)}%)` } : undefined} />;
+                  })}
                   <i style={{ left: `calc(${(avg[i] / 15) * 100}% - 1px)` }} title={`Average ${one}`} />
                 </div>
+                {!weight && growth(a, b.steps[i]) > 0 && (
+                  <div className="dy-tile-note">{Math.round(growth(a, b.steps[i]) * 100)}% of the way to {nibbleToRating(b.steps[i] + 1)}</div>
+                )}
                 <div className="dy-tile-note">
-                  {flat[i] ? `The same for all ${n} ${who}` : weight ? `Heavier than ${Math.round((heavier[i] / Math.max(1, n - 1)) * 100)}% of ${who}` : tied[i] > 0 ? <><strong>Tied for {ordinal(rank[i])}</strong> of {n} {who}, with {tied[i]} {tied[i] === 1 ? 'other' : 'others'}</> : <><strong>{ordinal(rank[i])}</strong> of {n} {who}</>}
+                  {flat[i] ? `The same for all ${n} ${who}` : weight ? `Heavier than ${Math.round((heavier[i] / Math.max(1, n - self)) * 100)}% of ${who}` : tied[i] > 0 ? <><strong>Tied for {ordinal(rank[i])}</strong> of {n} {who}, with {tied[i]} {tied[i] === 1 ? 'other' : 'others'}</> : <><strong>{ordinal(rank[i])}</strong> of {n} {who}</>}
                 </div>
               </div>
             );
@@ -682,5 +886,29 @@ export function History() {
         </div>
       </div>
     </section>
+  );
+}
+
+/** The last completed season: the one the offseason follows, else the current one once it's over. */
+function lastDoneYear(d: Dynasty): number {
+  const s = d.seasons[d.seasons.length - 1];
+  if (d.offseason) return d.offseason.year;
+  return seasonDone(d) ? s.year : s.year - 1;
+}
+
+/** Letters at his school ("2L"), "TR (Louisville)" or "HS", with an explanation on tap or hover. */
+function Experience({ p }: { p: DPlayer }) {
+  const { d } = useDyn();
+  const [open, setOpen] = useState(false);
+  if (p.team === null) return null;
+  const x = experienceOf(p, lastDoneYear(d), d.startYear);
+  const school = d.teams[p.team].school;
+  const help = `Experience at ${school}: letters earned, one per season played there (2L = two seasons). TR: transferred in, no season there yet. HS: first season out of high school.`;
+  const text = x.label === 'TR' && x.from !== null ? `TR (${d.teams[x.from].school})` : x.label;
+  return (
+    <span className="dy-exp">
+      <button type="button" className="dy-exp-btn" title={help} aria-expanded={open} onClick={() => setOpen(!open)}>{text}</button>
+      {open && <span className="dy-exp-help" role="note">{help}</span>}
+    </span>
   );
 }

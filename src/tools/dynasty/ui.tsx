@@ -1,5 +1,6 @@
 // Small pieces the Dynasty pages share: the data they read, team marks and story art.
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useEffect, useRef } from 'react';
+import { drawHeadshot, HEAD_SIZE, lookOf } from '../../core/dynasty/headshot';
 import { SpriteCanvas } from '../../components';
 import { toLevels, LEVELS } from '../../core/colors';
 import type { Dynasty, DPlayer } from '../../core/dynasty/model';
@@ -14,6 +15,10 @@ export interface DynCtx {
   art: TeamArt[] | null;
   /** Hash path under #dynasty/, e.g. "team/12". */
   go: (path: string) => void;
+  /** Saves a changed dynasty (the lineup editor). */
+  commit: (next: Dynasty) => Promise<void>;
+  /** Downloads the season's ROM (needs the user's ROM, kept in the browser). */
+  downloadRom: (year: number) => void;
 }
 export const Ctx = createContext<DynCtx | null>(null);
 export const useDyn = () => useContext(Ctx)!;
@@ -125,3 +130,21 @@ export function Empty({ children }: { children: React.ReactNode }) {
 }
 
 export const heightText = (inches: number) => (inches ? `${Math.floor(inches / 12)}'${inches % 12}"` : '');
+
+/** "Town, State" (CFB 27 writes "Non-US" as the state of players from abroad: just the town then). */
+export const hometownText = (p: { hometown: string; state: string }) =>
+  [p.hometown, p.state && p.state !== 'Non-US' ? p.state : ''].filter(Boolean).join(', ');
+
+/** A player's 16-bit headshot (headshot.ts) in his team's colors, drawn crisp at any size. */
+export function Headshot({ p, size = 120 }: { p: DPlayer; size?: number }) {
+  const { d } = useDyn();
+  const ref = useRef<HTMLCanvasElement>(null);
+  const jersey = p.team !== null ? mainColor(d, p.team) : '#6b6e75';
+  const trim = (p.team !== null && SCHOOL_COLORS[d.teams[p.team].school]?.[1]) || '#ffffff';
+  useEffect(() => {
+    const c = ref.current?.getContext('2d');
+    if (!c) return;
+    c.putImageData(new ImageData(drawHeadshot(lookOf(p), jersey, trim), HEAD_SIZE, HEAD_SIZE), 0, 0);
+  }, [p, jersey, trim]);
+  return <canvas ref={ref} className="dy-headshot" width={HEAD_SIZE} height={HEAD_SIZE} style={{ width: size, height: size }} role="img" aria-label={`${p.first} ${p.last}`} />;
+}

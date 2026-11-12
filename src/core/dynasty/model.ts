@@ -5,16 +5,22 @@
 
 import { openRosterRom } from '../rosterRom';
 import { parseCsv, type Sheet } from '../rosterSheet';
-import { convertCfb27 } from '../rosterCfb27';
 import { readWideSeason, wideSeasonProblems } from '../seasonWide';
 import { parseBw95 } from '../bw95';
 import { teamsOf } from '../wide';
-import { GROUP_COLUMNS, type Attr, type Group } from '../rosterLayouts';
-import { hasOlPatch, OL_PATCH } from '../rosterOlPatch';
+import type { Attr, Group } from '../rosterLayouts';
 import { ratingProblems, readRating, type TeamRating } from '../teamRatings';
 import { readDynastySave, type DynastySave } from './save';
+import { startingPrestige } from './prestige';
+import { buildRosters } from './rosters';
+import { ovrOf, ratingsFromSlot, type Ratings } from './ratings';
+import { nibbleToRating } from '../rosterLayouts';
+import { assignBlack, skinFor } from './appearance';
+import { recordYear, type YearRecord } from './career';
+import { DYNASTY_EDITION, dynastyRomId, hasDynastyHooks, readStamp } from './dynastyArea';
 
-export const DYNASTY_FILE = { app: 'genesis-cfb-toolkit', tool: 'dynasty', version: 1 } as const;
+/** Version 2 (2026-11-12): players keep the Bill Walsh '95 ratings (ratings.ts); version 1 dynasties (CFB 27 ratings) aren't supported. */
+export const DYNASTY_FILE = { app: 'genesis-cfb-toolkit', tool: 'dynasty', version: 2 } as const;
 
 export const CLASSES = ['FR', 'SO', 'JR', 'SR', 'SR+'] as const;
 export type ClassYear = (typeof CLASSES)[number];
@@ -42,14 +48,29 @@ export interface DPlayer {
   weight: number;
   hometown: string;
   state: string;
+  /** OVR at his position from his ratings (ovr.ts formulas on the shown numbers). */
   ovr: number;
-  /** Values in the order of Dynasty.attrKeys (0-99). */
-  attrs: number[];
-  /** Skin tone 0-4, for the app's portraits only (the game uses one tone). */
+  /** His Bill Walsh '95 ratings: the numbers the game shows, 0-100 (Weight in the game's pounds); ratings.ts. */
+  ratings: Ratings;
+  /** Skin tone 0-3 (SKIN_TONES in appearance.ts: 0-1 White players, 2-3 Black players), for the app's portraits only (the game uses one tone). */
   skin: number;
+  /** Changes the user made to his generated portrait (headshot.ts `LookEdit`; editable any time, not in the ROM). */
+  look?: import('./headshot').LookEdit;
   status: 'active' | 'graduated' | 'pro' | 'transferred' | 'cut';
   /** The CFB 27 player ID for the starting players. */
   srcId?: number;
+  /** Hidden ceiling of his OVR, set at the first offseason or when he signs. */
+  pot?: number;
+  /** Signed in a dynasty signing class (stars 1-5; 0 = walk-on), and the year he signed. */
+  recruit?: { stars: number; year: number };
+  /** Year he left (graduated, went pro, transferred out, cut). */
+  leftYear?: number;
+  /** Moves through the transfer portal. */
+  transfers?: { year: number; from: number; to: number | null }[];
+  /** His last position change in the lineup editor: the season's year and the position he had. */
+  posChange?: { year: number; from: string };
+  /** His ratings each season he was on a team, oldest first (career.ts). */
+  years?: YearRecord[];
 }
 
 export interface SaveImport {
@@ -74,11 +95,33 @@ export interface DSeason {
   slots: (number | null)[][];
   /** Per team and slot, the Bill Walsh '95 ratings the slot's player has in the game this season. */
   bw?: (BwSlot | null)[][];
+  /** Per team and slot, the slot's backup on the bench and his ratings on the game's scale (not in the ROM). */
+  bench?: (number | null)[][];
+  benchBw?: (BwSlot | null)[][];
+  /** Each team's prestige this season, 1-6 stars (prestige.ts). */
+  prestige?: number[];
   /** Each team's offense and defense OVR in the ROM this season (what Game Setup shows). */
   teamOvr?: TeamRating[];
   /** Imports of this season's save, oldest first; one per number of completed weeks (the newest kept). */
   imports: SaveImport[];
+  /** What happened in the offseason before this season (departures, transfers, signings …), for the news. */
+  events?: OffseasonEvent[];
+  /** A user changed a team's lineup after the ROM was last written (download it again). */
+  lineupEdited?: boolean;
+  /** Roster version in the season ROM's ID block: 1, then one more for each lineup change after a download. */
+  rosterVersion?: number;
+  /** The season's ROM has been downloaded (the "download the ROM" window stops asking). */
+  romDownloaded?: boolean;
 }
+
+export type OffseasonEvent =
+  | { kind: 'graduated' | 'pro' | 'returns'; player: number; team: number; ovr: number }
+  | { kind: 'transfer'; player: number; from: number; to: number | null; ovr: number }
+  | { kind: 'signed'; player: number; team: number; stars: number; ovr: number }
+  | { kind: 'cut'; player: number; team: number; ovr: number }
+  | { kind: 'walkon'; player: number; team: number; ovr: number }
+  | { kind: 'class'; team: number; rank: number; signed: number; points: number }
+  | { kind: 'prestige'; team: number; from: number; to: number; finalRank: number };
 
 /** A roster slot's ratings in the game: 0-15 steps, in the roster screen's column order. */
 export interface BwSlot {
@@ -101,9 +144,14 @@ export interface Dynasty {
   startYear: number;
   userTeams: number[];
   teams: DTeam[];
-  attrKeys: string[];
   players: DPlayer[];
   seasons: DSeason[];
+  /** The offseason in progress (after the last season, before the next one). */
+  offseason?: import('./offseason').OffseasonState;
+  /** The offseason rules the user changed from the defaults (rules.ts; user, 2026-11-12). */
+  rules?: Partial<import('./rules').OffseasonRules>;
+  /** Each user team's training focus for the next offseason (training.ts; user, 2026-11-12). */
+  training?: Record<number, import('./training').Training>;
 }
 
 // ---- small helpers
@@ -156,7 +204,8 @@ export interface CreateOptions {
 /** A new dynasty from the user's 138-team ROM and the CFB 27 ratings CSV (the built-in Week 9 file). */
 export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptions): Dynasty {
   const roster = openRosterRom(rom);
-  if (!roster.wide) throw new Error("A dynasty needs the 138-team 2026 Season Edition (Bill Walsh '95 Elevated v2.0.0 or later).");
+  // Only ROMs with the dynasty support until the first public release (user, 2026-11-12).
+  if (!roster.wide || !hasDynastyHooks(rom)) throw new Error(`A dynasty needs ${DYNASTY_EDITION}.`);
   const p = wideSeasonProblems(rom);
   if (p.length) throw new Error(`This ROM's season settings can't be read: ${p.join('; ')}.`);
   const n = teamsOf(rom);
@@ -175,52 +224,55 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
     if (k < 0) throw new Error(`The ratings file has no "${name}" column.`);
     return k;
   };
-  const cTeam = H('Team'), cFirst = H('First Name'), cLast = H('Last Name'), cPos = H('Position'), cJersey = H('Jersey Number');
+  const cFirst = H('First Name'), cLast = H('Last Name'), cPos = H('Position'), cJersey = H('Jersey Number');
   const cHeight = H('Height (in)'), cWeight = H('Weight'), cOvr = H('Overall'), cClass = H('Class'), cRs = H('Redshirt Status');
   const cTown = H('Hometown'), cState = H('Home State'), cId = H('EA Player ID');
-  const first = H('Speed');
-  const attrKeys = sheet.headers.slice(first);
 
-  // Which ROM team each sheet team is (the roster conversion's own matching), and the season's slots.
-  const plan = convertCfb27(roster, sheet);
-  const teamOfSheet = new Map(plan.teams.map((t) => [t.sheetTeam, t.team]));
+  // The 32 in the game and the bench (one backup per slot), both from the Rosters tool's conversion;
+  // the dynasty keeps only these players, with the converted ratings as their own from now on.
+  const build = buildRosters(roster, sheet);
   const random = rng(opt.seed ?? Date.now());
+  const teamOfRow = new Map<number, number>();
+  const slotOfRow = new Map<number, BwSlot>();
+  build.slots.forEach((sl, t) => sl.forEach((row, k) => { if (row !== null && !teamOfRow.has(row)) { teamOfRow.set(row, t); slotOfRow.set(row, build.bw[t][k]!); } })); // a kicker who also punts: the kicker's ratings
+  build.bench.forEach((sl, t) => sl.forEach((row, k) => { if (row !== null && !teamOfRow.has(row)) { teamOfRow.set(row, t); slotOfRow.set(row, build.benchBw[t][k]!); } }));
   const players: DPlayer[] = [];
   const idOfRow = new Map<number, number>();
-  sheet.rows.forEach((r, row) => {
-    const team = teamOfSheet.get(r[cTeam]);
-    if (team === undefined) return;
+  for (const row of [...teamOfRow.keys()].sort((x, y) => x - y)) {
+    const r = sheet.rows[row];
     const id = players.length + 1;
     idOfRow.set(row, id);
-    players.push({
+    // His ratings: the steps the conversion gave him (as the game shows them), and the related group's.
+    const ratings = ratingsFromSlot(slotOfRow.get(row)!);
+    for (const [a, step] of Object.entries(build.extra.get(row) ?? {}) as [Attr, number][]) if (ratings[a] === undefined) ratings[a] = nibbleToRating(step);
+    const p: DPlayer = {
       id,
       first: r[cFirst].trim(),
       last: r[cLast].trim(),
       pos: r[cPos].trim().replace(/^LEDG$/, 'LE').replace(/^REDG$/, 'RE'),
-      team,
+      team: teamOfRow.get(row)!,
       cls: startingClass(r[cClass], r[cRs]),
       jersey: Number(r[cJersey]) || 0,
       heightIn: Number(r[cHeight]) || 0,
       weight: Number(r[cWeight]) || 0,
       hometown: r[cTown].trim(),
       state: r[cState].trim(),
-      ovr: Number(r[cOvr]) || 0,
-      attrs: attrKeys.map((_, k) => Number(r[first + k]) || 0),
-      skin: Math.floor(random() * 5),
+      ovr: 0,
+      ratings,
+      skin: 0, // set below, from the name and position
       status: 'active',
       srcId: Number(r[cId]) || undefined,
-    });
-  });
-  const slots: (number | null)[][] = Array.from({ length: n }, () => new Array<number | null>(32).fill(null));
-  const bw: (BwSlot | null)[][] = Array.from({ length: n }, () => new Array<BwSlot | null>(32).fill(null));
-  const olPlus = hasOlPatch(roster) ? OL_PATCH.pounds : 0;
-  for (const t of plan.teams) {
-    for (const f of t.fills) {
-      slots[t.team][f.slot] = idOfRow.get(f.player.row) ?? null;
-      const attrs = GROUP_COLUMNS[f.group];
-      bw[t.team][f.slot] = { label: f.label, group: f.group, attrs, steps: attrs.map((a) => f.steps[a] ?? 0), weightPlus: f.group === 'OL' ? olPlus : 0 };
-    }
+    };
+    p.ovr = ovrOf(p);
+    players.push(p);
   }
+  // Skin tones: each position's share of Black players, given by how the names point (appearance.ts).
+  assignBlack(players, random).forEach((black, i) => { players[i].skin = skinFor(black, random); });
+  const ids = (grid: (number | null)[][]) => grid.map((sl) => sl.map((row) => (row === null ? null : idOfRow.get(row) ?? null)));
+  const slots = ids(build.slots);
+  const bench = ids(build.bench);
+  const bw = build.bw;
+  const benchBw = build.benchBw;
 
   const season = readWideSeason(rom);
   const teamOvr = ratingProblems(rom).length ? undefined : Array.from({ length: n }, (_, t) => readRating(rom, t));
@@ -233,9 +285,8 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
     startYear,
     userTeams: opt.userTeams ?? [],
     teams,
-    attrKeys,
-    players,
-    seasons: [{ index: 0, year: startYear, conf: season.conf, confNames: season.names, slots, bw, teamOvr, imports: [] }],
+    players: recordYear(players, startYear),
+    seasons: [{ index: 0, year: startYear, conf: season.conf, confNames: season.names, slots, bw, bench, benchBw, teamOvr, prestige: startingPrestige(teams.map((t) => t.school), teamOvr), imports: [] }],
   };
 }
 
@@ -249,6 +300,8 @@ export interface ImportResult {
   newGames: number;
   /** Teams the save marks as the user's that the dynasty didn't have yet. */
   newUserTeams: number[];
+  /** Something to tell the user about the save (an out-of-date ROM). */
+  warning?: string;
 }
 
 const packed = (file: Uint8Array, save: DynastySave): Uint8Array => {
@@ -280,6 +333,23 @@ export function importSave(d: Dynasty, file: Uint8Array, opt: { at?: string; all
   if (save.season.games.some((g) => (g.visitor !== null && g.visitor >= d.teams.length) || (g.home !== null && g.home >= d.teams.length))) {
     throw new Error("This save's games use teams this dynasty doesn't have.");
   }
+  // The season must have been started with a ROM this app wrote: New Season copies its ID block into the save.
+  // Exception (user's save, 2026-11-12): the first season started with the plain 2026 ROM (no stamp) is taken,
+  // since that ROM has the same rosters as the app's first-season ROM, with a warning about lineup changes.
+  const stamp = readStamp(save.stamp);
+  let warning: string | undefined;
+  if (!stamp && d.seasons.length === 1) {
+    warning = `This season was started with the plain ${season.year} ROM, not the one from this app. That's fine for the first season: it has the same rosters. If you changed a lineup in the app, the stats are counted for the app's lineup.`;
+  } else if (!stamp) {
+    throw new Error(`This save's season wasn't started with a ROM from this app. Download the ${season.year} ROM (Manage, Season ROM), start a New Season in the game with it, play, then import.`);
+  } else if (stamp.dynasty !== dynastyRomId(d.id)) throw new Error("This save's season was started with a ROM of another dynasty.");
+  else if (stamp.season !== season.index + 1) {
+    const year = d.seasons[stamp.season - 1]?.year;
+    throw new Error(`This save's season was started with the ${year ?? 'another season\'s'} ROM, and the dynasty is in ${season.year}.${year !== undefined && year < season.year ? ` Start a New Season in the game with the ${season.year} ROM.` : ''}`);
+  }
+  if (stamp && stamp.rosterVersion !== (season.rosterVersion ?? 1)) {
+    warning = `This season was started with an earlier ${season.year} ROM, from before your last lineup change: its stats are counted for the lineup the app has now.`;
+  }
   const played = playedOf(save);
   const last = season.imports[season.imports.length - 1];
   if (last && !opt.allowOlder) {
@@ -307,6 +377,7 @@ export function importSave(d: Dynasty, file: Uint8Array, opt: { at?: string; all
     played,
     newGames: played - (last?.played ?? 0),
     newUserTeams,
+    warning,
   };
 }
 
@@ -317,10 +388,13 @@ export function latestSave(season: DSeason): DynastySave | null {
 }
 
 /** Checks a parsed dynasty file; returns the dynasty or throws. */
+export const OLD_DYNASTY = 'This dynasty was made by an earlier test version of the app (CFB 27 ratings). Start a new dynasty.';
+
 export function dynastyFromFile(json: unknown): Dynasty {
   const d = json as Dynasty;
   if (!d || d.app !== DYNASTY_FILE.app || d.tool !== DYNASTY_FILE.tool) throw new Error("This isn't a dynasty file of this app.");
   if (d.version > DYNASTY_FILE.version) throw new Error('This dynasty file was saved by a newer version of the app.');
+  if (d.version < DYNASTY_FILE.version) throw new Error(OLD_DYNASTY);
   if (!Array.isArray(d.teams) || !Array.isArray(d.players) || !Array.isArray(d.seasons) || !d.seasons.length) {
     throw new Error('This dynasty file is damaged.');
   }

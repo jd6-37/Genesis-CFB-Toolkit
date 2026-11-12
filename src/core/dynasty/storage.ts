@@ -7,6 +7,7 @@ import type { Picture } from '../render';
 const DB = 'genesis-cfb-dynasty';
 const DYN = 'dynasties';
 const ART = 'art';
+const ROM = 'rom';
 
 /** Team logo (small mascot), helmet and wordmark, per ROM team. */
 export interface TeamArt {
@@ -27,11 +28,12 @@ export interface DynastySummary {
 
 function open(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB, 1);
+    const req = indexedDB.open(DB, 2);
     req.onupgradeneeded = () => {
       const db = req.result;
       if (!db.objectStoreNames.contains(DYN)) db.createObjectStore(DYN, { keyPath: 'id' });
       if (!db.objectStoreNames.contains(ART)) db.createObjectStore(ART);
+      if (!db.objectStoreNames.contains(ROM)) db.createObjectStore(ROM);
     };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(new Error("This browser can't keep dynasties (storage is off or full)."));
@@ -86,6 +88,17 @@ export async function saveDynasty(d: Dynasty): Promise<void> {
 export async function deleteDynasty(id: string): Promise<void> {
   await run(DYN, 'readwrite', (s) => s.delete(id));
   await run(ART, 'readwrite', (s) => s.delete(id));
+  await run(ROM, 'readwrite', (s) => s.delete(id));
+}
+
+/** The user's ROM, kept in this browser for the offseason's depth chart and the season ROMs (never exported). */
+export async function loadRom(id: string): Promise<Uint8Array | null> {
+  const r = await run<Uint8Array | undefined>(ROM, 'readonly', (s) => s.get(id) as IDBRequest<Uint8Array | undefined>);
+  return r ? new Uint8Array(r) : null;
+}
+
+export async function saveRom(id: string, rom: Uint8Array): Promise<void> {
+  await run(ROM, 'readwrite', (s) => s.put(rom, id));
 }
 
 export async function loadArt(id: string): Promise<TeamArt[] | null> {

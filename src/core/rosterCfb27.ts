@@ -32,7 +32,7 @@ export const CFB27_COLUMNS = ['Team', 'Name', 'Position', 'Overall', 'Jersey Num
   'Throw Accuracy Short', 'Throw Accuracy Mid', 'Throw Accuracy Deep', 'Break Tackle', 'Trucking', 'Run Block',
   'Pass Block', 'Run Block Power', 'Pass Block Power', 'Power Moves', 'Block Shedding', 'Tackle', 'Hit Power', 'Pursuit',
   'Kick Power', 'Kick Accuracy', 'Lead Block'] as const;
-type Column = (typeof CFB27_COLUMNS)[number];
+export type Column = (typeof CFB27_COLUMNS)[number];
 
 /** Columns only CFB 27 data has (a BW95-style sheet has none of them). */
 const CFB27_ONLY = CFB27_COLUMNS.filter((c) => !['Team', 'Name', 'Position', 'Overall', 'Jersey Number', 'Weight', 'Speed',
@@ -155,7 +155,11 @@ const FALLBACK: Record<string, string[]> = {
 
 /** CFB 27 score behind each BW95 rating (integer sums; only the order matters). See docs/rosters.md. */
 function score(f: Cfb27Fill, attr: Attr): number {
-  const v = f.player.v, g = f.group;
+  return scoreOf(f.group, f.player.v, attr);
+}
+
+/** The CFB 27 score behind a BW95 rating, for a player's values `v` in a slot group. */
+export function scoreOf(g: Group, v: (c: Column) => number, attr: Attr): number {
   switch (attr) {
     case 'Weight': return v('Weight');
     case 'Speed': return v('Speed');
@@ -322,4 +326,30 @@ export function applyCfb27(rom: RosterRom, plan: Cfb27Plan, only?: Iterable<numb
     }
   }
   return written;
+}
+
+/**
+ * Game ratings for players outside a conversion (the Dynasty's bench), on the converted players'
+ * scale: for each rating, the step of the converted player of the same role whose CFB 27 score is
+ * closest below his (the lowest step if he is below them all). Nothing in `plan` changes.
+ */
+export function rateAgainst(plan: Cfb27Plan, extra: Cfb27Fill[]): void {
+  const fills = plan.teams.flatMap((t) => t.fills);
+  const table = new Map<string, [number, number][]>(); // role|attr -> [score, step], low to high
+  for (const f of fills) {
+    for (const attr of GROUP_ATTRS[f.group]) {
+      const k = `${f.role}|${attr}`;
+      table.set(k, [...(table.get(k) ?? []), [score(f, attr), f.steps[attr] ?? 0]]);
+    }
+  }
+  for (const list of table.values()) list.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  for (const e of extra) {
+    for (const attr of GROUP_ATTRS[e.group]) {
+      const list = table.get(`${e.role}|${attr}`) ?? [];
+      const mine = score(e, attr);
+      let lo = 0, hi = list.length; // first index with score > mine
+      while (lo < hi) { const m = (lo + hi) >> 1; if (list[m][0] <= mine) lo = m + 1; else hi = m; }
+      e.steps[attr] = lo > 0 ? list[lo - 1][1] : list.length ? list[0][1] : 0;
+    }
+  }
 }

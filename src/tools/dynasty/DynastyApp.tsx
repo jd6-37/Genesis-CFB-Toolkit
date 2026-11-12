@@ -1,17 +1,23 @@
 // The Dynasty section (#dynasty): a news site for the user's dynasty, kept in the browser, with its
 // own pages. Spec: docs/dynasty.md.
+import { TrainingResults } from './TrainingPage';
+import { Rules } from './RulesPage';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { openRom } from '../../core/romfile';
 import { fetchCfb27Latest, CFB27_LATEST } from '../../core/cfb27Latest';
-import { createDynasty, importSave, type Dynasty } from '../../core/dynasty/model';
+import { createDynasty, DYNASTY_FILE, importSave, OLD_DYNASTY, type Dynasty } from '../../core/dynasty/model';
+import { applyEdits, editLock, playersCsv, readPlayersCsv, type CsvImport } from '../../core/dynasty/edit';
 import { seasonView, weekName } from '../../core/dynasty/derive';
 import { teamArt } from '../../core/dynasty/art';
 import {
-  deleteDynasty, dynastyFileName, dynastyFileText, listDynasties, loadArt, loadDynasty, readDynastyFile, saveArt, saveDynasty,
+  deleteDynasty, dynastyFileName, dynastyFileText, listDynasties, loadArt, loadDynasty, loadRom, readDynastyFile, saveArt, saveDynasty, saveRom,
   type DynastySummary, type TeamArt,
 } from '../../core/dynasty/storage';
 import { Ctx, href, TeamMark, type DynCtx } from './ui';
 import { History, Home, Leaders, Player, Rankings, Scores, Standings, Team, Teams } from './pages';
+import { Offseason, type OffseasonActions } from './OffseasonPage';
+import { seasonRom } from '../../core/dynasty/offseason';
+import { canReplaceBench, randomBench } from '../../core/dynasty/bench';
 import './dynasty.css';
 
 const PAGES = [
@@ -22,6 +28,7 @@ const PAGES = [
   { id: 'teams', label: 'Teams' },
   { id: 'stats', label: 'Stats' },
   { id: 'history', label: 'History' },
+  { id: 'offseason', label: 'Offseason' },
   { id: 'manage', label: 'Manage' },
 ] as const;
 
@@ -47,8 +54,8 @@ const setCurrent = (id: string | null) => {
   }
 };
 
-function download(name: string, text: string) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+function download(name: string, text: BlobPart, type = 'application/json') {
+  const url = URL.createObjectURL(new Blob([text], { type }));
   const a = document.createElement('a');
   a.href = url;
   a.download = name;
@@ -58,10 +65,23 @@ function download(name: string, text: string) {
 
 const readFile = async (f: File) => new Uint8Array(await f.arrayBuffer());
 
+/** Asks for a file (from a click: the browser only opens the picker then). */
+function chooseFile(accept: string): Promise<File | null> {
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = accept;
+    input.onchange = () => resolve(input.files?.[0] ?? null);
+    input.addEventListener('cancel', () => resolve(null));
+    input.click();
+  });
+}
+
 type Note = { kind: 'error' | 'ok'; text: string } | null;
 
 export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
   const [route, setRoute] = useState(parseHash);
+  const [romLater, setRomLater] = useState<number | null>(null);
   const [list, setList] = useState<DynastySummary[] | null>(null);
   const [d, setD] = useState<Dynasty | null>(null);
   const [art, setArt] = useState<TeamArt[] | null>(null);
@@ -82,6 +102,11 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
   const open = useCallback(async (id: string) => {
     const dyn = await loadDynasty(id);
     if (!dyn) return false;
+    // Earlier test versions (CFB 27 ratings) can't be opened: delete them on the Manage page.
+    if ((dyn.version ?? 1) < DYNASTY_FILE.version) {
+      setNote({ kind: 'error', text: `${dyn.name}: ${OLD_DYNASTY}` });
+      return false;
+    }
     setD(dyn);
     setArt(await loadArt(id));
     setCurrent(id);
@@ -110,10 +135,11 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
     await refresh();
   }, [refresh]);
 
+  const dlRef = useRef<(year: number) => void>(() => {});
   const v = useMemo(() => (d ? seasonView(d, d.seasons[d.seasons.length - 1]) : null), [d]);
   const ctx: DynCtx | null = useMemo(
-    () => (d && v ? { d, v, art, go: (p: string) => (window.location.hash = href(p)) } : null),
-    [d, v, art],
+    () => (d && v ? { d, v, art, go: (p: string) => (window.location.hash = href(p)), commit, downloadRom: (y: number) => dlRef.current(y) } : null),
+    [d, v, art, commit],
   );
 
   const run = async (what: string, fn: () => Promise<void>) => {
@@ -136,11 +162,12 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       const pics = teamArt(rom);
       await saveDynasty(dyn);
       await saveArt(dyn.id, pics);
+      await saveRom(dyn.id, rom);
       setD(dyn);
       setArt(pics);
       setCurrent(dyn.id);
       await refresh();
-      setNote({ kind: 'ok', text: `${dyn.name} is ready: ${dyn.players.length.toLocaleString('en-US')} players on ${dyn.teams.length} teams. Import your save after you play a week.` });
+      setNote({ kind: 'ok', text: `${dyn.name} is ready: ${dyn.players.length.toLocaleString('en-US')} players on ${dyn.teams.length} teams. Play the ${dyn.seasons[0].year} season on your ROM as it is, and import your save whenever you like (after the last game at the latest). After the offseason the app gives you the next season's ROM.` });
     }),
     importSave: (f, allowOlder) => run('Importing the save…', async () => {
       if (!d) return;
@@ -151,7 +178,8 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       setNote({
         kind: 'ok',
         text: `Imported: ${r.played} games played${r.newGames > 0 ? ` (${r.newGames} new)` : ''}, next up ${nv.currentWeek < nv.weeks ? weekName(nv, nv.currentWeek) : 'nothing (the season is over)'}.` +
-          (added.length ? ` Your ${added.length > 1 ? 'teams' : 'team'}: ${added.join(', ')}.` : ''),
+          (added.length ? ` Your ${added.length > 1 ? 'teams' : 'team'}: ${added.join(', ')}.` : '') +
+          (r.warning ? ` ${r.warning}` : ''),
       });
     }),
     addArt: (romFile) => run('Reading team art…', async () => {
@@ -160,6 +188,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       const pics = teamArt(rom);
       if (pics.length !== d.teams.length) throw new Error(`This ROM has ${pics.length} teams; the dynasty has ${d.teams.length}.`);
       await saveArt(d.id, pics);
+      await saveRom(d.id, rom);
       setArt(pics);
       setNote({ kind: 'ok', text: 'Team logos added.' });
     }),
@@ -192,7 +221,49 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
     setUserTeams: (teams) => run('Saving…', async () => {
       if (d) await commit({ ...d, userTeams: teams });
     }),
+    downloadRom: (year) => dlRef.current(year),
+    commit,
+    download: (name, text, type) => download(name, text, type),
+    randomBench: () => run('Making random backups…', async () => {
+      if (!d) return;
+      await commit(randomBench(d));
+      setNote({ kind: 'ok', text: 'Every team has new, generated backups. The Active Rosters are the same.' });
+    }),
   };
+
+  const getRom = async (): Promise<Uint8Array | null> => {
+    if (!d) return null;
+    const kept = await loadRom(d.id);
+    if (kept) return kept;
+    const f = await chooseFile('.md,.bin,.gen,.zip');
+    if (!f) return null;
+    const rom = (await openRom(f.name, await readFile(f))).data;
+    await saveRom(d.id, rom);
+    return rom;
+  };
+  const offActions: OffseasonActions = {
+    commit: async (next, done) => {
+      await commit(next);
+      if (done) setNote({ kind: 'ok', text: done });
+    },
+    getRom,
+    run,
+    downloadRom: (year) => void run('Writing the ROM…', async () => {
+      if (!d) return;
+      const season = d.seasons.find((s) => s.year === year);
+      if (!season) return;
+      const rom = await getRom();
+      if (!rom) throw new Error('Choose your ROM to write the season into it.');
+      const slug = d.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'dynasty';
+      download(`${slug}-${year}.md`, seasonRom(d, season, rom) as Uint8Array<ArrayBuffer>, 'application/octet-stream');
+      if (season.lineupEdited || !season.romDownloaded) await commit({ ...d, seasons: d.seasons.map((x) => (x === season ? { ...x, lineupEdited: false, romDownloaded: true } : x)) });
+      setNote({
+        kind: 'ok',
+        text: `Downloaded the ${year} ROM. Start a New Season with it in the game: Season mode plays the dynasty's rosters, Exhibition keeps the real 2026 ones.`,
+      });
+    }),
+  };
+  dlRef.current = offActions.downloadRom;
 
   const { page, arg } = route;
   const num = arg !== undefined && /^\d+$/.test(arg) ? Number(arg) : undefined;
@@ -207,11 +278,14 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       case 'player': return num !== undefined ? <Player id={num} /> : <Home />;
       case 'stats': return <Leaders />;
       case 'history': return <History />;
+      case 'offseason': return <Offseason actions={offActions} busy={busy} />;
+      case 'rules': return <Rules actions={offActions} busy={busy} />;
+      case 'training': return <TrainingResults arg={arg} />;
       default: return <Home />;
     }
   })();
-  const navPage = page === 'team' || page === 'player' ? (page === 'team' ? 'teams' : 'stats') : page;
-  const week = v && v.save ? (v.currentWeek < v.weeks ? weekName(v, v.currentWeek) : 'Season complete') : null;
+  const navPage = page === 'team' || page === 'player' ? (page === 'team' ? 'teams' : 'stats') : page === 'rules' ? 'manage' : page === 'training' ? 'offseason' : page;
+  const week = d?.offseason ? 'Offseason' : v && v.save ? (v.currentWeek < v.weeks ? weekName(v, v.currentWeek) : 'Season complete') : d && d.seasons.length > 1 ? 'Preseason' : null;
 
   return (
     <div className="dy">
@@ -220,7 +294,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
           <a className="dy-back" href={toolkitHref}>Mod Toolkit</a>
           <a className="dy-title" href={href('home')}>
             <span className="dy-title-1">{d?.name ?? 'Dynasty'}</span>
-            {d && <span className="dy-title-2">{d.seasons[d.seasons.length - 1].year}{week ? `, ${week}` : ''}</span>}
+            {d && <span className="dy-title-2">{d.offseason ? d.offseason.year : d.seasons[d.seasons.length - 1].year}{week ? `, ${week}` : ''}</span>}
           </a>
           <span className="dy-mast-teams">
             {ctx && d!.userTeams.map((t) => (
@@ -239,6 +313,25 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       <main className="dy-main">
         {note && page !== 'manage' && <p className={`dy-note dy-note-${note.kind}`} role="status">{note.text}</p>}
         {ctx ? <Ctx.Provider value={ctx}>{body}</Ctx.Provider> : body}
+        {d && !d.offseason && d.seasons.length > 1 && (() => {
+          // The new season's ROM (user, 2026-11-12: the download "needs to be VERY obvious, like a modal window"):
+          // asks until it's downloaded or the season's first save is imported; "Later" hides it until the next visit.
+          const s = d.seasons[d.seasons.length - 1];
+          if (s.romDownloaded || s.imports.length || romLater === s.year) return null;
+          return (
+            <div className="dy-modal-back" role="presentation">
+              <div className="dy-modal" role="dialog" aria-modal="true" aria-labelledby="dy-rom-title">
+                <h2 id="dy-rom-title">Download the {s.year} ROM</h2>
+                <p>The {s.year} season is set up. Download its ROM and start a <b>New Season</b> in the game with it: it has the new rosters, and the app can only import saves of seasons started with it.</p>
+                <p className="dy-small dy-dim">You can still change your depth chart first (your team's page); then download it again.</p>
+                <div className="dy-row">
+                  <button type="button" className="dy-button" disabled={!!busy} onClick={() => offActions.downloadRom(s.year)}>Download the {s.year} ROM</button>
+                  <button type="button" className="dy-button dy-quiet" onClick={() => setRomLater(s.year)}>Later</button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </main>
     </div>
   );
@@ -248,6 +341,9 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
 
 interface ManageActions {
   create: (name: string, rom: File) => void;
+  commit: (next: Dynasty) => Promise<void>;
+  download: (name: string, text: string, type?: string) => void;
+  downloadRom: (year: number) => void;
   importSave: (f: File, allowOlder: boolean) => void;
   addArt: (rom: File) => void;
   exportFile: () => void;
@@ -256,6 +352,30 @@ interface ManageActions {
   remove: (id: string) => void;
   rename: (name: string) => void;
   setUserTeams: (teams: number[]) => void;
+  randomBench: () => void;
+}
+
+function BenchChoice({ onRandom, busy }: { onRandom: () => void; busy: boolean }) {
+  const [sure, setSure] = useState(false);
+  return (
+    <>
+      <h3>Backups</h3>
+      <p>
+        Every team has a backup for each of the 32 players on its Active Roster, who moves up when a spot opens. The backups start as the
+        next-best real players (CFB 27). In the first season you can replace them with generated players instead; the Active Rosters stay the same.
+      </p>
+      <div className="dy-row">
+        {sure ? (
+          <>
+            <button type="button" className="dy-button" disabled={busy} onClick={() => { onRandom(); setSure(false); }}>Replace every team's backups</button>
+            <button type="button" className="dy-button dy-quiet" onClick={() => setSure(false)}>Keep the real players</button>
+          </>
+        ) : (
+          <button type="button" className="dy-button dy-quiet" onClick={() => setSure(true)}>Generate random backups</button>
+        )}
+      </div>
+    </>
+  );
 }
 
 function FileButton({ label, accept, onFile, disabled }: { label: string; accept?: string; onFile: (f: File) => void; disabled?: boolean }) {
@@ -351,6 +471,26 @@ function Manage({ d, art, list, busy, note, actions }: {
             <button type="button" className="dy-button" disabled={addTeam === ''} onClick={() => { actions.setUserTeams([...d.userTeams, Number(addTeam)]); setAddTeam(''); }}>Add team</button>
           </div>
 
+          {!d.offseason && d.seasons.length > 1 && (() => {
+            const year = d.seasons[d.seasons.length - 1].year;
+            return (
+              <>
+                <h3>Season ROM</h3>
+                <p>
+                  The {year} rosters and team OVRs in your ROM's dynasty area: Season mode plays them, Exhibition keeps the real 2026
+                  rosters, and New Season marks the save with the dynasty and season, so the app knows it. Start the {year} season in the
+                  game with this ROM; saves of seasons started with another ROM can't be imported. (The first season needs no download:
+                  play it on your ROM as it is.)
+                </p>
+                <button type="button" className="dy-button" disabled={!!busy} onClick={() => actions.downloadRom(year)}>Download the {year} ROM</button>
+              </>
+            );
+          })()}
+
+          {canReplaceBench(d) && <BenchChoice onRandom={actions.randomBench} busy={!!busy} />}
+
+          <PlayersCsv d={d} actions={actions} />
+
           <h3>Team logos</h3>
           {art ? (
             <p>Team logos come from your ROM and stay in this browser. They aren't in the dynasty file.</p>
@@ -360,6 +500,10 @@ function Manage({ d, art, list, busy, note, actions }: {
               <FileButton label="Load ROM for logos" accept=".md,.bin,.gen,.zip" disabled={!!busy} onFile={actions.addArt} />
             </>
           )}
+
+          <h3>Offseason rules</h3>
+          <p>Every number the computer's offseason uses (departures, development, transfers, recruiting, walk-ons, prestige), to change for this dynasty or move to another one. Spoilers.</p>
+          <div className="dy-row"><a className="dy-button dy-quiet" href={href('rules')}>Offseason rules</a></div>
 
           <h3>Keep a copy</h3>
           <p>Your dynasty lives in this browser. Download it to keep a backup or to move it to another computer.</p>
@@ -408,7 +552,7 @@ function Manage({ d, art, list, busy, note, actions }: {
       <section className="dy-panel">
         <h2>Start a new dynasty</h2>
         <p>
-          A dynasty needs the 138-team 2026 Season Edition of Bill Walsh '95 Elevated (v2.0.0 or later). The players start from the
+          A dynasty needs the 138-team 2026 Season Edition of Bill Walsh '95 Elevated with dynasty support (v2.0.1-test9 or later). The players start from the
           built-in {CFB27_LATEST.label.replace('College Football 27', 'CFB 27')} rosters; redshirted players start one class up.
         </p>
         <form className="dy-row" onSubmit={(e) => e.preventDefault()}>
@@ -419,5 +563,62 @@ function Manage({ d, art, list, busy, note, actions }: {
         <FileButton label="Open dynasty file" accept=".json" disabled={!!busy} onFile={actions.importFile} />
       </section>
     </div>
+  );
+}
+
+/** Players CSV (edit.ts): download every player, import an edited file with a preview first. */
+function PlayersCsv({ d, actions }: { d: Dynasty; actions: ManageActions }) {
+  const [pending, setPending] = useState<CsvImport | null>(null);
+  const [msg, setMsg] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
+  const lock = editLock(d);
+  const slug = d.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'dynasty';
+  const year = d.offseason ? d.offseason.year + 1 : d.seasons[d.seasons.length - 1].year;
+  return (
+    <>
+      <h3>Players (CSV)</h3>
+      <p>
+        Every player with his Bill Walsh '95 ratings as the game shows them (0-100), to edit in a spreadsheet. Import the file again:
+        rows with an ID change that player, rows without one add a player, a cleared Team releases him. You see every change before it's applied.
+      </p>
+      <div className="dy-row">
+        <button type="button" className="dy-button dy-quiet" onClick={() => actions.download(`${slug}-players-${year}.csv`, playersCsv(d), 'text/csv')}>Download players CSV</button>
+        {lock ? <span className="dy-dim dy-small">{lock}</span> : (
+          <FileButton label="Import players CSV" accept=".csv,text/csv" onFile={async (f) => {
+            setMsg(null);
+            setPending(readPlayersCsv(d, new TextDecoder().decode(await readFile(f))));
+          }} />
+        )}
+      </div>
+      {pending && (
+        <div className="dy-note">
+          {pending.problems.length > 0 && (
+            <>
+              <p><strong>{pending.problems.length} {pending.problems.length === 1 ? 'problem' : 'problems'}</strong>: fix the file and import it again.</p>
+              <ul className="dy-small">{pending.problems.slice(0, 20).map((m) => <li key={m}>{m}</li>)}</ul>
+            </>
+          )}
+          {pending.problems.length === 0 && (
+            pending.changes.length ? (
+              <>
+                <p><strong>{pending.changes.length} {pending.changes.length === 1 ? 'player changes' : 'players change'}</strong>:</p>
+                <ul className="dy-small dy-changes">{pending.changes.slice(0, 200).map((m, i) => <li key={i}>{m}</li>)}</ul>
+                {pending.changes.length > 200 && <p className="dy-small dy-dim">and {pending.changes.length - 200} more.</p>}
+                <div className="dy-row">
+                  <button type="button" className="dy-button" onClick={async () => {
+                    try {
+                      await actions.commit(applyEdits(d, pending.edits, pending.adds));
+                      setMsg({ kind: 'ok', text: `${pending.changes.length} ${pending.changes.length === 1 ? 'player' : 'players'} changed.${d.offseason ? '' : ' Download the season ROM again before you start the New Season.'}` });
+                      setPending(null);
+                    } catch (e) { setMsg({ kind: 'error', text: (e as Error).message }); }
+                  }}>Apply the changes</button>
+                  <button type="button" className="dy-button dy-quiet" onClick={() => setPending(null)}>Cancel</button>
+                </div>
+              </>
+            ) : <p>Nothing in the file differs from the dynasty.</p>
+          )}
+        </div>
+      )}
+      {msg && <p className={`dy-note dy-note-${msg.kind}`}>{msg.text}</p>}
+    </>
   );
 }
