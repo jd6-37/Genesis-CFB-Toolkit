@@ -13,6 +13,7 @@ import { GROUP_COLUMNS, type Attr, type Group } from '../rosterLayouts';
 import { hasOlPatch, OL_PATCH } from '../rosterOlPatch';
 import { ratingProblems, readRating, type TeamRating } from '../teamRatings';
 import { readDynastySave, type DynastySave } from './save';
+import { startingPrestige } from './prestige';
 
 export const DYNASTY_FILE = { app: 'genesis-cfb-toolkit', tool: 'dynasty', version: 1 } as const;
 
@@ -82,6 +83,8 @@ export interface DSeason {
   slots: (number | null)[][];
   /** Per team and slot, the Bill Walsh '95 ratings the slot's player has in the game this season. */
   bw?: (BwSlot | null)[][];
+  /** Each team's prestige this season, 1-6 stars (prestige.ts). */
+  prestige?: number[];
   /** Each team's offense and defense OVR in the ROM this season (what Game Setup shows). */
   teamOvr?: TeamRating[];
   /** Imports of this season's save, oldest first; one per number of completed weeks (the newest kept). */
@@ -96,7 +99,8 @@ export type OffseasonEvent =
   | { kind: 'signed'; player: number; team: number; stars: number; ovr: number }
   | { kind: 'cut'; player: number; team: number; ovr: number }
   | { kind: 'walkon'; player: number; team: number; ovr: number }
-  | { kind: 'class'; team: number; rank: number; signed: number; points: number };
+  | { kind: 'class'; team: number; rank: number; signed: number; points: number }
+  | { kind: 'prestige'; team: number; from: number; to: number; finalRank: number };
 
 /** A roster slot's ratings in the game: 0-15 steps, in the roster screen's column order. */
 export interface BwSlot {
@@ -255,7 +259,7 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
     teams,
     attrKeys,
     players,
-    seasons: [{ index: 0, year: startYear, conf: season.conf, confNames: season.names, slots, bw, teamOvr, imports: [] }],
+    seasons: [{ index: 0, year: startYear, conf: season.conf, confNames: season.names, slots, bw, teamOvr, prestige: startingPrestige(teams.map((t) => t.school), teamOvr), imports: [] }],
   };
 }
 

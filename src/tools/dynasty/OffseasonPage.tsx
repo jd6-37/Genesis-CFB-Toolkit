@@ -21,7 +21,7 @@ export interface OffseasonActions {
 
 /** The step whose results the page shows (the button below them runs the next one). */
 const STEPS = ['Departures', 'Transfer portal', 'Signing day and cuts', 'Next season'] as const;
-const STEP_OF = { portal: 0, signing: 1, cuts: 2, ready: 3 } as const;
+const STEP_OF = { portal: 0, recruiting: 1, signing: 1, cuts: 2, ready: 3 } as const;
 
 let templates: Promise<RecruitTemplates> | null = null;
 const getTemplates = (d: Dynasty) =>

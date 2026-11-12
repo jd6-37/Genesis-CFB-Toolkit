@@ -23,6 +23,7 @@ import { fixChecksums, jerseyByte, openRosterRom, readPlayer, setRating, teamLay
 import { GROUP_ATTRS, GROUP_COLUMNS } from '../rosterLayouts';
 import { hasOlPatch, OL_PATCH } from '../rosterOlPatch';
 import CFB_OVR from './cfbOvr.json';
+import { MAX_PRESTIGE, nextPrestige, seasonPrestige } from './prestige';
 import { playerOvr } from './ovr';
 import { ratingProblems, starterOvr, writeRating } from '../teamRatings';
 
@@ -44,7 +45,7 @@ export const POS_MIN: Record<string, number> = {
 };
 export const POSITIONS = Object.keys(POS_TARGET);
 
-export type OffseasonStep = 'portal' | 'signing' | 'cuts' | 'ready';
+export type OffseasonStep = 'portal' | 'recruiting' | 'signing' | 'cuts' | 'ready';
 
 export interface OffseasonState {
   /** The season that just ended. */
@@ -58,6 +59,11 @@ export interface OffseasonState {
   growth: { player: number; from: number; to: number }[];
   /** After signing day: the cuts suggested for each user team (the user can change them). */
   suggestedCuts?: Record<number, number[]>;
+  /** Next season's prestige stars, set when the season ends (one star at most toward the final poll's tier). */
+  prestige?: number[];
+  /** 'random' signing classes (the default) or 'full' recruiting weeks. */
+  mode?: 'random' | 'full';
+  recruiting?: import('./recruiting').RecruitingState;
 }
 
 // ---- small helpers
@@ -97,23 +103,14 @@ function givePotential(p: DPlayer, r: Rand): number {
   return clamp(Math.round(p.ovr + between(r, lo, hi)), p.ovr, 99);
 }
 
-/**
- * A team's standing for recruiting and the portal, 0-1: last season's final rank and record and the
- * strength of its roster.
- */
+/** A school's prestige stars now: the offseason's new stars once it has started, else the season's. */
+export function prestigeStars(d: Dynasty, team: number): number {
+  return d.offseason?.prestige?.[team] ?? seasonPrestige(d, lastSeason(d))[team];
+}
+
+/** A team's standing for recruiting and the portal, 0-1, from its prestige stars (1-6). */
 export function prestige(d: Dynasty, team: number): number {
-  const s = lastSeason(d);
-  const v = seasonView(d, s);
-  const rec = v.records[team];
-  const games = rec.w + rec.l;
-  const winPct = games ? rec.w / games : 0.5;
-  const rank = v.save ? v.rank[team] : 70;
-  const rankScore = rank <= 25 ? 1 - (rank - 1) / 50 : clamp(0.5 - (rank - 25) / 226, 0, 0.5);
-  const top = active(d).filter((p) => p.team === team).map((p) => p.ovr).sort((a, b) => b - a).slice(0, 22);
-  const avg = top.length ? top.reduce((a, b) => a + b, 0) / top.length : 70;
-  const talent = clamp((avg - 68) / 20, 0, 1);
-  const title = v.champion === team ? 0.1 : 0;
-  return clamp(0.35 * talent + 0.35 * rankScore + 0.2 * winPct + 0.1 * (title ? 1 : 0), 0, 1);
+  return (prestigeStars(d, team) - 1) / (MAX_PRESTIGE - 1);
 }
 
 /** Whether the season can end: every game played (or the user forces it). */
@@ -154,6 +151,11 @@ export function startOffseason(d: Dynasty, opt: { seed?: number; force?: boolean
   if (!opt.force && !seasonDone(d)) throw new Error('The season isn\'t over yet: import the save after the last game first.');
   const year = lastSeason(d).year;
   const st: OffseasonState = { year, step: 'portal', seed: opt.seed ?? (Date.now() >>> 0), before: d.players, events: [], growth: [] };
+  // Prestige: one star toward the tier of the final poll place (no change without a save).
+  const v = seasonView(d, lastSeason(d));
+  const was = seasonPrestige(d, lastSeason(d));
+  st.prestige = was.map((stars, t) => (v.save ? nextPrestige(stars, v.rank[t]) : stars));
+  st.prestige.forEach((to, t) => { if (to !== was[t]) st.events.push({ kind: 'prestige', team: t, from: was[t], to, finalRank: v.rank[t] }); });
   const r = stepRand(st, 1);
   const inGame = new Set(lastSeason(d).slots.flat().filter((x): x is number => x !== null));
   const players = d.players.map((p0) => {
@@ -535,6 +537,7 @@ export function finishOffseason(d: Dynasty, rom: Uint8Array): Dynasty {
     conf: prev.conf.slice(),
     confNames: prev.confNames.slice(),
     ...depthChart(withNumbers, rom),
+    prestige: st.prestige ?? seasonPrestige(d, prev),
     imports: [],
     events: st.events,
   };

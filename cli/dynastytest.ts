@@ -16,6 +16,7 @@ import { CFB27_LATEST } from '../src/core/cfb27Latest';
 import { OVR_FORMULAS, playerOvr, roleOfSlot } from '../src/core/dynasty/ovr';
 import { readRating } from '../src/core/teamRatings';
 import * as Off from '../src/core/dynasty/offseason';
+import { nextPrestige, tierOfRank } from '../src/core/dynasty/prestige';
 import { openRosterRom, readPlayer, getRating, teamLayout } from '../src/core/rosterRom';
 
 const [romPath, savePath] = process.argv.slice(2);
@@ -214,6 +215,19 @@ assert.equal(act(o1).filter((p) => p.cls === 'SR+').length, o1.offseason!.events
 assert.ok(d1.players.filter((p) => p.cls === 'SR+').every((p) => o1.players[p.id - 1].status === 'graduated'), 'every SR+ leaves');
 assert.ok(act(o1).every((p) => p.pot !== undefined && p.pot >= p.ovr));
 assert.deepEqual(Off.startOffseason(d1, { seed: 3, force: true }), o1, 'same seed, same offseason');
+// Prestige: the starting stars follow the scale (10 six-star, 10 five, 15 four, 35 three, 30 two, 38 one);
+// at the season's end each school moves at most one star toward its final poll place's tier.
+assert.deepEqual([1, 10, 11, 20, 21, 35, 36, 70, 71, 100, 101].map(tierOfRank), [6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 1]);
+assert.equal(nextPrestige(3, 5), 4);
+assert.equal(nextPrestige(3, 120), 2);
+assert.equal(nextPrestige(3, 50), 3);
+const p0 = first.prestige!;
+assert.deepEqual([6, 5, 4, 3, 2, 1].map((n) => p0.filter((x) => x === n).length), [10, 10, 15, 35, 30, 38]);
+const vEnd = seasonView(d1, d1.seasons[0]);
+o1.offseason!.prestige!.forEach((to, t) => {
+  assert.ok(Math.abs(to - p0[t]) <= 1);
+  assert.equal(Math.sign(to - p0[t]), Math.sign(tierOfRank(vEnd.rank[t]) - p0[t]));
+});
 assert.deepEqual(Off.cancelOffseason(o1).players, d1.players);
 const o2 = Off.runPortal(o1);
 const moves = o2.offseason!.events.filter((e) => e.kind === 'transfer');
@@ -239,6 +253,7 @@ for (const t of o4.teams) {
 }
 const o5 = Off.finishOffseason(o4, rom);
 const next = o5.seasons[1];
+assert.deepEqual(next.prestige, o1.offseason!.prestige, 'the new season has the new stars');
 assert.equal(o5.offseason, undefined);
 assert.equal(next.year, 2027);
 assert.equal(next.slots.flat().filter((x) => x !== null).length, 138 * 32, 'every slot filled');

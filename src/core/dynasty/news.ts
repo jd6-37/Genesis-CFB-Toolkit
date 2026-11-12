@@ -176,6 +176,17 @@ export function offseasonStories(d: Dynasty, events: OffseasonEvent[], year: num
     headline: `${who(e.player)} transfers from ${name(e.from)} to ${name(e.to!)}`,
     dek: `A ${e.ovr} OVR ${pl(e.player).pos} moves through the portal.`,
   }));
+  const pres = events.filter((e): e is Extract<OffseasonEvent, { kind: 'prestige' }> => e.kind === 'prestige');
+  for (const e of pres.filter((x) => x.to === 6 && x.from < 6)) out.push({
+    id: `${year}-elite-${e.team}`, kind: 'number1', week: 0, weight: 64, teams: [e.team],
+    headline: `${name(e.team)} joins the elite: 6-star prestige`,
+    dek: `A No. ${e.finalRank} finish in ${year} lifts the program to the top tier.`,
+  });
+  for (const e of pres.filter((x) => d.userTeams.includes(x.team))) out.push({
+    id: `${year}-yours-prestige-${e.team}`, kind: 'yours', week: 0, weight: 78, teams: [e.team],
+    headline: `${name(e.team)} ${e.to > e.from ? 'rises' : 'drops'} to ${e.to}-star prestige`,
+    dek: `${name(e.team)} finished No. ${e.finalRank} in ${year}${e.to > e.from ? ', and recruits will notice' : ''}.`,
+  });
   for (const u of d.userTeams) {
     const c = classes.find((x) => x.team === u);
     const left = events.filter((e) => (e.kind === 'graduated' || e.kind === 'pro') && e.team === u).length;

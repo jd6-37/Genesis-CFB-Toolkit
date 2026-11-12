@@ -79,6 +79,10 @@ The pages use each school's official primary and secondary colors (`src/core/dyn
 
 IndexedDB database `genesis-cfb-dynasty`: store `dynasties` (the dynasty and when it changed) and store `art` (each team's logo, helmet and wordmark drawn from the user's ROM). The dynasty file is the dynasty as JSON with `app: "genesis-cfb-toolkit"`, `tool: "dynasty"`, `version: 1`; it never carries the art. A file from a newer version is refused.
 
+## Prestige
+
+`src/core/dynasty/prestige.ts`. Every school has 1-6 stars per season (`DSeason.prestige`). Scale (user, 2026-11-12): final poll top 10 = 6, top 20 = 5, top 35 = 4, top 70 = 3, top 100 = 2, else 1; when the season ends a school moves at most one star toward the tier it finished in. Start: College Football 27's prestige at launch (0-5 in half stars, `CFB27_PRESTIGE`); schools are ranked by it (ties by team OVR in the ROM) and given the tier of their place, so the first season has 10 six-star, 10 five-star, 15 four-star, 35 three-star, 30 two-star and 38 one-star programs. Recruiting and the portal read prestige as (stars − 1) / 5.
+
 ## The offseason
 
 `src/core/dynasty/offseason.ts`, pure steps that each return a new dynasty; seeded, so the same choices give the same offseason. `Dynasty.offseason` holds the step, the seed, the events (for the news and the next season's `events`) and the players as they were at the start (Start the offseason over).

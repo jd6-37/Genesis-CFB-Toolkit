@@ -282,3 +282,6 @@
   .dy-plist li > .dy-small { flex-basis: auto; margin-left: auto; }
   .dy-classes li .dy-small { display: inline; margin-left: 10px; }
 }
+.dy-prestige { flex-basis: 100%; font-size: 20px; letter-spacing: 2px; line-height: 1.2; }
+.dy-prestige > span { opacity: 0.3; }
+@media (min-width: 760px) { .dy-prestige { flex-basis: auto; font-size: 17px; } }

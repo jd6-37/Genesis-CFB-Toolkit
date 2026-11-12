@@ -6,6 +6,8 @@ import {
   INDEPENDENT, type PlayerLine, type StatCategory,
 } from '../../core/dynasty/derive';
 import { offseasonStories, stories } from '../../core/dynasty/news';
+import { prestigeStars } from '../../core/dynasty/offseason';
+import { MAX_PRESTIGE } from '../../core/dynasty/prestige';
 import type { SaveGame } from '../../core/dynasty/save';
 import { nibbleToRating, nibbleToWeight, rosterLayout } from '../../core/rosterLayouts';
 import { playerOvr, roleOfSlot } from '../../core/dynasty/ovr';
@@ -308,6 +310,15 @@ function StatTables({ lines }: { lines: PlayerLine[] }) {
 
 // ---- teams
 
+/** Prestige as stars out of six. */
+function Prestige({ stars }: { stars: number }) {
+  return (
+    <span className="dy-prestige" role="img" aria-label={`Prestige: ${stars} of ${MAX_PRESTIGE} stars`} title={`Prestige: ${stars} of ${MAX_PRESTIGE} stars`}>
+      {'★'.repeat(stars)}<span>{'★'.repeat(MAX_PRESTIGE - stars)}</span>
+    </span>
+  );
+}
+
 /** The 138-team edition's 32 roster slots in the game's order (every team plays the 4-3). */
 const SLOT_ORDER = rosterLayout('bw95', false, true);
 
@@ -359,6 +370,7 @@ export function Team({ team }: { team: number }) {
           <div>
             <h2>{t.school} {t.nickname}</h2>
             <p>
+              <Prestige stars={prestigeStars(d, team)} />
               <span>{conf === INDEPENDENT ? 'Independent' : v.season.confNames[conf]}</span>
               {v.save && <span>{recordText(r)}, {r.cw}-{r.cl} in conference</span>}
               {v.save && v.rank[team] <= 25 && <span>No. {v.rank[team]}</span>}
