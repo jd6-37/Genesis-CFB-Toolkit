@@ -16,6 +16,7 @@
 // same offseason. The players before the offseason are kept so it can be started over.
 
 import { FINE_SET_BYTES, putFineOffsets } from './fine';
+import { applyWhiteHome } from './kit';
 import { lastGames, makeSchedule, RELEASE_CONF_WEEKS, scheduleSet } from './schedule';
 import { CLASSES, rng, type ClassYear, type DPlayer, type DSeason, type Dynasty, type OffseasonEvent } from './model';
 import { playerLines, seasonView } from './derive';
@@ -868,6 +869,7 @@ export function seasonRom(d: Dynasty, season: DSeason, rom: Uint8Array, now = Da
     fine,
     schedule: season.schedule ? scheduleSet(season.schedule) : undefined,
   });
+  applyWhiteHome(out.data, d);
   fixChecksums(out.data, out.game);
   return out.data;
 }

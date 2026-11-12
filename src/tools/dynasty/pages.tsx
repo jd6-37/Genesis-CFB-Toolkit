@@ -2,6 +2,8 @@
 // stat leaders and history.
 import { playerHonors, seasonAwards } from '../../core/dynasty/awards';
 import { scheduleLock } from '../../core/dynasty/schedule';
+import { setWhiteHome, whiteHomeLock } from '../../core/dynasty/kit';
+import { Select } from '../../ui';
 import { useEffect, useMemo, useState } from 'react';
 import {
   champions, leaders, playerLines, playerName, seasonView, standings, statValue, teamHistory, weekName,
@@ -443,7 +445,7 @@ export function Teams() {
 }
 
 export function Team({ team }: { team: number }) {
-  const { d, v, downloadRom } = useDyn();
+  const { d, v, downloadRom, commit } = useDyn();
   const lines = useMemo(() => playerLines(v).filter((l) => l.team === team), [v, team]);
   const [moveError, setMoveError] = useState<string | null>(null);
   const t = d.teams[team];
@@ -494,6 +496,13 @@ export function Team({ team }: { team: number }) {
 
       <div className="dy-team-cols">
         <div>
+          {mine && d.whiteHome && (
+            <div className="dy-homekit">
+              <Select label="Home jersey" value={d.whiteHome[team] ? 'white' : 'dark'} options={[{ value: 'dark', label: 'Dark at home' }, { value: 'white', label: 'White at home' }]}
+                onChange={(x) => { try { void commit(setWhiteHome(d, team, x === 'white')); setMoveError(null); } catch (e) { setMoveError((e as Error).message); } }} />
+              {whiteHomeLock(d, team) && <p className="dy-small dy-dim">{whiteHomeLock(d, team)}</p>}
+            </div>
+          )}
           <h3 className="dy-sub">Schedule</h3>
           {mine && v.season.schedule && !scheduleLock(v.season) && <p className="dy-small"><a href={href(`schedule/${team}`)}>Change the schedule</a></p>}
           {games.length ? (

@@ -211,6 +211,17 @@ Before a game, Bill Walsh reads a scouting report on each team: a paragraph on i
 - In Team Swap, a swapped team's report is the original team's with the new names until you edit it; the edited report goes into the swap file.
 - The app also has the Elevated mod's 2026 reports for every FBS team (written with the 2026 Season Edition, facts through Oct. 31, 2026). They name players by the jersey numbers of the built-in CFB 27 rosters, so they come with that import in the Rosters tab (see [CFB 27 rosters](#cfb-27-rosters)).
 
+### Alternate uniforms
+
+On the 138-team 2026 Season Edition with the uniform picker (Elevated v2.0.1-test14 and later), a team can pick other helmets, jerseys and pants on the controller screen (Y on a 6-button pad). **Alternate uniforms** in the Teams tab edits what the picker offers, team by team:
+
+- **Home jersey:** Dark at home (the default) or White at home. The visitor then gets the other one.
+- **Extra helmets, dark jerseys, white jerseys and pants.** A team's own home and away uniforms are always its first choices and aren't listed. **Add** starts a new piece as a copy of the team's own; pick its colors with the Genesis color picker. Picking a helmet's shell or a jersey's or the pants' main color also sets the lighter and darker shades, which you can change afterwards.
+- At most 7 extra helmets, 7 extra pants and 7 extra jerseys (dark and white together) per team: the picker's menu shows single digits.
+- **Undo** puts a team's, or every team's, uniforms back as the ROM was loaded.
+
+The extras are in a 4 KB table at `0x2B6000`-`0x2B6FFF` ("KIT1"); the app rewrites only that table, and only when the ROM has it. `npm run test:kits -- ELEVATED_2026_138` checks reading, writing and the limits.
+
 ### College Football 27 reference
 
 Below the teams, a searchable table lists every FBS team in College Football 27 (as of November 2026) with its offense style, its defensive playbook and the Bill Walsh '95 styles recommended for it. **Apply recommended styles** sets them for every team on the ROM that's in College Football 27 (matched by school name, including College Football USA 97's spellings such as USMA for Army); Undo puts back the styles the ROM was loaded with. The recommendations follow these rules:
@@ -370,6 +381,7 @@ Dynasties are kept in your browser (IndexedDB), with your ROM for the offseason 
 
 The save's season block and stats tables, the dynasty file and the plan for the next phases: [docs/dynasty.md](docs/dynasty.md).
 
+- **Home jersey:** on a ROM with the uniform picker (v2.0.1-test14 on), your team's page has **Home jersey**: Dark at home or White at home. Change it before the season's first save import or in the offseason; it's written into the season ROM (download the ROM again if you already had). The other teams keep the ROM's setting.
 - **ROM areas:** the season ROM is written into the dynasty area of Elevated's 2026 Season Edition (v2.0.1-test9 on), `0x3E0000`-`0x3FFFFF`: a header with the ID block (dynasty, season, roster version), the season rosters (138 × 32 × 4 bytes at `0x3E0100`), an OVR table (`0x3E4600`), the sim words (`0x3E4800`) and the names set for Team Rosters' names view (`0x3E5000`, "NAM1": class, first and last name per slot, in the game's font). The app writes it (and creates dynasties) only when the ROM has the dynasty hooks (the mark `BW95DYN` at `0x2B0000`) and Team Rosters' names (v2.0.1-test9 on) and the area is free (all `0xFF`) or already holds a dynasty header. Checksums are recomputed; nothing else changes.
 
 ### Testing

@@ -519,3 +519,6 @@
 @media (min-width: 700px) {
   .dy-sched-list li { grid-template-columns: 90px 1fr; align-items: center; }
 }
+
+/* Home jersey (kit.ts) on a user team's page. */
+.dy-homekit { margin: 0 0 20px; max-width: 240px; }
