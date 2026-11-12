@@ -13,10 +13,13 @@ import { ratingProblems, readRating, type TeamRating } from '../teamRatings';
 import { readDynastySave, type DynastySave } from './save';
 import { startingPrestige } from './prestige';
 import { buildRosters } from './rosters';
+import { ovrOf, ratingsFromSlot, type Ratings } from './ratings';
+import { nibbleToRating } from '../rosterLayouts';
 import { assignBlack, skinFor } from './appearance';
 import { DYNASTY_EDITION, dynastyRomId, hasDynastyHooks, readStamp } from './dynastyArea';
 
-export const DYNASTY_FILE = { app: 'genesis-cfb-toolkit', tool: 'dynasty', version: 1 } as const;
+/** Version 2 (2026-11-12): players keep the Bill Walsh '95 ratings (ratings.ts); version 1 dynasties (CFB 27 ratings) aren't supported. */
+export const DYNASTY_FILE = { app: 'genesis-cfb-toolkit', tool: 'dynasty', version: 2 } as const;
 
 export const CLASSES = ['FR', 'SO', 'JR', 'SR', 'SR+'] as const;
 export type ClassYear = (typeof CLASSES)[number];
@@ -44,15 +47,16 @@ export interface DPlayer {
   weight: number;
   hometown: string;
   state: string;
+  /** OVR at his position from his ratings (ovr.ts formulas on the shown numbers). */
   ovr: number;
-  /** Values in the order of Dynasty.attrKeys (0-99). */
-  attrs: number[];
+  /** His Bill Walsh '95 ratings: the numbers the game shows, 0-100 (Weight in the game's pounds); ratings.ts. */
+  ratings: Ratings;
   /** Skin tone 0-3 (SKIN_TONES in appearance.ts: 0-1 White players, 2-3 Black players), for the app's portraits only (the game uses one tone). */
   skin: number;
   status: 'active' | 'graduated' | 'pro' | 'transferred' | 'cut';
   /** The CFB 27 player ID for the starting players. */
   srcId?: number;
-  /** Hidden ceiling of his OVR (CFB 27 scale), set at the first offseason or when he signs. */
+  /** Hidden ceiling of his OVR, set at the first offseason or when he signs. */
   pot?: number;
   /** Signed in a dynasty signing class (stars 1-5; 0 = walk-on), and the year he signed. */
   recruit?: { stars: number; year: number };
@@ -133,7 +137,6 @@ export interface Dynasty {
   startYear: number;
   userTeams: number[];
   teams: DTeam[];
-  attrKeys: string[];
   players: DPlayer[];
   seasons: DSeason[];
   /** The offseason in progress (after the last season, before the next one). */
@@ -213,23 +216,25 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
   const cFirst = H('First Name'), cLast = H('Last Name'), cPos = H('Position'), cJersey = H('Jersey Number');
   const cHeight = H('Height (in)'), cWeight = H('Weight'), cOvr = H('Overall'), cClass = H('Class'), cRs = H('Redshirt Status');
   const cTown = H('Hometown'), cState = H('Home State'), cId = H('EA Player ID');
-  const first = H('Speed');
-  const attrKeys = sheet.headers.slice(first);
 
   // The 32 in the game and the bench (one backup per slot), both from the Rosters tool's conversion;
-  // the dynasty keeps only these players.
+  // the dynasty keeps only these players, with the converted ratings as their own from now on.
   const build = buildRosters(roster, sheet);
   const random = rng(opt.seed ?? Date.now());
   const teamOfRow = new Map<number, number>();
-  build.slots.forEach((sl, t) => sl.forEach((row) => row !== null && teamOfRow.set(row, t)));
-  build.bench.forEach((sl, t) => sl.forEach((row) => row !== null && teamOfRow.set(row, t)));
+  const slotOfRow = new Map<number, BwSlot>();
+  build.slots.forEach((sl, t) => sl.forEach((row, k) => { if (row !== null && !teamOfRow.has(row)) { teamOfRow.set(row, t); slotOfRow.set(row, build.bw[t][k]!); } })); // a kicker who also punts: the kicker's ratings
+  build.bench.forEach((sl, t) => sl.forEach((row, k) => { if (row !== null && !teamOfRow.has(row)) { teamOfRow.set(row, t); slotOfRow.set(row, build.benchBw[t][k]!); } }));
   const players: DPlayer[] = [];
   const idOfRow = new Map<number, number>();
   for (const row of [...teamOfRow.keys()].sort((x, y) => x - y)) {
     const r = sheet.rows[row];
     const id = players.length + 1;
     idOfRow.set(row, id);
-    players.push({
+    // His ratings: the steps the conversion gave him (as the game shows them), and the related group's.
+    const ratings = ratingsFromSlot(slotOfRow.get(row)!);
+    for (const [a, step] of Object.entries(build.extra.get(row) ?? {}) as [Attr, number][]) if (ratings[a] === undefined) ratings[a] = nibbleToRating(step);
+    const p: DPlayer = {
       id,
       first: r[cFirst].trim(),
       last: r[cLast].trim(),
@@ -241,12 +246,14 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
       weight: Number(r[cWeight]) || 0,
       hometown: r[cTown].trim(),
       state: r[cState].trim(),
-      ovr: Number(r[cOvr]) || 0,
-      attrs: attrKeys.map((_, k) => Number(r[first + k]) || 0),
+      ovr: 0,
+      ratings,
       skin: 0, // set below, from the name and position
       status: 'active',
       srcId: Number(r[cId]) || undefined,
-    });
+    };
+    p.ovr = ovrOf(p);
+    players.push(p);
   }
   // Skin tones: each position's share of Black players, given by how the names point (appearance.ts).
   assignBlack(players, random).forEach((black, i) => { players[i].skin = skinFor(black, random); });
@@ -267,7 +274,6 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
     startYear,
     userTeams: opt.userTeams ?? [],
     teams,
-    attrKeys,
     players,
     seasons: [{ index: 0, year: startYear, conf: season.conf, confNames: season.names, slots, bw, bench, benchBw, teamOvr, prestige: startingPrestige(teams.map((t) => t.school), teamOvr), imports: [] }],
   };
@@ -366,10 +372,13 @@ export function latestSave(season: DSeason): DynastySave | null {
 }
 
 /** Checks a parsed dynasty file; returns the dynasty or throws. */
+export const OLD_DYNASTY = 'This dynasty was made by an earlier test version of the app (CFB 27 ratings). Start a new dynasty.';
+
 export function dynastyFromFile(json: unknown): Dynasty {
   const d = json as Dynasty;
   if (!d || d.app !== DYNASTY_FILE.app || d.tool !== DYNASTY_FILE.tool) throw new Error("This isn't a dynasty file of this app.");
   if (d.version > DYNASTY_FILE.version) throw new Error('This dynasty file was saved by a newer version of the app.');
+  if (d.version < DYNASTY_FILE.version) throw new Error(OLD_DYNASTY);
   if (!Array.isArray(d.teams) || !Array.isArray(d.players) || !Array.isArray(d.seasons) || !d.seasons.length) {
     throw new Error('This dynasty file is damaged.');
   }

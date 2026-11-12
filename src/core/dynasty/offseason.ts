@@ -5,27 +5,27 @@
 //   startOffseason   departures (graduates, early pros, seniors back as SR+), classes move up,
 //                    players develop toward their potential
 //   runPortal        players without a spot enter the portal; teams with needs take them
-//   runSigningDay    random signing classes by need and prestige (recruits made from the built-in
-//                    CFB 27 freshmen as templates)
+//   runSigningDay    random signing classes by need and prestige (recruits made from the league's own
+//                    players of the position, as freshmen)
 //   applyCuts        every team down to the roster limit (CPU automatically, user teams by choice),
 //                    walk-ons for positions below their minimum
-//   finishOffseason  depth chart through the Rosters tool's CFB 27 conversion, unique jersey
-//                    numbers, the next season
+//   finishOffseason  depth chart (the best OVR at each spot, depth.ts), unique jersey numbers, the
+//                    next season
 //
 // Pure functions: each returns a new dynasty. Randomness is seeded, so the same choices give the
 // same offseason. The players before the offseason are kept so it can be started over.
 
 import { CLASSES, rng, type ClassYear, type DPlayer, type DSeason, type Dynasty, type OffseasonEvent } from './model';
 import { seasonView } from './derive';
-import { parseCsv, type Sheet } from '../rosterSheet';
 import { fixChecksums, jerseyByte, openRosterRom, readPlayer, setRating, teamLayout } from '../rosterRom';
 import { GROUP_ATTRS } from '../rosterLayouts';
-import CFB_OVR from './cfbOvr.json';
 import { MAX_PRESTIGE, nextPrestige, seasonPrestige } from './prestige';
-import { playerOvr } from './ovr';
-import { readRating, starterOvr } from '../teamRatings';
+import { OVR_FORMULAS } from './ovr';
+import { readRating } from '../teamRatings';
 import { DYNASTY_EDITION, dynastyAreaProblem, dynastyRomId, writeDynastyArea, type DynastyName } from './dynastyArea';
-import { buildRosters, TEAM_SIZE } from './rosters';
+import { TEAM_SIZE } from './rosters';
+import { depthChart } from './depth';
+import { ovrOf, roleOfPos, type Ratings } from './ratings';
 import { blackShare, firstOdds, lastOdds, MAX_FIRST, MAX_LAST, namePool, pickName, skinFor, type NamePool } from './appearance';
 
 /** A team is 64 players: the 32 in the game and one backup for each (rosters.ts). */
@@ -74,23 +74,6 @@ const pick = <T>(r: Rand, a: T[]): T => a[Math.floor(r() * a.length)];
 const gauss = (r: Rand) => Math.sqrt(-2 * Math.log(1 - r())) * Math.cos(2 * Math.PI * r());
 const stepRand = (st: { seed: number }, salt: number) => rng((st.seed ^ Math.imul(salt + 1, 0x9e3779b1)) >>> 0);
 
-const FORMULAS = (CFB_OVR as { positions: Record<string, { base: number; weights: Record<string, number> }> }).positions;
-
-/** A CFB 27-style Overall from a player's ratings (fitted to the built-in ratings; within 1 for most players). */
-export function cfbOvr(d: Pick<Dynasty, 'attrKeys'>, pos: string, attrs: number[]): number {
-  const f = FORMULAS[pos];
-  if (!f) return 0;
-  let v = f.base;
-  for (const [k, w] of Object.entries(f.weights)) {
-    const i = d.attrKeys.indexOf(k);
-    if (i >= 0) v += w * attrs[i];
-  }
-  return clamp(Math.round(v), 0, 99);
-}
-
-/** Ratings that don't grow much with training. */
-const PHYSICAL = new Set(['Speed', 'Acceleration', 'Agility', 'Change of Direction', 'Jumping']);
-
 const active = (d: Dynasty) => d.players.filter((p) => p.status === 'active' && p.team !== null);
 const lastSeason = (d: Dynasty) => d.seasons[d.seasons.length - 1];
 
@@ -118,23 +101,30 @@ export function seasonDone(d: Dynasty): boolean {
 
 // ---- 1. departures, classes, development
 
-/** Grows a player toward his potential: the gain goes to the ratings his position's Overall counts. */
-export function develop(d: Dynasty, p: DPlayer, gain: number, r: Rand): DPlayer {
-  const f = FORMULAS[p.pos];
-  if (!f || Math.abs(gain) < 0.5) return p;
-  const keys = Object.entries(f.weights).filter(([, w]) => w > 0);
-  const sum = keys.reduce((a, [, w]) => a + w, 0);
-  if (sum <= 0) return p;
-  const attrs = p.attrs.slice();
-  const per = gain / sum;
-  for (const [k] of keys) {
-    const i = d.attrKeys.indexOf(k);
-    if (i < 0) continue;
-    const slow = PHYSICAL.has(k) ? 0.4 : 1;
-    attrs[i] = clamp(Math.round(attrs[i] + per * slow * between(r, 0.6, 1.4)), 0, 99);
+/**
+ * Grows a player toward his potential: an OVR gain raises the ratings his position's OVR formula counts
+ * (Speed at half the pace), by the shown numbers, so he can be part of the way to the next step. Bigger
+ * players also put on a few pounds.
+ */
+export function develop(p: DPlayer, gain: number, r: Rand): DPlayer {
+  const role = roleOfPos(p.pos);
+  const f = OVR_FORMULAS[role];
+  if (!f || Math.abs(gain) < 0.25) return p;
+  const per = gain / f.scale; // the weighted average moves by this many points
+  const ratings: Ratings = { ...p.ratings };
+  for (const [a, w] of Object.entries(f.weights) as [keyof Ratings, number][]) {
+    if (!w) continue;
+    const pace = a === 'Speed' ? 0.5 : 1.15;
+    ratings[a] = clamp(Math.round(((ratings[a] ?? 0) + per * pace * between(r, 0.6, 1.4)) * 10) / 10, 0, 100);
   }
-  // Keep his own offset from the formula (CFB 27's Overall isn't exactly linear, e.g. QB archetypes).
-  return { ...p, attrs, ovr: clamp(p.ovr + cfbOvr(d, p.pos, attrs) - cfbOvr(d, p.pos, p.attrs), 0, 99) };
+  let weight = p.weight;
+  if (gain > 0 && ['OL', 'DE', 'DT', 'TE', 'LB', 'FB'].includes(role)) {
+    const lbs = Math.round(between(r, 0, 6));
+    ratings.Weight = clamp((ratings.Weight ?? 140) + lbs, 140, 380);
+    weight = clamp(weight + lbs, 150, 400);
+  }
+  const q = { ...p, ratings, weight };
+  return { ...q, ovr: ovrOf(q) };
 }
 
 /** How much of the room to his potential a player closes in one offseason, by the class he's leaving. */
@@ -175,7 +165,7 @@ export function startOffseason(d: Dynasty, opt: { seed?: number; force?: boolean
     const from = p.ovr;
     const room = (p.pot ?? p.ovr) - p.ovr;
     const gain = room * GROWTH_RATE[p.cls] * between(r, 0.5, 1.5) + (inGame.has(p.id) ? 1 : 0) + gauss(r);
-    p = develop(d, { ...p, cls: CLASSES[Math.min(4, CLASSES.indexOf(p.cls) + 1)] }, gain, r);
+    p = develop({ ...p, cls: CLASSES[Math.min(4, CLASSES.indexOf(p.cls) + 1)] }, gain, r);
     if (p.ovr > (p.pot ?? 99)) p = { ...p, pot: p.ovr };
     st.growth.push({ player: p.id, from, to: p.ovr });
     return p;
@@ -276,43 +266,40 @@ export function runPortal(d: Dynasty): Dynasty {
 // ---- 3. signing day (random classes)
 
 export interface RecruitTemplates {
-  /** Freshmen of each position from the built-in CFB 27 ratings, as rating arrays in attrKeys order, lowest Overall first. */
-  byPos: Record<string, { attrs: number[]; ovr: number; heightIn: number; weight: number }[]>;
-  /** Names of the CFB 27 players (short enough for the game), weighted by how often and for whom they occur. */
+  /** The league's players of each position (their ratings), lowest OVR first. */
+  byPos: Record<string, { ratings: Ratings; ovr: number; heightIn: number; weight: number }[]>;
+  /** Names of the starting (CFB 27) players, short enough for the game, weighted by how often and for whom they occur. */
   firstNames: NamePool;
   lastNames: NamePool;
-  /** Real players' full names, never given to a new player. */
+  /** Every dynasty player's full name, never given to a new player. */
   realNames: Set<string>;
   towns: { hometown: string; state: string }[];
 }
 
-/** Recruit templates from the built-in CFB 27 ratings CSV (its freshmen, names and hometowns). */
-export function recruitTemplates(d: Pick<Dynasty, 'attrKeys'>, csvText: string): RecruitTemplates {
-  const sheet: Sheet = parseCsv(csvText);
-  const H = (n: string) => sheet.headers.indexOf(n);
-  const [cPos, cOvr, cCls, cFirst, cLast, cTown, cState, cH, cW] =
-    ['Position', 'Overall', 'Class', 'First Name', 'Last Name', 'Hometown', 'Home State', 'Height (in)', 'Weight'].map(H);
-  const ks = d.attrKeys.map(H);
+/**
+ * What new players are made from, all from the dynasty itself: the league's players of each position now
+ * (their ratings, size), and the starting players' names and hometowns.
+ */
+export function recruitTemplates(d: Dynasty): RecruitTemplates {
   const byPos: RecruitTemplates['byPos'] = {};
   const first = new Map<string, number>(), last = new Map<string, number>(), real = new Set<string>();
   const towns: RecruitTemplates['towns'] = [];
-  for (const row of sheet.rows) {
-    const pos = row[cPos].trim().replace(/^LEDG$/, 'LE').replace(/^REDG$/, 'RE');
-    const f = row[cFirst]?.trim() ?? '', l = row[cLast]?.trim() ?? '';
-    if (f) first.set(f, (first.get(f) ?? 0) + 1);
-    if (l) last.set(l, (last.get(l) ?? 0) + 1);
-    if (f && l) real.add(`${f} ${l}`);
-    // Hometowns in the US (CFB 27 writes "Non-US" as the state of the others).
-    if (row[cTown]?.trim() && row[cState]?.trim() && row[cState].trim() !== 'Non-US') towns.push({ hometown: row[cTown].trim(), state: row[cState].trim() });
-    if (!/^freshman$/i.test(row[cCls]?.trim() ?? '')) continue;
-    (byPos[pos] ??= []).push({ attrs: ks.map((k) => Number(row[k]) || 0), ovr: Number(row[cOvr]) || 0, heightIn: Number(row[cH]) || 72, weight: Number(row[cW]) || 200 });
+  for (const p of d.players) {
+    real.add(`${p.first} ${p.last}`);
+    if (p.srcId === undefined) continue; // names and towns from the starting players only
+    first.set(p.first, (first.get(p.first) ?? 0) + 1);
+    last.set(p.last, (last.get(p.last) ?? 0) + 1);
+    if (p.hometown && p.state && p.state !== 'Non-US') towns.push({ hometown: p.hometown, state: p.state });
   }
+  for (const p of active(d)) (byPos[p.pos] ??= []).push({ ratings: p.ratings, ovr: p.ovr, heightIn: p.heightIn, weight: p.weight });
   for (const list of Object.values(byPos)) list.sort((a, b) => a.ovr - b.ovr);
   return { byPos, firstNames: namePool(first, firstOdds, MAX_FIRST), lastNames: namePool(last, lastOdds, MAX_LAST), realNames: real, towns };
 }
 
-/** Where in the freshmen of a position a recruit of each star rating comes from (Overall percentile). */
+/** Where in the league's players of a position a recruit of each star rating is modeled on (OVR percentile), before the freshman gap. */
 const STAR_BAND: Record<number, [number, number]> = { 5: [0.97, 1], 4: [0.8, 0.97], 3: [0.35, 0.8], 2: [0.05, 0.35], 1: [0, 0.05], 0: [0, 0.08] };
+/** How far below the player he's modeled on a freshman starts (OVR points). */
+const FRESHMAN_GAP: [number, number] = [7, 13];
 /** Potential range by stars (walk-ons 0). */
 const STAR_POT: Record<number, [number, number]> = { 5: [86, 99], 4: [80, 93], 3: [72, 86], 2: [65, 79], 1: [58, 72], 0: [55, 70] };
 
@@ -324,14 +311,24 @@ export function drawStars(r: Rand, pres: number): number {
   return 3;
 }
 
-/** One new player made from a CFB 27 freshman of the position, with fresh ratings, name and hometown. */
+/**
+ * One new player: modeled on a league player of the position at the star rating's place, younger (the
+ * freshman gap, less for Speed), every rating a little different; a new name and hometown.
+ */
 export function makeRecruit(d: Dynasty, tpl: RecruitTemplates, r: Rand, id: number, team: number, pos: string, stars: number, year: number): DPlayer {
-  // Positions with few freshmen in CFB 27 (fullbacks) borrow a close position's.
   const pool = (tpl.byPos[pos]?.length ?? 0) >= 5 ? tpl.byPos[pos] : tpl.byPos[pos === 'FB' ? 'TE' : 'WR'];
   const [lo, hi] = STAR_BAND[stars];
   const t = pool[Math.min(pool.length - 1, Math.floor(between(r, lo, hi) * pool.length))];
-  const attrs = t.attrs.map((a) => (a === 0 ? 0 : clamp(Math.round(a + 3 * gauss(r)), 1, 99)));
-  const ovr = cfbOvr(d, pos, attrs);
+  const f = OVR_FORMULAS[roleOfPos(pos)];
+  const gap = between(r, ...FRESHMAN_GAP) / (f?.scale ?? 0.5);
+  const ratings: Ratings = {};
+  for (const [a, v] of Object.entries(t.ratings) as [keyof Ratings, number][]) {
+    if (a === 'Weight') { ratings.Weight = clamp(Math.round(v + 8 * gauss(r)), 140, 380); continue; }
+    const counts = !!f?.weights[a];
+    const drop = counts ? gap * (a === 'Speed' ? 0.4 : 1) * between(r, 0.6, 1.4) : 0;
+    ratings[a] = clamp(Math.round(v - drop + 3 * gauss(r)), 0, 100);
+  }
+  const ovr = ovrOf({ pos, ratings });
   const [plo, phi] = STAR_POT[stars];
   const town = pick(r, tpl.towns);
   // White or Black by the position's share; names that fit, never a real player's full name.
@@ -344,7 +341,7 @@ export function makeRecruit(d: Dynasty, tpl: RecruitTemplates, r: Rand, id: numb
   return {
     id, first, last, pos, team, cls: 'FR', jersey: 0,
     heightIn: clamp(Math.round(t.heightIn + gauss(r)), 64, 82), weight: clamp(Math.round(t.weight + 6 * gauss(r)), 150, 380),
-    hometown: town.hometown, state: town.state, ovr, attrs, skin: skinFor(black, r), status: 'active',
+    hometown: town.hometown, state: town.state, ovr, ratings, skin: skinFor(black, r), status: 'active',
     pot: clamp(Math.round(between(r, plo, phi)), ovr + 3, 99), recruit: { stars, year },
   };
 }
@@ -516,40 +513,8 @@ export function fixJerseys(players: DPlayer[], r: Rand): DPlayer[] {
   return out;
 }
 
-/** The dynasty's players as a CFB 27 sheet the Rosters tool's conversion reads (EA Player ID = dynasty ID). */
-export function rosterSheet(d: Dynasty, ps: DPlayer[] = active(d)): { sheet: Sheet; ids: number[] } {
-  const headers = ['Team', 'Name', 'Position', 'Overall', 'Jersey Number', 'Weight', 'EA Player ID', ...d.attrKeys];
-  return {
-    sheet: {
-      headers,
-      rows: ps.map((p) => [d.teams[p.team!].school, `${p.first} ${p.last}`, p.pos, String(p.ovr), String(p.jersey), String(p.weight), String(p.id), ...p.attrs.map(String)]),
-    },
-    ids: ps.map((p) => p.id),
-  };
-}
-
-/**
- * The next season's 32 per team and their bench, their game ratings and the team OVRs, from the
- * Rosters tool's CFB 27 conversion of the dynasty's players (rosters.ts).
- */
-export function depthChart(d: Dynasty, rom: Uint8Array): Pick<DSeason, 'slots' | 'bw' | 'bench' | 'benchBw' | 'teamOvr'> {
-  const roster = openRosterRom(rom);
-  const { sheet, ids } = rosterSheet(d);
-  const b = buildRosters(roster, sheet);
-  const map = (grid: (number | null)[][]) => grid.map((sl) => sl.map((row) => (row === null ? null : ids[row])));
-  const slots = map(b.slots);
-  // Team OVRs from the starters' game-rating OVRs (the game's ratings are relative, so this keeps the
-  // scale steady from season to season, where CFB 27-style OVRs drift with each class).
-  const teamOvr = d.teams.map((t) => starterOvr(slots[t.index].flatMap((id, slot) => {
-    const p = id ? d.players[id - 1] : undefined;
-    const bw = b.bw[t.index][slot];
-    return p && bw ? [{ pos: p.pos, ovr: playerOvr(slot, bw) }] : [];
-  })));
-  return { slots, bw: b.bw, bench: map(b.bench), benchBw: b.benchBw, teamOvr: teamOvr.map((o) => ({ off: o.off, def: o.def })) };
-}
-
 /** Ends the offseason: unique numbers, the depth chart, and the next season (same conferences). */
-export function finishOffseason(d: Dynasty, rom: Uint8Array): Dynasty {
+export function finishOffseason(d: Dynasty): Dynasty {
   const st = d.offseason;
   if (!st || st.step !== 'ready') throw new Error('Finish the cuts first.');
   const r = stepRand(st, 5);
@@ -561,7 +526,7 @@ export function finishOffseason(d: Dynasty, rom: Uint8Array): Dynasty {
     year: prev.year + 1,
     conf: prev.conf.slice(),
     confNames: prev.confNames.slice(),
-    ...depthChart(withNumbers, rom),
+    ...depthChart(withNumbers),
     prestige: st.prestige ?? seasonPrestige(d, prev),
     imports: [],
     events: st.events,

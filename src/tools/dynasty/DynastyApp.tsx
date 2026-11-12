@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { openRom } from '../../core/romfile';
 import { fetchCfb27Latest, CFB27_LATEST } from '../../core/cfb27Latest';
-import { createDynasty, importSave, type Dynasty } from '../../core/dynasty/model';
+import { createDynasty, DYNASTY_FILE, importSave, OLD_DYNASTY, type Dynasty } from '../../core/dynasty/model';
+import { applyEdits, editLock, playersCsv, readPlayersCsv, type CsvImport } from '../../core/dynasty/edit';
 import { seasonView, weekName } from '../../core/dynasty/derive';
 import { teamArt } from '../../core/dynasty/art';
 import {
@@ -12,7 +13,7 @@ import {
 } from '../../core/dynasty/storage';
 import { Ctx, href, TeamMark, type DynCtx } from './ui';
 import { History, Home, Leaders, Player, Rankings, Scores, Standings, Team, Teams } from './pages';
-import { Offseason, getTemplates, type OffseasonActions } from './OffseasonPage';
+import { Offseason, type OffseasonActions } from './OffseasonPage';
 import { seasonRom } from '../../core/dynasty/offseason';
 import { canReplaceBench, randomBench } from '../../core/dynasty/bench';
 import './dynasty.css';
@@ -98,6 +99,11 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
   const open = useCallback(async (id: string) => {
     const dyn = await loadDynasty(id);
     if (!dyn) return false;
+    // Earlier test versions (CFB 27 ratings) can't be opened: delete them on the Manage page.
+    if ((dyn.version ?? 1) < DYNASTY_FILE.version) {
+      setNote({ kind: 'error', text: `${dyn.name}: ${OLD_DYNASTY}` });
+      return false;
+    }
     setD(dyn);
     setArt(await loadArt(id));
     setCurrent(id);
@@ -213,11 +219,11 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       if (d) await commit({ ...d, userTeams: teams });
     }),
     downloadRom: (year) => dlRef.current(year),
+    commit,
+    download: (name, text, type) => download(name, text, type),
     randomBench: () => run('Making random backups…', async () => {
       if (!d) return;
-      const rom = await getRom();
-      if (!rom) throw new Error('Making backups needs your ROM: choose it to go on.');
-      await commit(randomBench(d, rom, await getTemplates(d)));
+      await commit(randomBench(d));
       setNote({ kind: 'ok', text: 'Every team has new, generated backups. The Active Rosters are the same.' });
     }),
   };
@@ -311,6 +317,8 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
 
 interface ManageActions {
   create: (name: string, rom: File) => void;
+  commit: (next: Dynasty) => Promise<void>;
+  download: (name: string, text: string, type?: string) => void;
   downloadRom: (year: number) => void;
   importSave: (f: File, allowOlder: boolean) => void;
   addArt: (rom: File) => void;
@@ -456,6 +464,8 @@ function Manage({ d, art, list, busy, note, actions }: {
 
           {canReplaceBench(d) && <BenchChoice onRandom={actions.randomBench} busy={!!busy} />}
 
+          <PlayersCsv d={d} actions={actions} />
+
           <h3>Team logos</h3>
           {art ? (
             <p>Team logos come from your ROM and stay in this browser. They aren't in the dynasty file.</p>
@@ -524,5 +534,62 @@ function Manage({ d, art, list, busy, note, actions }: {
         <FileButton label="Open dynasty file" accept=".json" disabled={!!busy} onFile={actions.importFile} />
       </section>
     </div>
+  );
+}
+
+/** Players CSV (edit.ts): download every player, import an edited file with a preview first. */
+function PlayersCsv({ d, actions }: { d: Dynasty; actions: ManageActions }) {
+  const [pending, setPending] = useState<CsvImport | null>(null);
+  const [msg, setMsg] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
+  const lock = editLock(d);
+  const slug = d.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'dynasty';
+  const year = d.offseason ? d.offseason.year + 1 : d.seasons[d.seasons.length - 1].year;
+  return (
+    <>
+      <h3>Players (CSV)</h3>
+      <p>
+        Every player with his Bill Walsh '95 ratings as the game shows them (0-100), to edit in a spreadsheet. Import the file again:
+        rows with an ID change that player, rows without one add a player, a cleared Team releases him. You see every change before it's applied.
+      </p>
+      <div className="dy-row">
+        <button type="button" className="dy-button dy-quiet" onClick={() => actions.download(`${slug}-players-${year}.csv`, playersCsv(d), 'text/csv')}>Download players CSV</button>
+        {lock ? <span className="dy-dim dy-small">{lock}</span> : (
+          <FileButton label="Import players CSV" accept=".csv,text/csv" onFile={async (f) => {
+            setMsg(null);
+            setPending(readPlayersCsv(d, new TextDecoder().decode(await readFile(f))));
+          }} />
+        )}
+      </div>
+      {pending && (
+        <div className="dy-note">
+          {pending.problems.length > 0 && (
+            <>
+              <p><strong>{pending.problems.length} {pending.problems.length === 1 ? 'problem' : 'problems'}</strong>: fix the file and import it again.</p>
+              <ul className="dy-small">{pending.problems.slice(0, 20).map((m) => <li key={m}>{m}</li>)}</ul>
+            </>
+          )}
+          {pending.problems.length === 0 && (
+            pending.changes.length ? (
+              <>
+                <p><strong>{pending.changes.length} {pending.changes.length === 1 ? 'player changes' : 'players change'}</strong>:</p>
+                <ul className="dy-small dy-changes">{pending.changes.slice(0, 200).map((m, i) => <li key={i}>{m}</li>)}</ul>
+                {pending.changes.length > 200 && <p className="dy-small dy-dim">and {pending.changes.length - 200} more.</p>}
+                <div className="dy-row">
+                  <button type="button" className="dy-button" onClick={async () => {
+                    try {
+                      await actions.commit(applyEdits(d, pending.edits, pending.adds));
+                      setMsg({ kind: 'ok', text: `${pending.changes.length} ${pending.changes.length === 1 ? 'player' : 'players'} changed.${d.offseason ? '' : ' Download the season ROM again before you start the New Season.'}` });
+                      setPending(null);
+                    } catch (e) { setMsg({ kind: 'error', text: (e as Error).message }); }
+                  }}>Apply the changes</button>
+                  <button type="button" className="dy-button dy-quiet" onClick={() => setPending(null)}>Cancel</button>
+                </div>
+              </>
+            ) : <p>Nothing in the file differs from the dynasty.</p>
+          )}
+        </div>
+      )}
+      {msg && <p className={`dy-note dy-note-${msg.kind}`}>{msg.text}</p>}
+    </>
   );
 }

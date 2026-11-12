@@ -5,7 +5,6 @@ import {
   applyCuts, cancelOffseason, classRankings, cutProblems, finishOffseason, keepValue, recruitTemplates, runPortal, runSigningDay,
   seasonDone, startOffseason, ROSTER_LIMIT, type RecruitTemplates,
 } from '../../core/dynasty/offseason';
-import { fetchCfb27Latest } from '../../core/cfb27Latest';
 import { WEEKS, openRecruiting } from '../../core/dynasty/recruiting';
 import { Recruiting } from './RecruitingPage';
 import { playerName } from '../../core/dynasty/derive';
@@ -25,9 +24,8 @@ export interface OffseasonActions {
 const STEPS = ['Departures', 'Transfer portal', 'Signing day and cuts', 'Next season'] as const;
 const STEP_OF = { portal: 0, recruiting: 1, signing: 1, cuts: 2, ready: 3 } as const;
 
-let templates: Promise<RecruitTemplates> | null = null;
-export const getTemplates = (d: Dynasty) =>
-  (templates ??= fetchCfb27Latest().then((b) => recruitTemplates(d, new TextDecoder().decode(b))).catch((e) => { templates = null; throw e; }));
+/** What new players are made from (the dynasty's own players). */
+export const getTemplates = async (d: Dynasty): Promise<RecruitTemplates> => recruitTemplates(d);
 
 const stars = (n: number) => (n ? `${n}★` : 'Walk-on');
 
@@ -172,16 +170,14 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
             </div>
           ))}
           <p>
-            Next: every team's depth chart for {st.year + 1} (its 32 players in Bill Walsh '95, their game ratings and the team OVRs). Then you can download
+            Next: every team's depth chart for {st.year + 1} (its 32 players in Bill Walsh '95 and their backups, the best OVR at each spot, and the team OVRs). Then you can download
             the {st.year + 1} ROM.
           </p>
           <Next
             busy={busy}
             label={`Start the ${st.year + 1} season`}
             onClick={() => actions.run('Setting the depth charts…', async () => {
-              const rom = await actions.getRom();
-              if (!rom) throw new Error('The depth chart needs your ROM: choose it to go on.');
-              await actions.commit(finishOffseason(d, rom), `The ${st.year + 1} season is ready. Download its ROM below.`);
+              await actions.commit(finishOffseason(d), `The ${st.year + 1} season is ready. Download its ROM below.`);
             })}
           />
         </>

@@ -7,11 +7,13 @@ import {
 } from '../../core/dynasty/derive';
 import { offseasonStories, stories } from '../../core/dynasty/news';
 import { OffseasonSide, SeasonMore, SeasonSide } from './HomeSide';
+import { AddPlayer, EditPlayer } from './EditPlayer';
 import { prestigeStars } from '../../core/dynasty/offseason';
 import { MAX_PRESTIGE } from '../../core/dynasty/prestige';
 import type { SaveGame } from '../../core/dynasty/save';
 import type { DPlayer } from '../../core/dynasty/model';
-import { nibbleToRating, nibbleToWeight } from '../../core/rosterLayouts';
+import { nibbleToRating, nibbleToWeight, type Attr } from '../../core/rosterLayouts';
+import { progressOf } from '../../core/dynasty/ratings';
 import { backupLabel, isBackup, lineupLock, moveToSpot, slotKind, slotOfSpot, spotLabel, spotsFor, SPOTS } from '../../core/dynasty/lineup';
 import { playerOvr, roleOfSlot } from '../../core/dynasty/ovr';
 import { Empty, StoryArt, TeamLink, TeamMark, href, heightText, hometownText, inkColor, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
@@ -491,6 +493,7 @@ export function Team({ team }: { team: number }) {
       <h3 className="dy-sub">Backups</h3>
       <p className="dy-dim dy-small">{bench.length + reserves.length} players who aren't on the Active Roster this season. Each backs up a spot and can move up when it opens.</p>
       <RosterTable rows={[...bench, ...reserves.map((p) => ({ p, spot: null, label: p.pos, ovr: null }))]} edit={edit} />
+      <AddPlayer team={team} />
     </section>
   );
 }
@@ -596,8 +599,9 @@ export function Player({ id }: { id: number }) {
           <StatTables lines={s.lines} />
         </div>
       ))}
+      {p.status === 'active' && team !== null && <div className="dy-edit-wrap"><EditPlayer key={p.id} p={p} /></div>}
       <h3 className="dy-sub">Bill Walsh '95 ratings</h3>
-      {shownSlots.length ? shownSlots.map((slot) => <BwRatings key={slot} team={team!} slot={slot} name={playerName(p)} bench={onBench} />) : (
+      {shownSlots.length ? shownSlots.map((slot) => <BwRatings key={slot} team={team!} slot={slot} name={playerName(p)} bench={onBench} player={p} />) : (
         <p className="dy-dim">
           {v.season.bw ? `He isn't one of ${team !== null ? d.teams[team].school : 'his team'}'s 32 players in Bill Walsh '95 this season, so he has no ratings.` : 'Start this dynasty again to see the ratings (it was made before the app kept them).'}
         </p>
@@ -620,7 +624,7 @@ const ordinal = (n: number) => {
   return `${n}${t >= 11 && t <= 13 ? 'th' : u === 1 ? 'st' : u === 2 ? 'nd' : u === 3 ? 'rd' : 'th'}`;
 };
 
-function BwRatings({ team, slot, name, bench = false }: { team: number; slot: number; name: string; bench?: boolean }) {
+function BwRatings({ team, slot, name, bench = false, player }: { team: number; slot: number; name: string; bench?: boolean; player?: DPlayer }) {
   const { d, v } = useDyn();
   // A bench player is rated on the game's scale too (what he'd have if he played), against the players in the game.
   const b = (bench ? v.season.benchBw : v.season.bw)![team][slot]!;
@@ -650,6 +654,13 @@ function BwRatings({ team, slot, name, bench = false }: { team: number; slot: nu
   const poly = (f: (i: number) => number) => axes.map((x, k) => pt(k, (f(x.i) / 15) * R).map((z) => z.toFixed(1)).join(',')).join(' ');
   // A kicker's or punter's Quick is his kick distance in the game.
   const label = (a: string) => (b.group === 'KP' && a === 'Quickness' ? 'Kick distance' : a);
+  // Progress toward the next step from his own numbers (ratings.ts), when they're the slot's step.
+  const growth = (a: Attr, step: number) => {
+    const value = player?.ratings[a];
+    if (value === undefined || a === 'Weight' || step >= 15) return 0;
+    const pr = progressOf(value);
+    return pr.step === step ? pr.frac : 0;
+  };
   const tiles = b.attrs.map((a, i) => ({ a, i })).sort((x, y) => Number(x.a === 'Weight' || flat[x.i]) - Number(y.a === 'Weight' || flat[y.i]) || rank[x.i] - rank[y.i]);
 
   return (
@@ -681,9 +692,16 @@ function BwRatings({ team, slot, name, bench = false }: { team: number; slot: nu
               <div key={a} className="dy-tile">
                 <div className="dy-tile-top"><span>{label(a)}</span><strong>{shown}</strong></div>
                 <div className="dy-pips" role="img" aria-label={`Step ${b.steps[i]} of 15; average ${one} ${avg[i].toFixed(1)}`}>
-                  {Array.from({ length: 15 }, (_, k) => <span key={k} style={k < b.steps[i] ? { background: color } : undefined} />)}
+                  {Array.from({ length: 15 }, (_, k) => {
+                    // His progress toward the next step: that pip partly filled.
+                    const part = k === b.steps[i] ? growth(a, b.steps[i]) : 0;
+                    return <span key={k} style={k < b.steps[i] ? { background: color } : part > 0 ? { background: `linear-gradient(90deg, ${color} ${Math.round(part * 100)}%, transparent ${Math.round(part * 100)}%)` } : undefined} />;
+                  })}
                   <i style={{ left: `calc(${(avg[i] / 15) * 100}% - 1px)` }} title={`Average ${one}`} />
                 </div>
+                {!weight && growth(a, b.steps[i]) > 0 && (
+                  <div className="dy-tile-note">{Math.round(growth(a, b.steps[i]) * 100)}% of the way to {nibbleToRating(b.steps[i] + 1)}</div>
+                )}
                 <div className="dy-tile-note">
                   {flat[i] ? `The same for all ${n} ${who}` : weight ? `Heavier than ${Math.round((heavier[i] / Math.max(1, n - self)) * 100)}% of ${who}` : tied[i] > 0 ? <><strong>Tied for {ordinal(rank[i])}</strong> of {n} {who}, with {tied[i]} {tied[i] === 1 ? 'other' : 'others'}</> : <><strong>{ordinal(rank[i])}</strong> of {n} {who}</>}
                 </div>

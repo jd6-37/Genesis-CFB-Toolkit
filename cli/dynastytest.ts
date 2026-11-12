@@ -21,6 +21,9 @@ import * as Rec from '../src/core/dynasty/recruiting';
 import { randomBench } from '../src/core/dynasty/bench';
 import { gameText, dynastyAreaProblem, dynastyHeaderValid, dynastyRomId, DYN_AREA, DYN_END, hasDynastyHooks, readStamp } from '../src/core/dynasty/dynastyArea';
 import { simFromOvr } from '../src/core/teamRatings';
+import { parseCsv } from '../src/core/rosterSheet';
+import { bwSlotOf, ovrOf, progressOf, stepOf } from '../src/core/dynasty/ratings';
+import { applyEdits, playersCsv, readPlayersCsv } from '../src/core/dynasty/edit';
 import { blackShare, MAX_FIRST, MAX_LAST, SKIN_TONES } from '../src/core/dynasty/appearance';
 import { backupLabel, lineupLock, moveToSpot, SPOTS, spotLabel, spotsFor } from '../src/core/dynasty/lineup';
 import { nextPrestige, tierOfRank } from '../src/core/dynasty/prestige';
@@ -102,8 +105,21 @@ const took = Date.now() - t0;
 assert.equal(d0.teams.length, 138);
 assert.ok(d0.players.length > 8000 && d0.players.length <= 138 * 64, 'players: the 32 and the bench of every team');
 assert.ok(d0.players.every((p) => first0Has(p.id)), 'every player is in the game or on the bench');
-assert.equal(d0.attrKeys[0], 'Speed');
-assert.ok(d0.players.every((p) => p.attrs.length === d0.attrKeys.length && CLASSES.includes(p.cls) && p.skin >= 0 && p.skin < 5));
+assert.ok(d0.players.every((p) => CLASSES.includes(p.cls) && p.skin >= 0 && p.skin < 4 && (p.ratings.Weight ?? 0) >= 140 && p.ovr === ovrOf(p)));
+// Every player's own ratings are his converted steps, as the game shows them (the first season = the ROM).
+for (const [grid, rated] of [[first0().slots, first0().bw], [first0().bench, first0().benchBw]] as const) {
+  grid!.forEach((sl, t) => sl.forEach((id, slot) => {
+    const b = rated![t][slot];
+    if (!id || !b) return;
+    const spots = first0().slots[t].filter((x) => x === id).length + (first0().bench?.[t].filter((x) => x === id).length ?? 0);
+    if (spots > 1) return; // a kicker who also punts keeps the kicker's ratings (the season keeps both slots' steps)
+    assert.deepEqual(bwSlotOf(d0.players[id - 1], b).steps, b.steps, `team ${t} slot ${slot}`);
+  }));
+}
+function first0() { return d0.seasons[0]; }
+// Linemen and linebackers also have the related group's rating (lineup moves DE/OLB).
+assert.ok(d0.players.filter((p) => ['LE', 'RE', 'DT'].includes(p.pos)).every((p) => p.ratings.Quickness !== undefined));
+assert.ok(d0.players.filter((p) => ['LOLB', 'ROLB', 'MLB'].includes(p.pos)).every((p) => p.ratings.Power !== undefined));
 assert.equal(new Set(d0.players.map((p) => p.id)).size, d0.players.length);
 const first = d0.seasons[0];
 function first0Has(id: number) { return d0.seasons[0].slots.some((sl) => sl.includes(id)) || !!d0.seasons[0].bench?.some((sl) => sl.includes(id)); }
@@ -141,12 +157,14 @@ first.teamOvr!.forEach((r, t) => assert.deepEqual(r, readRating(rom, t)));
 // Player OVRs from the game ratings: every formula's shares add up to 100, and the OVRs land near CFB 27's.
 for (const f of Object.values(OVR_FORMULAS)) assert.equal(Object.values(f.weights).reduce((a, b) => a + b!, 0), 100);
 const misses = new Map<string, number[]>();
+const sheet27 = parseCsv(csv);
+const cfbOverall = new Map(sheet27.rows.map((r) => [Number(r[sheet27.headers.indexOf('EA Player ID')]), Number(r[sheet27.headers.indexOf('Overall')])]));
 first.slots.forEach((sl, t) => sl.forEach((id, slot) => {
   if (id === null) return;
   const o = playerOvr(slot, first.bw![t][slot]!);
   assert.ok(o >= 0 && o <= 99);
   const role = roleOfSlot(slot);
-  misses.set(role, [...(misses.get(role) ?? []), Math.abs(o - d0.players[id - 1].ovr)]);
+  misses.set(role, [...(misses.get(role) ?? []), Math.abs(o - cfbOverall.get(d0.players[id - 1].srcId!)!)]);
 }));
 const allMiss = [...misses.values()].flat();
 const mean = (a: number[]) => a.reduce((x, y) => x + y, 0) / a.length;
@@ -258,7 +276,7 @@ const o2 = Off.runPortal(o1);
 const moves = o2.offseason!.events.filter((e) => e.kind === 'transfer');
 assert.equal(moves.length, 0, 'nobody transfers after one season on the bench');
 for (const m of moves) if (m.kind === 'transfer') assert.equal(o2.players[m.player - 1].team, m.to);
-const tpl = Off.recruitTemplates(o2, csv);
+const tpl = Off.recruitTemplates(o2);
 const o3 = Off.runSigningDay(o2, tpl);
 const signed = o3.offseason!.events.filter((e) => e.kind === 'signed');
 for (const t of o3.teams) {
@@ -276,7 +294,7 @@ for (const t of o4.teams) {
   assert.ok(roster.length >= Off.ROSTER_MIN && roster.length <= Off.ROSTER_LIMIT, `${t.school} has ${roster.length}`);
   for (const pos of Off.POSITIONS) assert.ok(roster.filter((p) => p.pos === pos).length >= Off.POS_MIN[pos], `${t.school} ${pos}`);
 }
-const o5 = Off.finishOffseason(o4, rom);
+const o5 = Off.finishOffseason(o4);
 const next = o5.seasons[1];
 assert.deepEqual(next.prestige, o1.offseason!.prestige, 'the new season has the new stars');
 assert.equal(o5.offseason, undefined);
@@ -308,7 +326,7 @@ const f3 = Rec.finishRecruiting(f2, tpl);
 const fSigned = f3.offseason!.events.filter((e) => e.kind === 'signed');
 for (const t of f3.teams) assert.ok(fSigned.filter((e) => e.kind === 'signed' && e.team === t.index).length <= rsEnd.spots[t.index]);
 assert.ok(f3.players.filter((p) => rsEnd.prospects.some((q) => q.id === p.id)).every((p) => p.status === 'transferred' ? p.team === null : p.team !== null), 'portal players moved or left');
-const f5 = Off.finishOffseason(Off.applyCuts(f3, {}, tpl), rom);
+const f5 = Off.finishOffseason(Off.applyCuts(f3, {}, tpl));
 assert.equal(f5.seasons[1].slots.flat().filter((x) => x !== null).length, 138 * 32);
 ok(`full recruiting: ${rs0.prospects.length} prospects, ${rsEnd.prospects.filter((p) => p.committed !== null).length} committed in ${Rec.WEEKS} weeks, ${fSigned.length} signed; ${user === undefined ? '' : `${f3.teams[user].school} landed ${targets.filter((t) => rsEnd.prospects.find((p) => p.id === t.id)!.committed === user).length} of its 10 targets`}`);
 
@@ -336,11 +354,11 @@ const isRomOwn = (out: Uint8Array) => {
 };
 
 // A random bench for the first season: the 32 stay (the ROM is unchanged), every slot gets a backup.
-const rb = randomBench(d0, rom, tpl, 5);
+const rb = randomBench(d0, 5);
 assert.ok(isRomOwn(Off.seasonRom(rb, rb.seasons[0], rom)));
 assert.equal(rb.seasons[0].bench!.flat().filter((x) => x !== null).length, 138 * 32);
 assert.deepEqual(rb.seasons[0].slots.map((sl) => sl.map((id) => (id ? rb.players[id - 1].srcId : null))), first.slots.map((sl) => sl.map((id) => (id ? d0.players[id - 1].srcId : null))));
-assert.throws(() => randomBench(o5, rom, tpl), /first season/);
+assert.throws(() => randomBench(o5), /first season/);
 ok('random bench for the first season');
 
 // The season's rosters in the ROM: the first season's are the ROM's own; the next one reads back.
@@ -419,6 +437,48 @@ ok('a new season refuses the last season\'s save');
   assert.ok(tones.every((x) => x > recruits.length * 0.1), tones.join(' '));
   const sample = recruits.slice(0, 6).map((p) => `${p.first} ${p.last} (${p.pos}, ${SKIN_TONES[p.skin].label})`);
   ok(`names and skin tones: shares by position, names lean the tone; ${recruits.length} recruits, e.g. ${sample.join(', ')}`);
+}
+
+// ---- the game's ratings as the truth: steps, progress, development, editing, CSV
+{
+  assert.deepEqual([stepOf(0), stepOf(85.9), stepOf(86), stepOf(92.9), stepOf(93), stepOf(100)], [0, 12, 13, 13, 14, 15]);
+  assert.ok(Math.abs(progressOf(89.5).frac - 0.5) < 0.1 && progressOf(100).next === null);
+  // After an offseason most returning players are part of the way to a next step.
+  const grown = o5.players.filter((p) => p.status === 'active' && p.srcId !== undefined);
+  const between = grown.filter((p) => Object.entries(p.ratings).some(([a, v]) => a !== 'Weight' && progressOf(v!).frac > 0)).length;
+  assert.ok(between / grown.length > 0.5, `${between} of ${grown.length} players between steps`);
+  // The depth chart: every slot of every team, the starters at least as good as their backups (same position).
+  for (const sl of next.slots) assert.ok(sl.every((x) => x !== null));
+  // Editing before the first import: the season follows (ratings, team OVR, ROM out of date).
+  const T = 5, qb = d0.seasons[0].slots[T][0]!;
+  const e1 = applyEdits(d0, new Map([[qb, { ratings: { Awareness: 100, Quickness: 100 }, first: 'Edited' }]]));
+  assert.equal(e1.players[qb - 1].first, 'Edited');
+  assert.equal(e1.seasons[0].bw![T][0]!.steps[e1.seasons[0].bw![T][0]!.attrs.indexOf('Awareness')], 15);
+  assert.ok(e1.seasons[0].teamOvr![T].off >= d0.seasons[0].teamOvr![T].off && e1.seasons[0].lineupEdited);
+  assert.throws(() => applyEdits(importSave(d0, srm).dynasty, new Map([[qb, { first: 'X' }]])), /offseason/);
+  // Releasing a starter: the team's lineup is set again, every slot filled.
+  const e2 = applyEdits(d0, new Map([[qb, { team: null }]]));
+  assert.ok(!e2.seasons[0].slots[T].includes(qb) && e2.seasons[0].slots[T].every((x) => x !== null));
+  // CSV: the export reads back without changes; edited rows change exactly what was edited; new rows add players.
+  const csvText = playersCsv(d0);
+  const same = readPlayersCsv(d0, csvText);
+  assert.equal(same.problems.length, 0, same.problems.join(' '));
+  assert.equal(same.changes.length, 0, same.changes.slice(0, 3).join(' | '));
+  const lines = csvText.split(/\r?\n/);
+  const hdr = lines[0].split(',');
+  const row = lines[1].split(',');
+  row[hdr.indexOf('Speed')] = '99';
+  row[hdr.indexOf('Last Name')] = 'Csvman';
+  const add = hdr.map((h) => ({ 'Team': d0.teams[3].school, 'First Name': 'New', 'Last Name': 'Guy', 'Position': 'CB', 'Speed': '90' } as Record<string, string>)[h] ?? '');
+  const imp = readPlayersCsv(d0, [lines[0], row.join(','), add.join(',')].join('\n'));
+  assert.equal(imp.problems.length, 0, imp.problems.join(' '));
+  assert.equal(imp.changes.length, 2);
+  const e3 = applyEdits(d0, imp.edits, imp.adds);
+  const edited = e3.players[Number(row[0]) - 1];
+  assert.equal(edited.last, 'Csvman'); assert.equal(edited.ratings.Speed, 99);
+  assert.equal(e3.players.length, d0.players.length + 1);
+  assert.ok(readPlayersCsv(d0, [lines[0], row.map((x, i) => (hdr[i] === 'Position' ? 'XX' : x)).join(',')].join('\n')).problems.length === 1);
+  ok(`ratings: steps and progress, ${Math.round((between / grown.length) * 100)}% of returning players between steps after an offseason; editing and the players CSV (${lines.length - 1} rows)`);
 }
 
 // ---- the lineup editor

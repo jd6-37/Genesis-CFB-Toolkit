@@ -354,3 +354,14 @@
 @media (min-width: 600px) { .dy-front-more { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; } }
 @media (min-width: 900px) { .dy-front-more { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; } }
 .dy-side-games li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+
+/* Player editor (mobile first: one column, two from 600 px, three from 900 px). */
+.dy-edit-wrap { margin: 16px 0; }
+.dy-edit { border: 1px solid var(--rule); border-radius: 8px; padding: 12px 14px; }
+.dy-edit .dy-sub { margin-top: 4px; }
+.dy-edit-grid { display: grid; gap: 10px 16px; }
+.dy-edit-grid label { display: flex; flex-direction: column; gap: 4px; font-size: 14px; font-weight: 600; }
+.dy-edit-grid input, .dy-edit-grid select { font: inherit; font-weight: 400; padding: 8px; min-height: 40px; border: 1px solid var(--rule); border-radius: 4px; }
+.dy-changes { max-height: 320px; overflow: auto; padding-left: 18px; }
+@media (min-width: 600px) { .dy-edit-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 900px) { .dy-edit-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
