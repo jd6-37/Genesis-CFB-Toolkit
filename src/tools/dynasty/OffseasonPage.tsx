@@ -2,8 +2,8 @@
 import { useMemo, useState } from 'react';
 import type { DPlayer, Dynasty, OffseasonEvent } from '../../core/dynasty/model';
 import {
-  applyCuts, cancelOffseason, classRankings, cutProblems, finishOffseason, keepValue, recruitTemplates, runPortal, runSigningDay,
-  seasonDone, startOffseason, ROSTER_LIMIT, type RecruitTemplates,
+  applyCuts, cancelOffseason, classRankings, cutOrder, cutProblems, finishOffseason, recruitTemplates, runPortal, runSigningDay,
+  seasonDone, startOffseason, GROUP_MIN, ROSTER_LIMIT, type RecruitTemplates,
 } from '../../core/dynasty/offseason';
 import { WEEKS, openRecruiting } from '../../core/dynasty/recruiting';
 import { simCuts, simOffseason } from '../../core/dynasty/sim';
@@ -232,7 +232,7 @@ function SigningAndCuts({ actions, busy }: { actions: OffseasonActions; busy: st
   const [cuts, setCuts] = useState<Record<number, number[]>>(() => ({ ...(st.suggestedCuts ?? {}) }));
   const [err, setErr] = useState<string | null>(null);
   const rosters = useMemo(
-    () => Object.fromEntries(d.userTeams.map((u) => [u, d.players.filter((p) => p.team === u && p.status === 'active').sort((a, b) => keepValue(a) - keepValue(b))])),
+    () => Object.fromEntries(d.userTeams.map((u) => [u, cutOrder(d.players.filter((p) => p.team === u && p.status === 'active'))])),
     [d],
   );
   const toggle = (u: number, id: number) => {
@@ -265,9 +265,13 @@ function SigningAndCuts({ actions, busy }: { actions: OffseasonActions; busy: st
       </ol>
 
       <h3 className="dy-sub">Cuts</h3>
-      <p>Every team cuts to {ROSTER_LIMIT}. The computer cuts for the other teams; check the players you want to cut. The suggestion is checked already (lowest value first: rating, room to grow, years left).</p>
+      <p>
+        Every team cuts to {ROSTER_LIMIT}. The computer cuts for the other teams the same way it suggests yours, which are checked already: next season's
+        Active Roster (★) stays, and backups go first by what they'll be worth when they could start (expected OVR the next two seasons, so seniors
+        go first). Keep at least {GROUP_MIN.map((g) => `${g.min} ${g.name}`).join(', ')}, and a player for every Active Roster spot.
+      </p>
       {d.userTeams.map((u) => {
-        const roster = rosters[u];
+        const { order: roster, active } = rosters[u];
         const mine = cuts[u] ?? [];
         const over = roster.length - ROSTER_LIMIT;
         const left = over - mine.length;
@@ -282,7 +286,7 @@ function SigningAndCuts({ actions, busy }: { actions: OffseasonActions; busy: st
                     <li key={p.id}>
                       <label>
                         <input type="checkbox" checked={mine.includes(p.id)} onChange={() => toggle(u, p.id)} />
-                        <span>{playerName(p)}</span>
+                        <span>{playerName(p)}{active.has(p.id) && <span className="dy-dim" title="Active Roster next season"> ★</span>}</span>
                         <span className="dy-dim">{p.pos}</span>
                         <span className="dy-dim">{p.cls}</span>
                         <span className="dy-strong">{p.ovr}</span>

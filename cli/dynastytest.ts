@@ -289,11 +289,30 @@ assert.ok(Off.classRankings(o3.offseason!.events).length > 130);
 const user = o3.userTeams[0];
 const sug = o3.offseason!.suggestedCuts![user];
 assert.deepEqual(Off.cutProblems(o3, user, sug), []);
+// Smarter cuts: next season's Active Roster stays; backups by expected OVR the next two seasons (seniors first).
+const fr = { ...act(o3)[0], cls: 'FR' as const, ovr: 75, pot: 82 }, sr = { ...act(o3)[0], cls: 'SR' as const, ovr: 76, pot: 76 };
+assert.ok(Off.keepValue(fr) > Off.keepValue(sr), 'a 75 FR outranks a 76 SR backup');
+let checkedCuts = 0;
+for (const t of o3.teams) {
+  const roster = act(o3).filter((p) => p.team === t.index);
+  if (roster.length <= Off.ROSTER_LIMIT) continue;
+  const cuts = Off.suggestCuts(o3, t.index);
+  const { active: starters } = Off.cutOrder(roster);
+  assert.equal(cuts.length, roster.length - Off.ROSTER_LIMIT, `${t.school} cuts to the limit`);
+  assert.ok(cuts.every((id) => !starters.has(id)), `${t.school} keeps its Active Roster`);
+  assert.deepEqual(Off.cutProblems(o3, t.index, cuts), []);
+  checkedCuts++;
+}
+assert.ok(checkedCuts > 0, 'some teams had to cut');
+const qbs = act(o3).filter((p) => p.team === user && p.pos === 'QB').map((p) => p.id);
+assert.ok(Off.cutProblems(o3, user, qbs).some((m) => /QB/.test(m)), 'cuts below the minimums are refused');
+ok(`smarter cuts: ${checkedCuts} teams over ${Off.ROSTER_LIMIT} keep their Active Rosters, cut backups by future value, stay above the minimums`);
 const o4 = Off.applyCuts(o3, {}, tpl);
 for (const t of o4.teams) {
   const roster = act(o4).filter((p) => p.team === t.index);
   assert.ok(roster.length >= Off.ROSTER_MIN && roster.length <= Off.ROSTER_LIMIT, `${t.school} has ${roster.length}`);
   for (const pos of Off.POSITIONS) assert.ok(roster.filter((p) => p.pos === pos).length >= Off.POS_MIN[pos], `${t.school} ${pos}`);
+  for (const g of Off.GROUP_MIN) assert.ok(roster.filter((p) => g.positions.includes(p.pos)).length >= g.min, `${t.school} ${g.name}`);
 }
 const o5 = Off.finishOffseason(o4);
 const next = o5.seasons[1];

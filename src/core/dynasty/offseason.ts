@@ -24,7 +24,7 @@ import { OVR_FORMULAS } from './ovr';
 import { readRating } from '../teamRatings';
 import { DYNASTY_EDITION, dynastyAreaProblem, dynastyRomId, writeDynastyArea, type DynastyName } from './dynastyArea';
 import { TEAM_SIZE } from './rosters';
-import { depthChart } from './depth';
+import { depthChart, teamDepth } from './depth';
 import { ovrOf, roleOfPos, type Ratings } from './ratings';
 import { blackShare, firstOdds, lastOdds, MAX_FIRST, MAX_LAST, namePool, pickName, skinFor, type NamePool } from './appearance';
 
@@ -42,6 +42,24 @@ export const POS_TARGET: Record<string, number> = {
 /** The fewest a team may have at each position: one for each of its slots (cuts stop there; walk-ons fill up to it). */
 export const POS_MIN: Record<string, number> = Object.fromEntries(Object.entries(POS_TARGET).map(([p, n]) => [p, n / 2]));
 export const POSITIONS = Object.keys(POS_TARGET);
+/**
+ * Roster minimums by position group (user, 2026-11-12: "do we really need to require the user have 8
+ * CBs? Maybe we set min per position"): every Active Roster spot plus a backup (two on the line); the
+ * rest of the 64 is the team's choice. Cuts never go below these (nor below POS_MIN at a position).
+ */
+export const GROUP_MIN: { name: string; positions: string[]; min: number }[] = [
+  { name: 'QBs', positions: ['QB'], min: 2 },
+  { name: 'HBs and FBs', positions: ['HB', 'FB'], min: 4 },
+  { name: 'WRs', positions: ['WR'], min: 5 },
+  { name: 'TEs', positions: ['TE'], min: 3 },
+  { name: 'offensive linemen', positions: ['LT', 'LG', 'C', 'RG', 'RT'], min: 7 },
+  { name: 'defensive linemen', positions: ['LE', 'RE', 'DT'], min: 5 },
+  { name: 'linebackers', positions: ['LOLB', 'MLB', 'ROLB'], min: 5 },
+  { name: 'CBs', positions: ['CB'], min: 5 },
+  { name: 'safeties', positions: ['FS', 'SS'], min: 4 },
+  { name: 'kickers and punters', positions: ['K', 'P'], min: 2 },
+];
+const groupOf = (pos: string) => GROUP_MIN.find((g) => g.positions.includes(pos));
 
 export type OffseasonStep = 'portal' | 'recruiting' | 'signing' | 'cuts' | 'ready';
 
@@ -406,30 +424,76 @@ export function fillMinimums(d: Dynasty, players: DPlayer[], tpl: RecruitTemplat
         events.push({ kind: 'walkon', player: w.id, team: t.index, ovr: w.ovr });
       }
     }
+    // Then each group up to its minimum, at the group's position with the fewest players for its slots.
+    for (const g of GROUP_MIN) {
+      const c = countBy(out, t.index);
+      for (let k = g.positions.reduce((a, pos) => a + (c[pos] ?? 0), 0); k < g.min; k++) {
+        const pos = g.positions.slice().sort((a, b) => (c[a] ?? 0) / POS_MIN[a] - (c[b] ?? 0) / POS_MIN[b])[0];
+        const w = makeRecruit({ ...d, players: out }, tpl, r, nextId++, t.index, pos, 0, year);
+        out = [...out, w];
+        c[pos] = (c[pos] ?? 0) + 1;
+        events.push({ kind: 'walkon', player: w.id, team: t.index, ovr: w.ovr });
+      }
+    }
   }
   return out;
 }
 
-/** What a player is worth to his team when it has to cut: rating now, room to grow, years left. */
+/**
+ * What a backup is worth to his team when it has to cut (user, 2026-11-12: "I'd rather not cut a 75 OVR FR
+ * when i have a 76 OVR senior that i could cut"). Backups aren't in the game, so only the seasons he could
+ * start count: his expected OVR next season and the one after (development by class and potential). A SR
+ * or SR+ has no season left after this one: lowest of all, the better ones last.
+ */
 export function keepValue(p: DPlayer): number {
-  const yearsLeft = { FR: 3, SO: 2, JR: 1, SR: 0.5, 'SR+': 0 }[p.cls];
-  return p.ovr + 0.5 * Math.max(0, (p.pot ?? p.ovr) - p.ovr) + yearsLeft;
+  const i = CLASSES.indexOf(p.cls);
+  const left = 3 - i; // seasons after this one: FR 3, SO 2, JR 1, SR 0, SR+ -1
+  if (left <= 0) return p.ovr - 100;
+  const pot = Math.max(p.pot ?? p.ovr, p.ovr);
+  const n1 = p.ovr + (pot - p.ovr) * GROWTH_RATE[p.cls];
+  if (left === 1) return n1;
+  const n2 = n1 + (pot - n1) * GROWTH_RATE[CLASSES[i + 1]];
+  return (n1 + n2) / 2;
 }
 
-/** The players a team should cut to get to the roster limit: lowest value first, never below a position's minimum. */
+/** Players under a team's minimums if these were cut (messages; empty when fine). */
+function minimumProblems(roster: DPlayer[], cut: Set<number>): string[] {
+  const c: Record<string, number> = {};
+  for (const p of roster) if (!cut.has(p.id)) c[p.pos] = (c[p.pos] ?? 0) + 1;
+  const out: string[] = [];
+  const short = new Set<string>();
+  for (const g of GROUP_MIN) if (g.positions.reduce((a, pos) => a + (c[pos] ?? 0), 0) < g.min) { out.push(`Keep at least ${g.min} ${g.name}.`); g.positions.forEach((pos) => short.add(pos)); }
+  // A position below its Active Roster spots (said once: not again when its group is short already).
+  for (const pos of POSITIONS) if ((c[pos] ?? 0) < POS_MIN[pos] && !short.has(pos)) out.push(`Keep ${POS_MIN[pos] === 1 ? `a ${pos}` : `${POS_MIN[pos]} ${pos}s`} for the Active Roster.`);
+  return out;
+}
+
+/** The order a team would cut in: backups by value (lowest first), then the Active Roster by OVR. */
+export function cutOrder(roster: DPlayer[]): { order: DPlayer[]; active: Set<number> } {
+  const active = new Set(teamDepth(roster).slots.filter((x): x is number => x !== null));
+  const order = [
+    ...roster.filter((p) => !active.has(p.id)).sort((a, b) => keepValue(a) - keepValue(b) || a.ovr - b.ovr || b.id - a.id),
+    ...roster.filter((p) => active.has(p.id)).sort((a, b) => a.ovr - b.ovr || b.id - a.id),
+  ];
+  return { order, active };
+}
+
+/**
+ * The players a team should cut to get to the roster limit: next season's Active Roster (the depth chart
+ * the season would start with) stays; backups go lowest value first, across all positions; never below
+ * the minimums (POS_MIN, GROUP_MIN).
+ */
 export function suggestCuts(d: Dynasty, team: number): number[] {
   const roster = active(d).filter((p) => p.team === team);
   const extra = roster.length - ROSTER_LIMIT;
   if (extra <= 0) return [];
-  const counts = countBy(roster, team);
-  const out: number[] = [];
-  for (const p of roster.slice().sort((a, b) => keepValue(a) - keepValue(b) || b.id - a.id)) {
-    if (out.length >= extra) break;
-    if ((counts[p.pos] ?? 0) <= (POS_MIN[p.pos] ?? 0)) continue;
-    counts[p.pos]--;
-    out.push(p.id);
+  const cut = new Set<number>();
+  for (const p of cutOrder(roster).order) {
+    if (cut.size >= extra) break;
+    cut.add(p.id);
+    if (minimumProblems(roster, cut).length) cut.delete(p.id);
   }
-  return out;
+  return [...cut];
 }
 
 /** Why a set of cuts can't be used for a team (empty when it can). */
@@ -440,6 +504,7 @@ export function cutProblems(d: Dynasty, team: number, cuts: number[]): string[] 
   if (cuts.some((c) => !ids.has(c))) out.push('Some of the players aren\'t on the team.');
   const left = roster.length - new Set(cuts).size;
   if (left > ROSTER_LIMIT) out.push(`${left} players are still too many: cut ${left - ROSTER_LIMIT} more (the limit is ${ROSTER_LIMIT}).`);
+  out.push(...minimumProblems(roster, new Set(cuts)));
   return out;
 }
 
