@@ -258,7 +258,7 @@ function SigningAndCuts({ actions, busy }: { actions: OffseasonActions; busy: st
           return (
             <li key={c.team}>
               <TeamLink team={c.team} rank={false} />
-              <span className="dy-dim dy-small">{c.signed} signed, {mine.filter((s) => s.stars === 5).length} 5★, {mine.filter((s) => s.stars === 4).length} 4★</span>
+              <span className="dy-dim dy-small">{c.signed} signed{[5, 4].map((k) => { const n = mine.filter((s) => s.stars === k).length; return n ? <span key={k}>, <b>{n}</b> × {k}★</span> : null; })}</span>
             </li>
           );
         })}

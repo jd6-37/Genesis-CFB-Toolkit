@@ -320,6 +320,12 @@ const STAR_BAND: Record<number, [number, number]> = { 5: [0.97, 1], 4: [0.8, 0.9
 const FRESHMAN_GAP: [number, number] = [7, 13];
 /** Potential range by stars (walk-ons 0). */
 const STAR_POT: Record<number, [number, number]> = { 5: [86, 99], 4: [80, 93], 3: [72, 86], 2: [65, 79], 1: [58, 72], 0: [55, 70] };
+/**
+ * A diamond in the rough (user, 2026-11-12: "a few rare ones would be cool"): a walk-on with the potential
+ * of a top recruit. He starts as weak as any walk-on and grows fast (development is a share of his room).
+ */
+export const DIAMOND_CHANCE = 0.03;
+export const DIAMOND_POT: [number, number] = [84, 96];
 
 /** Stars for one recruit of a program with this prestige (0-1). */
 export function drawStars(r: Rand, pres: number): number {
@@ -347,7 +353,7 @@ export function makeRecruit(d: Dynasty, tpl: RecruitTemplates, r: Rand, id: numb
     ratings[a] = clamp(Math.round(v - drop + 3 * gauss(r)), 0, 100);
   }
   const ovr = ovrOf({ pos, ratings });
-  const [plo, phi] = STAR_POT[stars];
+  const [plo, phi] = stars === 0 && r() < DIAMOND_CHANCE ? DIAMOND_POT : STAR_POT[stars];
   const town = pick(r, tpl.towns);
   // White or Black by the position's share; names that fit, never a real player's full name.
   const black = r() < blackShare(pos);

@@ -581,6 +581,7 @@ export function Player({ id }: { id: number }) {
             <span>#{p.jersey} {shownSlots.length ? shownSlots.map((x) => (onBench ? backupLabel(x) : rated(x).label)).join(', ') : p.pos}</span>
             {team !== null && <span className="dy-status">{bwSlots.length ? 'Active Roster' : 'Backup'}</span>}
             <span>{p.cls}</span>
+            {p.recruit && <span title={`Signed in ${p.recruit.year}`}>{p.recruit.stars ? `${'★'.repeat(p.recruit.stars)} recruit` : 'Walk-on'} ({p.recruit.year})</span>}
             <span>{heightText(p.heightIn)}, {p.weight} lb</span>
             {team !== null && <a href={href(`team/${team}`)}>{d.teams[team].school}</a>}
             {p.hometown && <span>{hometownText(p)}</span>}

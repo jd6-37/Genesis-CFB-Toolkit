@@ -315,6 +315,11 @@ for (const t of o4.teams) {
   for (const g of Off.GROUP_MIN) assert.ok(roster.filter((p) => g.positions.includes(p.pos)).length >= g.min, `${t.school} ${g.name}`);
 }
 const o5 = Off.finishOffseason(o4);
+const walkons = o5.players.filter((p) => p.recruit?.stars === 0);
+const diamonds = walkons.filter((p) => (p.pot ?? 0) >= Off.DIAMOND_POT[0]);
+assert.ok(diamonds.length > 0 && diamonds.length < walkons.length * 0.08, `a few walk-ons are diamonds in the rough (${diamonds.length} of ${walkons.length})`);
+assert.ok(o5.players.filter((p) => p.recruit && p.recruit.stars > 0).every((p) => p.recruit!.year === o5.seasons[1].year), 'recruits keep their stars and class year');
+ok(`walk-ons: ${diamonds.length} of ${walkons.length} are diamonds in the rough; recruits keep their stars`);
 const next = o5.seasons[1];
 assert.deepEqual(next.prestige, o1.offseason!.prestige, 'the new season has the new stars');
 assert.equal(o5.offseason, undefined);
