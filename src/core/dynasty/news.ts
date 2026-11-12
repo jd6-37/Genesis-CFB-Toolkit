@@ -2,7 +2,7 @@
 // Pure functions: the same season gives the same stories.
 
 import { leaders, playerLines, playerName, seasonView, statValue, weekName, type SeasonView } from './derive';
-import type { Dynasty } from './model';
+import type { Dynasty, OffseasonEvent } from './model';
 import type { SaveGame } from './save';
 
 export interface Story {
@@ -135,4 +135,61 @@ export function stories(d: Dynasty, v: SeasonView = seasonView(d, d.seasons[d.se
   }
 
   return out.sort((a, b) => b.weight - a.weight || b.week - a.week);
+}
+
+// ---- offseason stories (departures, transfers, signing day)
+
+const STAR = (n: number) => `${n}-star`;
+
+/** Stories from an offseason's events (the one in progress, or the one before a season). */
+export function offseasonStories(d: Dynasty, events: OffseasonEvent[], year: number): Story[] {
+  const out: Story[] = [];
+  const name = (t: number) => d.teams[t].school;
+  const pl = (id: number) => d.players[id - 1];
+  const who = (id: number) => `${pl(id).pos} ${pl(id).first} ${pl(id).last}`;
+  const classes = events.filter((e): e is Extract<OffseasonEvent, { kind: 'class' }> => e.kind === 'class').sort((a, b) => a.rank - b.rank);
+  const signed = events.filter((e): e is Extract<OffseasonEvent, { kind: 'signed' }> => e.kind === 'signed');
+  if (classes[0]) {
+    const c = classes[0];
+    const mine = signed.filter((s) => s.team === c.team);
+    out.push({
+      id: `${year}-class-1`, kind: 'champion', week: 0, weight: 90, teams: [c.team, ...(classes[1] ? [classes[1].team] : [])],
+      headline: `${name(c.team)} signs the No. 1 class`,
+      dek: `${c.signed} signees, ${mine.filter((s) => s.stars === 5).length} of them 5-star and ${mine.filter((s) => s.stars === 4).length} 4-star. ${classes[1] ? `${name(classes[1].team)} is second.` : ''}`.trim(),
+    });
+  }
+  const top = signed.slice().sort((a, b) => b.stars - a.stars || b.ovr - a.ovr).slice(0, 3);
+  top.forEach((s, i) => out.push({
+    id: `${year}-recruit-${s.player}`, kind: 'leader', week: 0, weight: 70 - i * 5, teams: [s.team],
+    headline: `${STAR(s.stars)} ${who(s.player)} signs with ${name(s.team)}`,
+    dek: `From ${pl(s.player).hometown}${pl(s.player).state && pl(s.player).state !== 'Non-US' ? `, ${pl(s.player).state}` : ''}, one of the top recruits of the ${year + 1} class.`,
+  }));
+  const pros = events.filter((e): e is Extract<OffseasonEvent, { kind: 'graduated' | 'pro' | 'returns' }> => e.kind === 'pro').sort((a, b) => b.ovr - a.ovr).slice(0, 3);
+  pros.forEach((e, i) => out.push({
+    id: `${year}-pro-${e.player}`, kind: 'upset', week: 0, weight: 66 - i * 5, teams: [e.team],
+    headline: `${who(e.player)} leaves ${name(e.team)} for the pros`,
+    dek: `${pl(e.player).first} ${pl(e.player).last} (${e.ovr} OVR) gives up his last ${pl(e.player).cls === 'JR' ? 'two seasons' : 'season'} of eligibility.`,
+  }));
+  const moves = events.filter((e): e is Extract<OffseasonEvent, { kind: 'transfer' }> => e.kind === 'transfer' && e.to !== null).sort((a, b) => b.ovr - a.ovr).slice(0, 3);
+  moves.forEach((e, i) => out.push({
+    id: `${year}-transfer-${e.player}`, kind: 'topgame', week: 0, weight: 62 - i * 5, teams: [e.to!, e.from],
+    headline: `${who(e.player)} transfers from ${name(e.from)} to ${name(e.to!)}`,
+    dek: `A ${e.ovr} OVR ${pl(e.player).pos} moves through the portal.`,
+  }));
+  for (const u of d.userTeams) {
+    const c = classes.find((x) => x.team === u);
+    const left = events.filter((e) => (e.kind === 'graduated' || e.kind === 'pro') && e.team === u).length;
+    const back = events.filter((e) => e.kind === 'returns' && e.team === u).length;
+    if (c) out.push({
+      id: `${year}-yours-class-${u}`, kind: 'yours', week: 0, weight: 80, teams: [u],
+      headline: `${name(u)} signs the No. ${c.rank} class`,
+      dek: `${c.signed} signees for ${year + 1}. ${left} players left${back ? `, ${back} seniors are back for a fifth year` : ''}.`,
+    });
+    else if (left) out.push({
+      id: `${year}-yours-left-${u}`, kind: 'yours', week: 0, weight: 80, teams: [u],
+      headline: `${name(u)} loses ${left} players`,
+      dek: `${back ? `${back} seniors come back for a fifth year. ` : ''}The transfer portal and signing day are next.`,
+    });
+  }
+  return out.sort((a, b) => b.weight - a.weight);
 }

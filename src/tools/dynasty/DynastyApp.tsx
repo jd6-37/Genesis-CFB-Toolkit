@@ -7,11 +7,13 @@ import { createDynasty, importSave, type Dynasty } from '../../core/dynasty/mode
 import { seasonView, weekName } from '../../core/dynasty/derive';
 import { teamArt } from '../../core/dynasty/art';
 import {
-  deleteDynasty, dynastyFileName, dynastyFileText, listDynasties, loadArt, loadDynasty, readDynastyFile, saveArt, saveDynasty,
+  deleteDynasty, dynastyFileName, dynastyFileText, listDynasties, loadArt, loadDynasty, loadRom, readDynastyFile, saveArt, saveDynasty, saveRom,
   type DynastySummary, type TeamArt,
 } from '../../core/dynasty/storage';
 import { Ctx, href, TeamMark, type DynCtx } from './ui';
 import { History, Home, Leaders, Player, Rankings, Scores, Standings, Team, Teams } from './pages';
+import { Offseason, type OffseasonActions } from './OffseasonPage';
+import { seasonRom } from '../../core/dynasty/offseason';
 import './dynasty.css';
 
 const PAGES = [
@@ -22,6 +24,7 @@ const PAGES = [
   { id: 'teams', label: 'Teams' },
   { id: 'stats', label: 'Stats' },
   { id: 'history', label: 'History' },
+  { id: 'offseason', label: 'Offseason' },
   { id: 'manage', label: 'Manage' },
 ] as const;
 
@@ -47,8 +50,8 @@ const setCurrent = (id: string | null) => {
   }
 };
 
-function download(name: string, text: string) {
-  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+function download(name: string, text: BlobPart, type = 'application/json') {
+  const url = URL.createObjectURL(new Blob([text], { type }));
   const a = document.createElement('a');
   a.href = url;
   a.download = name;
@@ -57,6 +60,18 @@ function download(name: string, text: string) {
 }
 
 const readFile = async (f: File) => new Uint8Array(await f.arrayBuffer());
+
+/** Asks for a file (from a click: the browser only opens the picker then). */
+function chooseFile(accept: string): Promise<File | null> {
+  return new Promise((resolve) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = accept;
+    input.onchange = () => resolve(input.files?.[0] ?? null);
+    input.addEventListener('cancel', () => resolve(null));
+    input.click();
+  });
+}
 
 type Note = { kind: 'error' | 'ok'; text: string } | null;
 
@@ -136,6 +151,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       const pics = teamArt(rom);
       await saveDynasty(dyn);
       await saveArt(dyn.id, pics);
+      await saveRom(dyn.id, rom);
       setD(dyn);
       setArt(pics);
       setCurrent(dyn.id);
@@ -160,6 +176,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       const pics = teamArt(rom);
       if (pics.length !== d.teams.length) throw new Error(`This ROM has ${pics.length} teams; the dynasty has ${d.teams.length}.`);
       await saveArt(d.id, pics);
+      await saveRom(d.id, rom);
       setArt(pics);
       setNote({ kind: 'ok', text: 'Team logos added.' });
     }),
@@ -194,6 +211,35 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
     }),
   };
 
+  const getRom = async (): Promise<Uint8Array | null> => {
+    if (!d) return null;
+    const kept = await loadRom(d.id);
+    if (kept) return kept;
+    const f = await chooseFile('.md,.bin,.gen,.zip');
+    if (!f) return null;
+    const rom = (await openRom(f.name, await readFile(f))).data;
+    await saveRom(d.id, rom);
+    return rom;
+  };
+  const offActions: OffseasonActions = {
+    commit: async (next, done) => {
+      await commit(next);
+      if (done) setNote({ kind: 'ok', text: done });
+    },
+    getRom,
+    run,
+    downloadRom: (year) => void run('Writing the ROM…', async () => {
+      if (!d) return;
+      const season = d.seasons.find((s) => s.year === year);
+      if (!season) return;
+      const rom = await getRom();
+      if (!rom) throw new Error('Choose your ROM to write the season into it.');
+      const slug = d.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'dynasty';
+      download(`${slug}-${year}.md`, seasonRom(d, season, rom) as Uint8Array<ArrayBuffer>, 'application/octet-stream');
+      setNote({ kind: 'ok', text: `Downloaded the ${year} ROM. Start a New Season with it in the game.` });
+    }),
+  };
+
   const { page, arg } = route;
   const num = arg !== undefined && /^\d+$/.test(arg) ? Number(arg) : undefined;
   const body = (() => {
@@ -207,11 +253,12 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       case 'player': return num !== undefined ? <Player id={num} /> : <Home />;
       case 'stats': return <Leaders />;
       case 'history': return <History />;
+      case 'offseason': return <Offseason actions={offActions} busy={busy} />;
       default: return <Home />;
     }
   })();
   const navPage = page === 'team' || page === 'player' ? (page === 'team' ? 'teams' : 'stats') : page;
-  const week = v && v.save ? (v.currentWeek < v.weeks ? weekName(v, v.currentWeek) : 'Season complete') : null;
+  const week = d?.offseason ? 'Offseason' : v && v.save ? (v.currentWeek < v.weeks ? weekName(v, v.currentWeek) : 'Season complete') : d && d.seasons.length > 1 ? 'Preseason' : null;
 
   return (
     <div className="dy">
@@ -220,7 +267,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
           <a className="dy-back" href={toolkitHref}>Mod Toolkit</a>
           <a className="dy-title" href={href('home')}>
             <span className="dy-title-1">{d?.name ?? 'Dynasty'}</span>
-            {d && <span className="dy-title-2">{d.seasons[d.seasons.length - 1].year}{week ? `, ${week}` : ''}</span>}
+            {d && <span className="dy-title-2">{d.offseason ? d.offseason.year : d.seasons[d.seasons.length - 1].year}{week ? `, ${week}` : ''}</span>}
           </a>
           <span className="dy-mast-teams">
             {ctx && d!.userTeams.map((t) => (

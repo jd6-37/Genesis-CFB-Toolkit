@@ -1,0 +1,292 @@
+// The offseason, step by step: departures, the transfer portal, signing day, cuts, the next season.
+import { useMemo, useState } from 'react';
+import type { DPlayer, Dynasty, OffseasonEvent } from '../../core/dynasty/model';
+import {
+  applyCuts, cancelOffseason, classRankings, cutProblems, finishOffseason, keepValue, recruitTemplates, runPortal, runSigningDay,
+  seasonDone, startOffseason, ROSTER_LIMIT, type RecruitTemplates,
+} from '../../core/dynasty/offseason';
+import { fetchCfb27Latest } from '../../core/cfb27Latest';
+import { playerName } from '../../core/dynasty/derive';
+import { TeamLink, hometownText, href, useDyn } from './ui';
+
+export interface OffseasonActions {
+  /** Saves the new dynasty (and shows errors). */
+  commit: (d: Dynasty, done?: string) => Promise<void>;
+  /** The ROM kept in this browser, or one the user picks now. */
+  getRom: () => Promise<Uint8Array | null>;
+  /** Runs a step with a busy note; errors show on the page. */
+  run: (what: string, fn: () => Promise<void>) => Promise<void>;
+  downloadRom: (year: number) => void;
+}
+
+/** The step whose results the page shows (the button below them runs the next one). */
+const STEPS = ['Departures', 'Transfer portal', 'Signing day and cuts', 'Next season'] as const;
+const STEP_OF = { portal: 0, signing: 1, cuts: 2, ready: 3 } as const;
+
+let templates: Promise<RecruitTemplates> | null = null;
+const getTemplates = (d: Dynasty) =>
+  (templates ??= fetchCfb27Latest().then((b) => recruitTemplates(d, new TextDecoder().decode(b))).catch((e) => { templates = null; throw e; }));
+
+const stars = (n: number) => (n ? `${n}★` : 'Walk-on');
+
+function PlayerList({ rows, note, limit = 8 }: { rows: { p: DPlayer; extra?: string }[]; note?: string; limit?: number }) {
+  const [all, setAll] = useState(false);
+  if (!rows.length) return <p className="dy-dim">{note ?? 'Nobody.'}</p>;
+  const sorted = rows.slice().sort((a, b) => b.p.ovr - a.p.ovr);
+  const shown = all ? sorted : sorted.slice(0, limit);
+  return (
+    <>
+      <ul className="dy-plist">
+        {shown.map(({ p, extra }) => (
+          <li key={p.id}>
+            <a href={href(`player/${p.id}`)}>{playerName(p)}</a>
+            <span className="dy-dim">{p.pos}</span>
+            <span className="dy-strong">{p.ovr}</span>
+            {extra && <span className="dy-dim dy-small">{extra}</span>}
+          </li>
+        ))}
+      </ul>
+      {sorted.length > limit && (
+        <button type="button" className="dy-linkbutton dy-small" onClick={() => setAll(!all)}>
+          {all ? 'Show fewer' : `Show all ${sorted.length}`}
+        </button>
+      )}
+    </>
+  );
+}
+
+export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: string | null }) {
+  const { d, v } = useDyn();
+  const st = d.offseason;
+  const season = d.seasons[d.seasons.length - 1];
+  const pl = (id: number) => d.players[id - 1];
+  const events = st?.events ?? [];
+  const of = <K extends OffseasonEvent['kind']>(k: K) => events.filter((e) => e.kind === k) as Extract<OffseasonEvent, { kind: K }>[];
+  const users = d.userTeams;
+
+  if (!st) {
+    const done = seasonDone(d);
+    const startedNew = season.imports.length === 0 && d.seasons.length > 1;
+    return (
+      <section className="dy-off">
+        <div className="dy-pagehead"><h2>Offseason</h2></div>
+        {startedNew ? (
+          <>
+            <p>The {season.year} season is ready. Download its ROM, start a New Season in the game with it, and import the save after you play.</p>
+            <button type="button" className="dy-button" onClick={() => actions.downloadRom(season.year)}>Download the {season.year} ROM</button>
+          </>
+        ) : (
+          <>
+            <p>
+              {done
+                ? `The ${season.year} season is over. The offseason takes your dynasty to ${season.year + 1}: seniors leave, players develop, the transfer portal opens, every team signs a class and cuts to ${ROSTER_LIMIT}.`
+                : `The offseason starts once the ${season.year} season is over: import the save after the last game. ${v.save ? `So far ${v.games.filter((g) => g.vs !== null).length} of ${v.games.length} games are played.` : ''}`}
+            </p>
+            <div className="dy-row">
+              {done ? (
+                <button type="button" className="dy-button" disabled={!!busy} onClick={() => actions.run('Ending the season…', () => actions.commit(startOffseason(d)))}>Start the offseason</button>
+              ) : (
+                <EndEarly onEnd={() => actions.run('Ending the season…', () => actions.commit(startOffseason(d, { force: true })))} />
+              )}
+            </div>
+          </>
+        )}
+      </section>
+    );
+  }
+
+  const step = STEP_OF[st.step];
+  return (
+    <section className="dy-off">
+      <div className="dy-pagehead"><h2>Offseason {st.year}</h2></div>
+      <ol className="dy-steps">
+        {STEPS.map((s, i) => <li key={s} className={i < step ? 'dy-done' : i === step ? 'dy-now' : ''} aria-current={i === step ? 'step' : undefined}>{s}</li>)}
+      </ol>
+
+      {/* What happened so far, newest step first */}
+      {st.step === 'portal' && (
+        <>
+          <h3 className="dy-sub">Departures</h3>
+          {users.map((u) => {
+            const team = (k: 'graduated' | 'pro' | 'returns') => of(k).filter((e) => e.team === u).map((e) => ({ p: pl(e.player) }));
+            const grew = st.growth.filter((g) => pl(g.player).team === u).sort((a, b) => b.to - b.from - (a.to - a.from)).slice(0, 5);
+            return (
+              <div key={u} className="dy-off-team">
+                <h4><TeamLink team={u} rank={false} /></h4>
+                <p className="dy-small dy-dim">Going pro</p>
+                <PlayerList rows={team('pro')} />
+                <p className="dy-small dy-dim">Graduating</p>
+                <PlayerList rows={team('graduated')} />
+                <p className="dy-small dy-dim">Back for a fifth year (SR+)</p>
+                <PlayerList rows={team('returns')} />
+                <p className="dy-small dy-dim">Most improved</p>
+                <PlayerList rows={grew.map((g) => ({ p: pl(g.player), extra: `+${g.to - g.from}` }))} />
+              </div>
+            );
+          })}
+          <p>
+            Across the country {of('graduated').length.toLocaleString('en-US')} players graduate, {of('pro').length} go pro and {of('returns').length} seniors
+            come back as SR+.
+          </p>
+          <Next busy={busy} label="Open the transfer portal" onClick={() => actions.run('Running the transfer portal…', () => actions.commit(runPortal(d)))} />
+        </>
+      )}
+
+      {st.step === 'signing' && (
+        <>
+          <h3 className="dy-sub">Transfer portal</h3>
+          {users.map((u) => (
+            <div key={u} className="dy-off-team">
+              <h4><TeamLink team={u} rank={false} /></h4>
+              <p className="dy-small dy-dim">Leaving</p>
+              <PlayerList rows={of('transfer').filter((e) => e.from === u).map((e) => ({ p: pl(e.player), extra: e.to !== null ? `to ${d.teams[e.to].school}` : 'out of the dynasty' }))} />
+              <p className="dy-small dy-dim">Coming in</p>
+              <PlayerList rows={of('transfer').filter((e) => e.to === u).map((e) => ({ p: pl(e.player), extra: `from ${d.teams[e.from].school}` }))} />
+            </div>
+          ))}
+          <p>{of('transfer').length} players entered the portal; {of('transfer').filter((e) => e.to !== null).length} found a new team.</p>
+          <h4>Biggest moves</h4>
+          <PlayerList rows={of('transfer').filter((e) => e.to !== null).sort((a, b) => b.ovr - a.ovr).slice(0, 10).map((e) => ({ p: pl(e.player), extra: `${d.teams[e.from].school} to ${d.teams[e.to!].school}` }))} />
+          <Next busy={busy} label="Signing day" onClick={() => actions.run('Signing the classes…', async () => actions.commit(runSigningDay(d, await getTemplates(d))))} />
+        </>
+      )}
+
+      {st.step === 'cuts' && <SigningAndCuts actions={actions} busy={busy} />}
+
+      {st.step === 'ready' && (
+        <>
+          <h3 className="dy-sub">Cuts and walk-ons</h3>
+          {users.map((u) => (
+            <div key={u} className="dy-off-team">
+              <h4><TeamLink team={u} rank={false} /></h4>
+              <p className="dy-small dy-dim">Cut</p>
+              <PlayerList rows={of('cut').filter((e) => e.team === u).map((e) => ({ p: pl(e.player) }))} />
+              <p className="dy-small dy-dim">Walk-ons</p>
+              <PlayerList rows={of('walkon').filter((e) => e.team === u).map((e) => ({ p: pl(e.player) }))} />
+            </div>
+          ))}
+          <p>
+            Next: every team's depth chart for {st.year + 1} (its 32 players in Bill Walsh '95, their game ratings and the team OVRs). Then you can download
+            the {st.year + 1} ROM.
+          </p>
+          <Next
+            busy={busy}
+            label={`Start the ${st.year + 1} season`}
+            onClick={() => actions.run('Setting the depth charts…', async () => {
+              const rom = await actions.getRom();
+              if (!rom) throw new Error('The depth chart needs your ROM: choose it to go on.');
+              await actions.commit(finishOffseason(d, rom), `The ${st.year + 1} season is ready. Download its ROM below.`);
+            })}
+          />
+        </>
+      )}
+
+      <p className="dy-small dy-dim dy-restart">
+        <button type="button" className="dy-linkbutton" onClick={() => actions.run('Starting over…', () => actions.commit(cancelOffseason(d)))}>Start the offseason over</button>
+        {' '}(back to the end of the {st.year} season).
+      </p>
+    </section>
+  );
+}
+
+function Next({ label, onClick, busy }: { label: string; onClick: () => void; busy: string | null }) {
+  return <div className="dy-row dy-next"><button type="button" className="dy-button" disabled={!!busy} onClick={onClick}>{label}</button></div>;
+}
+
+function EndEarly({ onEnd }: { onEnd: () => void }) {
+  const [sure, setSure] = useState(false);
+  return sure ? (
+    <>
+      <button type="button" className="dy-button dy-danger" onClick={onEnd}>End the season now</button>
+      <button type="button" className="dy-button dy-quiet" onClick={() => setSure(false)}>Keep playing</button>
+    </>
+  ) : (
+    <button type="button" className="dy-button dy-quiet" onClick={() => setSure(true)}>End the season early</button>
+  );
+}
+
+function SigningAndCuts({ actions, busy }: { actions: OffseasonActions; busy: string | null }) {
+  const { d } = useDyn();
+  const st = d.offseason!;
+  const pl = (id: number) => d.players[id - 1];
+  const ranks = classRankings(st.events);
+  const signed = st.events.filter((e): e is Extract<OffseasonEvent, { kind: 'signed' }> => e.kind === 'signed');
+  const [cuts, setCuts] = useState<Record<number, number[]>>(() => ({ ...(st.suggestedCuts ?? {}) }));
+  const [err, setErr] = useState<string | null>(null);
+  const rosters = useMemo(
+    () => Object.fromEntries(d.userTeams.map((u) => [u, d.players.filter((p) => p.team === u && p.status === 'active').sort((a, b) => keepValue(a) - keepValue(b))])),
+    [d],
+  );
+  const toggle = (u: number, id: number) => {
+    setErr(null);
+    setCuts((c) => ({ ...c, [u]: (c[u] ?? []).includes(id) ? (c[u] ?? []).filter((x) => x !== id) : [...(c[u] ?? []), id] }));
+  };
+  return (
+    <>
+      <h3 className="dy-sub">Signing day</h3>
+      {d.userTeams.map((u) => {
+        const r = ranks.find((x) => x.team === u);
+        return (
+          <div key={u} className="dy-off-team">
+            <h4><TeamLink team={u} rank={false} /> <span className="dy-dim dy-small">No. {r?.rank} class</span></h4>
+            <PlayerList rows={signed.filter((s) => s.team === u).sort((a, b) => b.stars - a.stars || b.ovr - a.ovr).map((s) => ({ p: pl(s.player), extra: `${stars(s.stars)}, ${hometownText(pl(s.player))}` }))} />
+          </div>
+        );
+      })}
+      <h4>Top classes</h4>
+      <ol className="dy-classes">
+        {ranks.slice(0, 10).map((c) => {
+          const mine = signed.filter((s) => s.team === c.team);
+          return (
+            <li key={c.team}>
+              <TeamLink team={c.team} rank={false} />
+              <span className="dy-dim dy-small">{c.signed} signed, {mine.filter((s) => s.stars === 5).length} 5★, {mine.filter((s) => s.stars === 4).length} 4★</span>
+            </li>
+          );
+        })}
+      </ol>
+
+      <h3 className="dy-sub">Cuts</h3>
+      <p>Every team cuts to {ROSTER_LIMIT}. The computer cuts for the other teams; check the players you want to cut. The suggestion is checked already (lowest value first: rating, room to grow, years left).</p>
+      {d.userTeams.map((u) => {
+        const roster = rosters[u];
+        const mine = cuts[u] ?? [];
+        const over = roster.length - ROSTER_LIMIT;
+        const left = over - mine.length;
+        return (
+          <div key={u} className="dy-off-team">
+            <h4><TeamLink team={u} rank={false} /> <span className="dy-dim dy-small">{roster.length} players</span></h4>
+            {over <= 0 ? <p className="dy-dim">{roster.length} players: no cuts needed.</p> : (
+              <>
+                <p className={left > 0 ? 'dy-l' : 'dy-dim'}>{left > 0 ? `Cut ${left} more.` : left < 0 ? `${-left} more than needed: that's fine.` : 'Ready.'}</p>
+                <ul className="dy-cutlist">
+                  {roster.map((p) => (
+                    <li key={p.id}>
+                      <label>
+                        <input type="checkbox" checked={mine.includes(p.id)} onChange={() => toggle(u, p.id)} />
+                        <span>{playerName(p)}</span>
+                        <span className="dy-dim">{p.pos}</span>
+                        <span className="dy-dim">{p.cls}</span>
+                        <span className="dy-strong">{p.ovr}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+        );
+      })}
+      {err && <p className="dy-note dy-note-error" role="alert">{err}</p>}
+      <Next
+        busy={busy}
+        label="Make the cuts"
+        onClick={() => {
+          const bad = d.userTeams.flatMap((u) => cutProblems(d, u, cuts[u] ?? []).map((m) => `${d.teams[u].school}: ${m}`));
+          if (bad.length) return setErr(bad.join(' '));
+          void actions.run('Making the cuts…', async () => actions.commit(applyCuts(d, cuts, await getTemplates(d))));
+        }}
+      />
+    </>
+  );
+}
