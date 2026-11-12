@@ -378,7 +378,7 @@
 @media (min-width: 900px) { .dy-edit-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 
 /* Player headshots (headshot.ts): crisp pixels. */
-.dy-headshot { image-rendering: pixelated; image-rendering: crisp-edges; border-radius: 6px; flex: none; display: block; }
+.dy-headshot { image-rendering: pixelated; image-rendering: crisp-edges; border-radius: 6px; border: 2px solid #ccc; flex: none; display: block; }
 
 /* Offseason rules (RulesPage.tsx): phone first, two columns from 640 px. */
 .dy-modal-back { position: fixed; inset: 0; background: rgba(20, 20, 24, 0.55); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 50; }
