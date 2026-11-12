@@ -19,7 +19,7 @@ import { seasonDone } from '../../core/dynasty/offseason';
 import type { Dynasty } from '../../core/dynasty/model';
 import { backupLabel, isBackup, lineupLock, moveToSpot, slotKind, slotOfSpot, spotLabel, spotsFor, SPOTS } from '../../core/dynasty/lineup';
 import { playerOvr, roleOfSlot } from '../../core/dynasty/ovr';
-import { Empty, Headshot, StoryArt, TeamLink, TeamMark, href, heightText, hometownText, inkColor, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
+import { accentOn, Empty, Headshot, StoryArt, TeamLink, TeamMark, href, heightText, hometownText, inkColor, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
 
 // ---- front page
 
@@ -640,9 +640,10 @@ export function Player({ id }: { id: number }) {
         <div className="dy-teamhead-id">
         <Headshot p={p} size={120} />
         <div>
-          <h2>{playerName(p)}</h2>
+          {/* The number before the name in the school's second color, then a thin bar (user, 2026-11-12: "make the jersey number bigger, more prominent"; "i like how LSU roster puts the player number in yellow before the name"). */}
+          <h2 className="dy-player-name"><span className="dy-jersey" aria-label={`Number ${p.jersey}`} style={team !== null ? { color: accentOn(d, team) } : undefined}>{p.jersey}</span><span className="dy-jersey-bar" aria-hidden="true" /><span>{playerName(p)}</span></h2>
           <p>
-            <span>#{p.jersey} {shownSlots.length ? shownSlots.map((x) => (onBench ? backupLabel(x) : rated(x).label)).join(', ') : p.pos}</span>
+            <span>{shownSlots.length ? shownSlots.map((x) => (onBench ? backupLabel(x) : rated(x).label)).join(', ') : p.pos}</span>
             {team !== null && <span className="dy-status">{bwSlots.length ? 'Active Roster' : 'Backup'}</span>}
             <span>{p.cls}</span>
             <Experience p={p} />
@@ -654,13 +655,17 @@ export function Player({ id }: { id: number }) {
           </p>
         </div>
         </div>
-        {shownSlots.length > 0 && (
-          <dl className={`dy-teamovr${team !== null && onColor(c) === '#000' ? ' dy-on-light' : ''}`}>
-            <div><dt>OVR</dt><dd>{playerOvr(shownSlots[0], rated(shownSlots[0]))}</dd></div>
-          </dl>
-        )}
+        <div className="dy-player-side">
+          {shownSlots.length > 0 && (
+            <dl className={`dy-teamovr${team !== null && onColor(c) === '#000' ? ' dy-on-light' : ''}`}>
+              <div><dt>OVR</dt><dd>{playerOvr(shownSlots[0], rated(shownSlots[0]))}</dd></div>
+            </dl>
+          )}
+          {/* The team's logo (user, 2026-11-12: "the team logo should go in the header too"). */}
+          {team !== null && <a className="dy-player-logo" href={href(`team/${team}`)} aria-label={d.teams[team].school}><TeamMark team={team} size={96} /></a>}
+        </div>
       </header>
-      {seasons.map((s) => s.lines.length > 0 && (
+      {seasons.filter((s) => s.year === v.season.year && s.lines.length > 0).map((s) => (
         <div key={s.year}>
           <h3 className="dy-sub">{s.year} season{s.team !== null && <span className="dy-sub-team"> at <TeamLink team={s.team} rank={false} /></span>}</h3>
           <StatTables lines={s.lines} />
@@ -673,7 +678,56 @@ export function Player({ id }: { id: number }) {
           {v.season.bw ? `He isn't one of ${team !== null ? d.teams[team].school : 'his team'}'s 32 players in Bill Walsh '95 this season, so he has no ratings.` : 'Start this dynasty again to see the ratings (it was made before the app kept them).'}
         </p>
       )}
+      <CareerStats p={p} seasons={seasons} />
     </section>
+  );
+}
+
+/**
+ * Career stats below the ratings (user, 2026-11-12: "Do we have career stats? Do they appear after one year
+ * of stats below the ratings?"): a row per season (the school he played for, his class) and a career row,
+ * per category he has stats in. Shown once he has stats from a season before this one, or from two seasons.
+ */
+function CareerStats({ p, seasons }: { p: DPlayer; seasons: { year: number; team: number | null; lines: PlayerLine[] }[] }) {
+  const { v } = useDyn();
+  const withStats = seasons.filter((s) => s.lines.length > 0).slice().reverse(); // oldest first
+  if (!withStats.length || (withStats.length === 1 && withStats[0].year === v.season.year)) return null;
+  const sum = (l: PlayerLine[], k: string) => (k === 'long' ? Math.max(0, ...l.map((x) => statValue(x, k))) : l.reduce((a, x) => a + statValue(x, k), 0));
+  return (
+    <>
+      <h3 className="dy-sub">Career stats</h3>
+      <div className="dy-stat-tables">
+        {STAT_TABLES.map((t) => {
+          const rows = withStats.map((s) => ({ s, lines: s.lines.filter((l) => l.cat === t.cat) })).filter((r) => r.lines.some((l) => t.cols.some(([k]) => statValue(l, k) > 0)));
+          if (!rows.length) return null;
+          const all = rows.flatMap((r) => r.lines);
+          return (
+            <div key={t.cat} className="dy-scroll-x">
+            <table className="dy-table">
+              <caption>{t.title}</caption>
+              <thead><tr><th className="dy-left">Season</th><th className="dy-left">Team</th><th>Class</th>{t.cols.map(([k, label]) => <th key={k}>{label}</th>)}</tr></thead>
+              <tbody>
+                {rows.map(({ s, lines }) => (
+                  <tr key={s.year}>
+                    <td className="dy-left">{s.year}</td>
+                    <td className="dy-left">{s.team !== null ? <TeamLink team={s.team} rank={false} size={16} /> : ''}</td>
+                    <td>{p.years?.find((y) => y.year === s.year)?.cls ?? ''}</td>
+                    {t.cols.map(([k]) => <td key={k}>{sum(lines, k)}</td>)}
+                  </tr>
+                ))}
+                {rows.length > 1 && (
+                  <tr className="dy-total">
+                    <td className="dy-left" colSpan={3}>Career</td>
+                    {t.cols.map(([k]) => <td key={k}>{sum(all, k)}</td>)}
+                  </tr>
+                )}
+              </tbody>
+            </table>
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }
 

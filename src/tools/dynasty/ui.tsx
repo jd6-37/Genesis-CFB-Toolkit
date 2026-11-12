@@ -148,3 +148,14 @@ export function Headshot({ p, size = 120 }: { p: DPlayer; size?: number }) {
   }, [p, jersey, trim]);
   return <canvas ref={ref} className="dy-headshot" width={HEAD_SIZE} height={HEAD_SIZE} style={{ width: size, height: size }} role="img" aria-label={`${p.first} ${p.last}`} />;
 }
+
+/**
+ * The accent for text on a team's color (the player page's jersey number, as LSU's roster shows it in gold on
+ * purple; user, 2026-11-12): the school's second color when it stands out from the first, else plain text.
+ */
+export function accentOn(d: Dynasty, t: number): string {
+  const main = mainColor(d, t);
+  const second = SCHOOL_COLORS[d.teams[t].school]?.[1];
+  if (second && !near(second, main) && Math.abs(lum(second) - lum(main)) > 70) return second;
+  return onColor(main);
+}
