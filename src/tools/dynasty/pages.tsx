@@ -6,6 +6,7 @@ import {
   INDEPENDENT, type PlayerLine, type StatCategory,
 } from '../../core/dynasty/derive';
 import { offseasonStories, stories } from '../../core/dynasty/news';
+import { OffseasonSide, SeasonMore, SeasonSide } from './HomeSide';
 import { prestigeStars } from '../../core/dynasty/offseason';
 import { MAX_PRESTIGE } from '../../core/dynasty/prestige';
 import type { SaveGame } from '../../core/dynasty/save';
@@ -101,6 +102,7 @@ export function Home() {
               </article>
             ))}
           </div>
+          {v.save && <HomePoll />}
         </div>
         <aside className="dy-front-side">
           {heads.length > 0 && (
@@ -116,15 +118,52 @@ export function Home() {
             </section>
           )}
           <YourTeams />
-          {v.save && (
-            <section>
-              <h2 className="dy-side-head">Top 25</h2>
-              <Top25 compact />
-            </section>
-          )}
+          <SeasonSide />
+          <OffseasonSide />
         </aside>
       </div>
+      <SeasonMore />
     </>
+  );
+}
+
+/** The Top 25 on the front page: on wider screens the top four as cards, the rest in columns. */
+function HomePoll() {
+  const { v } = useDyn();
+  const prev = v.save?.season?.lastRanks ?? [];
+  const row = (t: number, i: number) => {
+    const was = prev[t];
+    const move = was ? was - (i + 1) : 0;
+    return { was, move, text: !was || was > 25 ? 'New' : move > 0 ? `Up ${move}` : move < 0 ? `Down ${-move}` : 'No change' };
+  };
+  const top = v.order.slice(0, 25);
+  return (
+    <section className="dy-poll">
+      <h2 className="dy-side-head"><a href={href('top25')}>Top 25</a></h2>
+      <ol className="dy-poll-top">
+        {top.slice(0, 4).map((t, i) => {
+          const m = row(t, i);
+          return (
+            <li key={t}>
+              <span className="dy-top-n">{i + 1}</span>
+              <span className="dy-poll-big"><TeamMark team={t} size={48} /></span>
+              <TeamLink team={t} rank={false} />
+              <span className="dy-num">{recordText(v.records[t])}</span>
+              <span className={`dy-move${m.move > 0 ? ' dy-up' : m.move < 0 ? ' dy-down' : ''}`}>{m.text}</span>
+            </li>
+          );
+        })}
+      </ol>
+      <ol className="dy-poll-rest" start={5}>
+        {top.slice(4).map((t, k) => (
+          <li key={t}>
+            <span className="dy-top-n">{k + 5}</span>
+            <TeamLink team={t} rank={false} />
+            <span className="dy-num">{recordText(v.records[t])}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 

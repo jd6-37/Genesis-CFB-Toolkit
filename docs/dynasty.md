@@ -99,6 +99,14 @@ IndexedDB database `genesis-cfb-dynasty`: store `dynasties` (the dynasty and whe
 - **The save stamp:** New Season copies the ID block into the season block's +0x1330. `importSave` only takes stamped saves: another dynasty's or season's are refused (this also refuses last season's save in a new season), and an older roster version than the season's gives a warning (the season was started before the last lineup change).
 - The Manage page has a Download button for the current season's ROM (the first season's too, so its save gets the stamp); the Offseason page has one for the next season; the lineup editor reminds the user to download again.
 
+## The front page
+
+Layout (user, 2026-11-12; mobile first): the stories, then the Top 25 in the main column (from 600 px the top four as cards and the rest in two columns, three from 900 px; phones one list); the side column has the headlines, your teams, next week's big games and the Heisman watch; a band across the page below has the playoff picture, the national leaders (top three in passing, rushing and receiving yards) and your conference's standings (one table per conference of your teams). In the offseason the side column shows your commitments and the recruiting rankings (commitments by class points), then the top classes; before a season's first game, the classes it signed. `src/tools/dynasty/HomeSide.tsx`, `src/core/dynasty/outlook.ts`:
+
+- **Big games** (`bigGames`): both teams ranked (by their ranks added up), then a ranked team against a team with at least 85% of its power rating (the save's power, season block +$50), then a conference game between the top two of the conference standings with a conference win each. At most eight.
+- **Playoff picture** (`playoffPicture`): the format from the season flags (CFP 12, CFP 24 bit 2, CFP 4 bit 3, BCS 2 bit 4; none without the postseason bit). The game's seeds once set; before that, as the game picks the field: CFP 12 and 24 take the Power 4 conference champions and the best-ranked Group of 6 champion (each conference's leader standing in before the title games), CFP 12 also Notre Dame in the top 12, then the best-ranked teams; seeds by rank. CFP 4 and BCS 2 take the top teams. CFP 24 shows the eight byes and the last four in; all show the first four out.
+- **Heisman watch** (`heismanWatch`): points from the season's stats: passing yards / 20, passing TD × 4, interceptions × −2, rushing and receiving yards / 10, their TDs × 6, plus 2 per team win. Top five.
+
 ## Names and skin tones
 
 `appearance.ts` (user, 2026-11-12). Players are White or Black in the app; that decides the skin tone and, for generated players, which names fit together. Nothing of it goes into the ROM (the game has one skin tone); the tones are for the app's portraits.
