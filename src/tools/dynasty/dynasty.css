@@ -285,3 +285,17 @@
 .dy-prestige { flex-basis: 100%; font-size: 20px; letter-spacing: 2px; line-height: 1.2; }
 .dy-prestige > span { opacity: 0.3; }
 @media (min-width: 760px) { .dy-prestige { flex-basis: auto; font-size: 17px; } }
+
+/* Recruiting board (phone first) */
+.dy-board { list-style: none; margin: 0; padding: 0; }
+.dy-board li { padding: 10px 0; border-bottom: 1px solid var(--rule); display: grid; gap: 4px; }
+.dy-board-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.dy-board-ctl { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.dy-board-ctl label { display: inline-flex; align-items: center; gap: 6px; }
+.dy-board-ctl input { width: 76px; border: 1px solid #b9b8c8; border-radius: 4px; padding: 6px 8px; }
+.dy-filters select { flex: 1 1 140px; }
+@media (min-width: 640px) {
+  .dy-board li { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+  .dy-board li > .dy-small { grid-column: 1; }
+  .dy-board-ctl { grid-column: 2; grid-row: 1 / span 2; }
+}

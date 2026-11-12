@@ -16,6 +16,7 @@ import { CFB27_LATEST } from '../src/core/cfb27Latest';
 import { OVR_FORMULAS, playerOvr, roleOfSlot } from '../src/core/dynasty/ovr';
 import { readRating } from '../src/core/teamRatings';
 import * as Off from '../src/core/dynasty/offseason';
+import * as Rec from '../src/core/dynasty/recruiting';
 import { nextPrestige, tierOfRank } from '../src/core/dynasty/prestige';
 import { openRosterRom, readPlayer, getRating, teamLayout } from '../src/core/rosterRom';
 
@@ -263,6 +264,29 @@ for (const t of o5.teams) {
   next.slots[t.index].forEach((id) => assert.equal(o5.players[id! - 1].team, t.index));
 }
 ok(`offseason: ${o1.offseason!.events.filter((e) => e.kind !== 'returns').length} departures, ${moves.length} transfers, ${signed.length} signed, ${o4.offseason!.events.filter((e) => e.kind === 'cut').length} cut, ${o4.offseason!.events.filter((e) => e.kind === 'walkon').length} walk-ons; ${act(o5).length} players in ${next.year}`);
+
+// Full recruiting: five weeks, then signing day; every team stays within its spots.
+const f1 = Rec.openRecruiting(o1, tpl);
+const rs0 = f1.offseason!.recruiting!;
+assert.equal(f1.offseason!.step, 'recruiting');
+assert.ok(rs0.prospects.some((p) => p.id > 0) && rs0.prospects.some((p) => p.id < 0), 'portal and high-school prospects');
+const targets = rs0.prospects.filter((p) => p.id < 0 && p.stars <= 3).slice(0, 10);
+const plan = { points: Object.fromEntries(targets.map((p) => [p.id, 60])), offers: targets.map((p) => p.id) };
+assert.deepEqual(Rec.planProblems(plan), []);
+assert.ok(Rec.planProblems({ points: { [targets[0].id]: 61 }, offers: [] }).length > 0, 'at most 60 a prospect');
+assert.ok(Rec.planProblems({ points: Object.fromEntries(rs0.prospects.slice(0, 20).map((p) => [p.id, 60])), offers: [] }).length > 0, 'at most 1,000 a week');
+let f2 = f1;
+for (let w = 0; w < Rec.WEEKS; w++) f2 = Rec.recruitingWeek(f2, { [user]: w === 0 ? plan : { points: plan.points, offers: [] } });
+assert.throws(() => Rec.recruitingWeek(f2, {}), /signing day/);
+const rsEnd = f2.offseason!.recruiting!;
+for (const t of f2.teams) assert.ok(rsEnd.prospects.filter((p) => p.committed === t.index).length <= rsEnd.spots[t.index]);
+const f3 = Rec.finishRecruiting(f2);
+const fSigned = f3.offseason!.events.filter((e) => e.kind === 'signed');
+for (const t of f3.teams) assert.ok(fSigned.filter((e) => e.kind === 'signed' && e.team === t.index).length <= rsEnd.spots[t.index]);
+assert.ok(f3.players.filter((p) => rsEnd.prospects.some((q) => q.id === p.id)).every((p) => p.status === 'transferred' ? p.team === null : p.team !== null), 'portal players moved or left');
+const f5 = Off.finishOffseason(Off.applyCuts(f3, {}, tpl), rom);
+assert.equal(f5.seasons[1].slots.flat().filter((x) => x !== null).length, 138 * 32);
+ok(`full recruiting: ${rs0.prospects.length} prospects, ${rsEnd.prospects.filter((p) => p.committed !== null).length} committed in ${Rec.WEEKS} weeks, ${fSigned.length} signed; ${user === undefined ? '' : `${f3.teams[user].school} landed ${targets.filter((t) => rsEnd.prospects.find((p) => p.id === t.id)!.committed === user).length} of its 10 targets`}`);
 
 // The season's rosters in the ROM: the first season gives the ROM back unchanged; the next one reads back.
 assert.ok(Off.seasonRom(d0, first, rom).every((b, i) => b === rom[i]), 'season 1 written = the ROM');

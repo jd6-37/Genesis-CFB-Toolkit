@@ -6,6 +6,8 @@ import {
   seasonDone, startOffseason, ROSTER_LIMIT, type RecruitTemplates,
 } from '../../core/dynasty/offseason';
 import { fetchCfb27Latest } from '../../core/cfb27Latest';
+import { WEEKS, openRecruiting } from '../../core/dynasty/recruiting';
+import { Recruiting } from './RecruitingPage';
 import { playerName } from '../../core/dynasty/derive';
 import { TeamLink, hometownText, href, useDyn } from './ui';
 
@@ -100,7 +102,7 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
     <section className="dy-off">
       <div className="dy-pagehead"><h2>Offseason {st.year}</h2></div>
       <ol className="dy-steps">
-        {STEPS.map((s, i) => <li key={s} className={i < step ? 'dy-done' : i === step ? 'dy-now' : ''} aria-current={i === step ? 'step' : undefined}>{s}</li>)}
+        {STEPS.map((s0, i) => (st.mode === 'full' && i === 1 ? 'Recruiting' : s0)).map((s, i) => <li key={s} className={i < step ? 'dy-done' : i === step ? 'dy-now' : ''} aria-current={i === step ? 'step' : undefined}>{s}</li>)}
       </ol>
 
       {/* What happened so far, newest step first */}
@@ -128,7 +130,11 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
             Across the country {of('graduated').length.toLocaleString('en-US')} players graduate, {of('pro').length} go pro and {of('returns').length} seniors
             come back as SR+.
           </p>
-          <Next busy={busy} label="Open the transfer portal" onClick={() => actions.run('Running the transfer portal…', () => actions.commit(runPortal(d)))} />
+          <p>Next: the transfer portal and signing day. Either quickly, with random signing classes for every team, or by recruiting yourself for {WEEKS} weeks (high-school players and the transfer portal).</p>
+          <div className="dy-row dy-next">
+            <button type="button" className="dy-button" disabled={!!busy} onClick={() => actions.run('Opening recruiting…', async () => actions.commit(openRecruiting(d, await getTemplates(d))))}>Recruit for {WEEKS} weeks</button>
+            <button type="button" className="dy-button dy-quiet" disabled={!!busy} onClick={() => actions.run('Running the transfer portal…', () => actions.commit(runPortal(d)))}>Random classes</button>
+          </div>
         </>
       )}
 
@@ -150,6 +156,8 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
           <Next busy={busy} label="Signing day" onClick={() => actions.run('Signing the classes…', async () => actions.commit(runSigningDay(d, await getTemplates(d))))} />
         </>
       )}
+
+      {st.step === 'recruiting' && <Recruiting actions={actions} busy={busy} />}
 
       {st.step === 'cuts' && <SigningAndCuts actions={actions} busy={busy} />}
 

@@ -11,20 +11,24 @@
 //                    flips
 //   signingDay       uncommitted prospects pick among the teams that offered; then cuts as before
 //
-// Interest gained in a week = points × (0.5 + fit) × (1.2 with an offer, 0.6 without), where fit =
+// Interest gained in a week = points × (0.5 + fit) × (1.2 with an offer, 0.6 without) × reach (a
+// prospect above the school's prestige level is harder to reach), where fit =
 // his priorities · (playing time he'd get, prestige, closeness to home). He commits when the leader
-// reaches the threshold for his stars, leads the second by 25% and has offered with a spot open.
+// reaches the threshold for his stars, leads the second by 25% and has offered with a spot open; the
+// best prospects don't decide before week 3 (4★) or 4 (5★).
 
 import { rng, type DPlayer, type Dynasty, type OffseasonEvent } from './model';
-import { CLASS_MAX, POSITIONS, POS_TARGET, ROSTER_LIMIT, STAR_POINTS, drawStars, makeRecruit, prestige, suggestCuts, type RecruitTemplates } from './offseason';
+import { CLASS_MAX, POSITIONS, POS_TARGET, ROSTER_LIMIT, STAR_POINTS, drawStars, makeRecruit, prestige, prestigeStars, suggestCuts, type RecruitTemplates } from './offseason';
 import { closeness } from './schoolStates';
 
 export const WEEKS = 5;
 export const WEEKLY_POINTS = 1000;
-export const MAX_PER_PROSPECT = 150;
+export const MAX_PER_PROSPECT = 60;
 export const BOARD_SIZE = 35;
 /** Interest a prospect needs from a team before he commits, by stars (portal players decide sooner). */
-const THRESHOLD = [25, 35, 50, 65, 85, 110];
+const THRESHOLD = [40, 60, 100, 160, 230, 320];
+/** The first week a prospect may commit, by stars (the best take their time; portal players a week sooner). */
+const FIRST_WEEK = [1, 1, 2, 2, 3, 4];
 
 export interface Prospect {
   /** Negative for high-school recruits (a player ID only when he signs), the player's ID for portal players. */
@@ -144,10 +148,17 @@ export function startRecruiting(d: Dynasty, tpl: RecruitTemplates, portal: DPlay
 
 // ---- 3. a week
 
+/**
+ * How far a school's pitch reaches a prospect of some stars: full when its prestige is at or above
+ * his level (a 6-star program for a 5-star player), 20% less for each star he is above it.
+ */
+export const reach = (stars: number, prestigeStars: number) => clamp(1 - 0.2 * (stars - (prestigeStars - 1)), 0.3, 1.15);
+
 /** What the week's decisions read, computed once: each team's OVRs by position (portal players out) and prestige. */
 export interface WeekContext {
   depth: Map<number, Map<string, number[]>>;
   prestige: Map<number, number>;
+  stars: Map<number, number>;
   portalIds: Set<number>;
 }
 
@@ -160,7 +171,7 @@ export function weekContext(d: Dynasty, rs: RecruitingState): WeekContext {
   };
   for (const p of d.players) if (p.status === 'active' && p.team !== null && !portalIds.has(p.id)) add(p.team, p.pos, p.ovr);
   for (const q of rs.prospects) if (q.committed !== null) add(q.committed, q.player.pos, q.player.ovr);
-  return { depth, prestige: new Map(d.teams.map((t) => [t.index, prestige(d, t.index)])), portalIds };
+  return { depth, prestige: new Map(d.teams.map((t) => [t.index, prestige(d, t.index)])), stars: new Map(d.teams.map((t) => [t.index, prestigeStars(d, t.index)])), portalIds };
 }
 
 /** How well a team fits what a prospect wants, 0-1. */
@@ -184,15 +195,16 @@ export function cpuPlan(d: Dynasty, rs: RecruitingState, ctx: WeekContext, team:
   const maxStar = clamp(2 + Math.round(pres * 4), 1, 5);
   const minStar = Math.max(1, maxStar - 2);
   const cands = rs.prospects
-    .filter((p) => p.committed === null && p.stars <= maxStar && p.stars >= minStar && (POS_TARGET[p.player.pos] ?? 0) - (counts[p.player.pos] ?? 0) > 0 && p.from !== team)
+    .filter((p) => (p.committed === null || (p.committed !== team && p.stars >= 4 && ctx.stars.get(team)! > ctx.stars.get(p.committed)! + 1)) && p.stars <= maxStar && p.stars >= minStar && (POS_TARGET[p.player.pos] ?? 0) - (counts[p.player.pos] ?? 0) > 0 && p.from !== team)
     .map((p) => ({ p, score: (p.stars + 1) * (0.3 + fit(d, ctx, p, team)) * ((POS_TARGET[p.player.pos] ?? 0) - (counts[p.player.pos] ?? 0)) * (0.7 + 0.6 * r()) + (p.interest[team] ?? 0) / 400 }))
     .sort((a, b) => b.score - a.score)
-    .slice(0, Math.min(BOARD_SIZE, open * 2 + 4));
-  const total = cands.reduce((a, c) => a + c.score, 0) || 1;
+    .slice(0, Math.min(BOARD_SIZE, open + 6));
+  // Points go mostly to the best targets (score squared), up to the most one prospect can take.
+  const total = cands.reduce((a, c) => a + c.score * c.score, 0) || 1;
   const points: Record<number, number> = {};
   let left = WEEKLY_POINTS;
   for (const c of cands) {
-    const pts = Math.min(MAX_PER_PROSPECT, left, Math.round((WEEKLY_POINTS * c.score) / total));
+    const pts = Math.min(MAX_PER_PROSPECT, left, Math.round((WEEKLY_POINTS * c.score * c.score) / total));
     if (pts <= 0) continue;
     points[c.p.id] = pts;
     left -= pts;
@@ -238,7 +250,7 @@ export function runRecruitingWeek(d: Dynasty, rs0: RecruitingState, userPlans: R
       const p = byId.get(Number(idS));
       if (!p || pts <= 0) continue;
       const f = fit(d, ctx, p, team);
-      p.interest[team] = (p.interest[team] ?? 0) + pts * (0.5 + f) * (p.offers.includes(team) ? 1.2 : 0.6) * (0.85 + 0.3 * r());
+      p.interest[team] = (p.interest[team] ?? 0) + pts * (0.5 + f) * (p.offers.includes(team) ? 1.2 : 0.6) * reach(p.stars, ctx.stars.get(team)!) * (0.85 + 0.3 * r());
     }
   }
   // Commitments and flips (best prospects decide first, so spots go to them).
@@ -251,6 +263,7 @@ export function runRecruitingWeek(d: Dynasty, rs0: RecruitingState, userPlans: R
     if (!top) continue;
     const second = ranked.find((x) => x.t !== top.t)?.v ?? 0;
     const need = THRESHOLD[p.stars] * (p.id > 0 ? 0.7 : 1);
+    if (rs.week + 1 < FIRST_WEEK[p.stars] - (p.id > 0 ? 1 : 0)) continue;
     if (p.committed === null) {
       if (top.v >= need && top.v >= 1.25 * second) {
         p.committed = top.t;
