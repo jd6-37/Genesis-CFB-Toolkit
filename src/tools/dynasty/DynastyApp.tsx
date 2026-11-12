@@ -13,7 +13,7 @@ import {
 import { Ctx, href, TeamMark, type DynCtx } from './ui';
 import { History, Home, Leaders, Player, Rankings, Scores, Standings, Team, Teams } from './pages';
 import { Offseason, getTemplates, type OffseasonActions } from './OffseasonPage';
-import { seasonRom, writesDynastyArea } from '../../core/dynasty/offseason';
+import { seasonRom } from '../../core/dynasty/offseason';
 import { canReplaceBench, randomBench } from '../../core/dynasty/bench';
 import './dynasty.css';
 
@@ -158,7 +158,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       setArt(pics);
       setCurrent(dyn.id);
       await refresh();
-      setNote({ kind: 'ok', text: `${dyn.name} is ready: ${dyn.players.length.toLocaleString('en-US')} players on ${dyn.teams.length} teams. ${writesDynastyArea(rom) ? `Download the ${dyn.seasons[0].year} ROM (Season ROM, below), start a New Season with it, and import` : 'Import'} your save after you play a week.` });
+      setNote({ kind: 'ok', text: `${dyn.name} is ready: ${dyn.players.length.toLocaleString('en-US')} players on ${dyn.teams.length} teams. Download the ${dyn.seasons[0].year} ROM (Season ROM, below), start a New Season in the game with it, and import your save after you play a week.` });
     }),
     importSave: (f, allowOlder) => run('Importing the save…', async () => {
       if (!d) return;
@@ -250,9 +250,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       if (season.lineupEdited) await commit({ ...d, seasons: d.seasons.map((x) => (x === season ? { ...x, lineupEdited: false } : x)) });
       setNote({
         kind: 'ok',
-        text: writesDynastyArea(rom)
-          ? `Downloaded the ${year} ROM. Start a New Season with it in the game: Season mode plays the dynasty's rosters, Exhibition keeps the real 2026 ones.`
-          : `Downloaded the ${year} ROM. Start a New Season with it in the game. This ROM has no dynasty support (Elevated 2026 Season Edition v2.0.1 or later), so the rosters replace the real 2026 ones in Exhibition too.`,
+        text: `Downloaded the ${year} ROM. Start a New Season with it in the game: Season mode plays the dynasty's rosters, Exhibition keeps the real 2026 ones.`,
       });
     }),
   };
@@ -447,9 +445,9 @@ function Manage({ d, art, list, busy, note, actions }: {
               <>
                 <h3>Season ROM</h3>
                 <p>
-                  The {year} rosters and team OVRs written into your ROM. With the Elevated 2026 Season Edition v2.0.1 or later they go into the
-                  ROM's dynasty area: Season mode plays them, Exhibition keeps the real 2026 rosters, and New Season marks the save with the
-                  dynasty and season. Start the {year} season in the game with this ROM.
+                  The {year} rosters and team OVRs in your ROM's dynasty area: Season mode plays them, Exhibition keeps the real 2026
+                  rosters, and New Season marks the save with the dynasty and season, so the app knows it. Start the {year} season in the
+                  game with this ROM; saves of seasons started with another ROM can't be imported.
                 </p>
                 <button type="button" className="dy-button" disabled={!!busy} onClick={() => actions.downloadRom(year)}>Download the {year} ROM</button>
               </>
@@ -515,7 +513,7 @@ function Manage({ d, art, list, busy, note, actions }: {
       <section className="dy-panel">
         <h2>Start a new dynasty</h2>
         <p>
-          A dynasty needs the 138-team 2026 Season Edition of Bill Walsh '95 Elevated (v2.0.0 or later). The players start from the
+          A dynasty needs the 138-team 2026 Season Edition of Bill Walsh '95 Elevated with dynasty support (v2.0.1-test8 or later). The players start from the
           built-in {CFB27_LATEST.label.replace('College Football 27', 'CFB 27')} rosters; redshirted players start one class up.
         </p>
         <form className="dy-row" onSubmit={(e) => e.preventDefault()}>

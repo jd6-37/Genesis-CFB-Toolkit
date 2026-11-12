@@ -2,7 +2,7 @@
 
 The Dynasty section (`#dynasty`) keeps a multi-season record of the 138-team 2026 Season Edition: the app owns the players, the game plays the games, and the battery save carries each season's results back to the app.
 
-Code: `src/core/dynasty/` (no DOM) and `src/tools/dynasty/` (the pages). Tests: `npm run test:dynasty -- ELEVATED_2026_138 SAVE.srm`.
+Code: `src/core/dynasty/` (no DOM) and `src/tools/dynasty/` (the pages). Tests: `npm run test:dynasty -- ELEVATED_2026_138_DYNASTY SAVE.srm` (v2.0.1-test8 or later; the test marks the save for its dynasty).
 
 ## The battery save
 
@@ -94,10 +94,9 @@ IndexedDB database `genesis-cfb-dynasty`: store `dynasties` (the dynasty and whe
 
 `seasonRom` (`offseason.ts`) writes a season's 32 per team (jersey numbers and game ratings, on the 2026 record of each slot) and the team OVRs into a copy of the user's ROM, checksums fixed.
 
-- **With the dynasty support** (Elevated 2026 Season Edition v2.0.1-test8 on: the mark `BW95DYN` + version at `0x2B0000`; `dynastyArea.ts`): everything goes into the dynasty area `0x3E0000`-`0x3FFFFF`, which Season mode reads and Exhibition never does. Header: the ID block (`DYN1`, dynasty ID = FNV-1a of the dynasty's app ID, season number = season index + 1, roster version, export time in Unix seconds), format word 1, team count 138, then the addresses of the roster set (`0x3E0100`, 138 × 32 game records), the OVR table (`0x3E4600`, `OVR1` + OFF/DEF bytes) and the sim words (`0x3E4800`, `simFromOvr`). The ID block is written last. The area must be all `0xFF` or hold a valid header (`DYN1`, `0x0001008A` at +0x10); the 2026 data stays as it is. Season one's sets equal the ROM's own rosters and OVRs.
-- **Without it** (v2.0.0 to v2.0.1-test7): the rosters and OVRs replace the 2026 ones in the team blocks and the OVR table (Exhibition plays them too); season one's ROM is byte-identical to the user's.
+- **Only ROMs with the dynasty support** (Elevated 2026 Season Edition v2.0.1-test8 on: the mark `BW95DYN` + version at `0x2B0000`; `dynastyArea.ts`); older ROMs and saves aren't supported before the first public release (user, 2026-11-12: "things are changing fast and big"). Everything goes into the dynasty area `0x3E0000`-`0x3FFFFF`, which Season mode reads and Exhibition never does. Header: the ID block (`DYN1`, dynasty ID = FNV-1a of the dynasty's app ID, season number = season index + 1, roster version, export time in Unix seconds), format word 1, team count 138, then the addresses of the roster set (`0x3E0100`, 138 × 32 game records), the OVR table (`0x3E4600`, `OVR1` + OFF/DEF bytes) and the sim words (`0x3E4800`, `simFromOvr`). The ID block is written last. The area must be all `0xFF` or hold a valid header (`DYN1`, `0x0001008A` at +0x10); the 2026 data stays as it is. Season one's sets equal the ROM's own rosters and OVRs.
 - **Roster version:** 1, then one more when the lineup changes after the last download (`DSeason.rosterVersion`, lineup editor).
-- **The save stamp:** New Season copies the ID block into the season block's +0x1330. `importSave` refuses a stamp of another dynasty or another season, and warns when the roster version is older than the season's (the season was started before the last lineup change). Saves without a stamp (older ROMs, or a season started on a ROM the app didn't write) import as before.
+- **The save stamp:** New Season copies the ID block into the season block's +0x1330. `importSave` only takes stamped saves: another dynasty's or season's are refused (this also refuses last season's save in a new season), and an older roster version than the season's gives a warning (the season was started before the last lineup change).
 - The Manage page has a Download button for the current season's ROM (the first season's too, so its save gets the stamp); the Offseason page has one for the next season; the lineup editor reminds the user to download again.
 
 ## Prestige

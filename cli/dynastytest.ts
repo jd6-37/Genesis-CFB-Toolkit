@@ -1,8 +1,8 @@
 // Dynasty tests against a real ROM and battery save (bring your own; the ROM may be a .zip):
-//   npx tsx cli/dynastytest.ts ELEVATED_2026_138 SAVE.srm
-// The ROM is the 138-team 2026 Season Edition (Elevated v2.0.0 or later). The save is a Genesis Plus GX
-// (RetroArch) .srm of that ROM with a season started and at least one week played. The optional third ROM is an
-// edition with the dynasty support (v2.0.1-test8 or later): it tests the dynasty area and the save stamp.
+//   npx tsx cli/dynastytest.ts ELEVATED_2026_138_DYNASTY SAVE.srm
+// The ROM is the 138-team 2026 Season Edition with the dynasty support (Elevated v2.0.1-test8 or later). The
+// save is a Genesis Plus GX (RetroArch) .srm of the 138-team edition with a season started and at least one week
+// played; the test puts its dynasty's mark (the ID block New Season copies) into it.
 import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { strict as assert } from 'node:assert';
@@ -23,15 +23,24 @@ import { dynastyAreaProblem, dynastyHeaderValid, dynastyRomId, DYN_AREA, DYN_END
 import { simFromOvr } from '../src/core/teamRatings';
 import { backupLabel, lineupLock, moveToSpot, SPOTS, spotLabel, spotsFor } from '../src/core/dynasty/lineup';
 import { nextPrestige, tierOfRank } from '../src/core/dynasty/prestige';
-import { openRosterRom, readPlayer, getRating, teamLayout } from '../src/core/rosterRom';
+import { openRosterRom, readPlayer, getRating, jerseyNumber, teamLayout } from '../src/core/rosterRom';
 
-const [romPath, savePath, dynRomPath] = process.argv.slice(2);
+const [romPath, savePath] = process.argv.slice(2);
 if (!romPath || !savePath) {
-  console.error('usage: tsx cli/dynastytest.ts ELEVATED_2026_138 SAVE.srm [ELEVATED_2026_138_WITH_DYNASTY_SUPPORT]');
+  console.error('usage: tsx cli/dynastytest.ts ELEVATED_2026_138_DYNASTY SAVE.srm');
   process.exit(2);
 }
 const rom = (await openRom(basename(romPath), new Uint8Array(readFileSync(romPath)))).data;
-const srm = new Uint8Array(readFileSync(savePath));
+// The ID block New Season copies into the season block (+0x1330), for the test dynasty ('test'), season 1.
+const stampSave = (file: Uint8Array, id: number, season: number, version: number) => {
+  const f = file.slice();
+  const b = [0x44, 0x59, 0x4e, 0x31, id >>> 24, (id >>> 16) & 255, (id >>> 8) & 255, id & 255, season >> 8, season & 255, version >> 8, version & 255, 0, 0, 0, 1];
+  const window = f[1] === 0x6f;
+  b.forEach((x, k) => { f[window ? 0xe01 + 2 * (0x1330 + k) : 0x700 + 0x1330 + k] = x; });
+  return f;
+};
+const rawSrm = new Uint8Array(readFileSync(savePath));
+const srm = stampSave(rawSrm, dynastyRomId('test'), 1, 1);
 const csv = readFileSync(new URL(`../public/${CFB27_LATEST.file}`, import.meta.url), 'utf8');
 let passed = 0;
 const ok = (name: string) => {
@@ -310,29 +319,47 @@ assert.ok(y1moves.length > 0);
 assert.ok(y1moves.every((e) => e.kind === 'transfer' && (benched.get(e.player) ?? 0) >= 2 && !next.slots.some((sl) => sl.includes(e.player))));
 ok(`second offseason: ${y1moves.length} transfers, all after two seasons on the bench`);
 
+// The dynasty area's sets (dynastyArea.ts).
+const u32at = (d: Uint8Array, a: number) => ((d[a] << 24) >>> 0) + (d[a + 1] << 16) + (d[a + 2] << 8) + d[a + 3];
+const areaRecord = (d: Uint8Array, t: number, slot: number) => {
+  const a = u32at(d, DYN_AREA + 0x14) + 128 * t + 4 * slot;
+  return { numberByte: d[a], ratings: [d[a + 1] >> 4, d[a + 1] & 15, d[a + 2] >> 4, d[a + 2] & 15, d[a + 3] >> 4, d[a + 3] & 15] };
+};
+const stockRosters = openRosterRom(rom);
+/** Season one: the area holds the ROM's own rosters; nothing outside it changes but the checksums. */
+const isRomOwn = (out: Uint8Array) => {
+  let outside = 0;
+  for (let i = 0; i < DYN_AREA; i++) if (out[i] !== rom[i]) outside++;
+  const base = u32at(out, DYN_AREA + 0x14);
+  return outside <= 4 && stockRosters.teams.every((t) => out.subarray(base + 128 * t.index, base + 128 * t.index + 128).every((b, k) => b === rom[t.rosterOffset + k]));
+};
+
 // A random bench for the first season: the 32 stay (the ROM is unchanged), every slot gets a backup.
 const rb = randomBench(d0, rom, tpl, 5);
-assert.ok(Off.seasonRom(rb, rb.seasons[0], rom).every((b, i) => b === rom[i]));
+assert.ok(isRomOwn(Off.seasonRom(rb, rb.seasons[0], rom)));
 assert.equal(rb.seasons[0].bench!.flat().filter((x) => x !== null).length, 138 * 32);
 assert.deepEqual(rb.seasons[0].slots.map((sl) => sl.map((id) => (id ? rb.players[id - 1].srcId : null))), first.slots.map((sl) => sl.map((id) => (id ? d0.players[id - 1].srcId : null))));
 assert.throws(() => randomBench(o5, rom, tpl), /first season/);
 ok('random bench for the first season');
 
-// The season's rosters in the ROM: the first season gives the ROM back unchanged; the next one reads back.
-assert.ok(Off.seasonRom(d0, first, rom).every((b, i) => b === rom[i]), 'season 1 written = the ROM');
+// The season's rosters in the ROM: the first season's are the ROM's own; the next one reads back.
+assert.ok(isRomOwn(Off.seasonRom(d0, first, rom)), 'season 1 written = the ROM\'s rosters');
 const rom2 = Off.seasonRom(o5, next, rom);
 const rr = openRosterRom(rom2);
+const ovr2 = u32at(rom2, DYN_AREA + 0x18);
 for (let t = 0; t < 138; t++) {
   for (const def of teamLayout(rr, t)) {
     const b = next.bw![t][def.slot]!;
-    const pl = readPlayer(rr, t, def.slot);
-    assert.deepEqual(b.attrs.map((a) => getRating(pl, def, a)), b.steps);
+    assert.deepEqual(b.attrs.map((a) => getRating(areaRecord(rom2, t, def.slot), def, a)), b.steps);
+    assert.equal(jerseyNumber(areaRecord(rom2, t, def.slot).numberByte), o5.players[next.slots[t][def.slot]! - 1].jersey);
   }
-  assert.deepEqual(readRating(rom2, t), next.teamOvr![t]);
+  assert.deepEqual({ off: rom2[ovr2 + 4 + 2 * t], def: rom2[ovr2 + 5 + 2 * t] }, next.teamOvr![t]);
+  assert.deepEqual(readRating(rom2, t), readRating(rom, t)); // Exhibition's 2026 OVRs stay
 }
-ok('season rosters written to the ROM and read back');
+assert.deepEqual(readStamp(rom2.subarray(DYN_AREA, DYN_AREA + 16))!.season, 2);
+ok('season rosters written to the dynasty area and read back');
 // The new season doesn't take last season's save.
-assert.throws(() => importSave(o5, srm), /2026 season's save/);
+assert.throws(() => importSave(o5, srm), /the 2026 ROM, and the dynasty is in 2027/);
 ok('a new season refuses the last season\'s save');
 
 // ---- the lineup editor
@@ -391,68 +418,51 @@ ok('a new season refuses the last season\'s save');
   assert.match(lineupLock(played, T) ?? '', /set for this season/);
   // The ROM gets the new lineup.
   const romE = Off.seasonRom(a4, a4.seasons[0], rom);
-  const re = openRosterRom(romE);
-  for (const def of teamLayout(re, T)) {
+  for (const def of teamLayout(stockRosters, T)) {
     const b = a4.seasons[0].bw![T][def.slot]!;
-    assert.deepEqual(b.attrs.map((x) => getRating(readPlayer(re, T, def.slot), def, x)), b.steps);
+    assert.deepEqual(b.attrs.map((x) => getRating(areaRecord(romE, T, def.slot), def, x)), b.steps);
   }
-  assert.deepEqual(readRating(romE, T), a4.seasons[0].teamOvr![T]);
+  const ovrE = u32at(romE, DYN_AREA + 0x18);
+  assert.deepEqual({ off: romE[ovrE + 4 + 2 * T], def: romE[ovrE + 5 + 2 * T] }, a4.seasons[0].teamOvr![T]);
   ok(`lineup editor: 64 spots (${labels.slice(32, 36).join(', ')} …), swaps, position changes once a season, locks, ROM`);
 }
 
-// ---- the dynasty area (Elevated v2.0.1-test8 on)
-assert.ok(!hasDynastyHooks(rom));
+// ---- the dynasty area and the save's mark
+assert.ok(hasDynastyHooks(rom) && dynastyAreaProblem(rom) === null);
 {
-  // A stamp in the save's season block (+0x1330), as New Season writes it.
-  const stamped = (id: number, season: number, version: number) => {
-    const f = srm.slice();
-    const b = [0x44, 0x59, 0x4e, 0x31, id >>> 24, (id >>> 16) & 255, (id >>> 8) & 255, id & 255, season >> 8, season & 255, version >> 8, version & 255, 0, 0, 0, 1];
-    b.forEach((x, k) => { f[0xe01 + 2 * (0x1330 + k)] = x; });
-    return f;
-  };
   const id = dynastyRomId(d0.id);
-  assert.ok(importSave(d0, stamped(id, 1, 1)).warning === undefined);
-  assert.throws(() => importSave(d0, stamped(id ^ 1, 1, 1)), /another dynasty/);
-  assert.throws(() => importSave(d0, stamped(id, 2, 1)), /another season's ROM, and the dynasty is in 2026/);
-  ok('save stamps: this dynasty and season import, others are refused');
+  assert.ok(importSave(d0, stampSave(rawSrm, id, 1, 1)).warning === undefined);
+  assert.throws(() => importSave(d0, rawSrm), /wasn't started with a ROM from this app/);
+  assert.throws(() => importSave(d0, stampSave(rawSrm, id ^ 1, 1, 1)), /another dynasty/);
+  assert.throws(() => importSave(d0, stampSave(rawSrm, id, 2, 1)), /another season's ROM, and the dynasty is in 2026/);
+  assert.match(importSave({ ...d0, seasons: [{ ...d0.seasons[0], rosterVersion: 2 }] }, srm).warning ?? '', /earlier 2026 ROM/);
+  ok('save marks: this dynasty and season import, unmarked and other saves are refused, an older roster version warns');
 }
-if (dynRomPath) {
-  const rom8 = (await openRom(basename(dynRomPath), new Uint8Array(readFileSync(dynRomPath)))).data;
-  assert.ok(hasDynastyHooks(rom8) && dynastyAreaProblem(rom8) === null);
-  const d8 = createDynasty(rom8, csv, { name: 'Area', seed: 1, id: 'area', created: '2026-01-01T00:00:00.000Z' });
-  const out = Off.seasonRom(d8, d8.seasons[0], rom8, 1_800_000_000_000);
-  assert.ok(dynastyHeaderValid(out));
-  assert.deepEqual(readStamp(out.subarray(DYN_AREA, DYN_AREA + 16)), { dynasty: dynastyRomId('area'), season: 1, rosterVersion: 1, time: 1_800_000_000 });
-  // The 2026 data is untouched (only the checksums outside the area may change).
-  let outside = 0;
-  for (let i = 0; i < DYN_AREA; i++) if (out[i] !== rom8[i]) outside++;
-  assert.ok(outside <= 4, `${outside} bytes changed outside the dynasty area`);
-  // Season one's sets are the ROM's own rosters and OVRs.
-  const r8 = openRosterRom(rom8);
-  const u32 = (a: number) => ((out[a] << 24) >>> 0) + (out[a + 1] << 16) + (out[a + 2] << 8) + out[a + 3];
-  const [rost, ovrT, sims] = [u32(DYN_AREA + 0x14), u32(DYN_AREA + 0x18), u32(DYN_AREA + 0x1c)];
+{
+  const out = Off.seasonRom(d0, d0.seasons[0], rom, 1_800_000_000_000);
+  assert.ok(dynastyHeaderValid(out) && isRomOwn(out));
+  assert.deepEqual(readStamp(out.subarray(DYN_AREA, DYN_AREA + 16)), { dynasty: dynastyRomId('test'), season: 1, rosterVersion: 1, time: 1_800_000_000 });
+  const ovrT = u32at(out, DYN_AREA + 0x18), sims = u32at(out, DYN_AREA + 0x1c);
   assert.deepEqual([...out.subarray(ovrT, ovrT + 4)], [0x4f, 0x56, 0x52, 0x31]);
   for (let t = 0; t < 138; t++) {
-    const o = r8.teams[t].rosterOffset;
-    assert.deepEqual([...out.subarray(rost + 128 * t, rost + 128 * t + 128)], [...rom8.subarray(o, o + 128)], `team ${t} roster`);
-    const r = readRating(rom8, t);
+    const r = readRating(rom, t);
     assert.deepEqual([out[ovrT + 4 + 2 * t], out[ovrT + 5 + 2 * t]], [r.off, r.def]);
     assert.deepEqual([(out[sims + 4 * t] << 8) | out[sims + 4 * t + 1], (out[sims + 4 * t + 2] << 8) | out[sims + 4 * t + 3]], [simFromOvr(r.off), simFromOvr(r.def)]);
   }
   // A lineup change: a new roster version and the new records; written again over the last export.
-  const T = d8.teams.findIndex((_, t) => d8.players[d8.seasons[0].slots[t][2]! - 1].pos === 'HB' && d8.players[d8.seasons[0].slots[t][1]! - 1].pos === 'HB');
-  const L8 = moveToSpot({ ...d8, userTeams: [T] }, T, d8.seasons[0].slots[T][2]!, 1);
+  const T = d0.teams.findIndex((_, t) => d0.players[d0.seasons[0].slots[t][2]! - 1].pos === 'HB' && d0.players[d0.seasons[0].slots[t][1]! - 1].pos === 'HB');
+  const L8 = moveToSpot({ ...d0, userTeams: [T] }, T, d0.seasons[0].slots[T][2]!, 1);
   const out2 = Off.seasonRom(L8, L8.seasons[0], out, 1_800_000_100_000);
   assert.equal(readStamp(out2.subarray(DYN_AREA, DYN_AREA + 16))!.rosterVersion, 2);
-  const o = r8.teams[T].rosterOffset;
-  assert.deepEqual([...out2.subarray(rost + 128 * T + 4, rost + 128 * T + 8)], [...rom8.subarray(o + 8, o + 12)]); // HB2's record now at HB1
-  assert.deepEqual([...out2.subarray(0, DYN_AREA)].filter((x, i) => x !== out[i]).length <= 4, true);
-  // Something else in the area: refused.
-  const busy = rom8.slice(); busy[DYN_END - 16] = 0;
-  assert.throws(() => Off.seasonRom(d8, d8.seasons[0], busy), /isn't free/);
-  ok('dynasty area: header, ID block, season rosters, OVRs and sim words; 2026 data untouched; lineup changes; busy area refused');
-} else {
-  console.log('(no ROM with dynasty support given: dynasty area tests skipped)');
+  const o = stockRosters.teams[T].rosterOffset;
+  assert.deepEqual([...out2.subarray(u32at(out2, DYN_AREA + 0x14) + 128 * T + 4, u32at(out2, DYN_AREA + 0x14) + 128 * T + 8)], [...rom.subarray(o + 8, o + 12)]); // HB2's record now at HB1
+  // Something else in the area, or a ROM without the dynasty support: refused.
+  const busy = rom.slice(); busy[DYN_END - 16] = 0;
+  assert.throws(() => Off.seasonRom(d0, d0.seasons[0], busy), /isn't free/);
+  const noHooks = rom.slice(); noHooks[0x2b0000] = 0xff;
+  assert.throws(() => createDynasty(noHooks, csv, { name: 'x', seed: 1 }), /dynasty support/);
+  assert.throws(() => Off.seasonRom(d0, d0.seasons[0], noHooks), /dynasty support/);
+  ok('dynasty area: header, ID block, season rosters, OVRs and sim words; 2026 data untouched; lineup changes; busy area and older ROMs refused');
 }
 
 console.log(`\n${passed} passed`);

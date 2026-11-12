@@ -1,4 +1,4 @@
-// The dynasty area of the 138-team 2026 Season Edition (Elevated v2.0.1 on; claude.ai project notes:
+// The dynasty area of the 138-team 2026 Season Edition (Elevated v2.0.1-test8 on; claude.ai project notes:
 // bw95-dynasty-spec.md, sections 4-5; the ROM side is the Elevated patch's dynasty.py).
 //
 // 0x3E0000-0x3FFFFF (all 0xFF until the app writes it), big-endian:
@@ -22,6 +22,8 @@ const MARK = [0x42, 0x57, 0x39, 0x35, 0x44, 0x59, 0x4e]; // BW95DYN
 const MAGIC = [0x44, 0x59, 0x4e, 0x31]; // DYN1
 const FORMAT = 0x0001008a; // format 1, 138 teams
 export const DYN_TEAMS = 138;
+/** What a dynasty needs (no older ROMs or saves until the first public release, user 2026-11-12). */
+export const DYNASTY_EDITION = "the 138-team 2026 Season Edition with dynasty support (Bill Walsh '95 Elevated v2.0.1-test8 or later)";
 
 /** The sets' places (the patch's suggestion). */
 const ROSTERS = DYN_AREA + 0x100;
@@ -43,7 +45,7 @@ export const dynastyHeaderValid = (d: Uint8Array) => MAGIC.every((b, k) => d[DYN
 
 /** Why the dynasty area can't be written, or null: it must be free (all 0xFF) or hold a dynasty header. */
 export function dynastyAreaProblem(d: Uint8Array): string | null {
-  if (!hasDynastyHooks(d)) return "This ROM doesn't have the dynasty support (Elevated 2026 Season Edition v2.0.1 or later).";
+  if (!hasDynastyHooks(d)) return `This ROM doesn't have the dynasty support: the dynasty needs ${DYNASTY_EDITION}.`;
   if (dynastyHeaderValid(d)) return null;
   for (let a = DYN_AREA; a < DYN_END; a++) if (d[a] !== 0xff) return `The dynasty area (0x3E0000) isn't free: something else is at 0x${a.toString(16).toUpperCase()}.`;
   return null;

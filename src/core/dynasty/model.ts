@@ -13,7 +13,7 @@ import { ratingProblems, readRating, type TeamRating } from '../teamRatings';
 import { readDynastySave, type DynastySave } from './save';
 import { startingPrestige } from './prestige';
 import { buildRosters } from './rosters';
-import { dynastyRomId, readStamp } from './dynastyArea';
+import { DYNASTY_EDITION, dynastyRomId, hasDynastyHooks, readStamp } from './dynastyArea';
 
 export const DYNASTY_FILE = { app: 'genesis-cfb-toolkit', tool: 'dynasty', version: 1 } as const;
 
@@ -189,7 +189,8 @@ export interface CreateOptions {
 /** A new dynasty from the user's 138-team ROM and the CFB 27 ratings CSV (the built-in Week 9 file). */
 export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptions): Dynasty {
   const roster = openRosterRom(rom);
-  if (!roster.wide) throw new Error("A dynasty needs the 138-team 2026 Season Edition (Bill Walsh '95 Elevated v2.0.0 or later).");
+  // Only ROMs with the dynasty support until the first public release (user, 2026-11-12).
+  if (!roster.wide || !hasDynastyHooks(rom)) throw new Error(`A dynasty needs ${DYNASTY_EDITION}.`);
   const p = wideSeasonProblems(rom);
   if (p.length) throw new Error(`This ROM's season settings can't be read: ${p.join('; ')}.`);
   const n = teamsOf(rom);
@@ -312,30 +313,20 @@ export function importSave(d: Dynasty, file: Uint8Array, opt: { at?: string; all
   if (save.season.games.some((g) => (g.visitor !== null && g.visitor >= d.teams.length) || (g.home !== null && g.home >= d.teams.length))) {
     throw new Error("This save's games use teams this dynasty doesn't have.");
   }
-  // A season started with a ROM the app wrote (Elevated v2.0.1 on) carries the dynasty's ID block.
+  // The season must have been started with a ROM this app wrote: New Season copies its ID block into the save.
   const stamp = readStamp(save.stamp);
+  if (!stamp) throw new Error(`This save's season wasn't started with a ROM from this app. Download the ${season.year} ROM (Manage, Season ROM), start a New Season in the game with it, play, then import.`);
+  if (stamp.dynasty !== dynastyRomId(d.id)) throw new Error("This save's season was started with a ROM of another dynasty.");
+  if (stamp.season !== season.index + 1) {
+    const year = d.seasons[stamp.season - 1]?.year;
+    throw new Error(`This save's season was started with the ${year ?? 'another season\'s'} ROM, and the dynasty is in ${season.year}.${year !== undefined && year < season.year ? ` Start a New Season in the game with the ${season.year} ROM.` : ''}`);
+  }
   let warning: string | undefined;
-  if (stamp) {
-    if (stamp.dynasty !== dynastyRomId(d.id)) throw new Error("This save's season was started with a ROM of another dynasty.");
-    if (stamp.season !== season.index + 1) {
-      const year = d.seasons[stamp.season - 1]?.year;
-      throw new Error(`This save's season was started with the ${year ?? 'another season\'s'} ROM, and the dynasty is in ${season.year}.${year !== undefined && year < season.year ? ` Start a New Season in the game with the ${season.year} ROM.` : ''}`);
-    }
-    if (stamp.rosterVersion !== (season.rosterVersion ?? 1)) {
-      warning = `This season was started with an earlier ${season.year} ROM, from before your last lineup change: its stats are counted for the lineup the app has now.`;
-    }
+  if (stamp.rosterVersion !== (season.rosterVersion ?? 1)) {
+    warning = `This season was started with an earlier ${season.year} ROM, from before your last lineup change: its stats are counted for the lineup the app has now.`;
   }
   const played = playedOf(save);
   const last = season.imports[season.imports.length - 1];
-  // A new season's first import: not the save of the season before (its results would all be there).
-  const prevSeason = d.seasons[d.seasons.length - 2];
-  const prevLast = prevSeason?.imports[prevSeason.imports.length - 1];
-  if (!last && prevLast && !opt.allowOlder) {
-    const prev = readDynastySave(fromBase64(prevLast.data));
-    const same = prev.season && prev.season.games.length === save.season.games.length && prev.season.games.some((g) => g.vs !== null) &&
-      prev.season.games.every((g, i) => g.vs === null || (g.vs === save.season!.games[i].vs && g.hs === save.season!.games[i].hs && g.visitor === save.season!.games[i].visitor));
-    if (same) throw new Error(`This is the ${prevSeason.year} season's save. Start a New Season in the game with the ${season.year} ROM, play, then import.`);
-  }
   if (last && !opt.allowOlder) {
     const prev = readDynastySave(fromBase64(last.data));
     if (played < last.played) {
