@@ -11,7 +11,7 @@
 //                    flips
 //   signingDay       uncommitted prospects pick among the teams that offered; then cuts as before
 //
-// Interest gained in a week = points × (0.5 + fit) × (1.2 with an offer, 0.6 without) × reach (a
+// Interest gained in a week = points × (the pitch's reaction) × (0.5 + fit) × (1.2 with an offer, 0.6 without) × reach (a
 // prospect above the school's prestige level is harder to reach), where fit =
 // his priorities · (playing time he'd get, prestige, closeness to home). He commits when the leader
 // reaches the threshold for his stars, leads the second by 25% and has offered with a spot open; the
@@ -210,12 +210,31 @@ export function pipelineStates(d: Dynasty, team: number): { state: string; n: nu
   return [...c].filter(([, n]) => n >= R.pipelineMin).map(([state, n]) => ({ state, n })).sort((a, b) => b.n - a.n || a.state.localeCompare(b.state));
 }
 
-/** How far a school's points go with a prospect (user: "In-state recruits should have lower recruiting costs"). */
-export function pointValue(d: Dynasty, ctx: Pick<WeekContext, 'pipelines'>, pr: Prospect, team: number): number {
+/**
+ * What a point on a prospect costs a school, as a share (user: "In-state recruits should have lower
+ * recruiting costs"; 2026-11-13: "instead of the points counting more, it just costs fewer points"):
+ * less for prospects from its state, a little less for its pipeline states.
+ */
+export function pointCost(d: Dynasty, ctx: Pick<WeekContext, 'pipelines'>, pr: Prospect, team: number): number {
   const R = rulesOf(d);
   const s = stateCode(pr.player.state);
-  if (s && SCHOOL_STATE[d.teams[team].school] === s) return R.inStateBoost;
-  return s && ctx.pipelines.get(team)?.has(s) ? R.pipelineBoost : 1;
+  if (s && SCHOOL_STATE[d.teams[team].school] === s) return R.inStateCost;
+  return s && ctx.pipelines.get(team)?.has(s) ? R.pipelineCost : 1;
+}
+
+/** What `points` on a prospect take out of the week's budget (whole points). */
+export const costOf = (d: Dynasty, ctx: Pick<WeekContext, 'pipelines'>, pr: Prospect, team: number, points: number) =>
+  Math.round(points * pointCost(d, ctx, pr, team));
+
+/** What a team's plan costs this week (scouting not counted). */
+export function planCost(d: Dynasty, ctx: Pick<WeekContext, 'pipelines'>, rs: RecruitingState, team: number, plan: TeamPlan): number {
+  const byId = new Map(rs.prospects.map((p) => [p.id, p]));
+  let c = 0;
+  for (const [id, pts] of Object.entries(plan.points)) {
+    const p = byId.get(Number(id));
+    c += p ? costOf(d, ctx, p, team, pts) : pts;
+  }
+  return c;
 }
 
 /**
@@ -272,18 +291,37 @@ export function fit(d: Dynasty, ctx: WeekContext, pr: Prospect, team: number): n
   return PITCHES.reduce((a, k) => a + (pr.wants[k] ?? 0) * sc[k], 0);
 }
 
-/** The next pitch from the reactions so far: + kept, untried pitches before a ~, never − or ✗ again. */
-export function learnedPitch(known: Partial<Record<PitchKey, PitchReaction>>, r: () => number): PitchKey {
-  const good = PITCHES.find((k) => known[k] === 'good');
-  if (good) return good;
+/**
+ * The next pitch from the reactions so far, or none. `value` is what a known pitch is worth (the
+ * multiplier it got), `main` whether a known pitch is his main interest. A known pitch worth more than
+ * no pitch is kept once his main interest is found or the pitch got a +; otherwise an untried pitch;
+ * with all his interests found (or nothing left to try) and nothing worth more than no pitch, no pitch.
+ */
+export function learnedPitch(
+  known: Partial<Record<PitchKey, PitchReaction>>, r: () => number,
+  value: (k: PitchKey) => number = (k) => ({ good: 1.5, ok: 1.1, bad: 0.7, no: 0.9 })[known[k]!],
+  main: (k: PitchKey) => boolean = (k) => known[k] !== 'no',
+  interests = 2,
+): PitchKey | undefined {
+  const tried = PITCHES.filter((k) => known[k]);
+  const found = tried.filter((k) => known[k] !== 'no');
+  const best = tried.slice().sort((a, b) => value(b) - value(a))[0];
+  if (best && value(best) > 1 && (found.some(main) || known[best] === 'good')) return best;
   const untried = PITCHES.filter((k) => !known[k]);
-  if (untried.length) return untried[Math.floor(r() * untried.length)];
-  return PITCHES.find((k) => known[k] === 'ok') ?? PITCHES[Math.floor(r() * PITCHES.length)];
+  if (untried.length && found.length < interests) return untried[Math.floor(r() * untried.length)];
+  return best && value(best) > 1 ? best : undefined;
 }
 
-/** His interests: his top pitches (rules: pitchInterests). */
+/** His interests, the main one first: his top pitches (rules: pitchInterests). */
 export const interestsOf = (R: OffseasonRules, pr: Prospect): PitchKey[] =>
   PITCHES.slice().sort((a, b) => (pr.wants[b] ?? 0) - (pr.wants[a] ?? 0)).slice(0, R.pitchInterests);
+
+/**
+ * Where a pitch stands among his interests: 1 his main interest, 2 and up a minor one, 0 not an interest
+ * (user, 2026-11-13: ranked interests, so that the first hit isn't the end of it). The page shows it
+ * only for pitches that got a reaction.
+ */
+export const interestRank = (R: OffseasonRules, pr: Prospect, pitch: PitchKey): number => interestsOf(R, pr).indexOf(pitch) + 1;
 
 /**
  * A pitch's reaction (user, 2026-11-12: "you get rewarded if your school matches what the player is
@@ -294,8 +332,11 @@ export function pitchReaction(R: OffseasonRules, pr: Prospect, scores: Record<Pi
   const v = scores[pitch];
   return v >= R.pitchStrongAt ? 'good' : v < R.pitchWeakBelow ? 'bad' : 'ok';
 }
-export const reactionValue = (R: OffseasonRules, x: PitchReaction) =>
-  x === 'good' ? R.pitchGood : x === 'ok' ? R.pitchOk : x === 'bad' ? R.pitchBad : R.pitchNotInterested;
+/** What the week's points count after a pitch: his main interest swings more than a minor one (`rank` from interestRank). */
+export const reactionValue = (R: OffseasonRules, x: PitchReaction, rank = 1) =>
+  x === 'no' ? R.pitchNotInterested
+    : rank > 1 ? (x === 'good' ? R.pitchMinorGood : x === 'ok' ? R.pitchMinorOk : R.pitchMinorBad)
+      : x === 'good' ? R.pitchGood : x === 'ok' ? R.pitchOk : R.pitchBad;
 
 /** A CPU team's plan for the week: targets by need and level, points by fit and stars. */
 export function cpuPlan(d: Dynasty, rs: RecruitingState, ctx: WeekContext, team: number, r: Rand): TeamPlan {
@@ -318,10 +359,12 @@ export function cpuPlan(d: Dynasty, rs: RecruitingState, ctx: WeekContext, team:
   const points: Record<number, number> = {};
   let left = R.cpuPoints;
   for (const c of cands) {
-    const pts = Math.min(R.maxPerProspect, left, Math.round((R.cpuPoints * c.score * c.score) / total));
+    // What's left buys more with a prospect who costs less (in-state, pipeline).
+    const share = pointCost(d, ctx, c.p, team);
+    const pts = Math.min(R.maxPerProspect, Math.floor(left / share), Math.round((R.cpuPoints * c.score * c.score) / total / share));
     if (pts <= 0) continue;
     points[c.p.id] = pts;
-    left -= pts;
+    left -= costOf(d, ctx, c.p, team, pts);
   }
   // Its pitch for each target, learned the way the user learns it (user, 2026-11-12: prestige shouldn't
   // make a school better at reading recruits): keep a pitch that got +, try one not tried yet over a ~,
@@ -330,7 +373,9 @@ export function cpuPlan(d: Dynasty, rs: RecruitingState, ctx: WeekContext, team:
   const memory = rs.reactions?.[team] ?? {};
   for (const c of cands) {
     if (!points[c.p.id]) continue;
-    pitches[c.p.id] = learnedPitch(memory[c.p.id] ?? {}, r);
+    const known = memory[c.p.id] ?? {};
+    const pitch = learnedPitch(known, r, (k) => reactionValue(R, known[k]!, interestRank(R, c.p, k)), (k) => interestRank(R, c.p, k) === 1, R.pitchInterests);
+    if (pitch) pitches[c.p.id] = pitch;
   }
   return { points, offers: cands.slice(0, open + 6).map((c) => c.p.id), pitches };
 }
@@ -372,10 +417,11 @@ export function scoutProspect(d: Dynasty, team: number, id: number, level: Scout
   return { ...d, offseason: { ...st, recruiting } };
 }
 
-export function planProblems(R: OffseasonRules, plan: TeamPlan, scoutSpent = 0): string[] {
+/** `cost` = what the plan costs after the in-state and pipeline discounts (planCost); without it, its points. */
+export function planProblems(R: OffseasonRules, plan: TeamPlan, scoutSpent = 0, cost?: number): string[] {
   const out: string[] = [];
   const vals = Object.values(plan.points);
-  const total = vals.reduce((a, b) => a + b, 0) + scoutSpent;
+  const total = (cost ?? vals.reduce((a, b) => a + b, 0)) + scoutSpent;
   if (vals.some((v) => v < 0 || !Number.isFinite(v))) out.push('Points must be zero or more.');
   if (vals.some((v) => v > R.maxPerProspect)) out.push(`At most ${R.maxPerProspect} points for one prospect a week.`);
   if (total > R.userPoints) out.push(`That's ${total} points${scoutSpent ? `, ${scoutSpent} of them on scouting` : ''}: you have ${R.userPoints} a week.`);
@@ -390,13 +436,13 @@ export function planProblems(R: OffseasonRules, plan: TeamPlan, scoutSpent = 0):
 export function runRecruitingWeek(d: Dynasty, rs0: RecruitingState, userPlans: Record<number, TeamPlan>, seed: number, sim: number[] = []): RecruitingState {
   const R = rulesOf(d);
   if (rs0.week >= R.weeks) throw new Error('Recruiting is over: it\'s signing day.');
-  for (const [t, p] of Object.entries(userPlans)) {
-    const bad = planProblems(R, p, rs0.scoutSpent?.[Number(t)] ?? 0);
-    if (bad.length) throw new Error(`${d.teams[Number(t)].school}: ${bad.join(' ')}`);
-  }
   const r = seeded(seed, 100 + rs0.week);
   const rs: RecruitingState = { ...rs0, prospects: rs0.prospects.map((p) => ({ ...p, interest: { ...p.interest }, offers: p.offers.slice() })), log: rs0.log.slice(), plans: { ...rs0.plans, ...userPlans }, scouted: rs0.scouted ?? {}, scoutSpent: {}, reactions: JSON.parse(JSON.stringify(rs0.reactions ?? {})) };
   const ctx = weekContext(d, rs);
+  for (const [t, p] of Object.entries(userPlans)) {
+    const bad = planProblems(R, p, rs0.scoutSpent?.[Number(t)] ?? 0, planCost(d, ctx, rs, Number(t), p));
+    if (bad.length) throw new Error(`${d.teams[Number(t)].school}: ${bad.join(' ')}`);
+  }
   const byId = new Map(rs.prospects.map((p) => [p.id, p]));
   // Plans: user teams as given, the rest by the computer.
   const plans = new Map<number, TeamPlan>();
@@ -419,11 +465,11 @@ export function runRecruitingWeek(d: Dynasty, rs0: RecruitingState, userPlans: R
       let pv = 1;
       if (pitch) {
         const x = pitchReaction(R, p, sc, pitch);
-        pv = reactionValue(R, x);
+        pv = reactionValue(R, x, interestRank(R, p, pitch));
         const mine = (rs.reactions ??= {})[team] ??= {};
         mine[p.id] = { ...mine[p.id], [pitch]: x };
       }
-      p.interest[team] = (p.interest[team] ?? 0) + pts * pv * pointValue(d, ctx, p, team) * (0.5 + f) * (p.offers.includes(team) ? R.offerBoost : R.noOffer) * reach(p.stars, ctx.stars.get(team)!) * (0.85 + 0.3 * r());
+      p.interest[team] = (p.interest[team] ?? 0) + pts * pv * (0.5 + f) * (p.offers.includes(team) ? R.offerBoost : R.noOffer) * reach(p.stars, ctx.stars.get(team)!) * (0.85 + 0.3 * r());
     }
   }
   // Commitments and flips (best prospects decide first, so spots go to them).

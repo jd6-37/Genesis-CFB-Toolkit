@@ -12,7 +12,7 @@ import { playerName } from '../../core/dynasty/derive';
 import { GROUP_COLUMNS, type Attr } from '../../core/rosterLayouts';
 import { rulesOf } from '../../core/dynasty/rules';
 import { academicGrade, gradeOf } from '../../core/dynasty/academics';
-import { pipelineStates } from '../../core/dynasty/recruiting';
+import { costOf, interestRank, pipelineStates, planCost } from '../../core/dynasty/recruiting';
 import { SCHOOL_STATE, stateCode } from '../../core/dynasty/schoolStates';
 import { GROUP_OF_ROLE, roleOfPos, shownOf } from '../../core/dynasty/ratings';
 import { TeamLink, heightText, hometownText, useDyn } from './ui';
@@ -46,7 +46,9 @@ function Reactions({ p, team }: { p: Prospect; team: number }) {
     <div className="dy-small dy-reactions">
       {PITCHES.filter((k) => got[k]).map((k) => {
         const x = REACT[got[k]!];
-        return <span key={k} className={x.cls} title={`${PITCH[k]}: ${x.text}`}>{PITCH[k]} <b>{x.mark}</b></span>;
+        const rank = got[k] === 'no' ? 0 : interestRank(rulesOf(d), p, k);
+        const kind = rank === 1 ? 'his main interest' : rank > 1 ? 'a minor interest' : '';
+        return <span key={k} className={x.cls} title={`${PITCH[k]}: ${kind ? `${kind}; ` : ''}${x.text}`}>{PITCH[k]}{rank === 1 ? ' (main)' : rank > 1 ? ' (minor)' : ''} <b>{x.mark}</b></span>;
       })}
     </div>
   );
@@ -134,7 +136,9 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
   const plan = plans[team] ?? { points: {}, offers: [] };
   // Committed prospects leave the board.
   const board = Object.keys(plan.points).map(Number).map((id) => byId.get(id)!).filter((p) => p && (p.committed === null || p.committed === team));
-  const spent = board.filter((p) => p.committed === null).reduce((a, p) => a + (plan.points[p.id] ?? 0), 0);
+  const pipes = useMemo(() => ({ pipelines: new Map([[team, new Set(pipelineStates(d, team).map((x) => x.state))]]) }), [d, team]);
+  const cost = (p: Prospect) => costOf(d, pipes, p, team, plan.points[p.id] ?? 0);
+  const spent = board.filter((p) => p.committed === null).reduce((a, p) => a + cost(p), 0);
   const scoutSpent = rs.scoutSpent?.[team] ?? 0;
   const R = rulesOf(d);
   const left = R.userPoints - spent - scoutSpent;
@@ -162,7 +166,8 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
       const pitches = Object.fromEntries(Object.entries(p.pitches ?? {}).filter(([id]) => id in points));
       return [u, { points, offers: p.offers, pitches }];
     }));
-    const bad = users.flatMap((u) => planProblems(R, send[u], rs.scoutSpent?.[u] ?? 0).map((m) => `${d.teams[u].school}: ${m}`));
+    const ctx = weekContext(d, rs);
+    const bad = users.flatMap((u) => planProblems(R, send[u], rs.scoutSpent?.[u] ?? 0, planCost(d, ctx, rs, u, send[u])).map((m) => `${d.teams[u].school}: ${m}`));
     if (bad.length) return setErr(bad.join(' '));
     void actions.run(`Recruiting week ${rs.week + 1}…`, async () => {
       await actions.commit(recruitingWeek(d, send));
@@ -181,8 +186,8 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
     <>
       <SubHead>{rs.week < R.weeks ? `Recruiting, week ${rs.week + 1} of ${R.weeks}` : 'Recruiting is over'}</SubHead>
       <p>
-        Every week you have {R.userPoints.toLocaleString('en-US')} points to spend on up to {R.boardSize} prospects (at most {R.maxPerProspect} each); they go further with prospects from your state and your pipeline states.
-        Interest grows with points, with an offer, and with how well your school fits what a prospect wants: playing time, program prestige, being close to home, academics and a shot at a championship. What he wants is hidden: pitch one of them, and after the week he reacts. + means it's one of his interests and your school is strong there (your points count more), ~ in between, − one of his interests but your school is weak there (your points count less than with no pitch), ✗ not one of his interests.
+        Every week you have {R.userPoints.toLocaleString('en-US')} points to spend on up to {R.boardSize} prospects (at most {R.maxPerProspect} each); prospects from your state cost {Math.round((1 - R.inStateCost) * 100)}% fewer points and those from your pipeline states {Math.round((1 - R.pipelineCost) * 100)}% fewer.
+        Interest grows with points, with an offer, and with how well your school fits what a prospect wants: playing time, program prestige, being close to home, academics and a shot at a championship. What he wants is hidden: he has a main interest and {R.pitchInterests > 2 ? 'minor ones' : 'a minor one'}; pitch something, and after the week he reacts. + means it's one of his interests and your school is strong there (your points count more), ~ in between, − one of his interests but your school is weak there (your points count less than with no pitch), ✗ not one of his interests (your points count a little less). His main interest moves the points more than a minor one, and the reaction says which it is.
         Prospects rated above your program's prestige are harder to reach. A prospect commits when one school's interest is high enough and clearly
         ahead (the best ones not before week 3 or 4); at signing day the rest choose among the schools that offered. Players in the transfer portal are
         prospects too; your own players in the portal start on your board, and their old school (you) is one of their top schools. Scouting a high-school prospect shows his OVR ({R.scoutOvr} points), then all his ratings ({R.scoutRatings} more), out of the
@@ -251,6 +256,7 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
                     <label>
                       <span className="dy-small">Points</span>
                       <input type="number" inputMode="numeric" min={0} max={R.maxPerProspect} step={10} value={plan.points[p.id] ?? 0} onChange={(e) => setPoints(p.id, Number(e.target.value))} />
+                      {cost(p) !== (plan.points[p.id] ?? 0) && <span className="dy-small dy-dim"> costs {cost(p)}</span>}
                     </label>
                     {offered ? <span className="dy-small dy-w">Offered</span> : <Button variant="quiet" onClick={() => offer(p.id)}>Offer</Button>}
                     <ScoutButtons p={p} team={team} lv={lv} left={left} onScout={scout} />
