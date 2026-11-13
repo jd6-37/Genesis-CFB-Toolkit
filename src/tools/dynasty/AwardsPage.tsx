@@ -1,6 +1,6 @@
 // Season awards (awards.ts; user, 2026-11-12): the Heisman, position awards, the All-American teams and each
 // conference's first team, for any finished season. Mobile first: one column of tables on phones.
-import { PageHead, Select, SubHead } from '../../ui';
+import { PageHead, Select, SubHead, Table } from '../../ui';
 import { useMemo, useState } from 'react';
 import { AWARD_SPOTS, seasonAwards, type Candidate } from '../../core/dynasty/awards';
 import { playerName } from '../../core/dynasty/derive';
@@ -14,20 +14,20 @@ function TeamTable({ list }: { list: Candidate[] }) {
   const { d } = useDyn();
   return (
     <div className="dy-scroll-x">
-      <table className="dy-table dy-awards-table">
+      <Table className="dy-awards-table">
         <tbody>
           {list.map((c) => {
             const p = playerOf(d, c.player);
             return (
               <tr key={c.player}>
-                <td className="dy-left dy-dim">{AWARD_SPOTS.some((x) => x.roles.includes(c.role)) ? spotOf(c) : c.role}</td>
-                <td className="dy-left">{p ? <a href={href(`player/${p.id}`)}>{playerName(p)}</a> : 'Unknown player'}<div className="dy-small dy-dim">{c.line}</div></td>
-                <td className="dy-left"><TeamLink team={c.team} rank={false} size={16} /></td>
+                <td className="ui-left dy-dim">{AWARD_SPOTS.some((x) => x.roles.includes(c.role)) ? spotOf(c) : c.role}</td>
+                <td className="ui-left">{p ? <a href={href(`player/${p.id}`)}>{playerName(p)}</a> : 'Unknown player'}<div className="dy-small dy-dim">{c.line}</div></td>
+                <td className="ui-left"><TeamLink team={c.team} rank={false} size={16} /></td>
               </tr>
             );
           })}
         </tbody>
-      </table>
+      </Table>
     </div>
   );
 }

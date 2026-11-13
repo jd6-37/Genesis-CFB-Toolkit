@@ -2,7 +2,7 @@
 // the side column, the playoff picture, the national leaders and your conference in a band across the page
 // below; in the offseason, your commitments and the class rankings in the side column.
 
-import { SubHead } from '../../ui';
+import { SubHead, Table } from '../../ui';
 import { useMemo } from 'react';
 import { INDEPENDENT, leaders, playerLines, playerName, standings, statValue, weekName, type PlayerLine, type StatCategory } from '../../core/dynasty/derive';
 import { bigGames, heismanWatch, playoffPicture } from '../../core/dynasty/outlook';
@@ -198,18 +198,18 @@ function YourConferences() {
       {confs.map((c) => (
         <section key={c}>
           <SubHead level={2}><a href={href('standings')}>{v.season.confNames[c]}</a></SubHead>
-          <table className="dy-table dy-side-table">
-            <thead><tr><th className="dy-left">Team</th><th>Conf</th><th>Overall</th></tr></thead>
+          <Table figures className="dy-side-table">
+            <thead><tr><th className="ui-left">Team</th><th>Conf</th><th>Overall</th></tr></thead>
             <tbody>
               {standings(v, c).map((r) => (
                 <tr key={r.team} className={d.userTeams.includes(r.team) ? 'dy-side-mine' : undefined}>
-                  <td className="dy-left"><TeamLink team={r.team} /></td>
+                  <td className="ui-left"><TeamLink team={r.team} /></td>
                   <td>{r.cw}-{r.cl}</td>
                   <td>{recordText(r)}</td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         </section>
       ))}
     </>

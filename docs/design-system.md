@@ -58,14 +58,16 @@ Run `npm run storybook` to browse the components (port 6006).
 | `DataTable` | Any table of records: columns (`left` for text, `num` for figures in pixel numerals), rows, `mine` to mark the user's rows, `empty` text. Scrolls sideways inside itself on phones. |
 | `Stat` | One number with a label (an OVR, a record). |
 | `Empty` | A page with nothing yet: say what to do next. |
+| `Table` | A hand-written table (`thead`, `tbody`, `caption`) with the shared look, for tables `DataTable`'s columns can't describe: selects in cells, a totals row, columns that come and go. `figures` puts every cell in the pixel numerals except `ui-left` (text columns) and `ui-text` (a word, like a class or position); `ui-num` marks one figure cell in a table without `figures`; a totals row is `<tr className="ui-total">`. `className` is for column widths only. |
 | `Modal` | A window for one decision. Escape or a click outside closes it. |
 | `ThemeToggle` | The light/dark switch in Dynasty's masthead. The app sets `data-theme` from it and keeps the choice in the browser. |
 
 ## Status (2026-11-12)
 
 - Built: tokens, the components above, Storybook, the token check, Chromatic on pull requests.
-- **Dynasty:** colors on the tokens, dark mode, and its pages use `Button`, `SubHead`, `PageHead`, `Note`, `Empty`, `Select` (page heads) and `ThemeToggle`. Corners are square and scores, OVRs and rating tiles use the pixel numerals.
-- **Dynasty, not moved yet:** tables (still `.dy-table`, restyled to match; they become `DataTable`), selects inside pages and tables, the two modals, the rating tiles (`Stat`), the masthead, nav and ticker. `dynasty.css` still has its own font sizes.
+- **Dynasty:** colors on the tokens, dark mode, and its pages use `Button`, `SubHead`, `PageHead`, `Note`, `Empty`, `Table`, `Select` (page heads) and `ThemeToggle`. Corners are square and scores, OVRs and rating tiles use the pixel numerals.
+- **Dynasty tables** all use `Table` (18 of them); figures are in the pixel numerals.
+- **Dynasty, not moved yet:** selects inside pages and tables, the two modals, the rating tiles (`Stat`), the masthead, nav and ticker. `dynasty.css` still has its own font sizes.
 - **Mod Toolkit, not moved yet:** everything except the Teams tab's "Alternate uniforms" section. It still uses `src/styles.css`.
 - Team colors in charts: use `inkColor(d, team, dark)` so the color shows on the page in both themes.
 - `Button` takes `title` (a tooltip) and `label` (the name for screen readers); a link button with `disabled` has no address. `SubHead` takes `level={2}` for a section that isn't under a page title.

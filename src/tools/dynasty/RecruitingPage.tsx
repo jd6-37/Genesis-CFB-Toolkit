@@ -1,5 +1,5 @@
 // Full recruiting: five weeks of points and offers for the user teams' boards, then signing day.
-import { Button, Note, SubHead } from '../../ui';
+import { Button, Note, SubHead, Table } from '../../ui';
 import { useMemo, useState } from 'react';
 import type { Dynasty } from '../../core/dynasty/model';
 import {
@@ -396,16 +396,16 @@ function NeedsTable({ team, commits }: { team: number; commits: Prospect[] }) {
   return (
     <details className="dy-needs" open>
       <summary>Needs by position: {rows.reduce((a, r) => a + r.need, 0)} open</summary>
-      <table className="dy-table">
-        <thead><tr><th className="dy-left">Pos</th><th title="Players returning">Back</th><th title="Players in the transfer portal">Portal</th><th title="Commitments">Commits</th><th title="Two for each Active Roster spot">Target</th><th>Need</th></tr></thead>
+      <Table figures>
+        <thead><tr><th className="ui-left">Pos</th><th title="Players returning">Back</th><th title="Players in the transfer portal">Portal</th><th title="Commitments">Commits</th><th title="Two for each Active Roster spot">Target</th><th>Need</th></tr></thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.pos}>
-              <td className="dy-left">{r.pos}</td><td>{r.back}</td><td>{r.gone || ''}</td><td>{r.signed || ''}</td><td>{r.target}</td><td className="dy-strong">{r.need || ''}</td>
+              <td className="ui-left">{r.pos}</td><td>{r.back}</td><td>{r.gone || ''}</td><td>{r.signed || ''}</td><td>{r.target}</td><td className="dy-strong">{r.need || ''}</td>
             </tr>
           ))}
         </tbody>
-      </table>
+      </Table>
     </details>
   );
 }

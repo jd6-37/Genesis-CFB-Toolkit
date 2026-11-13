@@ -106,6 +106,26 @@ interface DataTableProps<T> {
   /** No heading row (short lists). */
   bare?: boolean;
 }
+/**
+ * A table written by hand (thead, tbody, a caption), for tables DataTable's columns can't describe: selects
+ * in cells, a totals row, columns that come and go. Scrolls sideways inside itself on phones.
+ * Cell classes: `ui-left` (text columns), `ui-num` (one figure cell), `ui-text` (a word in a `figures` table);
+ * a totals row is `<tr className="ui-total">`.
+ */
+export function Table({ children, figures, className }: {
+  children: ReactNode;
+  /** Every cell that isn't `ui-left` or `ui-text` is a figure, shown in the pixel numerals. */
+  figures?: boolean;
+  /** A layout hook only (column widths); the look comes from the component. */
+  className?: string;
+}) {
+  return (
+    <div className="ui-table-wrap">
+      <table className={['ui-table', figures ? 'ui-figures' : '', className ?? ''].filter(Boolean).join(' ')}>{children}</table>
+    </div>
+  );
+}
+
 /** A table of records. Scrolls sideways inside itself on phones; the page never does. */
 export function DataTable<T>({ columns, rows, rowKey, mine, empty = 'Nothing yet.', bare }: DataTableProps<T>) {
   if (!rows.length) return <p className="ui-table-empty">{empty}</p>;

@@ -85,3 +85,15 @@
 .ui-theme:focus-visible { outline: 2px solid var(--on-masthead); outline-offset: 2px; }
 .ui-sub a { color: inherit; text-decoration: none; }
 .ui-sub a:hover { text-decoration: underline; }
+
+/* Table: hand-written tables share DataTable's look. */
+.ui-table caption { padding-bottom: var(--sp-2); text-align: left; font: 700 var(--fs-5)/1.2 var(--font-display); color: var(--text); }
+.ui-table th { color: var(--text); }
+.ui-table tbody tr:hover td { background: var(--surface-sunken); }
+.ui-figures td:not(.ui-left):not(.ui-text) { font: 400 var(--fs-5)/1 var(--font-num); }
+.ui-table tr.ui-total td { font-weight: 700; border-top: 2px solid var(--rule-strong); border-bottom: 0; }
+
+/* Link buttons keep the button's colors where a page styles its links (a page's `a` rule would win otherwise). */
+a.ui-button, a.ui-button:hover { color: var(--on-accent); text-decoration: none; }
+a.ui-button-quiet, a.ui-button-quiet:hover { color: var(--text); }
+a.ui-button-danger, a.ui-button-danger:hover { color: var(--bad); }

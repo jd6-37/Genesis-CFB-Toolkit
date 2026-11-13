@@ -1,5 +1,5 @@
 // The offseason, step by step: departures, the transfer portal, signing day, cuts, the next season.
-import { Button, Note, PageHead, SubHead } from '../../ui';
+import { Button, Note, PageHead, SubHead, Table } from '../../ui';
 import { useMemo, useState } from 'react';
 import type { DPlayer, Dynasty, OffseasonEvent } from '../../core/dynasty/model';
 import {
@@ -412,8 +412,8 @@ function ProjectedDepth({ actions, busy }: { actions: OffseasonActions; busy: st
         return (
           <div key={u} className="dy-off-team">
             <h4><TeamLink team={u} rank={false} /></h4>
-            <table className="dy-table dy-depth">
-              <thead><tr><th className="dy-left">Spot</th><th className="dy-left">Player</th><th>OVR</th></tr></thead>
+            <Table figures className="dy-depth">
+              <thead><tr><th className="ui-left">Spot</th><th className="ui-left">Player</th><th>OVR</th></tr></thead>
               <tbody>
                 {LAYOUT.map((def, slot) => {
                   const pos = slotPosition(def.label);
@@ -421,8 +421,8 @@ function ProjectedDepth({ actions, busy }: { actions: OffseasonActions; busy: st
                   const cands = roster.filter((p) => p.pos === pos || p.id === here?.id).sort((a, b) => b.ovr - a.ovr);
                   return (
                     <tr key={slot}>
-                      <td className="dy-left">{def.label}{!DEPTH_SLOTS.has(def.label) && <span className="dy-dim" title="Starting spot"> ★</span>}</td>
-                      <td className="dy-left">
+                      <td className="ui-left">{def.label}{!DEPTH_SLOTS.has(def.label) && <span className="dy-dim" title="Starting spot"> ★</span>}</td>
+                      <td className="ui-left">
                         <select aria-label={`${def.label}`} value={here?.id ?? ''} onChange={(e) => pick(u, slot, Number(e.target.value))}>
                           {!here && <option value="">Nobody</option>}
                           {cands.map((p) => {
@@ -436,7 +436,7 @@ function ProjectedDepth({ actions, busy }: { actions: OffseasonActions; busy: st
                   );
                 })}
               </tbody>
-            </table>
+            </Table>
           </div>
         );
       })}

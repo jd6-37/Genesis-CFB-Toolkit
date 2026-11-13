@@ -18,8 +18,8 @@
   font: 400 16px/1.5 var(--body);
 }
 .dy :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-.dy a { color: inherit; text-decoration: none; }
-.dy a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.dy a:not(.ui-button) { color: inherit; text-decoration: none; }
+.dy a:not(.ui-button):hover { text-decoration: underline; text-underline-offset: 3px; }
 .dy select, .dy input:not([type]), .dy input[type='text'] {
   border: 1px solid var(--rule); border-radius: var(--radius); padding: 7px 10px; background: var(--field); color: var(--ink);
 }
@@ -109,12 +109,6 @@
 
 /* Page heads and tables */
 .dy-weeknav { display: flex; gap: 8px; align-items: center; }
-.dy-table { border-collapse: collapse; width: 100%; font-size: 15px; font-variant-numeric: tabular-nums; }
-.dy-table caption { text-align: left; font-family: var(--display); font-weight: 700; font-size: 21px; padding-bottom: 6px; }
-.dy-table th { font: 700 14px/1.2 var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink); text-align: right; padding: 6px 8px; border-bottom: var(--rule-w-strong) solid var(--ink); }
-.dy-table td { text-align: right; padding: 6px 8px; border-bottom: 1px dotted var(--rule); }
-.dy-table .dy-left { text-align: left; }
-.dy-table tbody tr:hover { background: var(--wash); }
 .dy-dim { color: var(--gray); }
 .dy-small { font-size: 13px; }
 .dy-strong { font-weight: 700; }
@@ -184,7 +178,7 @@
 .dy-panel h2 { font-family: var(--display); font-weight: 700; font-size: 40px; line-height: 1; margin: 0 0 6px; }
 .dy-panel h3 { font-family: var(--display); font-weight: 700; font-size: 22px; margin: 24px 0 4px; }
 .dy-panel p { margin: 0 0 10px; max-width: 64ch; }
-.dy-panel .dy-table { margin-top: 12px; max-width: 520px; }
+.dy-panel .ui-table { margin-top: 12px; max-width: 520px; }
 .dy-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .dy-check { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; color: var(--gray); }
 .dy-chips { list-style: none; padding: 0; margin: 0 0 10px; display: flex; flex-wrap: wrap; gap: 8px; }
@@ -442,7 +436,6 @@
 .dy-player-side .dy-teamovr { flex: 1; max-width: 220px; }
 .dy-player-logo { flex: none; display: block; line-height: 0; }
 .dy-player-logo .dy-mark, .dy-player-logo .dy-mark .sprite { height: 56px !important; width: auto !important; }
-.dy-total td { font-weight: 700; border-top: 2px solid var(--rule); }
 @media (min-width: 760px) {
   .dy-player-side { gap: 24px; }
   .dy-player-side .dy-teamovr { flex: none; max-width: none; }

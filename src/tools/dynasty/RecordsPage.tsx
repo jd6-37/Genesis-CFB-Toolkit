@@ -1,6 +1,6 @@
 // The records book (records.ts): single-season and career player records and team records,
 // league-wide or one school's. Mobile first: the tables stack on phones.
-import { PageHead, SubHead } from '../../ui';
+import { PageHead, SubHead, Table } from '../../ui';
 import { useMemo, useState } from 'react';
 import { playerName, RECORD_STATS, seasonRecords } from '../../core/dynasty/derive';
 import { careerRecords, teamRecords } from '../../core/dynasty/records';
@@ -37,35 +37,35 @@ export function Records({ arg }: { arg?: string }) {
         <div>
           <SubHead>{st.label} in a season</SubHead>
           {season.length ? (
-            <table className="dy-table">
+            <Table figures>
               <tbody>
                 {season.map((r, i) => (
                   <tr key={i}>
                     <td className="dy-dim">{i + 1}</td>
-                    <td className="dy-left">{who(r.player)}{school === undefined && <div className="dy-small dy-dim">{d.teams[r.team].school}</div>}</td>
+                    <td className="ui-left">{who(r.player)}{school === undefined && <div className="dy-small dy-dim">{d.teams[r.team].school}</div>}</td>
                     <td>{r.year}</td>
                     <td className="dy-strong">{r.value.toLocaleString('en-US')}</td>
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </Table>
           ) : <p className="dy-dim">No stats yet.</p>}
         </div>
         <div>
           <SubHead>{st.label} in a career</SubHead>
           {career.length ? (
-            <table className="dy-table">
+            <Table figures>
               <tbody>
                 {career.map((r, i) => (
                   <tr key={r.player}>
                     <td className="dy-dim">{i + 1}</td>
-                    <td className="dy-left">{who(r.player)}{school === undefined && <div className="dy-small dy-dim">{d.teams[r.team].school}</div>}</td>
+                    <td className="ui-left">{who(r.player)}{school === undefined && <div className="dy-small dy-dim">{d.teams[r.team].school}</div>}</td>
                     <td>{r.first === r.last ? r.first : `${r.first}-${String(r.last).slice(2)}`}</td>
                     <td className="dy-strong">{r.value.toLocaleString('en-US')}</td>
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </Table>
           ) : <p className="dy-dim">No stats yet.</p>}
         </div>
       </div>
@@ -75,17 +75,17 @@ export function Records({ arg }: { arg?: string }) {
           <div key={t.label}>
             <h4>{t.label}</h4>
             {t.list.length ? (
-              <table className="dy-table">
+              <Table figures>
                 <tbody>
                   {t.list.map((r, i) => (
                     <tr key={i}>
                       <td className="dy-strong">{r.value.toLocaleString('en-US')}</td>
-                      <td className="dy-left">{school === undefined && <TeamLink team={r.team} rank={false} size={16} />}<div className="dy-small dy-dim">{r.note}</div></td>
+                      <td className="ui-left">{school === undefined && <TeamLink team={r.team} rank={false} size={16} />}<div className="dy-small dy-dim">{r.note}</div></td>
                       <td>{r.year}</td>
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </Table>
             ) : <p className="dy-dim dy-small">Once a season is over.</p>}
           </div>
         ))}
