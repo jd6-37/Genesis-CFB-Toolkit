@@ -6,21 +6,7 @@
 
 /* Teams tab: the 36 teams in a table, what the styles call under it. */
 .sty-layout { display: grid; grid-template-columns: minmax(0, 62rem); gap: 28px; margin-bottom: 28px; }
-.sty-scroll { position: relative; overflow-x: auto; } /* relative: keeps the sr-only header inside the scroll box */
-.sty-table { width: 100%; border-collapse: collapse; }
-.sty-table th {
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--line);
-  text-align: left;
-  font-family: var(--display);
-  font-size: 20px;
-  font-weight: 700;
-}
-.sty-table td { padding: 4px 8px; border-bottom: 1px solid var(--line); }
-.sty-team { font-size: 16px; white-space: nowrap; }
-.sty-changed .sty-team { color: var(--menu); font-weight: 600; }
-.sty-cell select { width: 100%; }
-.sty-changed .sty-cell select { border-color: var(--accent); }
+.sty-layout .ui-table-wrap { position: relative; } /* keeps the sr-only header inside the scroll box */
 .sty-undo-cell { width: 4.5rem; text-align: right; }
 .sty-table-foot { display: flex; justify-content: flex-end; padding-top: 8px; }
 
@@ -41,8 +27,7 @@
 .sty-legend .hint { margin-top: 12px; }
 
 @media (max-width: 860px) {
-  .sty-team { white-space: normal; font-size: 15px; }
-  .sty-table th, .sty-table td { padding-left: 4px; padding-right: 4px; }
+  .sty-table tbody th { white-space: normal; }
   .sty-undo-cell { width: auto; }
   .sty-cell select { min-width: 6rem; }
 }
@@ -60,46 +45,24 @@
 .cfb-rules b { color: var(--chalk); }
 .cfb-tools { display: flex; flex-wrap: wrap; align-items: end; gap: 10px 20px; margin-bottom: 10px; }
 .cfb-search input { width: 16rem; }
-.cfb-only { display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .cfb-count { color: var(--chalk-dim); font-size: 14px; }
-.cfb-scroll { max-height: 34rem; overflow: auto; border: 1px solid var(--line); border-radius: var(--radius); }
-.cfb-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-.cfb-table th, .cfb-table td { padding: 5px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
-.cfb-table thead th { position: sticky; top: 0; background: var(--night); font-weight: 700; }
-.cfb-table tbody th { font-weight: 600; }
+.cfb-scroll .ui-table-wrap { max-height: 34rem; overflow: auto; border: var(--rule-w) solid var(--rule); }
+.cfb-table th, .cfb-table td { white-space: nowrap; }
+.cfb-table thead th { position: sticky; top: 0; background: var(--surface-raised); }
 .cfb-table .cfb-bw { color: var(--menu); }
 .cfb-table thead .cfb-bw { color: var(--menu); }
 .cfb-on-rom th[scope='row']::after { content: ' ●'; color: var(--menu); font-size: 10px; vertical-align: middle; }
 
 /* Team OVR and home weather (Team Swap edit screen, Teams tab). */
-.rat-num {
-  width: 3.4em;
-  padding: 5px 4px;
-  background: var(--deep);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  color: var(--chalk);
-  font: inherit;
-  font-size: 15px;
-  font-variant-numeric: tabular-nums;
-  text-align: center;
-  appearance: textfield;
-  -moz-appearance: textfield;
-}
-.rat-num::-webkit-inner-spin-button, .rat-num::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
-.rat-wnum { width: 2.6em; }
-.sty-changed .rat-num { border-color: rgba(246, 216, 74, 0.45); }
-.sty-table .rat-cell { width: 1%; text-align: center; }
-.sty-table .rat-wx-first { border-left: 1px solid var(--line); }
-.sty-table .rat-wx-head { border-left: 1px solid var(--line); text-align: center; }
-.sty-table .rat-sub { font-family: inherit; font-size: 13px; font-weight: 600; color: var(--chalk-dim); text-align: center; }
+.sty-table .rat-cell { width: 1%; }
+.sty-table td.rat-cell input, .rat-pair input { width: 3.4em; }
+.sty-table td.rat-wcell input, .rat-wx input { width: 2.8em; }
+.sty-table .rat-wx-first, .sty-table .rat-wx-head { border-left: var(--rule-w) solid var(--rule); }
 .rat-picks { display: flex; flex-direction: column; gap: 12px; }
 .rat-field { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--chalk-dim); }
 .rat-field small { font-size: 13px; line-height: 1.35; max-width: 40ch; }
 .rat-head { color: var(--chalk-dim); }
 .rat-pair { display: flex; flex-wrap: wrap; gap: 6px 12px; }
-.rat-pair label { display: flex; align-items: center; gap: 6px; font-size: 14px; color: var(--chalk-dim); }
 .rat-wx { display: grid; grid-template-columns: repeat(4, max-content); gap: 8px; }
 .rat-wx label { display: flex; flex-direction: column; gap: 3px; font-size: 13px; color: var(--chalk-dim); }
-.rat-picks .rat-num { padding: 7px 4px; font-size: 16px; }
 .sty-table .ui-link, .sty-table-foot .ui-link { font-size: var(--fs-2); }

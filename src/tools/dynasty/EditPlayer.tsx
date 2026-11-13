@@ -1,6 +1,6 @@
 // Roster editing on the player and team pages (edit.ts). Mobile first: one column of fields on phones.
 
-import { Button, Field, Note, Select, SubHead } from '../../ui';
+import { Button, Check, Field, Note, Select, SubHead } from '../../ui';
 import { useState } from 'react';
 import { applyEdits, editLock, editLook, newSkin, type PlayerEdit } from '../../core/dynasty/edit';
 import { BEARD_LABELS, BEARD_STYLES, HAIR_COLOR_LABELS, HAIR_STYLE_LABELS, HAIR_STYLES, lookChoices, MOUTH_LABELS, MOUTHS, type LookEdit } from '../../core/dynasty/headshot';
@@ -146,7 +146,7 @@ export function EditLook({ p }: { p: DPlayer }) {
           <Select label="Hair color" value={look.hairColor} options={HAIR_COLOR_LABELS.map((h, i) => ({ value: i, label: h }))} onChange={(x) => pick('hairColor', Number(x))} />
           <Select label="Facial hair" value={look.beard} options={BEARD_STYLES.map((b) => ({ value: b, label: BEARD_LABELS[b] }))} onChange={(x) => pick('beard', x as Required<LookEdit>['beard'])} />
           <Select label="Expression" value={look.mouth} options={MOUTHS.map((m) => ({ value: m, label: MOUTH_LABELS[m] }))} onChange={(x) => pick('mouth', x as Required<LookEdit>['mouth'])} />
-          <label className="dy-check"><input type="checkbox" checked={look.eyeBlack} onChange={(e) => pick('eyeBlack', e.target.checked)} /> Eye black</label>
+          <Check checked={look.eyeBlack} onChange={(v) => pick('eyeBlack', v)}>Eye black</Check>
         </div>
       </div>
       {error && <Note kind="error">{error}</Note>}

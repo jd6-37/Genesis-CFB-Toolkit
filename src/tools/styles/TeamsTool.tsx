@@ -1,7 +1,7 @@
 // Teams tab: for each of Bill Walsh '95's 36 teams (or the 2026 Season Edition's 138), the offense and defense style the CPU uses, the
 // team OVRs (offense, defense) and the home weather, on the working ROM that Season and Rosters edit
 // too (src/tools/shared/WorkRom.tsx).
-import { Button, Note, PageHead, SubHead } from '../../ui';
+import { Button, Note, PageHead, SubHead, Table } from '../../ui';
 import { useEffect, useMemo, useState } from 'react';
 import { openRosterRom } from '../../core/rosterRom';
 import {
@@ -173,8 +173,7 @@ export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapS
                 ROM have one; see the table below). Undo puts back the styles the ROM was loaded with.
               </p>
             </div>
-            <div className="sty-scroll">
-            <table className="sty-table">
+            <Table edit className="sty-table">
               <thead>
                 <tr>
                   <th scope="col" rowSpan={2}>Team</th>
@@ -202,8 +201,8 @@ export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapS
               </thead>
               <tbody>
                 {order.map((t) => (
-                  <tr key={t} className={isChanged(t) ? 'sty-changed' : undefined}>
-                    <th scope="row" className="sty-team">
+                  <tr key={t} className={isChanged(t) ? 'ui-row-mine' : undefined}>
+                    <th scope="row">
                       {ok.names[t]}
                     </th>
                     <StylePicks mode="table" team={ok.names[t]} value={styles[t]} info={ok.info} onChange={(st) => set(t, st)} />
@@ -231,8 +230,7 @@ export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapS
                   </tr>
                 ))}
               </tbody>
-            </table>
-            </div>
+            </Table>
             {changed.length > 1 && (
               <div className="sty-table-foot">
                 <Button variant="link" onClick={() => undo(changed)}>
