@@ -633,7 +633,7 @@ function SeasonSteps({ actions, step }: { actions: OffseasonActions; step: Seaso
   );
 }
 
-const LAYOUT = rosterLayout('bw95', false, true);
+const LAYOUT = rosterLayout('bw95', false, true, true);
 
 /**
  * The projected depth chart (user, 2026-11-12: "a step for projected depth chart prior to players leaving.

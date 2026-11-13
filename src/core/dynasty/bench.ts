@@ -10,7 +10,7 @@ import { bwSlotOf } from './ratings';
 import { rosterLayout } from '../rosterLayouts';
 
 export { slotPosition };
-const DEFS = rosterLayout('bw95', false, true);
+const DEFS = rosterLayout('bw95', false, true, true);
 
 /** Whether the bench can still be replaced: the first season, before the offseason. */
 export const canReplaceBench = (d: Dynasty) => d.seasons.length === 1 && !d.offseason;

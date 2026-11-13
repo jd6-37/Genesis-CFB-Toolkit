@@ -92,13 +92,13 @@ Week names follow the game: with the Real 2026 schedule the first week is Week 0
 | QB | 57 + 0.42 × (Quickness 25%, Awareness 45%, Range 10%, Power 5%, Speed 15%) | 2.2 | 82% |
 | HB1, HB2 | 48 + 0.51 × (Speed 35%, Quickness 30%, Awareness 15%, Hands 5%, Power 15%) | 1.3 | 96% |
 | FB | 46 + 0.4 × (Speed 40%, Awareness 20%, Hands 15%, Power 25%) | 2.2 | 80% |
-| SE, FL, WR1, WR2 | 52 + 0.5 × (Speed 15%, Quickness 25%, Awareness 25%, Hands 15%, Power 20%) | 1.4 | 95% |
+| SE, FL, WR3, WR4 | 52 + 0.5 × (Speed 15%, Quickness 25%, Awareness 25%, Hands 15%, Power 20%) | 1.4 | 95% |
 | TE1, TE2 | 55 + 0.51 × (Speed 20%, Quickness 25%, Awareness 20%, Hands 25%, Power 10%) | 1.6 | 89% |
 | LT, LG, C, RG, RT | 53 + 0.48 × (Power 30%, Blocking 30%, Speed 25%, Awareness 15%) | 1.2 | 98% |
 | LDE, RDE | 48 + 0.52 × (Power 15%, Speed 35%, Awareness 20%, Tackling 30%) | 1.2 | 97% |
 | DT1, DT2 | 56 + 0.38 × (Power 60%, Speed 10%, Awareness 15%, Tackling 15%) | 1.0 | 97% |
 | LOLB, MLB1, ROLB, MLB2 | 35 + 0.55 × (Speed 10%, Quickness 15%, Awareness 35%, Tackling 40%) | 1.4 | 96% |
-| LCB1, RCB1, LCB2, RCB2 | 38 + 0.55 × (Speed 30%, Quickness 25%, Awareness 30%, Hands 5%, Tackling 10%) | 1.5 | 93% |
+| CB1, CB2, CB3, CB4 | 38 + 0.55 × (Speed 30%, Quickness 25%, Awareness 30%, Hands 5%, Tackling 10%) | 1.5 | 93% |
 | SS, FS, FS2 | 43 + 0.51 × (Speed 20%, Quickness 20%, Awareness 40%, Hands 5%, Tackling 15%) | 1.1 | 99% |
 | K | 65 + 0.22 × (Quick (kick distance) 50%, Accuracy 50%) | 1.6 | 93% |
 | P | 62 + 0.24 × (Quick (kick distance) 55%, Accuracy 45%) | 1.5 | 91% |
@@ -115,7 +115,7 @@ IndexedDB database `genesis-cfb-dynasty`: store `dynasties` (the dynasty and whe
 
 ### Lineups
 
-`src/core/dynasty/lineup.ts` (user, 2026-11-12). A team has 64 spots: the 32 slots (the Active Roster) and each slot's backup, named QB2, HB3 and HB4 (behind HB1 and HB2), FB2, SE2, FL2, WR3, WR4, TE3, TE4, LT2 … RT2, LDE2, DT3, DT4, RDE2, LOLB2, MLB3, MLB4, ROLB2, LCB3, LCB4, RCB3, RCB4, SS2, FS3, FS4, K2, P2 (`backupLabel`: the family's size plus the slot's number). On a user team's page the Pos column is a menu, grouped by position with ★ on the Active Roster spots; choosing a spot swaps the player with the one there (who must be able to play the spot left; an Active Roster spot is never left empty).
+`src/core/dynasty/lineup.ts` (user, 2026-11-12). A team has 64 spots: the 32 slots (the Active Roster) and each slot's backup, named QB2, HB3 and HB4 (behind HB1 and HB2), FB2, SE2, FL2, WR5, WR6, TE3, TE4, LT2 … RT2, LDE2, DT3, DT4, RDE2, LOLB2, MLB3, MLB4, ROLB2, CB5 to CB8, SS2, FS3, FS4, K2, P2 (`backupLabel`: the family's size plus the slot's number). The labels are the game's from v2.0.1-test17 (WR3, WR4, CB1 to CB4; handoff H-005, 2026-11-13); before that the app showed WR1, WR2, LCB1, RCB1, LCB2, RCB2, with backups WR3, WR4, LCB3, LCB4, RCB3, RCB4. Dynasty files store slot numbers, not labels, so older files open and show the new labels. On a user team's page the Pos column is a menu, grouped by position with ★ on the Active Roster spots; choosing a spot swaps the player with the one there (who must be able to play the spot left; an Active Roster spot is never left empty).
 
 - **Which spots:** any spot of his position (by `DPlayer.pos`, plus the kind of spot he already holds), and one related position: HB↔FB, FB↔TE, DE↔OLB, OLB↔MLB, K↔P. No CB/S or DE/DT (user: so nobody signs corners to play safety). A change to another position sets his `pos` (LE/RE, LOLB/ROLB by the spot) and his CFB 27-style OVR, and is recorded in `posChange` with the season: once a season, so a TE needs a season at FB before HB. In that season he can still move between the spots of both positions (back to his old one undoes the change).
 - **Ratings:** he plays with his own numbers (ratings.ts), as the new slot's rating group uses them.

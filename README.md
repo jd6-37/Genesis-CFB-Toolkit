@@ -308,7 +308,7 @@ For sheets without a Slot column that aren't CFB 27 data: one row per player, al
 | Name, or First Name and Last Name | Optional, shown in the import report |
 
 - A 0-99 value goes to the step at or below it (88 → 86, the step the game shows as 86). Weights the same way (245 lb → 236).
-- Slots: BW95 has 32 players per team (QB, HB1-2, FB, five linemen, SE, FL, WR1-2, TE1-2, K, P, 4-3 or 3-4 front, PLB, four CBs, SS, FS, FS2). The four best WRs fill SE, FL, WR1 and WR2. On 3-4 teams the best DT is the NT and the MLBs fill LILB and RILB. The PLB is the best outside linebacker left over. On Elevated ROMs every team has DT1, DT2, MLB1 and MLB2, filled by the best DTs and MLBs. CF96/97 have 45 players per team (two QBs, three HBs, backups at most positions).
+- Slots: BW95 has 32 players per team (QB, HB1-2, FB, five linemen, SE, FL, WR1-2, TE1-2, K, P, 4-3 or 3-4 front, PLB, four CBs, SS, FS, FS2). The four best WRs fill SE, FL, WR1 and WR2. On 3-4 teams the best DT is the NT and the MLBs fill LILB and RILB. The PLB is the best outside linebacker left over. On Elevated ROMs every team has DT1, DT2, MLB1 and MLB2, filled by the best DTs and MLBs. From v2.0.1-test17 (and the 1994 edition's test11) the game calls the third and fourth receivers WR3 and WR4 and the cornerbacks CB1 to CB4 (CB1 and CB2 start); the editor shows what the ROM shows, and a CSV may use either set of labels. CF96/97 have 45 players per team (two QBs, three HBs, backups at most positions).
 - Slots nobody fills keep their current player, and empty cells keep the current value.
 - The report lists teams, positions and columns it didn't use, and who went to which slot.
 

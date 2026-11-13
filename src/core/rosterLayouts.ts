@@ -114,9 +114,13 @@ const s = (slot: number, label: string, group: Group, pool: string | string[], l
 /**
  * Slots in editor order (the exe's grid order). BW95 has three defensive layouts: stock 4-3, stock
  * 3-4 (per team, from the defense bits) and Elevated (one layout for every team: DT1/DT2, MLB1/MLB2).
+ * `newLabels`: Elevated from v2.0.1-test17 (2026) / test11 (1994) names the cornerbacks CB1-CB4 (CB1 and CB2
+ * are the starters, slots 24 and 26) and the third and fourth receivers WR3 and WR4 (they were WR1 and WR2;
+ * SE and FL are the first two). Only the text changed: the slots are the same.
  */
-export function rosterLayout(game: Game, threeFour = false, elevated = false): SlotDef[] {
+export function rosterLayout(game: Game, threeFour = false, elevated = false, newLabels = false): SlotDef[] {
   if (game === 'bw95') {
+    const nl = elevated && newLabels;
     const dl = elevated
       ? [s(16, 'LDE', 'DL', 'LE'), s(17, 'DT1', 'DL', 'DT'), s(21, 'DT2', 'DL', 'DT'), s(18, 'RDE', 'DL', 'RE')]
       : threeFour
@@ -133,11 +137,11 @@ export function rosterLayout(game: Game, threeFour = false, elevated = false): S
       s(0, 'QB', 'QB', 'QB'),
       s(1, 'HB1', 'RB', 'HB'), s(2, 'HB2', 'RB', 'HB'), s(3, 'FB', 'RB', 'FB'),
       s(4, 'LT', 'OL', 'LT'), s(5, 'LG', 'OL', 'LG'), s(6, 'C', 'OL', 'C'), s(7, 'RG', 'OL', 'RG'), s(8, 'RT', 'OL', 'RT'),
-      s(9, 'SE', 'REC', 'WR'), s(10, 'FL', 'REC', 'WR'), s(11, 'WR1', 'REC', 'WR'), s(12, 'WR2', 'REC', 'WR'),
+      s(9, 'SE', 'REC', 'WR'), s(10, 'FL', 'REC', 'WR'), s(11, nl ? 'WR3' : 'WR1', 'REC', 'WR'), s(12, nl ? 'WR4' : 'WR2', 'REC', 'WR'),
       s(13, 'TE1', 'REC', 'TE'), s(14, 'TE2', 'REC', 'TE'),
       s(15, 'K', 'KP', 'K'), s(31, 'P', 'KP', 'P'),
       ...dl, ...lb,
-      s(24, 'LCB1', 'DB', 'CB'), s(26, 'RCB1', 'DB', 'CB'), s(25, 'LCB2', 'DB', 'CB'), s(27, 'RCB2', 'DB', 'CB'),
+      s(24, nl ? 'CB1' : 'LCB1', 'DB', 'CB'), s(26, nl ? 'CB2' : 'RCB1', 'DB', 'CB'), s(25, nl ? 'CB3' : 'LCB2', 'DB', 'CB'), s(27, nl ? 'CB4' : 'RCB2', 'DB', 'CB'),
       s(28, 'SS', 'DB', 'SS'), s(29, 'FS', 'DB', 'FS'), s(30, 'FS2', 'DB', 'FS'),
     ];
   }

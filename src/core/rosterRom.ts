@@ -33,6 +33,8 @@ export interface RosterRom {
   teams: RosterTeam[];
   /** BW95 only: Bill Walsh '95 Elevated's defensive layout (DT1/DT2, MLB1/MLB2 for every team). */
   elevated: boolean;
+  /** Elevated from v2.0.1-test17 / test11: the game's labels read CB1-CB4 and WR3 / WR4 (see rosterLayout). */
+  newLabels: boolean;
   /** BW95 only: the 138-team 2026 Season Edition (src/core/wide.ts). */
   wide: boolean;
 }
@@ -41,6 +43,12 @@ export interface RosterRom {
 export function hasElevatedLayout(data: Uint8Array): boolean {
   const labels = String.fromCharCode(...data.subarray(BW95_LABELS_43.start, BW95_LABELS_43.end));
   return labels.includes('DT1');
+}
+
+/** BW95 Elevated from v2.0.1-test17 / test11: the label list reads CB1 (it read LCB1 before). */
+export function hasNewLabels(data: Uint8Array): boolean {
+  const labels = String.fromCharCode(...data.subarray(BW95_LABELS_43.start, BW95_LABELS_43.end));
+  return labels.includes('CB1') && !labels.includes('LCB1');
 }
 
 const hexBytes = (b: Uint8Array) => Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('').toUpperCase();
@@ -98,7 +106,7 @@ export function openRosterRom(input: Uint8Array, inPlace = false): RosterRom {
   if (game === 'bw95' && !elevated) {
     for (const t of teams) t.threeFour = ((data[BW95_DEFENSE_BITS + (t.index >> 3)] >> (t.index & 7)) & 1) === 0;
   }
-  return { game, info, data, teams, elevated, wide };
+  return { game, info, data, teams, elevated, newLabels: elevated && hasNewLabels(data), wide };
 }
 
 /** BW95, original layout: re-reads the 3-4 flags, which follow a team's defense when its style
@@ -109,7 +117,7 @@ export function refreshThreeFour(rom: RosterRom): void {
 }
 
 export const teamLayout = (rom: RosterRom, team: number): SlotDef[] =>
-  rosterLayout(rom.game, rom.teams[team].threeFour, rom.elevated);
+  rosterLayout(rom.game, rom.teams[team].threeFour, rom.elevated, rom.newLabels);
 
 export function readPlayer(rom: RosterRom, team: number, slot: number): Player {
   const o = rom.teams[team].rosterOffset + slot * rom.info.stride;

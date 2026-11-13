@@ -93,7 +93,9 @@ export const LAYOUT_NAMES: Record<LayoutKind, string> = {
 /**
  * Slot labels a team accepts in a Slot sheet: its own layout's labels plus the other spellings
  * the game uses for those same slots. Elevated ROMs also take the stock 4-3 labels (same slots:
- * LDT = DT1, MLB = MLB1, RDT = DT2, PLB = MLB2), as older exports and CSVs use them.
+ * LDT = DT1, MLB = MLB1, RDT = DT2, PLB = MLB2), as older exports and CSVs use them, and both sets of
+ * cornerback and receiver labels (LCB1 = CB1, RCB1 = CB2, LCB2 = CB3, RCB2 = CB4, WR1 = WR3, WR2 = WR4:
+ * the game's labels changed in v2.0.1-test17 / test11, the slots didn't).
  */
 function teamSlotLabels(rom: RosterRom, team: number): Map<string, number> {
   const m = new Map<string, number>();
@@ -102,7 +104,10 @@ function teamSlotLabels(rom: RosterRom, team: number): Map<string, number> {
   if (rom.game === 'bw95') {
     const extra: [string, number][] = [['LE', 16], ['RE', 18], ['KICK', 15], ['PUNT', 31], ['FS1', 29]];
     if (kind !== 'three4') extra.push(['DLT', 17], ['DRT', 21]);
-    if (kind === 'elevated') for (const s of rosterLayout('bw95', false)) extra.push([s.label, s.slot]);
+    if (kind === 'elevated') {
+      for (const s of rosterLayout('bw95', false)) extra.push([s.label, s.slot]);
+      for (const s of rosterLayout('bw95', false, true, !rom.newLabels)) extra.push([s.label, s.slot]);
+    }
     for (const [label, slot] of extra) if (!m.has(key(label))) m.set(key(label), slot);
   }
   return m;
@@ -245,7 +250,7 @@ export function importSheet(rom: RosterRom, sheet: Sheet): ImportReport {
     byTeam.set(t, e);
   });
 
-  const knownPositions = new Set([false, true].flatMap((tf) => rosterLayout(rom.game, tf, rom.elevated)).flatMap((s) => s.pool));
+  const knownPositions = new Set([false, true].flatMap((tf) => rosterLayout(rom.game, tf, rom.elevated, rom.newLabels)).flatMap((s) => s.pool));
   const unknownPositions = new Map<string, number>();
   const unknownSlots = new Map<string, number>();
 

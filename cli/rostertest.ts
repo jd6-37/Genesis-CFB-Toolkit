@@ -347,6 +347,29 @@ const FULL = ['QB', 'QB', 'HB', 'HB', 'HB', 'FB', 'WR', 'WR', 'WR', 'WR', 'WR', 
   const copy = openRosterRom(elevate(load('bw95')));
   importSheet(copy, elevatedCsv);
   assert.ok(copy.data.every((b, i) => b === elevated.data[i]));
+  // New receiver and cornerback labels (Elevated from v2.0.1-test17 / test11): same slots, new text; a Slot
+  // sheet may use either set on either kind of Elevated ROM, and the round trip stays byte-identical.
+  const relabel = (d: Uint8Array) => {
+    const at = d.subarray(BW95_LABELS_43.start, BW95_LABELS_43.end);
+    const i = String.fromCharCode(...at).indexOf('LCB1');
+    assert.ok(i >= 0);
+    at.set([0x43, 0x42, 0x31, 0x20], i); // "CB1 ": enough for the label check
+    return d;
+  };
+  const renamed = openRosterRom(relabel(elevate(load('bw95'))));
+  assert.ok(!elevated.newLabels && !stock.newLabels && renamed.newLabels);
+  const bySlot = (r: typeof renamed) => Object.fromEntries(teamLayout(r, 0).map((d) => [d.slot, d.label]));
+  assert.deepEqual([11, 12, 24, 25, 26, 27].map((n) => bySlot(renamed)[n]), ['WR3', 'WR4', 'CB1', 'CB3', 'CB2', 'CB4']);
+  assert.deepEqual([11, 12, 24, 25, 26, 27].map((n) => bySlot(elevated)[n]), ['WR1', 'WR2', 'LCB1', 'LCB2', 'RCB1', 'RCB2']);
+  assert.deepEqual(teamLayout(renamed, 0).filter((d) => d.pool.includes('CB')).map((d) => d.label), ['CB1', 'CB2', 'CB3', 'CB4']);
+  const renamedCsv = parseCsv(exportRostersCsv(renamed));
+  assert.ok(renamedCsv.rows.some((r) => r[1] === 'CB2') && !renamedCsv.rows.some((r) => /^[LR]CB|^WR[12]$/.test(r[1])));
+  for (const [target, sheet] of [[renamed, renamedCsv], [renamed, elevatedCsv], [elevated, renamedCsv]] as const) {
+    assert.equal(detectImport(target, sheet).path, 'slots');
+    const c = openRosterRom(target.data.slice());
+    importSheet(c, sheet);
+    assert.ok(c.data.every((x, i) => x === target.data[i]));
+  }
   // Duplicate slots and teams the ROM doesn't have.
   const dup = { headers: stockCsv.headers, rows: [stockCsv.rows[0], stockCsv.rows[0], ['Atlantis Tritons', ...stockCsv.rows[1].slice(1)]] };
   const d = detectImport(stock, dup);
@@ -356,7 +379,7 @@ const FULL = ['QB', 'QB', 'HB', 'HB', 'HB', 'FB', 'WR', 'WR', 'WR', 'WR', 'WR', 
   assert.deepEqual(importSheet(openRosterRom(load('bw95')), unknown).unknownTeams, [{ name: 'Atlantis Tritons', rows: 1 }]);
   // Sheets without a Slot column and without CFB 27 columns use the ranked import.
   assert.equal(detectImport(stock, parseCsv(readFileSync(fixture('sample.csv'), 'utf8'))).path, 'ranked');
-  ok('import paths: slots, refused (other layout, duplicates), ranked; Elevated layout and labels');
+  ok('import paths: slots, refused (other layout, duplicates), ranked; Elevated layout and labels, old and new');
 }
 
 // 10. OL weight display tweak.
