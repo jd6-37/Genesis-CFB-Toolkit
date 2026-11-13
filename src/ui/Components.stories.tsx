@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
-import { Button, Field, FileButton, DataTable, Empty, Meter, Modal, Note, Num, PageHead, Row, Select, Stat, Steps, SubHead, Table, Tabs, ThemeToggle } from './index';
+import { Button, Field, FileButton, DataTable, Empty, Masthead, Meter, Modal, NavBar, Note, Num, PageHead, Row, Select, Stat, Steps, SubHead, Table, Tabs, ThemeToggle } from './index';
 
 const meta: Meta = { title: 'Components' };
 export default meta;
@@ -187,5 +187,21 @@ export const Fields: Story = {
       <Field label="Awareness" type="number" min={0} max={100} value="71.5" note="In the game: 72" onChange={() => {}} />
       <Field label="Search" type="search" value="" placeholder="Name or hometown" onChange={() => {}} />
     </Row>
+  ),
+};
+
+/** An app's header with its main menu (Dynasty's; the Toolkit keeps its own title block). */
+export const MastheadAndNav: Story = {
+  render: () => (
+    <Masthead
+      title="My Dynasty" sub="2027, Week 3" href="#home"
+      left={<><a href="#toolkit">Mod Toolkit</a><ThemeToggle dark={false} onChange={() => {}} /></>}
+      right={<div style={{ width: 64, height: 64, background: 'var(--on-masthead)', opacity: 0.2 }} />}
+    >
+      <NavBar label="Dynasty" items={[
+        { label: 'Home', href: '#home', current: true }, { label: 'Scores', href: '#scores' }, { label: 'Standings', href: '#standings' },
+        { label: 'Teams', href: '#teams' }, { label: 'Offseason', href: '#offseason', off: true }, { label: 'Manage', href: '#manage' },
+      ]} />
+    </Masthead>
   ),
 };

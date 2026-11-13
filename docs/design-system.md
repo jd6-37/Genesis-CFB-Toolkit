@@ -72,6 +72,8 @@ Run `npm run storybook` to browse the components (port 6006).
 | `Steps` | A process in order with the step the user is on (`label` for screen readers, `steps` with `label` and optional `href`, `current`). Steps before it read as done; a step with `href` is a link, for steps the user may jump to. On a phone only the current step shows, as "Step 3 of 8: Recruiting". |
 | `Tabs` | The sections of a hub page, one open at a time: `label` (for screen readers), `tabs` (`value`, `label`, optional `count`), `value`, `onChange`. The page shows the open section itself. Scrolls sideways inside itself on phones. |
 | `Meter` | A bar for a share from 0 to 1 (interest, a pitch's strength). `label` for screen readers; `color` only for a team's color. Put the figure beside it when it matters. |
+| `Masthead` | An app's header: `title` (links to `href`), `sub` (one line under it), `left` and `right` for small controls and marks; its children sit under the title row (the `NavBar`). On a phone the title drops to its own row. |
+| `NavBar` | An app's main menu: `label` (for screen readers) and `items` (`label`, `href`, `current`, `off`). One mark per item: a bar under it. Scrolls sideways inside itself on phones. |
 | `ThemeToggle` | The light/dark switch in Dynasty's masthead. The app sets `data-theme` from it and keeps the choice in the browser. |
 
 ## Status (2026-11-13)
@@ -79,7 +81,8 @@ Run `npm run storybook` to browse the components (port 6006).
 - Built: tokens, the components above, Storybook, the token check, Chromatic on pull requests.
 - **Dynasty:** colors on the tokens, dark mode, and its pages use `Button`, `SubHead`, `PageHead`, `Note`, `Empty`, `Table`, `Select`, `Field`, `Modal` and `ThemeToggle`. Every dropdown, every one-line text field in the player editor and Manage, and all three windows (the ROM download, the rules' spoiler warning, the box score) are shared components. Corners are square and scores, OVRs and rating tiles use the pixel numerals.
 - **Dynasty tables** all use `Table` (18 of them); figures are in the pixel numerals.
-- **Dynasty, not moved yet:** the masthead, nav and ticker; checkboxes, the training sliders, the rules page's number fields and the recruiting points stepper. `dynasty.css` still has its own font sizes. The player page's rating tiles stay their own (a pip bar and the bold labels the owner asked for; `Stat` has neither).
+- **Dynasty's masthead and main menu** are `Masthead` and `NavBar`. The score ticker stays Dynasty's own (it is a scores strip, not a general element) and uses the tokens.
+- **Dynasty, not moved yet:** checkboxes, the training sliders, the rules page's number fields and the recruiting points stepper. `dynasty.css` still has its own font sizes. The player page's rating tiles stay their own (a pip bar and the bold labels the owner asked for; `Stat` has neither).
 - **Mod Toolkit:** every tab's title (`PageHead`), section headings (`SubHead`), buttons (`Button`, `FileButton`) and messages (`Note`, with `block` for lists) are shared components; `styles.css` maps its own names to the tokens; corners are square and the ROM cards have the hard shadow.
 - **Mod Toolkit, not moved yet:** its four tables, the selects and number fields in the editors, the link-style buttons (`ros-link`, `sty-link`), the tab menu's markup, the Team Swap rows, and the font sizes in its stylesheets.
 - Team colors in charts: use `inkColor(d, team, dark)` so the color shows on the page in both themes.

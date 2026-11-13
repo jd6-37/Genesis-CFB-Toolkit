@@ -89,6 +89,39 @@
   .ui-table th, .ui-table td { padding: var(--sp-2) var(--sp-3); }
 }
 
+/* Masthead: the app's name between small controls; on a phone the name drops to its own row. */
+.ui-mast { background: var(--masthead); color: var(--on-masthead); }
+.ui-mast-inner {
+  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--sp-4);
+  max-width: 1240px; margin: 0 auto; padding: var(--sp-3) var(--sp-4) var(--sp-2);
+}
+.ui-mast-left { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-3); justify-self: start; }
+.ui-mast .ui-mast-left a { color: color-mix(in srgb, var(--on-masthead) 70%, var(--masthead)); font-size: var(--fs-2); text-decoration: none; }
+.ui-mast .ui-mast-left a:hover { text-decoration: underline; }
+.ui-mast-right { display: flex; gap: var(--sp-2); justify-self: end; }
+.ui-mast a.ui-mast-title { grid-column: 1 / -1; grid-row: 2; display: flex; flex-direction: column; align-items: center; line-height: 0.9; color: var(--on-masthead); text-decoration: none; }
+.ui-mast a.ui-mast-title:hover { text-decoration: none; }
+.ui-mast-name { font: italic 800 clamp(var(--fs-6), 6vw, var(--fs-8))/0.9 var(--font-display); letter-spacing: -0.01em; text-align: center; }
+.ui-mast-sub { margin-top: var(--sp-2); font-size: var(--fs-2); line-height: 1; color: color-mix(in srgb, var(--on-masthead) 70%, var(--masthead)); }
+@media (min-width: 960px) {
+  .ui-mast-inner { grid-template-columns: 1fr auto 1fr; padding: var(--sp-3) var(--sp-5) var(--sp-2); }
+  .ui-mast a.ui-mast-title { grid-column: auto; grid-row: auto; }
+}
+
+/* NavBar: the main menu under the masthead. One mark per item: a bar under it (hover light, open page heavy). */
+.ui-nav {
+  display: flex; justify-content: safe center; gap: var(--sp-5); padding: 0 var(--sp-4); overflow-x: auto;
+  background: var(--surface); color: var(--text); border-bottom: var(--rule-w) solid var(--rule);
+}
+.ui-nav a.ui-nav-item {
+  padding: var(--sp-3) 0 var(--sp-2); border-bottom: 3px solid transparent;
+  color: inherit; font: 600 var(--fs-3)/1.5 var(--font-body); white-space: nowrap; text-decoration: none;
+}
+.ui-nav a.ui-nav-item:hover { text-decoration: none; border-bottom-color: var(--rule); }
+.ui-nav a.ui-nav-item[aria-current='page'] { border-bottom-color: var(--text); }
+.ui-nav a.ui-nav-off { color: var(--text-muted); opacity: 0.6; pointer-events: none; }
+.ui-nav a.ui-nav-item:focus-visible { outline: 2px solid var(--text); outline-offset: -2px; }
+
 /* ThemeToggle: a check box drawn in the masthead's colors. */
 .ui-theme {
   display: inline-flex; align-items: center; gap: var(--sp-2); padding: var(--sp-1) 0; border: 0; background: none;

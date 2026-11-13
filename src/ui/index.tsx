@@ -39,6 +39,53 @@ export function ThemeToggle({ dark, onChange }: { dark: boolean; onChange: (dark
   );
 }
 
+interface MastheadProps {
+  title: string;
+  /** One line under the title (the season and week). */
+  sub?: ReactNode;
+  /** Where the title links to (the app's front page). */
+  href: string;
+  /** Small links and switches at the left (another app, the theme switch). */
+  left?: ReactNode;
+  /** Marks at the right (the user's teams). */
+  right?: ReactNode;
+  /** What sits under the title row inside the header: the `NavBar`. */
+  children?: ReactNode;
+}
+/** An app's header: its name in the middle, small controls left and right, the main menu under it. */
+export function Masthead({ title, sub, href, left, right, children }: MastheadProps) {
+  return (
+    <header className="ui-mast">
+      <div className="ui-mast-inner">
+        <div className="ui-mast-left">{left}</div>
+        <a className="ui-mast-title" href={href}>
+          <span className="ui-mast-name">{title}</span>
+          {sub && <span className="ui-mast-sub">{sub}</span>}
+        </a>
+        <div className="ui-mast-right">{right}</div>
+      </div>
+      {children}
+    </header>
+  );
+}
+
+export interface NavItem { label: string; href: string; current?: boolean; off?: boolean }
+/** An app's main menu: links to its pages, the open one marked. Scrolls sideways inside itself on phones. */
+export function NavBar({ label, items }: { label: string; items: NavItem[] }) {
+  return (
+    <nav className="ui-nav" aria-label={label}>
+      {items.map((x) => (
+        <a
+          key={x.href} href={x.off ? undefined : x.href} aria-current={x.current ? 'page' : undefined} aria-disabled={x.off || undefined}
+          className={`ui-nav-item${x.off ? ' ui-nav-off' : ''}`}
+        >
+          {x.label}
+        </a>
+      ))}
+    </nav>
+  );
+}
+
 /** Buttons or controls side by side, wrapping on phones. */
 export const Row = ({ children }: { children: ReactNode }) => <div className="ui-row">{children}</div>;
 
