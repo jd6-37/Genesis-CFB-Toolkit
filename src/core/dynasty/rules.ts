@@ -50,6 +50,8 @@ export interface OffseasonRules {
   userPoints: number; cpuPoints: number;
   maxPerProspect: number; boardSize: number;
   scoutOvr: number; scoutRatings: number;
+  /** Offers a team may have out at one time, beyond its open spots (to prospects who haven't committed). */
+  offerExtra: number;
   /** Interest × this with an offer, × noOffer without. */
   offerBoost: number; noOffer: number;
   /** Interest a prospect needs from a school to commit, by stars. */
@@ -104,7 +106,7 @@ export const DEFAULT_RULES: OffseasonRules = {
   proSeniorBase: 80, proSeniorScale: 14, proSeniorMax: 0.85, srPlusReturn: 0.3, proJuniorBase: 84, proJuniorScale: 12, proJuniorMax: 0.7,
   growthFR: 0.45, growthSO: 0.4, growthJR: 0.35, growthSR: 0.3, growthSRPlus: 0.25, growthMin: 0.5, growthMax: 1.5, starterBonus: 1, speedPace: 0.5, paceQuickness: 0.7, paceRange: 0.8, pacePower: 1, paceTechnique: 1.2, paceAwareness: 1.4, trainingMax: 40, trainingEffect: 0.2, weightGainPct: 0.02, weightTrainingEffect: 0.5, capAwareness: 18, capSpeed: 6, capQuickRange: 10, capOther: 14,
   transferStarter: 0.01, transferDepth: 0.08, transferBackup: 0.12, transferBlocked: 0.1, transferSenior: 0.05, playingTimeCut: 0.8, playingTimeShare: 0.5, transfersPerTeam: 4,
-  weeks: 5, userPoints: 1000, cpuPoints: 1000, maxPerProspect: 60, boardSize: 35, scoutOvr: 10, scoutRatings: 20, offerBoost: 1.2, noOffer: 0.6,
+  weeks: 5, userPoints: 1000, cpuPoints: 1000, maxPerProspect: 60, boardSize: 35, scoutOvr: 10, scoutRatings: 20, offerExtra: 5, offerBoost: 1.2, noOffer: 0.6,
   commitThreshold: [40, 60, 100, 160, 230, 320], firstWeek: [1, 1, 2, 2, 3, 4], portalThreshold: 0.7, commitLead: 1.25, flipMargin: 1.5, flipChance: 0.5,
   topStart: [0.5, 0.45, 0.4, 0.35, 0.3], poolPerSpot: 1.4, inStateCost: 0.8, pipelineCost: 0.9, pipelineMin: 4, classMax: 25,
   pitchHome: [1.6, 1.6, 1.5, 1.3, 0.8, 0.6], pitchPrestige: [0.6, 0.6, 0.7, 0.9, 1.4, 1.7],
@@ -215,6 +217,7 @@ export const RULE_SECTIONS: RuleSection[] = [
       { key: 'boardSize', label: 'Prospects on your board', help: '', kind: 'int', min: 1, max: 200 },
       { key: 'scoutOvr', label: 'Scouting: OVR', help: 'Points.', kind: 'int', min: 0, max: 500 },
       { key: 'scoutRatings', label: 'Scouting: all ratings (after the OVR)', help: 'Points.', kind: 'int', min: 0, max: 500 },
+      { key: 'offerExtra', label: 'Offers beyond open spots', help: 'A team may have its open spots plus this many offers out at one time. Offers to prospects who have committed anywhere don\'t count.', kind: 'int', min: 0, max: 200 },
       { key: 'offerBoost', label: 'Interest with an offer (×)', help: '', kind: 'num', min: 0, max: 5 },
       { key: 'noOffer', label: 'Interest without an offer (×)', help: '', kind: 'num', min: 0, max: 5 },
       { key: 'commitThreshold', label: 'Interest needed to commit', help: 'By stars.', kind: 'int', min: 1, max: 5000, items: STARS },

@@ -559,6 +559,22 @@ if (user !== undefined) {
     const cpu = f1.teams.find((t) => !f1.userTeams.includes(t.index))!.index;
     assert.throws(() => Rec.withdrawOffer(w, cpu, tgt.id), /Only your teams/);
   }
+  // The offer cap (user, 2026-11-13): open spots plus offerExtra; committed prospects don't count; computer teams too.
+  {
+    const rsC = f1.offseason!.recruiting!;
+    const cap = Rec.offerCap(RD, rsC, user);
+    assert.equal(cap, rsC.spots[user] - rsC.prospects.filter((p) => p.committed === user).length + RD.offerExtra);
+    const open = rsC.prospects.filter((p) => p.committed === null && !p.offers.includes(user));
+    const room = Math.max(0, cap - Rec.offersOut(rsC, user));
+    const tooMany = { points: {}, offers: open.slice(0, room + 1).map((p) => p.id) };
+    assert.equal(Rec.newOffers(rsC, user, tooMany).length, room + 1);
+    assert.throws(() => Rec.recruitingWeek(f1, { [user]: tooMany }), /offers out/, 'one offer over the cap is refused');
+    const w = Rec.recruitingWeek(f1, { [user]: { points: {}, offers: open.slice(0, room).map((p) => p.id) } });
+    const rsW = w.offseason!.recruiting!;
+    for (const t of w.teams) assert.ok(Rec.offersOut(rsW, t.index) <= Math.max(Rec.offersOut(rsC, t.index), RD.offerExtra + rsC.spots[t.index]), `${t.school} stays within its cap`);
+    const cpuT = w.teams.find((t) => !w.userTeams.includes(t.index) && rsC.spots[t.index] > 0)!.index;
+    assert.ok(Rec.offersOut(rsW, cpuT) <= rsC.spots[cpuT] + RD.offerExtra, 'a computer team is within the cap');
+  }
   // Computer teams learn: keep a +, try untried pitches, never repeat − or ✗.
   const rnd = () => 0.5;
   assert.equal(Rec.learnedPitch({ home: 'good', pt: 'no' }, rnd), 'home');
