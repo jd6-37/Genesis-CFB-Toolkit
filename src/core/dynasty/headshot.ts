@@ -17,13 +17,16 @@ const SKIN: [RGB, RGB, RGB, RGB][] = [ // base, shade, highlight, deep (SKIN_TON
   [[92, 64, 46], [68, 46, 34], [118, 86, 64], [52, 36, 26]],
 ];
 const HAIR: RGB[] = [[30, 24, 20], [74, 48, 30], [126, 84, 46], [208, 172, 104], [18, 18, 24]];
-export const HAIR_STYLES = ['short', 'buzz', 'fade', 'curls', 'locs', 'flow', 'bald', 'twists', 'afro', 'mohawk'] as const;
+/** The styles a player's ID picks from. Never add to or reorder this list: every generated look would change. */
+const GENERATED_STYLES = ['short', 'buzz', 'fade', 'curls', 'locs', 'flow', 'bald', 'twists', 'afro', 'mohawk'] as const;
+/** Every style, in the editor's order. 'locs' is the long version (it keeps its name for saved looks). */
+export const HAIR_STYLES = ['short', 'buzz', 'fade', 'curls', 'locs', 'locsShort', 'flow', 'bald', 'twists', 'afro', 'mohawk'] as const;
 const BEARDS = ['none', 'none', 'stubble', 'none', 'goatee', 'beard', 'stubble'] as const;
 export const MOUTHS = ['neutral', 'smile', 'smirk', 'serious', 'grin'] as const;
 
 /** Choices for the appearance editor (user, 2026-11-12: editable any time; nothing of it goes into the ROM). */
 export const HAIR_STYLE_LABELS: Record<(typeof HAIR_STYLES)[number], string> = {
-  short: 'Short', buzz: 'Buzz cut', fade: 'Fade', curls: 'Curls', locs: 'Locs', flow: 'Flow', bald: 'Bald', twists: 'Twists', afro: 'Afro', mohawk: 'Mohawk',
+  short: 'Short', buzz: 'Buzz cut', fade: 'Fade', curls: 'Curls', locs: 'Locs long', locsShort: 'Locs short', flow: 'Flow', bald: 'Bald', twists: 'Twists', afro: 'Afro', mohawk: 'Mohawk',
 };
 export const HAIR_COLOR_LABELS = ['Dark brown', 'Brown', 'Light brown', 'Blond', 'Black'] as const;
 export const BEARD_STYLES = ['none', 'stubble', 'goatee', 'beard'] as const;
@@ -60,7 +63,9 @@ export function lookOf(p: Pick<DPlayer, 'id' | 'skin' | 'pos' | 'cls' | 'look'>)
   const r = rng((Math.imul(p.id, 0x9e3779b1) ^ 0x5bd1e995) >>> 0);
   const skin = Math.max(0, Math.min(3, p.skin));
   const hairColor = skin < 2 ? HAIR[Math.floor(r() * HAIR.length)] : [HAIR[0], HAIR[0], HAIR[1], HAIR[4]][Math.floor(r() * 4)];
-  const hair = HAIR_STYLES[Math.floor(r() * HAIR_STYLES.length)];
+  let hair: (typeof HAIR_STYLES)[number] = GENERATED_STYLES[Math.floor(r() * GENERATED_STYLES.length)];
+  // Locs come long or short (user, 2026-11-13), half each, from a draw of its own so nothing else about a look moves.
+  if (hair === 'locs' && rng((Math.imul(p.id, 0x85ebca6b) ^ 0x10c5) >>> 0)() < 0.5) hair = 'locsShort';
   // Younger players have less facial hair.
   let beard = BEARDS[Math.floor(r() * BEARDS.length)];
   if ((p.cls === 'FR' || p.cls === 'SO') && beard === 'beard' && r() < 0.6) beard = 'stubble';
@@ -253,7 +258,7 @@ export function drawHeadshot(look: HeadshotLook, jersey: string, trim: string): 
       }
       break;
     }
-    case 'locs':
+    case 'locs': case 'locsShort': // the same strands beside the face; the long version also falls behind the head (above)
       cap(4, 10, 1.0);
       for (const x of [headL - 1, headL, headR, headR + 1]) for (let y = 10; y < 24 + (x % 2) * 2; y++) put(x, y, y % 3 ? hair : hhi);
       break;
