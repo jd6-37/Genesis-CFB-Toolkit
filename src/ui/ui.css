@@ -106,3 +106,18 @@ a.ui-button-danger, a.ui-button-danger:hover { color: var(--bad); }
 
 /* A pixel figure that shares a baseline with text: its ink starts 1/8 em above the baseline, so drop it. */
 .ui-num-drop { display: inline-block; transform: translateY(0.125em); }
+
+/* Tabs: the sections of a hub page. The open one carries a heavy marker, as the Toolkit's tab menu does. */
+.ui-tabs { display: flex; overflow-x: auto; margin: var(--sp-4) 0; border-bottom: 2px solid var(--rule-strong); }
+.ui-tab {
+  flex: none; min-height: 44px; padding: var(--sp-2) var(--sp-4); border: 0; border-bottom: var(--rule-w-strong) solid transparent; background: none;
+  color: var(--text-muted); font: 700 var(--fs-4)/1.2 var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; cursor: pointer;
+}
+.ui-tab:hover { color: var(--text); }
+.ui-tab[aria-selected='true'] { color: var(--text); border-bottom-color: var(--rule-strong); }
+.ui-tab:focus-visible { outline: 2px solid var(--text); outline-offset: -2px; }
+.ui-tab-count { margin-left: var(--sp-2); font: 400 var(--fs-num-1)/1 var(--font-num); }
+
+/* Meter: a share from 0 to 1 as a bar. */
+.ui-meter { display: block; flex: 1; min-width: 40px; height: 12px; background: var(--rule); }
+.ui-meter > span { display: block; height: 100%; background: var(--text); }

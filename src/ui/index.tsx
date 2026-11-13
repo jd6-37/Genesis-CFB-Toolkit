@@ -197,6 +197,42 @@ export function Stat({ label, value, note }: { label: string; value: ReactNode; 
   );
 }
 
+/**
+ * The sections of one page, one open at a time (a hub: Board, Prospects, Top classes). The page shows the
+ * open section's content itself. On phones the row scrolls sideways inside itself.
+ */
+export function Tabs<T extends string>({ label, tabs, value, onChange }: {
+  /** What the sections belong to, for screen readers ("Recruiting sections"). */
+  label: string;
+  tabs: { value: T; label: string; count?: number }[];
+  value: T;
+  onChange: (value: T) => void;
+}) {
+  return (
+    <div className="ui-tabs" role="tablist" aria-label={label}>
+      {tabs.map((t) => (
+        <button key={t.value} type="button" role="tab" aria-selected={t.value === value} className="ui-tab" onClick={() => onChange(t.value)}>
+          {t.label}{t.count !== undefined && <span className="ui-tab-count">{t.count}</span>}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * A bar for a share from 0 to 1 (a prospect's interest in a school, how strong a pitch is). `label` says
+ * what it measures, for screen readers; put the figure beside it when it matters. `color` is for a team's
+ * color only; without it the bar is the text color.
+ */
+export function Meter({ value, label, color }: { value: number; label: string; color?: string }) {
+  const pct = Math.round(Math.max(0, Math.min(1, value)) * 100);
+  return (
+    <span className="ui-meter" role="meter" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct}>
+      <span style={{ width: `${pct}%`, background: color }} />
+    </span>
+  );
+}
+
 /** What a page shows when it has nothing yet: say what to do next. */
 export const Empty = ({ children }: { children: ReactNode }) => <div className="ui-empty">{children}</div>;
 
