@@ -65,7 +65,7 @@
 .dy-tick:hover { background: var(--wash); text-decoration: none !important; }
 .dy-tick-mine { background: var(--highlight); }
 .dy-tick-row { display: grid; grid-template-columns: 18px 18px 1fr auto; align-items: center; gap: 4px; font-weight: 600; }
-.dy-tick-rank { color: var(--gray); font-size: 12px; text-align: right; }
+.dy-tick-rank { color: var(--gray); font: 400 15px/1 var(--font-num-tiny); text-align: right; }
 .dy-tick-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dy-tick-pts { font: 400 var(--fs-num-1)/1 var(--font-num); }
 .dy-tick-state { font-size: 12px; color: var(--gray); }
@@ -105,7 +105,7 @@
   vertical-align: middle; letter-spacing: -0.02em;
 }
 .dy-team { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
-.dy-rank { color: var(--gray); font-size: 13px; font-weight: 500; }
+.dy-rank { color: var(--gray); font: 400 15px/1 var(--font-num-tiny); }
 
 /* Page heads and tables */
 .dy-weeknav { display: flex; gap: 8px; align-items: center; }

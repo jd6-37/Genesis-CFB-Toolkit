@@ -7,6 +7,8 @@ import '@fontsource/barlow-condensed/700.css';
 import '@fontsource/barlow-condensed/800-italic.css';
 import '@fontsource/barlow-condensed/900.css';
 import '@fontsource/press-start-2p/400.css';
+import '@fontsource/handjet/500.css';
+import '@fontsource/micro-5/400.css';
 import './styles.css';
 import App from './App';
 
