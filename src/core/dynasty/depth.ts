@@ -11,6 +11,13 @@ import { SLOTS } from './rosters';
 
 const DEFS = rosterLayout('bw95', false, true);
 
+/**
+ * The 32 spots by slot number. The layout lists them in the order the game shows them, which is not the
+ * slot order from the punter on (P is slot 31, DT2 slot 21, …): read a depth chart's entry through this,
+ * never through the layout's position in its list.
+ */
+export const SLOT_DEF: SlotDef[] = DEFS.reduce((acc, def) => { acc[def.slot] = def; return acc; }, new Array<SlotDef>(SLOTS));
+
 /** The position that plays a slot, by its label in the 138-team edition. */
 export function slotPosition(label: string): string {
   const l = label.replace(/\d+$/, '');
@@ -29,10 +36,10 @@ const FALLBACK: Record<string, string[]> = {
 export const olPlusOf = (s: DSeason | undefined) => s?.bw?.flat().find((b) => b?.group === 'OL')?.weightPlus ?? 0;
 
 /**
- * One team's 32 and backups (player IDs per slot). With `open`, a spot nobody of its own or a close
- * position can take stays empty and nobody holds two spots (the projected depth chart; user, 2026-11-13:
- * "I'd rather the slot stay empty if there is no QB"). Without it every one of the 32 gets a player, as
- * the game needs.
+ * One team's 32 and backups (player IDs per slot). With `open`, a spot takes only a player of its own
+ * position, once; otherwise it stays empty (the projected depth chart; user, 2026-11-13: "I'd rather the
+ * slot stay empty if there is no QB", and on a receiver at HB2: "don't let a WR stand in there. just show
+ * open"). Without it every one of the 32 gets a player, as the game needs.
  */
 export function teamDepth(players: DPlayer[], open = false): { slots: (number | null)[]; bench: (number | null)[] } {
   const slots = new Array<number | null>(SLOTS).fill(null);
@@ -49,7 +56,7 @@ export function teamDepth(players: DPlayer[], open = false): { slots: (number | 
   // Each slot's own position: the Active Roster first, then the backups; then close positions; then anyone.
   const own = (p: DPlayer, def: SlotDef) => p.pos === slotPosition(def.label);
   const close = (p: DPlayer, def: SlotDef) => (FALLBACK[slotPosition(def.label)] ?? []).includes(p.pos);
-  for (const ok of [own, close]) { fill(slots, DEFS, ok); fill(bench, DEFS, ok); }
+  for (const ok of open ? [own] : [own, close]) { fill(slots, DEFS, ok); fill(bench, DEFS, ok); }
   if (open) return { slots, bench };
   fill(slots, DEFS, () => true);
   // A slot in the game must have a player: a kicker can also punt (and the other way round).

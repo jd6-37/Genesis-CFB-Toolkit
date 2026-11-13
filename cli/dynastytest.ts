@@ -335,7 +335,7 @@ assert.ok(Math.abs(Off.transferChance(o1, depthGuy, busy) - 0.18 * 0.2) < 1e-9, 
 const team1 = depthGuy.team!;
 const chart = Off.projectedDepth(o1, team1).slice();
 const lay = rosterLayout('bw95', false, true);
-const spot = lay.findIndex((def, k) => !Off.DEPTH_SLOTS.has(def.label) && chart[k] !== null && o1.players[chart[k]! - 1].pos === depthGuy.pos);
+const spot = lay.find((def) => !Off.DEPTH_SLOTS.has(def.label) && chart[def.slot] !== null && o1.players[chart[def.slot]! - 1].pos === depthGuy.pos)?.slot ?? -1;
 if (spot >= 0) {
   const was = chart.indexOf(depthGuy.id);
   if (was >= 0) chart[was] = chart[spot];
@@ -352,7 +352,14 @@ assert.ok(Off.projectedProblems(o1, team1, [...chart.slice(0, 31), 999999]).leng
   const ids = open.filter((x) => x !== null);
   assert.equal(open[lay.findIndex((def) => def.label === 'QB')], null, 'no quarterback: the QB spot stays open');
   assert.equal(new Set(ids).size, ids.length, 'nobody holds two spots on the projected chart');
+  assert.ok(lay.every((def) => open[def.slot] === null || o1.players[open[def.slot]! - 1].pos === Depth.slotPosition(def.label)), 'only players of the spot\'s own position');
   assert.ok(Depth.teamDepth(noQb).slots.every((x) => x !== null), "the season's chart fills every spot");
+  // The layout's order is not the slot order (P is slot 31): the punter's spot holds a punter.
+  const full = Depth.teamDepth(act(o1).filter((p) => p.team === team1)).slots;
+  assert.equal(Depth.SLOT_DEF[31].label, 'P');
+  assert.ok(lay.every((def) => Depth.SLOT_DEF[def.slot].label === def.label), 'every spot is found by its slot number');
+  const punter = full[31] !== null ? o1.players[full[31]! - 1].pos : '';
+  assert.ok(punter === 'P' || punter === 'K', `slot 31 holds the punter (${punter})`);
 }
 const o1p = Off.confirmDepth(o1);
 assert.equal(o1p.offseason!.step, 'portal');

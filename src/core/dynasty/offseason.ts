@@ -27,7 +27,7 @@ import { OVR_FORMULAS } from './ovr';
 import { readRating } from '../teamRatings';
 import { DYNASTY_EDITION, dynastyAreaProblem, dynastyRomId, writeDynastyArea, type DynastyName } from './dynastyArea';
 import { TEAM_SIZE } from './rosters';
-import { depthChart, slotPosition, teamDepth } from './depth';
+import { SLOT_DEF, depthChart, slotPosition, teamDepth } from './depth';
 import { rosterLayout } from '../rosterLayouts';
 import { roleOfSlot } from './ovr';
 import { recordYear } from './career';
@@ -280,8 +280,8 @@ export function projectedProblems(d: Dynasty, team: number, slots: (number | nul
   const out: string[] = [];
   if (slots.length !== LAYOUT.length) out.push('The depth chart needs every spot.');
   if (ids.some((id) => d.players[id - 1]?.team !== team || d.players[id - 1]?.status !== 'active')) out.push('Some of the players aren\'t on the team.');
-  // Spots may be empty: before signing day rosters are thin, and a spot with nobody of its own or a close
-  // position stays open (the computer's chart leaves it so; see teamDepth).
+  // Spots may be empty: before signing day rosters are thin, and a spot with nobody of its own position
+  // stays open (the computer's chart leaves it so; see teamDepth).
   return out;
 }
 
@@ -355,7 +355,7 @@ export function transferChance(d: Dynasty, p: DPlayer, ctx: PortalContext = port
 
 /** Labels of the Active Roster spots that aren't starting jobs. */
 export const DEPTH_SLOTS = new Set(['HB2', 'WR1', 'WR2', 'TE2', 'DT2', 'MLB2', 'LCB2', 'RCB2', 'FS2']);
-const LAYOUT = rosterLayout('bw95', false, true);
+const LAYOUT = SLOT_DEF; // by slot number
 
 export interface PortalContext {
   /** His role last season. */
