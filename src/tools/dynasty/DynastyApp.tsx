@@ -584,6 +584,12 @@ function PlayersCsv({ d, actions }: { d: Dynasty; actions: ManageActions }) {
               <ul className="dy-small">{pending.problems.slice(0, 20).map((m) => <li key={m}>{m}</li>)}</ul>
             </>
           )}
+          {pending.problems.length === 0 && pending.warnings.length > 0 && (
+            <>
+              <p><strong>{pending.warnings.length} {pending.warnings.length === 1 ? 'number was' : 'numbers were'} replaced</strong>:</p>
+              <ul className="dy-small">{pending.warnings.slice(0, 50).map((m) => <li key={m}>{m}</li>)}</ul>
+            </>
+          )}
           {pending.problems.length === 0 && (
             pending.changes.length ? (
               <>

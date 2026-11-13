@@ -1054,6 +1054,20 @@ ok('a new season refuses the last season\'s save');
   assert.equal(edited.last, 'Csvman'); assert.equal(edited.ratings.Speed, 99);
   assert.equal(e3.players.length, d0.players.length + 1);
   assert.ok(readPlayersCsv(d0, [lines[0], row.map((x, i) => (hdr[i] === 'Position' ? 'XX' : x)).join(',')].join('\n')).problems.length === 1);
+  {
+    // A new number the position can't wear in the game is replaced, with a warning.
+    const te = d0.players.find((p) => p.pos === 'TE' && p.team === 3)!;
+    const line = lines.find((l) => l.startsWith(`${te.id},`))!.split(',');
+    line[hdr.indexOf('Jersey')] = '55';
+    const guard = hdr.map((h) => ({ 'Team': d0.teams[3].school, 'First Name': 'New', 'Last Name': 'Guard', 'Position': 'LG', 'Jersey': '8' } as Record<string, string>)[h] ?? '');
+    const fix = readPlayersCsv(d0, [lines[0], line.join(','), guard.join(',')].join('\n'));
+    assert.equal(fix.problems.length, 0, fix.problems.join(' '));
+    assert.equal(fix.warnings.length, 2, fix.warnings.join(' | '));
+    const to = fix.edits.get(te.id)?.jersey ?? te.jersey;
+    assert.ok(to !== 55 && Num.numberAllowed('TE', to));
+    assert.ok(to === te.jersey || !d0.players.some((q) => q.status === 'active' && q.team === 3 && q.id !== te.id && Num.sideOf(q.pos) === 'O' && q.jersey === to));
+    assert.ok(fix.adds[0].jersey >= 50 && fix.adds[0].jersey <= 79 && fix.adds[0].jersey % 10 === 8);
+  }
   ok(`ratings: steps and progress, ${Math.round((between / grown.length) * 100)}% of returning players between steps after an offseason; editing and the players CSV (${lines.length - 1} rows)`);
 }
 

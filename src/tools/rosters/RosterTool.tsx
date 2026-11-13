@@ -500,6 +500,12 @@ function ImportSummary({
       {report.missingColumns.length > 0 && (
         <p className="ros-warn">Not in the sheet, so those values were kept: {list(report.missingColumns)}</p>
       )}
+      {report.teams.some((t) => t.renumbered.length > 0) && (
+        <p className="ros-warn">
+          Numbers the game doesn't allow at a position (offensive linemen wear 50-79, nobody else on offense does), replaced:{' '}
+          {report.teams.flatMap((t) => t.renumbered.map((n) => `${t.teamName} ${n.label}${n.player ? ` ${n.player}` : ''} ${n.from} → ${n.to}`)).join('; ')}.
+        </p>
+      )}
       {report.teams.length > 0 && (
         <details>
           <summary>Who went where</summary>

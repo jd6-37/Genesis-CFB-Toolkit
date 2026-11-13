@@ -10,12 +10,13 @@ import {
   GROUP_ATTRS, rosterLayout, sheetColumn, ratingToNibble, weightToNibble, type SlotDef,
 } from './rosterLayouts';
 import {
-  readPlayer, writePlayer, jerseyByte, setRating, teamLayout, teamName, type RosterRom,
+  readPlayer, writePlayer, jerseyByte, jerseyNumber, setRating, teamLayout, teamName, type RosterRom,
 } from './rosterRom';
 import { EXE_TEAM_NAMES } from './rosterNames';
 import { cellNumber, type Sheet } from './rosterSheet';
 import { shownWeightOffset } from './rosterOlPatch';
 import { looksLikeCfb27 } from './rosterCfb27';
+import { numberAllowed, replacementNumber, sideOf } from './dynasty/numbers';
 
 export interface SlotFill {
   label: string;
@@ -35,6 +36,8 @@ export interface TeamImport {
   unfilled: string[];
   /** Rows of this team that weren't needed (depth beyond the game's slots). */
   unusedRows: number;
+  /** Players whose number in the sheet their slot's position can't wear in the game, and the number given instead. */
+  renumbered: { label: string; player: string; from: number; to: number }[];
 }
 
 export interface ImportReport {
@@ -254,9 +257,14 @@ export function importSheet(rom: RosterRom, sheet: Sheet): ImportReport {
   const unknownPositions = new Map<string, number>();
   const unknownSlots = new Map<string, number>();
 
+  // A number the slot's position can't wear in the game (numbers.ts: offensive linemen 50-79, nobody else on
+  // offense) is replaced once the team is done, unless it is the number the slot already had: a sheet exported
+  // from a ROM comes back unchanged.
+  let pendingNumbers: { def: SlotDef; from: number }[] = [];
   const apply = (team: number, def: SlotDef, r: string[]) => {
     const p = readPlayer(rom, team, def.slot);
     const n = cNumber === undefined ? NaN : cellNumber(r[cNumber]);
+    if (Number.isFinite(n) && !numberAllowed(def.pool[0], n) && jerseyNumber(p.numberByte) !== n) pendingNumbers.push({ def, from: n });
     if (Number.isFinite(n)) p.numberByte = jerseyByte(n);
     GROUP_ATTRS[def.group].forEach((attr) => {
       const ci = c(sheetColumn(def.group, attr));
@@ -321,12 +329,28 @@ export function importSheet(rom: RosterRom, sheet: Sheet): ImportReport {
     }
     const order = new Map(layout.map((d, k) => [d.slot, k]));
     filled.sort((a, b) => order.get(a.slot)! - order.get(b.slot)!);
+    const renumbered: TeamImport['renumbered'] = [];
+    const waiting = new Set(pendingNumbers.map((x) => x.def.slot));
+    for (const { def, from } of pendingNumbers.sort((a, b) => order.get(a.def.slot)! - order.get(b.def.slot)!)) {
+      const side = sideOf(def.pool[0]);
+      const taken = new Set(layout.filter((d) => !waiting.has(d.slot) && sideOf(d.pool[0]) === side)
+        .map((d) => jerseyNumber(readPlayer(rom, team, d.slot).numberByte)).filter((x): x is number => x !== null));
+      const to = replacementNumber(def.pool[0], from, taken);
+      if (to === null) continue;
+      const p = readPlayer(rom, team, def.slot);
+      p.numberByte = jerseyByte(to);
+      writePlayer(rom, team, def.slot, p);
+      waiting.delete(def.slot);
+      renumbered.push({ label: def.label, player: (filled.find((f) => f.slot === def.slot)?.player ?? '').replace(/^#\S+\s*/, ''), from, to });
+    }
+    pendingNumbers = [];
     teams.push({
       team, teamName: teamName(rom.teams[team]), sheetTeam,
       mode: bySlotLabel ? 'slots' : 'ranked',
       filled,
       unfilled: layout.filter((d) => !filled.some((f) => f.slot === d.slot)).map((d) => d.label),
       unusedRows: rows.length - used.size,
+      renumbered,
     });
   }
 
