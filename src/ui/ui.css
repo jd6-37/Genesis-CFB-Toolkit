@@ -97,3 +97,6 @@
 a.ui-button, a.ui-button:hover { color: var(--on-accent); text-decoration: none; }
 a.ui-button-quiet, a.ui-button-quiet:hover { color: var(--text); }
 a.ui-button-danger, a.ui-button-danger:hover { color: var(--bad); }
+
+/* A pixel figure that shares a baseline with text: its ink starts 1/8 em above the baseline, so drop it. */
+.ui-num-drop { display: inline-block; transform: translateY(0.125em); }

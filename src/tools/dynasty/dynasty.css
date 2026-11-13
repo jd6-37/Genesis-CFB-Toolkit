@@ -158,7 +158,7 @@
 .dy-teamovr > div { background: rgba(0, 0, 0, 0.2); border-radius: var(--radius); padding: 8px 12px; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .dy-teamovr.dy-on-light > div { background: rgba(255, 255, 255, 0.45); }
 .dy-teamovr dt { font-size: 14px; font-weight: 600; }
-.dy-teamovr dd { margin: 0; font: 400 var(--fs-num-3)/1 var(--font-num); }
+.dy-teamovr dd { margin: 0; font: 400 var(--fs-num-3)/1 var(--font-num); transform: translateY(0.125em); }
 @media (min-width: 760px) {
   .dy-teamhead { flex-direction: row; align-items: center; gap: 24px; padding: 24px 28px; margin-top: 28px; }
   .dy-teamhead-id { flex: 1; gap: 24px; }
@@ -166,7 +166,7 @@
   .dy-teamhead-helmet { display: block; }
   .dy-teamovr { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 112px; }
   .dy-teamovr > div { flex-direction: column-reverse; align-items: center; gap: 2px; padding: 10px 12px; }
-  .dy-teamovr dd { font-size: var(--fs-num-4); }
+  .dy-teamovr dd { font-size: var(--fs-num-4); transform: none; }
 }
 .dy-team-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 40px; }
 .dy-stat-tables { display: grid; gap: 24px; }
@@ -216,7 +216,7 @@
 .dy-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
 .dy-tile { border: 1px solid var(--rule); border-radius: var(--radius); padding: 12px 14px; }
 .dy-tile-top { display: flex; justify-content: space-between; align-items: baseline; color: var(--gray); font-size: 14px; }
-.dy-tile-top strong { font: 400 var(--fs-num-3)/1 var(--font-num); color: var(--ink); }
+.dy-tile-top strong { font: 400 var(--fs-num-3)/1 var(--font-num); color: var(--ink); transform: translateY(0.125em); }
 .dy-tile-top span { font-family: var(--display); font-weight: 700; font-size: 26px; line-height: 1; color: var(--ink); }
 .dy-pips { position: relative; display: flex; gap: 2px; margin: 8px 0 6px; }
 .dy-pips span { flex: 1; height: 12px; border-radius: var(--radius); background: var(--wash); }
