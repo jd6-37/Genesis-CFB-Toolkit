@@ -11,7 +11,7 @@ import { basename } from 'node:path';
 import { strict as assert } from 'node:assert';
 import { openRom } from '../src/core/romfile';
 import { openSave, readDynastySave, ranksFromPower, STAT_SLOTS } from '../src/core/dynasty/save';
-import { CLASSES, createDynasty, fromBase64, importSave, latestSave, startingClass, weeksDone } from '../src/core/dynasty/model';
+import { CLASSES, createDynasty, fromBase64, importSave, latestSave, rng, startingClass, weeksDone } from '../src/core/dynasty/model';
 import { champions, INDEPENDENT, playerName, leaders, playerLines, seasonRecords, RECORD_STATS, seasonView, standings, teamHistory, weekName } from '../src/core/dynasty/derive';
 import { offseasonStories, stories } from '../src/core/dynasty/news';
 import { rivalryOf } from '../src/core/dynasty/rivalries';
@@ -42,7 +42,7 @@ import { lookChoices, lookOf } from '../src/core/dynasty/headshot';
 import { blackShare, MAX_FIRST, MAX_LAST, SKIN_TONES } from '../src/core/dynasty/appearance';
 import { backupLabel, lineupLock, moveToSpot, SPOTS, spotLabel, spotsFor } from '../src/core/dynasty/lineup';
 import { nextPrestige, tierOfRank } from '../src/core/dynasty/prestige';
-import { EVEN_TRAINING, trainingFactor, trainingOf, trainingProblems } from '../src/core/dynasty/training';
+import { EVEN_TRAINING, trainingFactor, trainingOf, trainingProblems, weightGain } from '../src/core/dynasty/training';
 import { openRosterRom, readPlayer, getRating, jerseyNumber, teamLayout } from '../src/core/rosterRom';
 
 const [romPath, savePath] = process.argv.slice(2);
@@ -1078,6 +1078,25 @@ if (hasKits(rom)) {
   assert.match(whiteHomeLock(played, 0)!, /offseason/);
   assert.equal(whiteHomeLock({ ...played, offseason: {} as never }, 0), null);
   ok('home jersey: flags from the ROM, a user team changed, written into the season ROM, locked during the season');
+}
+
+// Weight gain (user, 2026-11-13): everyone but kickers puts on a few pounds each offseason, more with a bigger Strength program.
+{
+  const even = { strength: 25, speed: 25, technique: 25, knowledge: 25 }, heavy = { strength: 40, speed: 20, technique: 20, knowledge: 20 }, none = { strength: 0, speed: 40, technique: 30, knowledge: 30 };
+  assert.equal(weightGain(RD, 'OL', 300, even, 1), 6);
+  assert.equal(weightGain(RD, 'OL', 300, heavy, 1), 9);
+  assert.equal(weightGain(RD, 'OL', 300, none, 1), 3);
+  assert.equal(weightGain(RD, 'HB', 200, even, 1), 4);
+  assert.equal(weightGain(RD, 'HB', 200, heavy, 1), 6);
+  assert.equal(weightGain(RD, 'K', 200, heavy, 1), 0);
+  assert.equal(weightGain(RD, 'OL', 300, even, 0), 0);
+  const d0 = createDynasty(rom, csv, { name: 'w', seed: 9, userTeams: [] });
+  const some = d0.players.filter((p) => p.team === 0 && !['K', 'P'].includes(p.pos)).slice(0, 30);
+  const total = (t: typeof even, gain: number) => some.reduce((s, p, i) => s + (Off.develop(p, gain, rng(100 + i), RD, t).weight - p.weight), 0);
+  assert.ok(total(heavy, 3) > total(even, 3) && total(even, 3) > total(none, 3), 'more Strength program, more pounds');
+  assert.ok(total(even, 0) > 0, 'a player whose ratings stay put still gains weight');
+  for (const p of some) { const q = Off.develop(p, 3, rng(7), RD, heavy); assert.ok(q.weight - p.weight >= 0 && q.weight - p.weight <= Math.round(p.weight * 0.03)); assert.equal((q.ratings.Weight ?? 0) - (p.ratings.Weight ?? 0), Math.min(380, (p.ratings.Weight ?? 0) + q.weight - p.weight) - (p.ratings.Weight ?? 0)); }
+  ok('weight gain: a share of his weight, every position but K and P, scaled by the Strength program');
 }
 
 console.log(`\n${passed} passed`);

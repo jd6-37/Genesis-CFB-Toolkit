@@ -1,6 +1,7 @@
 // Training focus (user, 2026-11-12): before the offseason each user team splits 100 points over four
 // areas, at most 40 in one; 25 each gives the normal development paces. More points in an area make its
-// ratings grow up to 20% faster, fewer up to 20% slower. A year's OVR gain stays the same (develop()
+// ratings grow up to 20% faster, fewer up to 20% slower. The Strength program also sets how much
+// weight players put on (weightGain below). A year's OVR gain stays the same (develop()
 // normalizes), so the focus shapes the kind of player, not how good he gets. The page doesn't say which
 // ratings an area touches ("to keep a little mystery"); the Offseason rules page does. Computer teams
 // stay at 25 each (user: "cpu stays at 25 each for now").
@@ -54,8 +55,19 @@ export function trainingOf(d: Dynasty, R: OffseasonRules, team: number): Trainin
  * The pace factor for an area's points: 25 = 1; at the cap (40) 1 + effect; at 0, 1 − effect (straight
  * lines in between, so the step up and the step down both reach ±effect).
  */
-export function trainingFactor(R: OffseasonRules, points: number): number {
+export function trainingFactor(R: OffseasonRules, points: number, effect = R.trainingEffect): number {
   const even = TRAINING_POINTS / TRAINING_AREAS.length;
-  if (points >= even) return 1 + (R.trainingEffect * (points - even)) / Math.max(1, R.trainingMax - even);
-  return 1 - (R.trainingEffect * (even - points)) / even;
+  if (points >= even) return 1 + (effect * (points - even)) / Math.max(1, R.trainingMax - even);
+  return 1 - (effect * (even - points)) / even;
+}
+
+/**
+ * Pounds a player puts on in one offseason (user, 2026-11-13: "offseason player progression should also
+ * include mild weight gain. And that amount should be affected by the Strength Training training focus
+ * slider"; "It should be a percentage gain so heavier guys can gain more"): a random share of his weight,
+ * up to the rule's percentage, times the Strength program's factor. Kickers and punters don't gain.
+ */
+export function weightGain(R: OffseasonRules, role: string, lbs: number, t: Training, roll: number): number {
+  if (role === 'K' || role === 'P') return 0;
+  return Math.max(0, Math.round(roll * R.weightGainPct * lbs * trainingFactor(R, t.strength, R.weightTrainingEffect)));
 }

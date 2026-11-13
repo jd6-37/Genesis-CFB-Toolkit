@@ -32,7 +32,7 @@ import { rosterLayout } from '../rosterLayouts';
 import { roleOfSlot } from './ovr';
 import { recordYear } from './career';
 import { DEFAULT_RULES, growthRate, rulesOf, type OffseasonRules } from './rules';
-import { areaOf, EVEN_TRAINING, trainingFactor, trainingOf, type Training } from './training';
+import { areaOf, EVEN_TRAINING, trainingFactor, trainingOf, weightGain, type Training } from './training';
 import { ovrOf, roleOfPos, type Ratings } from './ratings';
 import { blackShare, firstOdds, lastOdds, MAX_FIRST, MAX_LAST, namePool, pickName, skinFor, type NamePool } from './appearance';
 
@@ -172,12 +172,17 @@ export function capOf(R: OffseasonRules, a: string, t: Training = EVEN_TRAINING)
  * Grows a player toward his potential: an OVR gain raises the ratings his position's OVR formula counts,
  * by the shown numbers, so he can be part of the way to the next step. The gain is shared out by each
  * rating's pace (Awareness fastest, Speed slowest; user, 2026-11-12: "SPD shouldn't be able to progress
- * as much as AWR"), scaled so his OVR still moves by the gain. Bigger players also put on a few pounds.
+ * as much as AWR"), scaled so his OVR still moves by the gain. Everyone but kickers also puts on a few pounds, more with
+ * a bigger Strength program (training.ts).
  */
 export function develop(p: DPlayer, gain: number, r: Rand, R: OffseasonRules = DEFAULT_RULES, t: Training = EVEN_TRAINING): DPlayer {
   const role = roleOfPos(p.pos);
   const f = OVR_FORMULAS[role];
-  if (!f || Math.abs(gain) < 0.25) return p;
+  if (!f) return p;
+  if (Math.abs(gain) < 0.25) { // no rating moves, but he still puts on weight
+    const lbs0 = weightGain(R, role, p.weight, t, r());
+    return lbs0 ? { ...p, weight: clamp(p.weight + lbs0, 150, 400), ratings: { ...p.ratings, Weight: clamp((p.ratings.Weight ?? 140) + lbs0, 140, 380) } } : p;
+  }
   const per = gain / f.scale; // the weighted average moves by this many points
   const ws = (Object.entries(f.weights) as [keyof Ratings, number][]).filter(([, w]) => w > 0);
   const norm = ws.reduce((s, [a, w]) => s + w * paceOf(R, a, t), 0) / ws.reduce((s, [, w]) => s + w, 0) || 1; // the weighted average pace
@@ -206,12 +211,9 @@ export function develop(p: DPlayer, gain: number, r: Rand, R: OffseasonRules = D
     if (Math.abs(left) < 0.01 || !tot) break;
     want = new Map(open.map(([a, x]) => [a, (left * x) / tot / ws.find(([y]) => y === a)![1]] as const));
   }
-  let weight = p.weight;
-  if (gain > 0 && ['OL', 'DE', 'DT', 'TE', 'LB', 'FB'].includes(role)) {
-    const lbs = Math.round(between(r, 0, 6));
-    ratings.Weight = clamp((ratings.Weight ?? 140) + lbs, 140, 380);
-    weight = clamp(weight + lbs, 150, 400);
-  }
+  const lbs = weightGain(R, role, p.weight, t, r());
+  ratings.Weight = clamp((ratings.Weight ?? 140) + lbs, 140, 380);
+  const weight = clamp(p.weight + lbs, 150, 400);
   const q = { ...p, ratings, weight };
   return { ...q, ovr: ovrOf(q) };
 }
@@ -462,7 +464,7 @@ export function runPortal(d: Dynasty): Dynasty {
 
 export interface RecruitTemplates {
   /** The league's players of each position (their ratings), lowest OVR first. */
-  byPos: Record<string, { ratings: Ratings; ovr: number; heightIn: number; weight: number }[]>;
+  byPos: Record<string, { ratings: Ratings; ovr: number; heightIn: number; weight: number; gained: number }[]>;
   /** Names of the starting (CFB 27) players, short enough for the game, weighted by how often and for whom they occur. */
   firstNames: NamePool;
   lastNames: NamePool;
@@ -486,7 +488,7 @@ export function recruitTemplates(d: Dynasty): RecruitTemplates {
     last.set(p.last, (last.get(p.last) ?? 0) + 1);
     if (p.hometown && p.state && p.state !== 'Non-US') towns.push({ hometown: p.hometown, state: p.state });
   }
-  for (const p of active(d)) (byPos[p.pos] ??= []).push({ ratings: p.ratings, ovr: p.ovr, heightIn: p.heightIn, weight: p.weight });
+  for (const p of active(d)) (byPos[p.pos] ??= []).push({ ratings: p.ratings, ovr: p.ovr, heightIn: p.heightIn, weight: p.weight, gained: p.weight - (p.weight0 ?? p.weight) });
   for (const list of Object.values(byPos)) list.sort((a, b) => a.ovr - b.ovr);
   return { byPos, firstNames: namePool(first, firstOdds, MAX_FIRST), lastNames: namePool(last, lastOdds, MAX_LAST), realNames: real, towns };
 }
@@ -521,9 +523,11 @@ export function makeRecruit(d: Dynasty, tpl: RecruitTemplates, r: Rand, id: numb
   const f = OVR_FORMULAS[roleOfPos(pos)];
   const R = rulesOf(d);
   const gap = between(r, R.freshmanGapMin, R.freshmanGapMax) / (f?.scale ?? 0.5);
+  // He arrives at the weight his model arrived at (without the pounds put on since), so the league
+  // doesn't get heavier every year.
   const ratings: Ratings = {};
   for (const [a, v] of Object.entries(t.ratings) as [keyof Ratings, number][]) {
-    if (a === 'Weight') { ratings.Weight = clamp(Math.round(v + 8 * gauss(r)), 140, 380); continue; }
+    if (a === 'Weight') { ratings.Weight = clamp(Math.round(v - t.gained + 8 * gauss(r)), 140, 380); continue; }
     const counts = !!f?.weights[a];
     const drop = counts ? gap * (a === 'Speed' ? 0.4 : 1) * between(r, 0.6, 1.4) : 0;
     ratings[a] = clamp(Math.round((v - drop + 3 * gauss(r)) * 10) / 10, 0, 100); // fine ratings: every point plays
@@ -538,9 +542,10 @@ export function makeRecruit(d: Dynasty, tpl: RecruitTemplates, r: Rand, id: numb
     first = pickName(tpl.firstNames, black, r);
     last = pickName(tpl.lastNames, black, r);
   }
+  const w0 = clamp(Math.round(t.weight - t.gained + 6 * gauss(r)), 150, 380);
   return {
     id, first, last, pos, team, cls: 'FR', jersey: 0,
-    heightIn: clamp(Math.round(t.heightIn + gauss(r)), 64, 82), weight: clamp(Math.round(t.weight + 6 * gauss(r)), 150, 380),
+    heightIn: clamp(Math.round(t.heightIn + gauss(r)), 64, 82), weight: w0, weight0: w0,
     hometown: town.hometown, state: town.state, ovr, ratings, skin: skinFor(black, r), status: 'active',
     pot: clamp(Math.round(between(r, plo, phi)), ovr + 3, 99), recruit: { stars, year },
   };
