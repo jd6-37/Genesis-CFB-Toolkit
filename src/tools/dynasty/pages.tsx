@@ -469,7 +469,7 @@ export function Team({ team }: { team: number }) {
                 <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 4 1 9l11 5 8-3.6V16h2V9L12 4zM5 12.7V16c0 1.7 3.1 3 7 3s7-1.3 7-3v-3.3l-7 3.2-7-3.2z" /></svg>
                 {academicGrade(t.school)}
               </span>
-              {v.save && <span>{recordText(r)}, {r.cw}-{r.cl} in conference</span>}
+              {v.save && <span className="dy-record"><strong>{recordText(r)}</strong>{conf !== INDEPENDENT && <>{' '}({r.cw}-{r.cl} in conference)</>}</span>}
               {v.save && v.rank[team] <= 25 && <span>No. {v.rank[team]}</span>}
             </p>
           </div>
