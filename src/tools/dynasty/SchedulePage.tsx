@@ -1,7 +1,7 @@
 // The schedule editor (user, 2026-11-12: "Generate each year, and then the user can edit … We don't need to edit
 // cpu teams, only the dynasty team(s)"; "I would like to be able to edit conference games too"). From the second
 // season, before its first import: a user team's 12 weeks, each with its opponent, site and week.
-import { Button, Note, PageHead, Select } from '../../ui';
+import { Button, Modal, Note, PageHead, Select, SubHead } from '../../ui';
 import { useMemo, useState } from 'react';
 import { INDEPENDENT } from '../../core/dynasty/derive';
 import { rivalryOf } from '../../core/dynasty/rivalries';
@@ -42,7 +42,7 @@ export function ScheduleEditor({ arg }: { arg?: string }) {
       let after: DSchedule | undefined;
       const next = editSchedule(d, (s) => (after = fn(s)));
       await commit(next);
-      setNote({ kind: 'ok', text: done(after!) });
+      setNote({ kind: 'ok', text: `Saved. ${done(after!)}` });
     } catch (e) {
       setNote({ kind: 'error', text: (e as Error).message });
     }
@@ -130,17 +130,23 @@ export function ScheduleEditor({ arg }: { arg?: string }) {
         })}
       </ol>
       {!lock && (
-        <div className="dy-row">
-          {confirmNew ? (
-            <>
-              <span className="dy-small">Every team gets new games, and your changes are gone.</span>
-              <Button onClick={() => void remake()}>Make a new schedule</Button>
-              <Button variant="quiet" onClick={() => setConfirmNew(false)}>Keep this one</Button>
-            </>
-          ) : (
-            <Button variant="quiet" onClick={() => setConfirmNew(true)}>Make a new schedule…</Button>
+        <>
+          <SubHead>When you're done</SubHead>
+          <p>Your changes are saved as you make them: there is nothing to confirm here. Next, download the {season.year} ROM and start a New Season in the game with it.</p>
+          <div className="dy-row">
+            <Button onClick={() => downloadRom(season.year)}>Download the {season.year} ROM</Button>
+            <Button variant="quiet" href={href(`team/${team}`)}>Depth chart</Button>
+          </div>
+          <SubHead>Start over</SubHead>
+          <p className="dy-small dy-dim">Throws away this schedule, your changes included, and draws new games for every team.</p>
+          <div className="dy-row"><Button variant="danger" onClick={() => setConfirmNew(true)}>Throw this schedule away…</Button></div>
+          {confirmNew && (
+            <Modal title={`A new ${season.year} schedule?`} onClose={() => setConfirmNew(false)}
+              actions={<><Button variant="danger" onClick={() => void remake()}>Throw it away and make a new one</Button><Button variant="quiet" onClick={() => setConfirmNew(false)}>Keep my schedule</Button></>}>
+              <p>Every team gets new games, and the changes you made are gone. This can't be undone.</p>
+            </Modal>
           )}
-        </div>
+        </>
       )}
     </section>
   );
