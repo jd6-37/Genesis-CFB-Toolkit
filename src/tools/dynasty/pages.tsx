@@ -3,7 +3,7 @@
 import { playerHonors, seasonAwards } from '../../core/dynasty/awards';
 import { scheduleLock } from '../../core/dynasty/schedule';
 import { setWhiteHome, whiteHomeLock } from '../../core/dynasty/kit';
-import { Button, Note, PageHead, Select, SubHead } from '../../ui';
+import { Button, Note, PageHead, Select, SubHead, Table } from '../../ui';
 import { useEffect, useMemo, useState } from 'react';
 import {
   champions, leaders, playerLines, playerName, seasonView, standings, statValue, teamHistory, weekName,
@@ -116,10 +116,10 @@ function StoryBox({ s, onClose }: { s: Story; onClose: () => void }) {
         </div>
         <p className="dy-small">{s.headline}{s.box!.result ? `: ${s.box!.result}` : ''}.</p>
         {s.box!.lines.map((l) => (
-          <table key={l.cat} className="dy-table dy-box-table">
-            <thead><tr><th className="dy-left">{l.cat}</th>{l.cells.map(([k]) => <th key={k}>{k}</th>)}</tr></thead>
-            <tbody><tr><td className="dy-left dy-dim">{weekName(v, s.week)}</td>{l.cells.map(([k, v]) => <td key={k}>{v}</td>)}</tr></tbody>
-          </table>
+          <Table key={l.cat} figures className="dy-box-table">
+            <thead><tr><th className="ui-left">{l.cat}</th>{l.cells.map(([k]) => <th key={k}>{k}</th>)}</tr></thead>
+            <tbody><tr><td className="ui-left dy-dim">{weekName(v, s.week)}</td>{l.cells.map(([k, v]) => <td key={k}>{v}</td>)}</tr></tbody>
+          </Table>
         ))}
         <div className="dy-row">
           <Button href={href(`player/${p.id}`)} onClick={onClose}>Player page</Button>
@@ -303,24 +303,24 @@ export function Standings() {
       <PageHead title="Standings" />
       <div className="dy-confs">
         {confs.map(({ name, c }) => (
-          <table key={c} className="dy-table">
+          <Table key={c} figures>
             <caption>{c === INDEPENDENT ? 'Independents' : name}</caption>
             <thead>
-              <tr><th className="dy-left">Team</th>{c !== INDEPENDENT && <th>Conf</th>}<th>Overall</th><th>PF</th><th>PA</th><th>Streak</th></tr>
+              <tr><th className="ui-left">Team</th>{c !== INDEPENDENT && <th>Conf</th>}<th>Overall</th><th>PF</th><th>PA</th><th>Streak</th></tr>
             </thead>
             <tbody>
               {standings(v, c).map((r) => (
                 <tr key={r.team}>
-                  <td className="dy-left"><TeamLink team={r.team} /></td>
+                  <td className="ui-left"><TeamLink team={r.team} /></td>
                   {c !== INDEPENDENT && <td>{r.cw}-{r.cl}</td>}
                   <td>{recordText(r)}</td>
                   <td>{r.pf}</td>
                   <td>{r.pa}</td>
-                  <td>{r.streak ? `${r.streak > 0 ? 'W' : 'L'}${Math.abs(r.streak)}` : ''}</td>
+                  <td className="ui-text">{r.streak ? `${r.streak > 0 ? 'W' : 'L'}${Math.abs(r.streak)}` : ''}</td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         ))}
       </div>
     </section>
@@ -389,19 +389,19 @@ function StatTables({ lines }: { lines: PlayerLine[] }) {
         if (!rows.length) return null;
         rows.sort((a, b) => statValue(b, t.sort) - statValue(a, t.sort));
         return (
-          <table key={t.cat} className="dy-table">
+          <Table key={t.cat} figures>
             <caption>{t.title}</caption>
-            <thead><tr><th className="dy-left">Player</th><th>Pos</th>{t.cols.map(([k, label]) => <th key={k}>{label}</th>)}</tr></thead>
+            <thead><tr><th className="ui-left">Player</th><th>Pos</th>{t.cols.map(([k, label]) => <th key={k}>{label}</th>)}</tr></thead>
             <tbody>
               {rows.map((l) => (
                 <tr key={`${l.cat}-${l.slot}`}>
-                  <td className="dy-left"><PlayerCell line={l} /></td>
-                  <td>{v.season.bw?.[l.team]?.[l.slot]?.label ?? playerOf(d, l.player)?.pos ?? ''}</td>
+                  <td className="ui-left"><PlayerCell line={l} /></td>
+                  <td className="ui-text">{v.season.bw?.[l.team]?.[l.slot]?.label ?? playerOf(d, l.player)?.pos ?? ''}</td>
                   {t.cols.map(([k]) => <td key={k}>{statValue(l, k)}</td>)}
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         );
       })}
     </div>
@@ -504,7 +504,7 @@ export function Team({ team }: { team: number }) {
           <SubHead>Schedule</SubHead>
           {mine && v.season.schedule && !scheduleLock(v.season) && <p className="dy-small"><a href={href(`schedule/${team}`)}>Change the schedule</a></p>}
           {games.length ? (
-            <table className="dy-table">
+            <Table figures>
               <tbody>
                 {games.map((g) => {
                   const home = g.home === team;
@@ -512,30 +512,30 @@ export function Team({ team }: { team: number }) {
                   const us = home ? g.hs : g.vs, them = home ? g.vs : g.hs;
                   return (
                     <tr key={g.index}>
-                      <td className="dy-left dy-dim">{weekName(v, g.week)}</td>
-                      <td className="dy-left">{home ? 'vs.' : 'at'} {opp !== null ? <TeamLink team={opp} /> : 'To be decided'}</td>
+                      <td className="ui-left dy-dim">{weekName(v, g.week)}</td>
+                      <td className="ui-left">{home ? 'vs.' : 'at'} {opp !== null ? <TeamLink team={opp} /> : 'To be decided'}</td>
                       <td>{us !== null && them !== null ? <span className={us > them ? 'dy-w' : 'dy-l'}>{us > them ? 'W' : us < them ? 'L' : 'T'} {us}-{them}</span> : ''}</td>
                     </tr>
                   );
                 })}
               </tbody>
-            </table>
+            </Table>
           ) : <p className="dy-dim">No games in the imported season.</p>}
 
           <SubHead>History</SubHead>
-          <table className="dy-table">
-            <thead><tr><th className="dy-left">Season</th><th>Record</th><th>Final rank</th><th></th></tr></thead>
+          <Table figures>
+            <thead><tr><th className="ui-left">Season</th><th>Record</th><th>Final rank</th><th></th></tr></thead>
             <tbody>
               {hist.map((h) => (
                 <tr key={h.year}>
-                  <td className="dy-left">{h.year}</td>
+                  <td className="ui-left">{h.year}</td>
                   <td>{h.imported ? recordText(h.record) : ''}</td>
                   <td>{h.imported && h.rank <= 25 ? h.rank : ''}</td>
-                  <td>{h.champion ? 'National champions' : ''}</td>
+                  <td className="ui-text">{h.champion ? 'National champions' : ''}</td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         </div>
         <div>
           <SubHead>Season stats</SubHead>
@@ -580,14 +580,14 @@ function RosterTable({ rows, edit }: { rows: RosterRow[]; edit?: { team: number;
   };
   return (
     <div className="dy-scroll">
-      <table className="dy-table dy-roster">
+      <Table className="dy-roster">
         <thead>
-          <tr><th className="dy-left">Pos</th><th>#</th><th className="dy-left">Name</th><th>OVR</th><th>Class</th><th className="dy-wide">Ht</th><th className="dy-wide">Wt</th><th className="dy-left dy-wide">Hometown</th></tr>
+          <tr><th className="ui-left">Pos</th><th>#</th><th className="ui-left">Name</th><th>OVR</th><th>Class</th><th className="dy-wide">Ht</th><th className="dy-wide">Wt</th><th className="ui-left dy-wide">Hometown</th></tr>
         </thead>
         <tbody>
           {rows.map(({ p, spot, label, ovr }) => (
             <tr key={`${spot ?? label}-${p.id}`}>
-              <td className="dy-left dy-strong">
+              <td className="ui-left dy-strong">
                 {edit ? (
                   <select className="dy-pos" aria-label={`Position of ${playerName(p)}`} value={spot ?? ''} onChange={(e) => move(p, Number(e.target.value))}>
                     {spot === null && <option value="" disabled>{label}</option>}
@@ -604,17 +604,17 @@ function RosterTable({ rows, edit }: { rows: RosterRow[]; edit?: { team: number;
                   </select>
                 ) : label}
               </td>
-              <td>{p.jersey}</td>
-              <td className="dy-left"><a href={href(`player/${p.id}`)}>{playerName(p)}</a></td>
-              <td className="dy-strong">{ovr ?? ''}</td>
+              <td className="ui-num">{p.jersey}</td>
+              <td className="ui-left"><a href={href(`player/${p.id}`)}>{playerName(p)}</a></td>
+              <td className="ui-num">{ovr ?? ''}</td>
               <td>{p.cls}</td>
               <td className="dy-wide">{heightText(p.heightIn)}</td>
-              <td className="dy-wide">{p.weight || ''}</td>
-              <td className="dy-left dy-dim dy-wide">{hometownText(p)}</td>
+              <td className="dy-wide ui-num">{p.weight || ''}</td>
+              <td className="ui-left dy-dim dy-wide">{hometownText(p)}</td>
             </tr>
           ))}
         </tbody>
-      </table>
+      </Table>
     </div>
   );
 }
@@ -780,26 +780,26 @@ function CareerStats({ p, seasons }: { p: DPlayer; seasons: { year: number; team
           const all = rows.flatMap((r) => r.lines);
           return (
             <div key={t.cat} className="dy-scroll-x">
-            <table className="dy-table">
+            <Table figures>
               <caption>{t.title}</caption>
-              <thead><tr><th className="dy-left">Season</th><th className="dy-left">Team</th><th>Class</th>{t.cols.map(([k, label]) => <th key={k}>{label}</th>)}</tr></thead>
+              <thead><tr><th className="ui-left">Season</th><th className="ui-left">Team</th><th>Class</th>{t.cols.map(([k, label]) => <th key={k}>{label}</th>)}</tr></thead>
               <tbody>
                 {rows.map(({ s, lines }) => (
                   <tr key={s.year}>
-                    <td className="dy-left">{s.year}</td>
-                    <td className="dy-left">{s.team !== null ? <TeamLink team={s.team} rank={false} size={16} /> : ''}</td>
-                    <td>{p.years?.find((y) => y.year === s.year)?.cls ?? ''}</td>
+                    <td className="ui-left">{s.year}</td>
+                    <td className="ui-left">{s.team !== null ? <TeamLink team={s.team} rank={false} size={16} /> : ''}</td>
+                    <td className="ui-text">{p.years?.find((y) => y.year === s.year)?.cls ?? ''}</td>
                     {t.cols.map(([k]) => <td key={k}>{sum(lines, k)}</td>)}
                   </tr>
                 ))}
                 {rows.length > 1 && (
-                  <tr className="dy-total">
-                    <td className="dy-left" colSpan={3}>Career</td>
+                  <tr className="ui-total">
+                    <td className="ui-left" colSpan={3}>Career</td>
                     {t.cols.map(([k]) => <td key={k}>{sum(all, k)}</td>)}
                   </tr>
                 )}
               </tbody>
-            </table>
+            </Table>
             </div>
           );
         })}
@@ -884,7 +884,7 @@ function BwRatings({ team, slot, name, bench = false, player }: { team: number; 
             const avgShown = weight ? `${Math.round(140 + avg[i] + b.weightPlus)} lb` : shownFine(Math.round(avg[i]));
             return (
               <div key={a} className="dy-tile">
-                <div className="dy-tile-top"><span>{label(a)}</span><strong>{shown}</strong></div>
+                <div className="dy-tile-top"><span>{label(a)}</span><strong>{weight ? <>{parseInt(`${shown}`, 10)}<small> lb</small></> : shown}</strong></div>
                 <div className="dy-pips" role="img" aria-label={`${shown}; average ${one} ${avgShown}`}>
                   {Array.from({ length: 15 }, (_, k) => {
                     // 15 pips of 16 fine points each; the one he's part of the way through is partly filled.
@@ -929,18 +929,18 @@ export function Leaders() {
       <PageHead title="Stat leaders">{v.season.year} season to date.</PageHead>
       <div className="dy-boards">
         {LEADER_BOARDS.map((b) => (
-          <table key={b.title} className="dy-table dy-board">
+          <Table key={b.title} figures className="dy-board">
             <caption>{b.title}</caption>
             <tbody>
               {leaders(lines, b.cat, b.key, 10).map((l, i) => (
                 <tr key={`${l.team}-${l.slot}`}>
                   <td className="dy-dim">{i + 1}</td>
-                  <td className="dy-left"><PlayerCell line={l} /> <span className="dy-dim dy-small">{d.teams[l.team].school}</span></td>
+                  <td className="ui-left"><PlayerCell line={l} /> <span className="dy-dim dy-small">{d.teams[l.team].school}</span></td>
                   <td className="dy-strong">{statValue(l, b.key).toLocaleString('en-US')}</td>
                 </tr>
               ))}
             </tbody>
-          </table>
+          </Table>
         ))}
       </div>
     </section>
@@ -961,29 +961,29 @@ export function History() {
         <div>
           <SubHead>National champions</SubHead>
           {champs.length ? (
-            <table className="dy-table">
+            <Table figures>
               <tbody>
                 {champs.slice().reverse().map((c) => (
-                  <tr key={c.year}><td className="dy-left">{c.year}</td><td className="dy-left"><TeamLink team={c.team} rank={false} full /></td><td>{recordText(c.record)}</td></tr>
+                  <tr key={c.year}><td className="ui-left">{c.year}</td><td className="ui-left"><TeamLink team={c.team} rank={false} full /></td><td>{recordText(c.record)}</td></tr>
                 ))}
               </tbody>
-            </table>
+            </Table>
           ) : <p className="dy-dim">No champion yet. The national championship game crowns the first one.</p>}
           {d.userTeams.map((t) => (
             <div key={t}>
               <SubHead>{d.teams[t].school} by season</SubHead>
-              <table className="dy-table">
+              <Table figures>
                 <tbody>
                   {teamHistory(d, t).map((h) => (
                     <tr key={h.year}>
-                      <td className="dy-left">{h.year}</td>
-                      <td>{h.imported ? recordText(h.record) : 'No save yet'}</td>
+                      <td className="ui-left">{h.year}</td>
+                      <td className={h.imported ? undefined : 'ui-text'}>{h.imported ? recordText(h.record) : 'No save yet'}</td>
                       <td>{h.imported && h.rank <= 25 ? `No. ${h.rank}` : ''}</td>
-                      <td>{h.champion ? 'National champions' : ''}</td>
+                      <td className="ui-text">{h.champion ? 'National champions' : ''}</td>
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </Table>
             </div>
           ))}
         </div>

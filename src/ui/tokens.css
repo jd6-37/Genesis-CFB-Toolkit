@@ -1,3 +1,18 @@
+/* The pixel numerals: Press Start 2P's digits sit 1/8 em above the baseline with nothing below it, so in a
+   centered box (a table cell, a chip) they look high. A taller box (ascent 130%) drops them so that, centered
+   beside 14-16 px text, they stand on that text's baseline at about its capital height.
+   Beside text on a shared baseline, also move the figure down 0.125em (see .ui-num-drop in ui.css). */
+@font-face {
+  font-family: 'Press Start Numerals';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('@fontsource/press-start-2p/files/press-start-2p-latin-400-normal.woff2') format('woff2');
+  ascent-override: 130%;
+  descent-override: 0%;
+  line-gap-override: 0%;
+}
+
 /* Design tokens for the Mod Toolkit and the Dynasty app (docs/design-system.md).
    Two layers:
    1. Scales every brand shares: type sizes, spacing (the Genesis' 8 px tile, halved for small gaps), radius,
@@ -8,7 +23,11 @@
   --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
   --font-body: 'Barlow', system-ui, sans-serif;
   /* Pixel numerals: scores, ratings and table figures only (never words). */
-  --font-num: 'Jersey 15', 'Barlow Condensed', sans-serif;
+  --font-num: 'Press Start Numerals', 'Barlow Condensed', sans-serif;
+  /* Figures where Press Start 2P is too wide (a narrow column, a crowded card). */
+  --font-num-narrow: 'Handjet', 'Barlow Condensed', sans-serif;
+  /* Really small figures (a rank beside a team name, a chart's axis). */
+  --font-num-tiny: 'Micro 5', 'Barlow Condensed', sans-serif;
 
   /* Type scale (px): small print, labels, body, lead, then headings. */
   --fs-1: 12px;
@@ -19,6 +38,11 @@
   --fs-6: 32px;
   --fs-7: 44px;
   --fs-8: 56px;
+  /* Pixel numerals (--font-num): the font is wide and drawn on an 8 px grid, so it has its own steps. */
+  --fs-num-1: 12px;
+  --fs-num-2: 16px;
+  --fs-num-3: 24px;
+  --fs-num-4: 32px;
 
   /* Spacing: 4 px steps up to the 8 px tile, then tiles. */
   --sp-1: 4px;
@@ -50,6 +74,10 @@
   --on-bar: #f6d84a;
   --masthead: #0f0c45;
   --on-masthead: #f2f0ff;
+  /* From the game's menus: light-blue column labels, a lighter blue bar behind every other row, a dither. */
+  --label: #7fc4ff;
+  --row: #2f2ba6;
+  --dither: rgba(255, 255, 255, 0.05);
   --bar-on: #ffffff;
   --accent: #f6d84a;
   --on-accent: #0f0c45;
@@ -77,6 +105,10 @@
   --on-bar: #ffffff;
   --masthead: #000000;
   --on-masthead: #ffffff;
+  /* The same parts as the Toolkit's, in grays (team colors are the only color on a Dynasty page). */
+  --label: #49496d;
+  --row: #f2f2f2;
+  --dither: rgba(0, 0, 0, 0.06);
   --bar-on: #ffdb49;
   --accent: #242424;
   --on-accent: #ffffff;
@@ -104,6 +136,9 @@
   /* The masthead stays black in dark mode (owner, 2026-11-12: "i don't like the white masthead"). */
   --masthead: #000000;
   --on-masthead: #ffffff;
+  --label: #b6b6b6;
+  --row: #303030;
+  --dither: rgba(255, 255, 255, 0.05);
   --bar-on: #b62400;
   --accent: #ffffff;
   --on-accent: #000000;

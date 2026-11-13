@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
-import { Button, DataTable, Empty, Modal, Note, PageHead, Row, Select, Stat, SubHead, ThemeToggle } from './index';
+import { Button, DataTable, Empty, Modal, Note, PageHead, Row, Select, Stat, SubHead, Table, ThemeToggle } from './index';
 
 const meta: Meta = { title: 'Components' };
 export default meta;
@@ -81,6 +81,21 @@ function ThemeDemo() {
 }
 /** The switch only; the Dynasty app sets data-theme from it. */
 export const ThemeSwitch: Story = { render: () => <ThemeDemo /> };
+
+/** A hand-written table: a caption, a word column inside figures, and a totals row. */
+export const HandTable: Story = {
+  render: () => (
+    <Table figures>
+      <caption>Rushing</caption>
+      <thead><tr><th className="ui-left">Season</th><th>Class</th><th>Att</th><th>Yds</th><th>TD</th></tr></thead>
+      <tbody>
+        <tr><td className="ui-left">2026</td><td className="ui-text">SO</td><td>148</td><td>812</td><td>7</td></tr>
+        <tr><td className="ui-left">2027</td><td className="ui-text">JR</td><td>201</td><td>1,204</td><td>12</td></tr>
+        <tr className="ui-total"><td className="ui-left" colSpan={2}>Career</td><td>349</td><td>2,016</td><td>19</td></tr>
+      </tbody>
+    </Table>
+  ),
+};
 
 export const EmptyState: Story = {
   render: () => <Empty><p>Awards are handed out once a season is over: import the save after the national championship game.</p></Empty>,

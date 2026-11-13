@@ -21,7 +21,7 @@ import { History, Home, Leaders, Player, Rankings, Scores, Standings, Team, Team
 import { Offseason, type OffseasonActions } from './OffseasonPage';
 import { seasonRom } from '../../core/dynasty/offseason';
 import { canReplaceBench, randomBench } from '../../core/dynasty/bench';
-import { Button, Note, ThemeToggle } from '../../ui';
+import { Button, Note, Table, ThemeToggle } from '../../ui';
 import './dynasty.css';
 
 const THEME_KEY = 'dynasty-theme';
@@ -452,19 +452,19 @@ function Manage({ d, art, list, busy, note, actions }: {
             </label>
           </div>
           {season.imports.length > 0 && (
-            <table className="dy-table">
+            <Table figures>
               <caption>{season.year} imports</caption>
-              <thead><tr><th className="dy-left">Imported</th><th>Games played</th><th>Weeks complete</th></tr></thead>
+              <thead><tr><th className="ui-left">Imported</th><th>Games played</th><th>Weeks complete</th></tr></thead>
               <tbody>
                 {season.imports.slice().reverse().map((i) => (
                   <tr key={i.at}>
-                    <td className="dy-left">{new Date(i.at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</td>
+                    <td className="ui-left">{new Date(i.at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</td>
                     <td>{i.played}</td>
                     <td>{i.weeksDone}</td>
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </Table>
           )}
 
           <h3>Your teams</h3>
