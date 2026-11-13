@@ -74,9 +74,9 @@ export function Awards({ arg }: { arg?: string }) {
         </div>
       </div>
       <SubHead>All-Conference first teams</SubHead>
-      <select aria-label="Conference" value={c} onChange={(e) => setConf(Number(e.target.value))}>
-        {confs.map((x) => <option key={x} value={x}>{pick.s.confNames[x]}</option>)}
-      </select>
+      <div className="dy-row dy-awards-pick">
+        <Select label="Conference" hideLabel value={c} options={confs.map((x) => ({ value: x, label: pick.s.confNames[x] }))} onChange={(x) => setConf(Number(x))} />
+      </div>
       <TeamTable list={a.allConference[c] ?? []} />
     </section>
   );

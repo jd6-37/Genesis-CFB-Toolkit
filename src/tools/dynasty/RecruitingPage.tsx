@@ -1,5 +1,5 @@
 // Full recruiting: five weeks of points and offers for the user teams' boards, then signing day.
-import { Button, Meter, Note, Select, SubHead, Table, Tabs } from '../../ui';
+import { Button, Field, Meter, Note, Select, SubHead, Table, Tabs } from '../../ui';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Dynasty } from '../../core/dynasty/model';
 import {
@@ -493,7 +493,7 @@ function ProspectsTab({ hub, portal }: { hub: Hub; portal: boolean }) {
         ))}
       </div>
             <div className="dy-filters2">
-              <label className="ui-field"><span>Search</span><input type="search" value={q} placeholder="Name or hometown" onChange={(e) => reset(setQ)(e.target.value)} /></label>
+              <Field label="Search" type="search" value={q} placeholder="Name or hometown" onChange={reset(setQ)} />
               <Select label="Position" value={pos} onChange={reset(setPos)} options={[{ value: '', label: 'All positions' }, ...POSITIONS.map((x) => ({ value: x, label: x }))]} />
               <Select label="Stars" value={minStars} onChange={reset(setMinStars)} options={[{ value: '0', label: 'Any' }, ...[5, 4, 3, 2].map((x) => ({ value: String(x), label: `${x} and up` }))]} />
               {!portal && <Select label="From" value={kind} onChange={reset(setKind)} options={[{ value: 'all', label: 'High school and portal' }, { value: 'hs', label: 'High school' }, { value: 'portal', label: 'Transfer portal' }, { value: 'near', label: `Close to ${school}` }]} />}

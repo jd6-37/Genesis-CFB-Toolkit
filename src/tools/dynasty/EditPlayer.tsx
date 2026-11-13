@@ -1,6 +1,6 @@
 // Roster editing on the player and team pages (edit.ts). Mobile first: one column of fields on phones.
 
-import { Button, Note, SubHead } from '../../ui';
+import { Button, Field, Note, Select, SubHead } from '../../ui';
 import { useState } from 'react';
 import { applyEdits, editLock, editLook, newSkin, type PlayerEdit } from '../../core/dynasty/edit';
 import { BEARD_LABELS, BEARD_STYLES, HAIR_COLOR_LABELS, HAIR_STYLE_LABELS, HAIR_STYLES, lookChoices, MOUTH_LABELS, MOUTHS, type LookEdit } from '../../core/dynasty/headshot';
@@ -39,10 +39,10 @@ export function EditPlayer({ p }: { p: DPlayer }) {
   const uses = new Set(GROUP_COLUMNS[GROUP_OF_ROLE[roleOfPos(String(val('pos')))]] ?? []);
   if (!open) return <Button variant="quiet" onClick={() => setOpen(true)}>Edit player</Button>;
   const text = (k: 'first' | 'last' | 'hometown' | 'state', label: string) => (
-    <label>{label}<input value={String(val(k) ?? '')} onChange={(e) => set(k, e.target.value)} /></label>
+    <Field label={label} value={String(val(k) ?? '')} onChange={(x) => set(k, x)} />
   );
   const number = (k: 'jersey' | 'heightIn' | 'weight' | 'pot', label: string) => (
-    <label>{label}<input type="number" inputMode="numeric" value={String(val(k) ?? '')} onChange={(e) => set(k, e.target.value === '' ? undefined : Number(e.target.value))} /></label>
+    <Field label={label} type="number" value={String(val(k) ?? '')} onChange={(x) => set(k, x === '' ? undefined : Number(x))} />
   );
   return (
     <form className="dy-edit" onSubmit={(e) => { e.preventDefault(); void save(form); }}>
@@ -50,23 +50,19 @@ export function EditPlayer({ p }: { p: DPlayer }) {
       <div className="dy-edit-grid">
         {text('first', 'First name')}
         {text('last', 'Last name')}
-        <label>Position
-          <select value={String(val('pos'))} onChange={(e) => set('pos', e.target.value)}>{POSITIONS.map((x) => <option key={x}>{x}</option>)}</select>
-        </label>
-        <label>Class
-          <select value={String(val('cls'))} onChange={(e) => set('cls', e.target.value as ClassYear)}>{CLASSES.map((x) => <option key={x}>{x}</option>)}</select>
-        </label>
+        <Select label="Position" value={String(val('pos'))} options={POSITIONS.map((x) => ({ value: x, label: x }))} onChange={(x) => set('pos', x)} />
+        <Select label="Class" value={String(val('cls'))} options={CLASSES.map((x) => ({ value: x, label: x }))} onChange={(x) => set('cls', x as ClassYear)} />
         {number('jersey', 'Number')}
         {number('heightIn', 'Height (in)')}
         {number('weight', 'Weight (lb)')}
         {text('hometown', 'Hometown')}
         {text('state', 'State')}
         {number('pot', 'Potential (OVR)')}
-        <label>Team
-          <select value={String(val('team') ?? '')} onChange={(e) => set('team', Number(e.target.value))}>
-            {d.teams.slice().sort((a, b) => a.school.localeCompare(b.school)).map((t) => <option key={t.index} value={t.index}>{t.school}</option>)}
-          </select>
-        </label>
+        <Select
+          label="Team" value={String(val('team') ?? '')}
+          options={d.teams.slice().sort((a, b) => a.school.localeCompare(b.school)).map((t) => ({ value: t.index, label: t.school }))}
+          onChange={(x) => set('team', Number(x))}
+        />
       </div>
       <SubHead>Ratings</SubHead>
       <p className="dy-dim dy-small">As the game's Team Rosters shows them. Every point counts in games (the fine-ratings mod); the game shows whole numbers up to 99.</p>
@@ -75,11 +71,11 @@ export function EditPlayer({ p }: { p: DPlayer }) {
           const v = rating(a);
           const weight = a === 'Weight';
           return (
-            <label key={a}>{LABEL[a] ?? a}
-              <input type="number" inputMode="decimal" min={weight ? 140 : 0} max={weight ? 380 : 100} value={v === undefined ? '' : String(Math.round(v * 10) / 10)}
-                onChange={(e) => setRating(a, Number(e.target.value))} />
-              {!weight && v !== undefined && <span className="dy-dim dy-small">In the game: {shownOf(v)}</span>}
-            </label>
+            <Field
+              key={a} label={LABEL[a] ?? a} type="number" min={weight ? 140 : 0} max={weight ? 380 : 100}
+              value={v === undefined ? '' : String(Math.round(v * 10) / 10)} onChange={(x) => setRating(a, Number(x))}
+              note={!weight && v !== undefined ? `In the game: ${shownOf(v)}` : undefined}
+            />
           );
         })}
       </div>
@@ -108,7 +104,7 @@ export function AddPlayer({ team }: { team: number }) {
   };
   return (
     <div className="dy-row">
-      <select aria-label="Position" value={pos} onChange={(e) => setPos(e.target.value)}>{POSITIONS.map((x) => <option key={x}>{x}</option>)}</select>
+      <Select label="Position" hideLabel value={pos} options={POSITIONS.map((x) => ({ value: x, label: x }))} onChange={setPos} />
       <Button variant="quiet" onClick={() => void add()}>Add a player</Button>
     </div>
   );
@@ -145,21 +141,11 @@ export function EditLook({ p }: { p: DPlayer }) {
       <div className="dy-look-body">
         <Headshot p={draft} size={120} />
         <div className="dy-edit-grid">
-          <label>Skin tone
-            <select value={skin} onChange={(e) => setSkin(Number(e.target.value))}>{SKIN_TONES.map((t, i) => <option key={t.label} value={i}>{t.label}</option>)}</select>
-          </label>
-          <label>Hair
-            <select value={look.hair} onChange={(e) => pick('hair', e.target.value as Required<LookEdit>['hair'])}>{HAIR_STYLES.map((h) => <option key={h} value={h}>{HAIR_STYLE_LABELS[h]}</option>)}</select>
-          </label>
-          <label>Hair color
-            <select value={look.hairColor} onChange={(e) => pick('hairColor', Number(e.target.value))}>{HAIR_COLOR_LABELS.map((h, i) => <option key={h} value={i}>{h}</option>)}</select>
-          </label>
-          <label>Facial hair
-            <select value={look.beard} onChange={(e) => pick('beard', e.target.value as Required<LookEdit>['beard'])}>{BEARD_STYLES.map((b) => <option key={b} value={b}>{BEARD_LABELS[b]}</option>)}</select>
-          </label>
-          <label>Expression
-            <select value={look.mouth} onChange={(e) => pick('mouth', e.target.value as Required<LookEdit>['mouth'])}>{MOUTHS.map((m) => <option key={m} value={m}>{MOUTH_LABELS[m]}</option>)}</select>
-          </label>
+          <Select label="Skin tone" value={skin} options={SKIN_TONES.map((t, i) => ({ value: i, label: t.label }))} onChange={(x) => setSkin(Number(x))} />
+          <Select label="Hair" value={look.hair} options={HAIR_STYLES.map((h) => ({ value: h, label: HAIR_STYLE_LABELS[h] }))} onChange={(x) => pick('hair', x as Required<LookEdit>['hair'])} />
+          <Select label="Hair color" value={look.hairColor} options={HAIR_COLOR_LABELS.map((h, i) => ({ value: i, label: h }))} onChange={(x) => pick('hairColor', Number(x))} />
+          <Select label="Facial hair" value={look.beard} options={BEARD_STYLES.map((b) => ({ value: b, label: BEARD_LABELS[b] }))} onChange={(x) => pick('beard', x as Required<LookEdit>['beard'])} />
+          <Select label="Expression" value={look.mouth} options={MOUTHS.map((m) => ({ value: m, label: MOUTH_LABELS[m] }))} onChange={(x) => pick('mouth', x as Required<LookEdit>['mouth'])} />
           <label className="dy-check"><input type="checkbox" checked={look.eyeBlack} onChange={(e) => pick('eyeBlack', e.target.checked)} /> Eye black</label>
         </div>
       </div>

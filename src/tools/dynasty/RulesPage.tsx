@@ -1,6 +1,6 @@
 // Offseason rules (user, 2026-11-12): every number the computer's offseason uses, behind a spoiler warning,
 // with each section's reset, a reset for everything, and rules files to move them between dynasties.
-import { Button, Note, PageHead, SubHead } from '../../ui';
+import { Button, Modal, Note, PageHead, SubHead } from '../../ui';
 import { useRef, useState } from 'react';
 import {
   DEFAULT_RULES, RULE_SECTIONS, changedRules, readRulesFile, ruleProblems, rulesFileText, rulesOf, setRules,
@@ -39,20 +39,19 @@ export function Rules({ actions, busy }: { actions: OffseasonActions; busy: stri
   if (!ok) {
     return (
       <section className="dy-rules">
-        <div className="dy-modal-back" role="presentation">
-          <div className="dy-modal" role="dialog" aria-modal="true" aria-labelledby="dy-spoiler-title">
-            <h2 id="dy-spoiler-title">Spoiler warning</h2>
+        <Modal
+          title="Spoiler warning"
+          actions={<>
+            <Button onClick={() => { try { sessionStorage.setItem(SEEN_KEY, '1'); } catch { /* private mode */ } setOk(true); }}>Show me the rules</Button>
+            <Button variant="quiet" href={href('manage')}>Go back</Button>
+          </>}
+        >
             <p>
               This page shows exactly how the computer runs the offseason: who goes pro, who transfers, how recruits decide, how players develop.
               Knowing the numbers can take some of the challenge out of your dynasty.
             </p>
             <p>You can change any of them for this dynasty.</p>
-            <div className="dy-row">
-              <Button onClick={() => { try { sessionStorage.setItem(SEEN_KEY, '1'); } catch { /* private mode */ } setOk(true); }}>Show me the rules</Button>
-              <Button variant="quiet" href={href('manage')}>Go back</Button>
-            </div>
-          </div>
-        </div>
+        </Modal>
       </section>
     );
   }

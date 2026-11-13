@@ -1,6 +1,6 @@
 // The records book (records.ts): single-season and career player records and team records,
 // league-wide or one school's. Mobile first: the tables stack on phones.
-import { PageHead, SubHead, Table } from '../../ui';
+import { PageHead, Select, SubHead, Table } from '../../ui';
 import { useMemo, useState } from 'react';
 import { playerName, RECORD_STATS, seasonRecords } from '../../core/dynasty/derive';
 import { careerRecords, teamRecords } from '../../core/dynasty/records';
@@ -23,15 +23,16 @@ export function Records({ arg }: { arg?: string }) {
     <section className="dy-records">
       <PageHead title="Records book">{school !== undefined ? `${d.teams[school].school} records` : 'League records'} since {d.startYear}.</PageHead>
       <div className="dy-row dy-records-pick">
-        <select aria-label="School" value={school ?? ''} onChange={(e) => { location.hash = href(e.target.value === '' ? 'records' : `records/${e.target.value}`); }}>
-          <option value="">Whole league</option>
-          {d.userTeams.map((t) => <option key={t} value={t}>{d.teams[t].school}</option>)}
-          <option disabled>──────────</option>
-          {others.map((t) => <option key={t.index} value={t.index}>{t.school}</option>)}
-        </select>
-        <select aria-label="Stat" value={stat} onChange={(e) => setStat(Number(e.target.value))}>
-          {RECORD_STATS.map((s, i) => <option key={s.label} value={i}>{s.label}</option>)}
-        </select>
+        <Select
+          label="School" value={school ?? ''}
+          options={[
+            { value: '', label: 'Whole league' },
+            ...d.userTeams.map((t) => ({ value: t, label: d.teams[t].school, group: 'Your teams' })),
+            ...others.map((t) => ({ value: t.index, label: t.school, group: 'All teams' })),
+          ]}
+          onChange={(x) => { location.hash = href(x === '' ? 'records' : `records/${x}`); }}
+        />
+        <Select label="Stat" value={stat} options={RECORD_STATS.map((s, i) => ({ value: i, label: s.label }))} onChange={(x) => setStat(Number(x))} />
       </div>
       <div className="dy-team-cols">
         <div>

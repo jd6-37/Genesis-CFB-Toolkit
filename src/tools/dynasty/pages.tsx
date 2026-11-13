@@ -3,7 +3,7 @@
 import { playerHonors, seasonAwards } from '../../core/dynasty/awards';
 import { scheduleLock } from '../../core/dynasty/schedule';
 import { setWhiteHome, whiteHomeLock } from '../../core/dynasty/kit';
-import { Button, Note, PageHead, Select, SubHead, Table } from '../../ui';
+import { Button, Modal, Note, PageHead, Select, SubHead, Table } from '../../ui';
 import { useEffect, useMemo, useState } from 'react';
 import {
   champions, leaders, playerLines, playerName, seasonView, standings, statValue, teamHistory, weekName,
@@ -99,21 +99,12 @@ function StoryLink({ s }: { s: Story }) {
 function StoryBox({ s, onClose }: { s: Story; onClose: () => void }) {
   const { d, v } = useDyn();
   const p = d.players[s.player! - 1];
-  useEffect(() => {
-    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', esc);
-    return () => window.removeEventListener('keydown', esc);
-  }, [onClose]);
   return (
-    <div className="dy-modal-back" role="presentation" onClick={onClose}>
-      <div className="dy-modal dy-box" role="dialog" aria-modal="true" aria-labelledby={`box-${s.id}`} onClick={(e) => e.stopPropagation()}>
-        <div className="dy-box-head">
-          <Headshot p={p} size={64} />
-          <div>
-            <h2 id={`box-${s.id}`}>{playerName(p)}</h2>
-            <p className="dy-small dy-dim">#{p.jersey} {p.pos}, <TeamLink team={s.teams[0]} rank={false} size={16} /></p>
-          </div>
-        </div>
+    <Modal
+      title={playerName(p)} onClose={onClose} media={<Headshot p={p} size={64} />}
+      sub={<>#{p.jersey} {p.pos}, <TeamLink team={s.teams[0]} rank={false} size={16} /></>}
+      actions={<><Button href={href(`player/${p.id}`)} onClick={onClose}>Player page</Button><Button variant="quiet" onClick={onClose}>Close</Button></>}
+    >
         <p className="dy-small">{s.headline}{s.box!.result ? `: ${s.box!.result}` : ''}.</p>
         {s.box!.lines.map((l) => (
           <Table key={l.cat} figures className="dy-box-table">
@@ -121,12 +112,7 @@ function StoryBox({ s, onClose }: { s: Story; onClose: () => void }) {
             <tbody><tr><td className="ui-left dy-dim">{weekName(v, s.week)}</td>{l.cells.map(([k, v]) => <td key={k}>{v}</td>)}</tr></tbody>
           </Table>
         ))}
-        <div className="dy-row">
-          <Button href={href(`player/${p.id}`)} onClick={onClose}>Player page</Button>
-          <Button variant="quiet" onClick={onClose}>Close</Button>
-        </div>
-      </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -589,19 +575,19 @@ function RosterTable({ rows, edit }: { rows: RosterRow[]; edit?: { team: number;
             <tr key={`${spot ?? label}-${p.id}`}>
               <td className="ui-left dy-strong">
                 {edit ? (
-                  <select className="dy-pos" aria-label={`Position of ${playerName(p)}`} value={spot ?? ''} onChange={(e) => move(p, Number(e.target.value))}>
-                    {spot === null && <option value="" disabled>{label}</option>}
-                    {/* By position, Active Roster spots (★) before their backups. */}
-                    {(() => {
+                  <Select
+                    label={`Position of ${playerName(p)}`} hideLabel compact value={spot ?? ''}
+                    options={(() => {
+                      // By position, Active Roster spots (★) before their backups.
                       const ok = spotsFor(d, edit.team, p);
                       const kinds = [...new Set(ok.map((x) => slotKind(slotOfSpot(x))))];
-                      return kinds.map((k) => (
-                        <optgroup key={k} label={k}>
-                          {ok.filter((x) => slotKind(slotOfSpot(x)) === k).map((x) => <option key={x} value={x}>{spotLabel(x)}{isBackup(x) ? '' : ' ★'}</option>)}
-                        </optgroup>
-                      ));
+                      return [
+                        ...(spot === null ? [{ value: '', label, disabled: true }] : []),
+                        ...kinds.flatMap((k) => ok.filter((x) => slotKind(slotOfSpot(x)) === k).map((x) => ({ value: x, label: `${spotLabel(x)}${isBackup(x) ? '' : ' ★'}`, group: k }))),
+                      ];
                     })()}
-                  </select>
+                    onChange={(x) => move(p, Number(x))}
+                  />
                 ) : label}
               </td>
               <td className="ui-num">{p.jersey}</td>

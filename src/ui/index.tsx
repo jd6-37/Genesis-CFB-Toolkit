@@ -105,7 +105,13 @@ export function SubHead({ children, level = 3, id }: { children: ReactNode; leve
   return <H className="ui-sub" id={id}>{children}</H>;
 }
 
-export interface Option { value: string | number; label: string; disabled?: boolean }
+export interface Option {
+  value: string | number;
+  label: string;
+  disabled?: boolean;
+  /** Options that follow each other with the same group are listed under that heading. */
+  group?: string;
+}
 interface SelectProps {
   label: string;
   /** Hide the label visually (it still names the control for screen readers). */
@@ -113,15 +119,56 @@ interface SelectProps {
   value: string | number;
   options: Option[];
   onChange: (value: string) => void;
+  disabled?: boolean;
+  /** A smaller control for table cells and tight rows. */
+  compact?: boolean;
 }
 /** A labeled dropdown. */
-export function Select({ label, hideLabel, value, options, onChange }: SelectProps) {
+export function Select({ label, hideLabel, value, options, onChange, disabled, compact }: SelectProps) {
+  // Runs of options with the same group become one <optgroup>.
+  const runs: { group?: string; items: Option[] }[] = [];
+  for (const o of options) {
+    const last = runs[runs.length - 1];
+    if (last && last.group === o.group) last.items.push(o);
+    else runs.push({ group: o.group, items: [o] });
+  }
+  const item = (o: Option) => <option key={o.value} value={o.value} disabled={o.disabled}>{o.label}</option>;
+  return (
+    <label className={`ui-field${compact ? ' ui-field-compact' : ''}`}>
+      <span className={hideLabel ? 'sr-only' : undefined}>{label}</span>
+      <select value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)}>
+        {runs.map((r, k) => (r.group ? <optgroup key={`${r.group}-${k}`} label={r.group}>{r.items.map(item)}</optgroup> : r.items.map(item)))}
+      </select>
+    </label>
+  );
+}
+
+interface FieldProps {
+  label: string;
+  /** Hide the label visually (it still names the control for screen readers). */
+  hideLabel?: boolean;
+  value: string | number;
+  onChange: (value: string) => void;
+  type?: 'text' | 'number' | 'search';
+  placeholder?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  maxLength?: number;
+  disabled?: boolean;
+  /** A short line under the field. */
+  note?: ReactNode;
+}
+/** A labeled one-line text, number or search field. */
+export function Field({ label, hideLabel, value, onChange, type = 'text', placeholder, min, max, step, maxLength, disabled, note }: FieldProps) {
   return (
     <label className="ui-field">
       <span className={hideLabel ? 'sr-only' : undefined}>{label}</span>
-      <select value={value} onChange={(e) => onChange(e.target.value)}>
-        {options.map((o) => <option key={o.value} value={o.value} disabled={o.disabled}>{o.label}</option>)}
-      </select>
+      <input
+        type={type} inputMode={type === 'number' ? 'decimal' : undefined} value={value} placeholder={placeholder}
+        min={min} max={max} step={step} maxLength={maxLength} disabled={disabled} onChange={(e) => onChange(e.target.value)}
+      />
+      {note && <span className="ui-field-note">{note}</span>}
     </label>
   );
 }
@@ -256,7 +303,13 @@ export function Meter({ value, label, color }: { value: number; label: string; c
 export const Empty = ({ children }: { children: ReactNode }) => <div className="ui-empty">{children}</div>;
 
 /** A window over the page for one decision. Escape or a click outside closes it when onClose is given. */
-export function Modal({ title, children, actions, onClose }: { title: string; children: ReactNode; actions: ReactNode; onClose?: () => void }) {
+export function Modal({ title, children, actions, onClose, media, sub }: {
+  title: string; children: ReactNode; actions: ReactNode; onClose?: () => void;
+  /** A picture beside the title (a headshot, a logo). */
+  media?: ReactNode;
+  /** One line under the title. */
+  sub?: ReactNode;
+}) {
   const id = useId();
   useEffect(() => {
     if (!onClose) return;
@@ -267,7 +320,12 @@ export function Modal({ title, children, actions, onClose }: { title: string; ch
   return (
     <div className="ui-modal-back" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.(); }}>
       <div className="ui-modal" role="dialog" aria-modal="true" aria-labelledby={id}>
-        <h2 id={id}>{title}</h2>
+        {media || sub ? (
+          <div className="ui-modal-head">
+            {media}
+            <div><h2 id={id}>{title}</h2>{sub && <p className="ui-modal-sub">{sub}</p>}</div>
+          </div>
+        ) : <h2 id={id}>{title}</h2>}
         {children}
         <div className="ui-row ui-modal-actions">{actions}</div>
       </div>
