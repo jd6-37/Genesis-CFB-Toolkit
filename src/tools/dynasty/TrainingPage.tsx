@@ -1,6 +1,6 @@
 // Training results (user, 2026-11-12: "a Training Results page, roster ordered by most improved"): a team's
 // returning players after an offseason's training, biggest OVR gain first, with what each rating did.
-import { PageHead, SubHead } from '../../ui';
+import { PageHead, Select, SubHead } from '../../ui';
 import { useMemo } from 'react';
 import { trainingResults, trainingYears, type TrainingRow } from '../../core/dynasty/career';
 import { playerName } from '../../core/dynasty/derive';
@@ -41,21 +41,15 @@ export function TrainingResults({ arg }: { arg?: string }) {
     <section className="dy-train">
       <PageHead title="Training results" />
       <div className="dy-train-pick">
-        <label>
-          <span>Team</span>
-          <select value={team} onChange={(e) => go(Number(e.target.value), year)}>
-            {d.userTeams.length > 0 && (
-              <optgroup label="Your teams">{d.userTeams.map((t) => <option key={t} value={t}>{d.teams[t].school}</option>)}</optgroup>
-            )}
-            <optgroup label="All teams">{others.map((t) => <option key={t.index} value={t.index}>{t.school}</option>)}</optgroup>
-          </select>
-        </label>
-        <label>
-          <span>Offseason</span>
-          <select value={year} onChange={(e) => go(team, Number(e.target.value))}>
-            {years.map((y) => <option key={y} value={y}>{y - 1} to {y}</option>)}
-          </select>
-        </label>
+        <Select
+          label="Team" value={team}
+          options={[
+            ...d.userTeams.map((t) => ({ value: t, label: d.teams[t].school, group: 'Your teams' })),
+            ...others.map((t) => ({ value: t.index, label: t.school, group: 'All teams' })),
+          ]}
+          onChange={(x) => go(Number(x), year)}
+        />
+        <Select label="Offseason" value={year} options={years.map((y) => ({ value: y, label: `${y - 1} to ${y}` }))} onChange={(x) => go(team, Number(x))} />
       </div>
       <SubHead><TeamLink team={team} rank={false} /></SubHead>
       {rows.length ? (

@@ -1,5 +1,5 @@
 // The offseason, step by step: departures, the transfer portal, signing day, cuts, the next season.
-import { Button, Note, PageHead, Steps, SubHead, Table, Tabs } from '../../ui';
+import { Button, Note, PageHead, Select, Steps, SubHead, Table, Tabs } from '../../ui';
 import { useMemo, useState } from 'react';
 import type { DPlayer, Dynasty, OffseasonEvent } from '../../core/dynasty/model';
 import {
@@ -685,13 +685,17 @@ function ProjectedDepth({ actions, busy }: { actions: OffseasonActions; busy: st
                     <tr key={slot}>
                       <td className="ui-left">{def.label}{!DEPTH_SLOTS.has(def.label) && <span className="dy-dim" title="Starting spot"> ★</span>}</td>
                       <td className="ui-left">
-                        <select aria-label={`${def.label}`} value={here?.id ?? ''} onChange={(e) => pick(u, slot, Number(e.target.value))}>
-                          {!here && <option value="">Open</option>}
-                          {cands.map((p) => {
-                            const at = c.indexOf(p.id);
-                            return <option key={p.id} value={p.id}>{playerName(p)}, {p.cls} {p.ovr}{at >= 0 && at !== slot ? ` (now at ${SLOT_DEF[at].label})` : ''}</option>;
-                          })}
-                        </select>
+                        <Select
+                          label={def.label} hideLabel compact value={here?.id ?? ''}
+                          options={[
+                            ...(here ? [] : [{ value: '', label: 'Open' }]),
+                            ...cands.map((p) => {
+                              const at = c.indexOf(p.id);
+                              return { value: p.id, label: `${playerName(p)}, ${p.cls} ${p.ovr}${at >= 0 && at !== slot ? ` (now at ${SLOT_DEF[at].label})` : ''}` };
+                            }),
+                          ]}
+                          onChange={(x) => { if (x !== '') pick(u, slot, Number(x)); }}
+                        />
                       </td>
                       <td className="dy-strong">{here?.ovr ?? ''}</td>
                     </tr>

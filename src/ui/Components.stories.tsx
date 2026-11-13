@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
-import { Button, FileButton, DataTable, Empty, Meter, Modal, Note, PageHead, Row, Select, Stat, Steps, SubHead, Table, Tabs, ThemeToggle } from './index';
+import { Button, Field, FileButton, DataTable, Empty, Meter, Modal, Note, PageHead, Row, Select, Stat, Steps, SubHead, Table, Tabs, ThemeToggle } from './index';
 
 const meta: Meta = { title: 'Components' };
 export default meta;
@@ -126,6 +126,15 @@ function ModalDemo() {
 }
 export const Modals: Story = { render: () => <ModalDemo /> };
 
+/** A window with a picture beside the title and a line under it (the box score of a player's game). */
+export const ModalWithMedia: Story = {
+  render: () => (
+    <Modal title="Sam Reyes" media={<div style={{ width: 64, height: 64, background: 'var(--row)' }} />} sub="#22 HB, Texas State" onClose={() => {}} actions={<><Button>Player page</Button><Button variant="quiet">Close</Button></>}>
+      <p>184 rushing yards and three touchdowns: Texas State 34, Rice 20.</p>
+    </Modal>
+  ),
+};
+
 function TabsDemo() {
   const [tab, setTab] = useState<'board' | 'prospects' | 'portal' | 'school' | 'classes'>('board');
   return (
@@ -159,5 +168,23 @@ export const StepsBar: Story = {
       { label: 'Projected depth chart' }, { label: 'Players leaving' }, { label: 'Recruiting' }, { label: 'Signing day and cuts' },
       { label: 'Training results' }, { label: 'Depth chart', href: '#depth' }, { label: 'Schedule', href: '#schedule' }, { label: 'Download the ROM', href: '#rom' },
     ]} />
+  ),
+};
+
+/** Dropdowns and one-line fields: plain, with groups, compact (for table cells), and a field with a note. */
+export const Fields: Story = {
+  render: () => (
+    <Row>
+      <Select label="Class" value="JR" options={['FR', 'SO', 'JR', 'SR'].map((x) => ({ value: x, label: x }))} onChange={() => {}} />
+      <Select
+        label="Team" value={1}
+        options={[{ value: 1, label: 'Texas State', group: 'Your teams' }, { value: 2, label: 'Rice', group: 'All teams' }, { value: 3, label: 'Troy', group: 'All teams' }]}
+        onChange={() => {}}
+      />
+      <Select label="Position of Sam Reyes" hideLabel compact value="HB1" options={[{ value: 'HB1', label: 'HB1 ★' }, { value: 'HB2', label: 'HB2 ★' }]} onChange={() => {}} />
+      <Field label="First name" value="Sam" onChange={() => {}} />
+      <Field label="Awareness" type="number" min={0} max={100} value="71.5" note="In the game: 72" onChange={() => {}} />
+      <Field label="Search" type="search" value="" placeholder="Name or hometown" onChange={() => {}} />
+    </Row>
   ),
 };

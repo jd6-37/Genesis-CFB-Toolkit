@@ -114,13 +114,19 @@ export function ScheduleEditor({ arg }: { arg?: string }) {
                 ) : (
                   <div className="dy-sched-edit">
                     <Button variant="quiet" label={`Week ${w + 1}: ${g.home ? 'home' : 'away'}, switch`} onClick={() => void change((s) => flipHome(s, w, team), () => `Week ${w + 1}: ${g.home ? 'at' : 'vs.'} ${name(g.opp)}.`)}>{g.home ? 'vs.' : 'at'}</Button>
-                    <select aria-label={`Week ${w + 1} opponent`} value={g.opp} onChange={(e) => pickOpponent(w, Number(e.target.value))}>
-                      <optgroup label="Conference">{confTeams.map((t) => <option key={t.index} value={t.index}>{t.school}</option>)}</optgroup>
-                      <optgroup label="Other teams">{restTeams.map((t) => <option key={t.index} value={t.index}>{t.school}</option>)}</optgroup>
-                    </select>
-                    <select aria-label={`Move the week ${w + 1} game`} value={w} onChange={(e) => pickWeek(w, Number(e.target.value))}>
-                      {Array.from({ length: SCHED_WEEKS }, (_, k) => <option key={k} value={k}>{k === w ? `Week ${k + 1}` : `Move to week ${k + 1}`}</option>)}
-                    </select>
+                    <Select
+                      label={`Week ${w + 1} opponent`} hideLabel value={g.opp}
+                      options={[
+                        ...confTeams.map((t) => ({ value: t.index, label: t.school, group: 'Conference' })),
+                        ...restTeams.map((t) => ({ value: t.index, label: t.school, group: 'Other teams' })),
+                      ]}
+                      onChange={(x) => pickOpponent(w, Number(x))}
+                    />
+                    <Select
+                      label={`Move the week ${w + 1} game`} hideLabel value={w}
+                      options={Array.from({ length: SCHED_WEEKS }, (_, k) => ({ value: k, label: k === w ? `Week ${k + 1}` : `Move to week ${k + 1}` }))}
+                      onChange={(x) => pickWeek(w, Number(x))}
+                    />
                   </div>
                 )}
                 {tags.length > 0 && <span className="dy-small dy-dim">{tags.join(', ')}</span>}

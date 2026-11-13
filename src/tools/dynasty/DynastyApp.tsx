@@ -21,7 +21,7 @@ import { History, Home, Leaders, Player, Rankings, Scores, Standings, Team, Team
 import { Offseason, type OffseasonActions } from './OffseasonPage';
 import { seasonRom } from '../../core/dynasty/offseason';
 import { canReplaceBench, randomBench } from '../../core/dynasty/bench';
-import { Button, FileButton, Note, Table, ThemeToggle } from '../../ui';
+import { Button, Field, FileButton, Modal, Note, Select, Table, ThemeToggle } from '../../ui';
 import './dynasty.css';
 
 const THEME_KEY = 'dynasty-theme';
@@ -335,18 +335,17 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
           // Not on the offseason's own pages: its last step is the download (user, 2026-11-13).
           if (s.romDownloaded || s.imports.length || romLater === s.year || page === 'offseason' || page === 'schedule') return null;
           return (
-            <div className="dy-modal-back" role="presentation">
-              <div className="dy-modal" role="dialog" aria-modal="true" aria-labelledby="dy-rom-title">
-                <h2 id="dy-rom-title">Download the {s.year} ROM</h2>
+            <Modal
+              title={`Download the ${s.year} ROM`}
+              actions={<>
+                <Button disabled={!!busy} onClick={() => offActions.downloadRom(s.year)}>Download the {s.year} ROM</Button>
+                <Button variant="quiet" onClick={() => { location.hash = href('offseason/depth'); }}>Depth chart and schedule first</Button>
+                <Button variant="quiet" onClick={() => setRomLater(s.year)}>Later</Button>
+              </>}
+            >
                 <p>The {s.year} season is set up. Download its ROM and start a <b>New Season</b> in the game with it: it has the new rosters{s.schedule ? ' and schedule' : ''}, and the app can only import saves of seasons started with it.</p>
                 <p className="dy-small dy-dim">The offseason's last steps are your depth chart{s.schedule ? ', your schedule' : ''} and this download. If you change either after downloading, download the ROM again.</p>
-                <div className="dy-row">
-                  <Button disabled={!!busy} onClick={() => offActions.downloadRom(s.year)}>Download the {s.year} ROM</Button>
-                  <Button variant="quiet" onClick={() => { location.hash = href('offseason/depth'); }}>Depth chart and schedule first</Button>
-                  <Button variant="quiet" onClick={() => setRomLater(s.year)}>Later</Button>
-                </div>
-              </div>
-            </div>
+            </Modal>
           );
         })()}
       </main>
@@ -460,12 +459,14 @@ function Manage({ d, art, list, busy, note, actions }: {
             ))}
           </ul>
           <div className="dy-row">
-            <select aria-label="Team to add" value={addTeam} onChange={(e) => setAddTeam(e.target.value)}>
-              <option value="">Choose a team</option>
-              {d.teams.filter((t) => !d.userTeams.includes(t.index)).sort((a, b) => a.school.localeCompare(b.school)).map((t) => (
-                <option key={t.index} value={t.index}>{t.school}</option>
-              ))}
-            </select>
+            <Select
+              label="Team to add" hideLabel value={addTeam}
+              options={[
+                { value: '', label: 'Choose a team' },
+                ...d.teams.filter((t) => !d.userTeams.includes(t.index)).sort((a, b) => a.school.localeCompare(b.school)).map((t) => ({ value: t.index, label: t.school })),
+              ]}
+              onChange={setAddTeam}
+            />
             <Button disabled={addTeam === ''} onClick={() => { actions.setUserTeams([...d.userTeams, Number(addTeam)]); setAddTeam(''); }}>Add team</Button>
           </div>
 
@@ -511,7 +512,7 @@ function Manage({ d, art, list, busy, note, actions }: {
               <Button variant="quiet" onClick={() => setRename(d.name)}>Rename</Button>
             ) : (
               <form className="dy-row" onSubmit={(e) => { e.preventDefault(); actions.rename(rename); setRename(null); }}>
-                <input aria-label="Dynasty name" value={rename} onChange={(e) => setRename(e.target.value)} maxLength={40} />
+                <Field label="Dynasty name" hideLabel value={rename} onChange={setRename} maxLength={40} />
                 <Button type="submit">Save name</Button>
                 <Button variant="quiet" onClick={() => setRename(null)}>Cancel</Button>
               </form>
@@ -554,7 +555,7 @@ function Manage({ d, art, list, busy, note, actions }: {
           built-in {CFB27_LATEST.label.replace('College Football 27', 'CFB 27')} rosters; redshirted players start one class up.
         </p>
         <form className="dy-row" onSubmit={(e) => e.preventDefault()}>
-          <input aria-label="Dynasty name" placeholder="Dynasty name" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} />
+          <Field label="Dynasty name" hideLabel placeholder="Dynasty name" value={name} onChange={setName} maxLength={40} />
           <FileButton label="Choose ROM and start" accept=".md,.bin,.gen,.zip" disabled={!!busy} onFile={(f) => actions.create(name, f)} />
         </form>
         <h3>Open a dynasty file</h3>
