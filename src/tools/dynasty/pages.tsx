@@ -735,7 +735,8 @@ function Progression({ p, color }: { p: DPlayer; color: string }) {
       <p className="dy-dim dy-small">{years[0].year} to {last.year}, each season as he started it (0-100 for every line).</p>
       <div className="dy-prog">
         {series.map((s) => {
-          const first = s.values[0], end = s.values[s.values.length - 1], change = Math.round(end - first);
+          // The change is between the two figures shown (22 → 20 is −2), not the rounded difference of the exact values.
+          const first = s.values[0], end = s.values[s.values.length - 1], change = Math.round(end) - Math.round(first);
           return (
             <figure key={s.label} className="dy-prog-tile">
               <figcaption>
