@@ -21,7 +21,7 @@ import { History, Home, Leaders, Player, Rankings, Scores, Standings, Team, Team
 import { Offseason, type OffseasonActions } from './OffseasonPage';
 import { seasonRom } from '../../core/dynasty/offseason';
 import { canReplaceBench, randomBench } from '../../core/dynasty/bench';
-import { Button, Field, FileButton, Modal, Note, Select, Table, ThemeToggle } from '../../ui';
+import { Button, Field, FileButton, Masthead, Modal, NavBar, Note, Select, Table, ThemeToggle } from '../../ui';
 import './dynasty.css';
 
 const THEME_KEY = 'dynasty-theme';
@@ -301,30 +301,16 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
 
   return (
     <div className="dy" data-brand="dynasty" data-theme={dark ? 'dark' : 'light'}>
-      <header className="dy-mast">
-        <div className="dy-mast-inner">
-          <span className="dy-mast-left">
-            <a className="dy-back" href={toolkitHref}>Mod Toolkit</a>
-            <ThemeToggle dark={dark} onChange={setDark} />
-          </span>
-          <a className="dy-title" href={href('home')}>
-            <span className="dy-title-1">{d?.name ?? 'Dynasty'}</span>
-            {d && <span className="dy-title-2">{d.offseason ? d.offseason.year : d.seasons[d.seasons.length - 1].year}{week ? `, ${week}` : ''}</span>}
-          </a>
-          <span className="dy-mast-teams">
-            {ctx && d!.userTeams.map((t) => (
-              <Ctx.Provider key={t} value={ctx}><a href={href(`team/${t}`)} aria-label={d!.teams[t].school}><TeamMark team={t} size={64} exact /></a></Ctx.Provider>
-            ))}
-          </span>
-        </div>
-        <nav className="dy-nav" aria-label="Dynasty">
-          {PAGES.map((p) => (
-            <a key={p.id} href={href(p.id)} aria-current={navPage === p.id ? 'page' : undefined} className={!ctx && p.id !== 'manage' ? 'dy-off' : ''}>
-              {p.label}
-            </a>
-          ))}
-        </nav>
-      </header>
+      <Masthead
+        title={d?.name ?? 'Dynasty'} href={href('home')}
+        sub={d ? `${d.offseason ? d.offseason.year : d.seasons[d.seasons.length - 1].year}${week ? `, ${week}` : ''}` : undefined}
+        left={<><a href={toolkitHref}>Mod Toolkit</a><ThemeToggle dark={dark} onChange={setDark} /></>}
+        right={ctx && d!.userTeams.map((t) => (
+          <Ctx.Provider key={t} value={ctx}><a href={href(`team/${t}`)} aria-label={d!.teams[t].school}><TeamMark team={t} size={64} exact /></a></Ctx.Provider>
+        ))}
+      >
+        <NavBar label="Dynasty" items={PAGES.map((p) => ({ label: p.label, href: href(p.id), current: navPage === p.id, off: !ctx && p.id !== 'manage' }))} />
+      </Masthead>
       <main className="dy-main">
         {note && page !== 'manage' && <Note kind={note.kind}>{note.text}</Note>}
         {ctx ? <Ctx.Provider value={ctx}>{body}</Ctx.Provider> : body}
