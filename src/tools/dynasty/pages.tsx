@@ -1,9 +1,10 @@
 // The Dynasty's reading pages: the news front page, scores, standings, rankings, teams, players,
 // stat leaders and history.
 import { playerHonors, seasonAwards } from '../../core/dynasty/awards';
+import { academicGrade } from '../../core/dynasty/academics';
 import { scheduleLock } from '../../core/dynasty/schedule';
 import { setWhiteHome, whiteHomeLock } from '../../core/dynasty/kit';
-import { Button, Modal, Note, PageHead, Select, SubHead, Table } from '../../ui';
+import { Button, Modal, Note, Num, PageHead, Select, SubHead, Table } from '../../ui';
 import { useEffect, useMemo, useState } from 'react';
 import {
   champions, leaders, playerLines, playerName, seasonView, standings, statValue, teamHistory, weekName,
@@ -383,7 +384,7 @@ function StatTables({ lines }: { lines: PlayerLine[] }) {
                 <tr key={`${l.cat}-${l.slot}`}>
                   <td className="ui-left"><PlayerCell line={l} /></td>
                   <td className="ui-text">{v.season.bw?.[l.team]?.[l.slot]?.label ?? playerOf(d, l.player)?.pos ?? ''}</td>
-                  {t.cols.map(([k]) => <td key={k}>{statValue(l, k)}</td>)}
+                  {t.cols.map(([k]) => <td key={k}><Num value={statValue(l, k)} /></td>)}
                 </tr>
               ))}
             </tbody>
@@ -464,7 +465,11 @@ export function Team({ team }: { team: number }) {
             <p>
               <Prestige stars={prestigeStars(d, team)} />
               <span>{conf === INDEPENDENT ? 'Independent' : v.season.confNames[conf]}</span>
-              {v.save && <span>{recordText(r)}, {r.cw}-{r.cl} in conference</span>}
+              <span className="dy-academics" role="img" aria-label={`Academics: ${academicGrade(t.school)}`} title={`Academics: ${academicGrade(t.school)}`}>
+                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 4 1 9l11 5 8-3.6V16h2V9L12 4zM5 12.7V16c0 1.7 3.1 3 7 3s7-1.3 7-3v-3.3l-7 3.2-7-3.2z" /></svg>
+                {academicGrade(t.school)}
+              </span>
+              {v.save && <span className="dy-record"><strong>{recordText(r)}</strong>{conf !== INDEPENDENT && <>{' '}({r.cw}-{r.cl} in conference)</>}</span>}
               {v.save && v.rank[team] <= 25 && <span>No. {v.rank[team]}</span>}
             </p>
           </div>
@@ -776,13 +781,13 @@ function CareerStats({ p, seasons }: { p: DPlayer; seasons: { year: number; team
                     <td className="ui-left">{s.year}</td>
                     <td className="ui-left">{s.team !== null ? <TeamLink team={s.team} rank={false} size={16} /> : ''}</td>
                     <td className="ui-text">{p.years?.find((y) => y.year === s.year)?.cls ?? ''}</td>
-                    {t.cols.map(([k]) => <td key={k}>{sum(lines, k)}</td>)}
+                    {t.cols.map(([k]) => <td key={k}><Num value={sum(lines, k)} /></td>)}
                   </tr>
                 ))}
                 {rows.length > 1 && (
                   <tr className="ui-total">
                     <td className="ui-left" colSpan={3}>Career</td>
-                    {t.cols.map(([k]) => <td key={k}>{sum(all, k)}</td>)}
+                    {t.cols.map(([k]) => <td key={k}><Num value={sum(all, k)} /></td>)}
                   </tr>
                 )}
               </tbody>
@@ -923,7 +928,7 @@ export function Leaders() {
                 <tr key={`${l.team}-${l.slot}`}>
                   <td className="dy-dim">{i + 1}</td>
                   <td className="ui-left"><PlayerCell line={l} /> <span className="dy-dim dy-small">{d.teams[l.team].school}</span></td>
-                  <td className="dy-strong">{statValue(l, b.key).toLocaleString('en-US')}</td>
+                  <td className="dy-strong"><Num value={statValue(l, b.key)} /></td>
                 </tr>
               ))}
             </tbody>

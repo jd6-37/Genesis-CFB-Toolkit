@@ -2,7 +2,7 @@
 // Every component is themed by the tokens of the brand and theme around it (tokens.css): the same Button is
 // yellow on indigo in the toolkit and black on white in Dynasty. New UI is built from these; a new kind of
 // element becomes a component here, with a story (src/ui/*.stories.tsx), before a page uses it.
-import { useEffect, useId, useRef, type ReactNode } from 'react';
+import { Fragment, useEffect, useId, useRef, type ReactNode } from 'react';
 import './tokens.css';
 import './ui.css';
 
@@ -234,6 +234,17 @@ export function DataTable<T>({ columns, rows, rowKey, mine, empty = 'Nothing yet
 }
 
 /** One number with its label (an OVR, a record). */
+/**
+ * A figure with commas in the thousands (12,356). In the pixel numerals every character is one cell wide, so a
+ * comma leaves a gap; this draws the comma tight against the digits. Use it for any figure that can pass 999.
+ */
+export function Num({ value }: { value: number | string }) {
+  const text = typeof value === 'number' ? value.toLocaleString('en-US') : value;
+  if (!text.includes(',')) return <>{text}</>;
+  const parts = text.split(',');
+  return <>{parts.map((x, k) => <Fragment key={k}>{k > 0 && <span className="ui-comma">,</span>}{x}</Fragment>)}</>;
+}
+
 export function Stat({ label, value, note }: { label: string; value: ReactNode; note?: ReactNode }) {
   return (
     <div className="ui-stat">
