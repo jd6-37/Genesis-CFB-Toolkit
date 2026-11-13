@@ -6,7 +6,6 @@
 .pat-add, .pat-next { max-width: 46rem; margin-bottom: 40px; }
 .pat-add > p { margin: 0; }
 .pat-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 20px; margin-bottom: 14px; }
-.pat-head h3, .pat-next h3 { margin: 0; font-family: var(--display); font-weight: 700; font-size: 32px; }
 .pat-head p { margin: 0; color: var(--chalk-dim); }
 .pat-head b { color: var(--chalk); font-weight: 600; }
 .pat-add a { color: inherit; text-underline-offset: 3px; }
@@ -33,23 +32,23 @@
 .pat-on .pat-about { color: var(--night); }
 
 .pat-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-.pat-actions .btn-quiet { align-self: center; }
+.pat-actions .ui-button-quiet { align-self: center; }
 .pat-done {
   margin-top: 20px;
   padding: 12px 16px;
   background: var(--deep);
   border: 1px solid var(--line);
   border-left: 4px solid var(--menu);
-  border-radius: 6px;
+  border-radius: var(--radius);
 }
 .pat-done p { margin: 0 0 10px; overflow-wrap: anywhere; }
 .pat-done b { color: var(--menu); font-weight: 600; }
 .pat-done-actions { display: flex; flex-wrap: wrap; gap: 10px; }
-.pat-done-actions .btn-quiet { align-self: center; }
+.pat-done-actions .ui-button-quiet { align-self: center; }
 
 .pat-next ul { display: grid; gap: 14px; margin: 12px 0 0; padding: 0; list-style: none; }
 .pat-step { display: grid; grid-template-columns: 17rem 1fr; gap: 16px; align-items: center; }
-.pat-step .btn { justify-content: center; }
+.pat-step .ui-button { justify-content: center; }
 .pat-step .hint { max-width: 52ch; }
 .pat-step > .hint:only-child { grid-column: 1 / -1; }
 @media (max-width: 700px) {

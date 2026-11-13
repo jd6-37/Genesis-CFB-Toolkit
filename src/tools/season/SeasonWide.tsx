@@ -1,5 +1,6 @@
 // Season tab for the 138-team 2026 Season Edition: conference names and members, and when each
 // conference plays its conference games in a random season (src/core/seasonWide.ts).
+import { Note, SubHead } from '../../ui';
 import { useMemo, useState } from 'react';
 import {
   CONFS, INDEPENDENT, MAX_CONF_TEAMS, NAME_CHARS, NAME_LEN, POWER4, REG_WEEKS, confSizes, playedGames, roundRobin,
@@ -41,7 +42,7 @@ export function SeasonWide({
   return (
     <section className="sea-sec" aria-labelledby="sea-confs-h">
       <div className="sea-head">
-        <h3 id="sea-confs-h">Conferences</h3>
+        <SubHead id="sea-confs-h">Conferences</SubHead>
         <p className="hint">
           The first {POWER4} conferences are the Power 4 (their champions get automatic playoff bids), the next six the
           Group of 6. Each of the ten plays a title game between its top two, so it needs 2 to {MAX_CONF_TEAMS} teams.
@@ -49,16 +50,16 @@ export function SeasonWide({
         </p>
       </div>
       {moved && (
-        <p className="note ok" role="status">
+        <Note kind="ok">
           {moved}
-        </p>
+        </Note>
       )}
       {issues.length > 0 && (
-        <div className="note error" role="alert">
+        <Note kind="error" block>
           {issues.map((i) => (
             <p key={i}>{i}</p>
           ))}
-        </div>
+        </Note>
       )}
       <div className="sea-confs">
         {byConf.map((list, c) => {

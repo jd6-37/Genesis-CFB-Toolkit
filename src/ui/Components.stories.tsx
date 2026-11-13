@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
-import { Button, DataTable, Empty, Modal, Note, PageHead, Row, Select, Stat, SubHead, Table, ThemeToggle } from './index';
+import { Button, FileButton, DataTable, Empty, Modal, Note, PageHead, Row, Select, Stat, SubHead, Table, ThemeToggle } from './index';
 
 const meta: Meta = { title: 'Components' };
 export default meta;
@@ -15,6 +15,16 @@ export const Buttons: Story = {
       <Button disabled>Import a save</Button>
       <Button href="#records" variant="quiet">Records book</Button>
     </Row>
+  ),
+};
+
+/** A file picker (it opens the computer's file window) and a message with a list inside. */
+export const FilesAndBlocks: Story = {
+  render: () => (
+    <>
+      <Row><FileButton label="Load season file" accept=".json" onFile={() => {}} /><FileButton variant="quiet" label="Use a .bps file" accept=".bps" multiple onFiles={() => {}} /></Row>
+      <Note kind="error" block><p>Two rows can't be used:</p><ul><li>Row 4: no jersey number</li><li>Row 9: unknown team</li></ul></Note>
+    </>
   ),
 };
 

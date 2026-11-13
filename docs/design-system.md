@@ -65,6 +65,7 @@ Run `npm run storybook` to browse the components (port 6006).
 | `Stat` | One number with a label (an OVR, a record). |
 | `Empty` | A page with nothing yet: say what to do next. |
 | `Table` | A hand-written table (`thead`, `tbody`, `caption`) with the shared look, for tables `DataTable`'s columns can't describe: selects in cells, a totals row, columns that come and go. `figures` puts every cell in the pixel numerals except `ui-left` (text columns) and `ui-text` (a word, like a class or position); `ui-num` marks one figure cell in a table without `figures`; a totals row is `<tr className="ui-total">`. `className` is for column widths only. |
+| `FileButton` | A button that asks for a file: `label`, `accept`, `onFile` (the first file) or `onFiles` with `multiple`; `variant` as `Button`. |
 | `Modal` | A window for one decision. Escape or a click outside closes it. |
 | `ThemeToggle` | The light/dark switch in Dynasty's masthead. The app sets `data-theme` from it and keeps the choice in the browser. |
 
@@ -74,6 +75,7 @@ Run `npm run storybook` to browse the components (port 6006).
 - **Dynasty:** colors on the tokens, dark mode, and its pages use `Button`, `SubHead`, `PageHead`, `Note`, `Empty`, `Table`, `Select` (page heads) and `ThemeToggle`. Corners are square and scores, OVRs and rating tiles use the pixel numerals.
 - **Dynasty tables** all use `Table` (18 of them); figures are in the pixel numerals.
 - **Dynasty, not moved yet:** selects inside pages and tables, the two modals, the rating tiles (`Stat`), the masthead, nav and ticker. `dynasty.css` still has its own font sizes.
-- **Mod Toolkit, not moved yet:** everything except the Teams tab's "Alternate uniforms" section. It still uses `src/styles.css`.
+- **Mod Toolkit:** every tab's title (`PageHead`), section headings (`SubHead`), buttons (`Button`, `FileButton`) and messages (`Note`, with `block` for lists) are shared components; `styles.css` maps its own names to the tokens; corners are square and the ROM cards have the hard shadow.
+- **Mod Toolkit, not moved yet:** its four tables, the selects and number fields in the editors, the link-style buttons (`ros-link`, `sty-link`), the tab menu's markup, the Team Swap rows, and the font sizes in its stylesheets.
 - Team colors in charts: use `inkColor(d, team, dark)` so the color shows on the page in both themes.
 - `Button` takes `title` (a tooltip) and `label` (the name for screen readers); a link button with `disabled` has no address. `SubHead` takes `level={2}` for a section that isn't under a page title.

@@ -2,7 +2,7 @@
 // Every component is themed by the tokens of the brand and theme around it (tokens.css): the same Button is
 // yellow on indigo in the toolkit and black on white in Dynasty. New UI is built from these; a new kind of
 // element becomes a component here, with a story (src/ui/*.stories.tsx), before a page uses it.
-import { useEffect, useId, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import './tokens.css';
 import './ui.css';
 
@@ -43,8 +43,49 @@ export function ThemeToggle({ dark, onChange }: { dark: boolean; onChange: (dark
 export const Row = ({ children }: { children: ReactNode }) => <div className="ui-row">{children}</div>;
 
 /** A message about what just happened or what to do next. */
-export function Note({ children, kind = 'info' }: { children: ReactNode; kind?: 'info' | 'ok' | 'error' }) {
-  return <p className={cx('ui-note', kind !== 'info' && `ui-note-${kind}`)} role={kind === 'error' ? 'alert' : 'status'}>{children}</p>;
+export function Note({ children, kind = 'info', block }: {
+  children: ReactNode;
+  kind?: 'info' | 'ok' | 'error';
+  /** The message has paragraphs or a list inside (it's drawn as a box, not one paragraph). */
+  block?: boolean;
+}) {
+  const T = block ? 'div' : 'p';
+  return <T className={cx('ui-note', kind !== 'info' && `ui-note-${kind}`)} role={kind === 'error' ? 'alert' : 'status'}>{children}</T>;
+}
+
+/** A button that asks for a file (or files) from the reader's computer. */
+export function FileButton({ label, accept, onFile, onFiles, multiple, disabled, variant = 'primary' }: {
+  label: string;
+  /** File types, as the input's accept (".json,application/json"). */
+  accept?: string;
+  /** Called with the first file chosen. */
+  onFile?: (file: File) => void;
+  /** Called with every file chosen (with `multiple`). */
+  onFiles?: (files: File[]) => void;
+  multiple?: boolean;
+  disabled?: boolean;
+  variant?: 'primary' | 'quiet' | 'danger';
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <>
+      <Button variant={variant} disabled={disabled} onClick={() => ref.current?.click()}>{label}</Button>
+      <input
+        ref={ref}
+        type="file"
+        accept={accept}
+        multiple={multiple}
+        hidden
+        onChange={(e) => {
+          const files = Array.from(e.target.files ?? []);
+          e.target.value = '';
+          if (!files.length) return;
+          onFile?.(files[0]);
+          onFiles?.(files);
+        }}
+      />
+    </>
+  );
 }
 
 /** A page's title, an optional line under it and optional controls at the right. */
@@ -59,9 +100,9 @@ export function PageHead({ title, children, actions }: { title: string; children
 }
 
 /** A section heading inside a page (a reversed bar). `level` 2 for a section that isn't under a page title. */
-export function SubHead({ children, level = 3 }: { children: ReactNode; level?: 2 | 3 }) {
+export function SubHead({ children, level = 3, id }: { children: ReactNode; level?: 2 | 3; id?: string }) {
   const H = level === 2 ? 'h2' : 'h3';
-  return <H className="ui-sub">{children}</H>;
+  return <H className="ui-sub" id={id}>{children}</H>;
 }
 
 export interface Option { value: string | number; label: string; disabled?: boolean }

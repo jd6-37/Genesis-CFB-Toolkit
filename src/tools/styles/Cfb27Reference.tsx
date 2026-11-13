@@ -1,5 +1,6 @@
 // The Teams tab's College Football 27 reference: every CFB 27 team's offense style and defensive
 // playbook, and the Bill Walsh '95 styles recommended for it (src/core/cfb27Styles.ts).
+import { SubHead } from '../../ui';
 import { useMemo, useState } from 'react';
 import { CFB27, OFFENSE_FOR } from '../../core/cfb27Styles';
 import { DEFENSE, OFFENSE } from '../../core/styles';
@@ -23,7 +24,7 @@ export function Cfb27Reference({ onRom }: { onRom: Set<string> | null }) {
 
   return (
     <section className="cfb-ref" aria-labelledby="cfb-ref-title">
-      <h3 id="cfb-ref-title">College Football 27 teams</h3>
+      <SubHead id="cfb-ref-title">College Football 27 teams</SubHead>
       <p className="cfb-ref-lede">
         Each team's offense style and defensive playbook in College Football 27 (as of November 2026), and the Bill
         Walsh '95 styles recommended for it. <b>Apply recommended styles</b> above sets them for the teams on your ROM.

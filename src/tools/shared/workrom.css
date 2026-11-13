@@ -1,21 +1,19 @@
 /* The ROM card shared by the Season, Teams and Rosters tabs. Uses the app's tokens from src/styles.css. */
 .work-roms { grid-template-columns: 1fr 1fr; }
 .work-from-swap { display: flex; flex-direction: column; justify-content: center; gap: 8px; }
-.work-from-swap .btn-quiet { font-size: 15px; padding: 8px 14px; }
 .work-ask {
   grid-column: 1 / -1;
   padding: 12px 16px;
   background: var(--deep);
   border: 1px solid var(--line);
   border-left: 4px solid var(--menu);
-  border-radius: 6px;
+  border-radius: var(--radius);
 }
 .work-ask p { margin: 0; }
 .work-ask-file { color: var(--chalk-dim); }
 .work-ask .hint { max-width: 80ch; margin-top: 8px; }
 .work-ask-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
-.work-ask-actions .btn-go { font-size: 16px; padding: 8px 16px; }
-.work-ask-actions .btn-quiet { align-self: center; }
+.work-ask-actions .ui-button-quiet { align-self: center; }
 .dock-also { display: block; font-family: var(--body); font-weight: 400; font-size: 14px; color: var(--chalk-dim); }
 /* One column on phones (this rule would otherwise override .roms's), and long file names wrap. */
 .work-roms > * { min-width: 0; }

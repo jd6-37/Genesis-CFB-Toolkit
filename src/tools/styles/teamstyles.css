@@ -4,7 +4,7 @@
   padding: 6px 8px;
   background: var(--night);
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius);
   color: var(--chalk);
   font-size: 15px;
 }
@@ -31,7 +31,7 @@
 .sty-table td { padding: 4px 8px; border-bottom: 1px solid var(--line); }
 .sty-team { font-size: 16px; white-space: nowrap; }
 .sty-changed .sty-team { color: var(--menu); font-weight: 600; }
-.sty-cell select { width: 100%; padding: 5px 8px; background: var(--deep); border: 1px solid var(--line); border-radius: 4px; font-size: 15px; }
+.sty-cell select { width: 100%; padding: 5px 8px; background: var(--deep); border: 1px solid var(--line); border-radius: var(--radius); font-size: 15px; }
 .sty-changed .sty-cell select { border-color: rgba(246, 216, 74, 0.45); }
 .sty-undo-cell { width: 4.5rem; text-align: right; }
 .sty-link { padding: 0; background: none; border: 0; color: var(--chalk-dim); font-size: 14px; text-decoration: underline; cursor: pointer; }
@@ -45,9 +45,8 @@
   padding: 14px 16px;
   background: var(--night);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius);
 }
-.sty-legend h3 { margin: 0 0 4px; font-family: var(--display); font-size: 24px; font-style: italic; font-weight: 800; }
 .sty-legend p { margin: 8px 0 0; color: var(--chalk-dim); font-size: 14px; line-height: 1.4; }
 .sty-legend p b { color: var(--chalk); font-weight: 600; }
 .sty-legend dl { margin: 0; }
@@ -68,7 +67,6 @@
 
 /* College Football 27 reference table. */
 .cfb-ref { margin: 8px 0 32px; }
-.cfb-ref h3 { margin: 0 0 6px; font-family: var(--display); font-size: 28px; font-style: italic; font-weight: 800; }
 .cfb-ref-lede { max-width: 70ch; margin: 0 0 14px; color: var(--chalk-dim); }
 .cfb-rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 8px 32px; max-width: 60rem; margin-bottom: 16px; }
 .cfb-rules h4 { margin: 0 0 4px; font-size: 15px; color: var(--menu); }
@@ -82,13 +80,13 @@
   padding: 7px 10px;
   background: var(--night);
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius);
   color: var(--chalk);
   font-size: 15px;
 }
 .cfb-only { display: flex; align-items: center; gap: 8px; font-size: 14px; }
 .cfb-count { color: var(--chalk-dim); font-size: 14px; }
-.cfb-scroll { max-height: 34rem; overflow: auto; border: 1px solid var(--line); border-radius: 6px; }
+.cfb-scroll { max-height: 34rem; overflow: auto; border: 1px solid var(--line); border-radius: var(--radius); }
 .cfb-table { width: 100%; border-collapse: collapse; font-size: 14px; }
 .cfb-table th, .cfb-table td { padding: 5px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
 .cfb-table thead th { position: sticky; top: 0; background: var(--night); font-weight: 700; }
@@ -103,7 +101,7 @@
   padding: 5px 4px;
   background: var(--deep);
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius);
   color: var(--chalk);
   font: inherit;
   font-size: 15px;
