@@ -9,7 +9,7 @@ Owner's goal (2026-11-12): a documented system and component library, so any ses
 Picked from three Figma mockups (file "CFB-Toolkit", page "Directions"): **"B's structure with A's pixel numerals."**
 
 - **Dynasty is the booklet from the game box:** white paper, black ink, black bars with reversed uppercase condensed type for section headings, a heavy rule under page titles and table headings, dotted rules between rows, square corners.
-- **Pixel numerals** (Jersey 15, `--font-num`) for figures only: scores, ratings, table numbers. Never for words.
+- **Pixel numerals** (Press Start 2P, `--font-num`) for figures only: scores, ratings, table numbers. Never for words. The font is wide, so it has its own sizes: `--fs-num-1` (12 px, tables) to `--fs-num-4` (32 px, big ratings).
 - **The Mod Toolkit keeps its indigo and yellow** and takes the same components ("yes, toolkit too").
 - **The Mod Toolkit's tab menu is "the subtle retro design"** (mockup A's toolkit frame): Barlow Condensed as today, square corners, 2 px rules and hard offset shadows. No pixel menu text and no chrome selection bar.
 - **Dark mode is for Dynasty only** ("the blue design of the toolkit is enough").
@@ -42,7 +42,7 @@ Run `npm run storybook` to browse the components (port 6006).
 
 - **Brand and theme** are set with `data-brand="toolkit|dynasty"` and `data-theme="light|dark"` on a wrapper element. The toolkit has one look today.
 - **Colors:** `--surface`, `--surface-raised`, `--surface-sunken`, `--text`, `--text-muted`, `--rule`, `--rule-strong`, `--bar`, `--on-bar`, `--bar-on` (section bars and the nav), `--masthead`, `--on-masthead` (the app's top bar: black in Dynasty light and dark), `--accent`, `--on-accent`, `--field`, `--highlight`, `--good`, `--good-wash`, `--bad`, `--bad-wash`, `--scrim`.
-- **Type:** `--font-display` (Barlow Condensed), `--font-body` (Barlow), `--font-num` (Jersey 15, figures only); sizes `--fs-1` (12 px) to `--fs-8` (56 px).
+- **Type:** `--font-display` (Barlow Condensed), `--font-body` (Barlow), `--font-num` (Press Start 2P, figures only; sizes `--fs-num-1` to `--fs-num-4`); sizes `--fs-1` (12 px) to `--fs-8` (56 px).
 - **Spacing:** `--sp-1` (4 px) to `--sp-7` (48 px), built on the Genesis' 8 px tile.
 - **Shape:** `--radius` (0), `--rule-w` (1 px), `--rule-w-strong` (4 px).
 

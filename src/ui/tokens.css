@@ -8,7 +8,7 @@
   --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
   --font-body: 'Barlow', system-ui, sans-serif;
   /* Pixel numerals: scores, ratings and table figures only (never words). */
-  --font-num: 'Jersey 15', 'Barlow Condensed', sans-serif;
+  --font-num: 'Press Start 2P', 'Barlow Condensed', sans-serif;
 
   /* Type scale (px): small print, labels, body, lead, then headings. */
   --fs-1: 12px;
@@ -19,6 +19,11 @@
   --fs-6: 32px;
   --fs-7: 44px;
   --fs-8: 56px;
+  /* Pixel numerals (--font-num): the font is wide and drawn on an 8 px grid, so it has its own steps. */
+  --fs-num-1: 12px;
+  --fs-num-2: 16px;
+  --fs-num-3: 24px;
+  --fs-num-4: 32px;
 
   /* Spacing: 4 px steps up to the 8 px tile, then tiles. */
   --sp-1: 4px;

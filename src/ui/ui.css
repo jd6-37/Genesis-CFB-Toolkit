@@ -50,14 +50,14 @@
   color: var(--text-muted); border-bottom: var(--rule-w-strong) solid var(--rule-strong); white-space: nowrap;
 }
 .ui-table td { padding: var(--sp-2); text-align: right; border-bottom: var(--rule-w) dotted var(--rule); }
-.ui-table .ui-num { font: 400 var(--fs-5)/1 var(--font-num); }
+.ui-table .ui-num { font: 400 var(--fs-num-1)/1.2 var(--font-num); }
 .ui-table .ui-left { text-align: left; }
 .ui-table tr.ui-row-mine td { background: var(--highlight); }
 .ui-table-empty { color: var(--text-muted); }
 
 .ui-stat { padding: var(--sp-3) var(--sp-4); border: 2px solid var(--rule-strong); border-radius: var(--radius); background: var(--surface-raised); }
 .ui-stat-label { font: 700 var(--fs-2)/1.2 var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
-.ui-stat-value { font: 400 var(--fs-8)/0.9 var(--font-num); color: var(--text); }
+.ui-stat-value { margin: var(--sp-1) 0; font: 400 var(--fs-num-4)/1 var(--font-num); color: var(--text); }
 .ui-stat-note { font-size: var(--fs-1); color: var(--text-muted); }
 
 .ui-empty { margin: var(--sp-7) auto; max-width: 520px; text-align: center; color: var(--text-muted); }
@@ -90,7 +90,7 @@
 .ui-table caption { padding-bottom: var(--sp-2); text-align: left; font: 700 var(--fs-5)/1.2 var(--font-display); color: var(--text); }
 .ui-table th { color: var(--text); }
 .ui-table tbody tr:hover td { background: var(--surface-sunken); }
-.ui-figures td:not(.ui-left):not(.ui-text) { font: 400 var(--fs-5)/1 var(--font-num); }
+.ui-figures td:not(.ui-left):not(.ui-text) { font: 400 var(--fs-num-1)/1.2 var(--font-num); }
 .ui-table tr.ui-total td { font-weight: 700; border-top: 2px solid var(--rule-strong); border-bottom: 0; }
 
 /* Link buttons keep the button's colors where a page styles its links (a page's `a` rule would win otherwise). */

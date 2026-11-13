@@ -884,7 +884,7 @@ function BwRatings({ team, slot, name, bench = false, player }: { team: number; 
             const avgShown = weight ? `${Math.round(140 + avg[i] + b.weightPlus)} lb` : shownFine(Math.round(avg[i]));
             return (
               <div key={a} className="dy-tile">
-                <div className="dy-tile-top"><span>{label(a)}</span><strong>{shown}</strong></div>
+                <div className="dy-tile-top"><span>{label(a)}</span><strong>{weight ? <>{parseInt(`${shown}`, 10)}<small> lb</small></> : shown}</strong></div>
                 <div className="dy-pips" role="img" aria-label={`${shown}; average ${one} ${avgShown}`}>
                   {Array.from({ length: 15 }, (_, k) => {
                     // 15 pips of 16 fine points each; the one he's part of the way through is partly filled.
