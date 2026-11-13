@@ -12,7 +12,7 @@ import { playerName } from '../../core/dynasty/derive';
 import { GROUP_COLUMNS, type Attr } from '../../core/rosterLayouts';
 import { rulesOf } from '../../core/dynasty/rules';
 import { academicGrade, academicsOf, gradeOf } from '../../core/dynasty/academics';
-import { costOf, interestRank, pipelineStates, planCost, pointCost, withdrawOffer } from '../../core/dynasty/recruiting';
+import { costOf, interestRank, newOffers, offerCap, offersOut, pipelineStates, planCost, pointCost, withdrawOffer } from '../../core/dynasty/recruiting';
 import { SCHOOL_STATE, stateCode } from '../../core/dynasty/schoolStates';
 import { GROUP_OF_ROLE, roleOfPos, shownOf } from '../../core/dynasty/ratings';
 import { Empty, Headshot, heightText, hometownText, inkColor, mainColor, onColor, useDyn } from './ui';
@@ -115,6 +115,9 @@ interface Hub {
   left: number;
   open: boolean;
   full: boolean;
+  /** No room for another offer (the cap: open spots plus the rules' extra). */
+  capped: boolean;
+  cap: number;
   busy: boolean;
   add: (id: number) => void;
   remove: (id: number) => void;
@@ -147,14 +150,16 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
   const left = R.userPoints - spent - scoutSpent;
   const commits = rs.prospects.filter((p) => p.committed === team);
   const spots = rs.spots[team] ?? 0;
-  const offersOut = rs.prospects.filter((p) => p.committed === null && (p.offers.includes(team) || plan.offers.includes(p.id))).length;
+  // Offers out, this week's new ones included, against the cap (open spots plus the rules' extra).
+  const offers = offersOut(rs, team) + newOffers(rs, team, plan).length;
+  const cap = offerCap(R, rs, team);
 
   const setPlan = (f: (p: TeamPlan) => TeamPlan) => {
     setErr(null);
     setPlans((all) => ({ ...all, [team]: f(all[team] ?? { points: {}, offers: [] }) }));
   };
   const hub: Hub = {
-    team, plan, pipes, left, open, busy: !!busy, full: Object.keys(plan.points).length >= R.boardSize,
+    team, plan, pipes, left, open, busy: !!busy, capped: offers >= cap, cap, full: Object.keys(plan.points).length >= R.boardSize,
     add: (id) => setPlan((p) => (Object.keys(p.points).length >= R.boardSize ? p : { ...p, points: { ...p.points, [id]: 0 } })),
     remove: (id) => setPlan((p) => { const points = { ...p.points }; delete points[id]; const pitches = { ...p.pitches }; delete pitches[id]; return { ...p, points, pitches }; }),
     setPoints: (id, v) => setPlan((p) => ({ ...p, points: { ...p.points, [id]: Math.max(0, Math.min(R.maxPerProspect, Math.round(v) || 0)) } })),
@@ -201,7 +206,7 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
           {open && <div><dt>Points left</dt><dd className={left < 0 ? 'dy-hub-over' : undefined}>{left}<small> of {R.userPoints.toLocaleString('en-US')}</small></dd></div>}
           {open && <div><dt>On board</dt><dd>{board.length}<small> of {R.boardSize}</small></dd></div>}
           <div><dt>Commits</dt><dd>{commits.length}<small> of {spots} spots</small></dd></div>
-          {open && <div><dt>Offers out</dt><dd>{offersOut}</dd></div>}
+          {open && <div><dt>Offers out</dt><dd className={offers > cap ? 'dy-hub-over' : undefined}>{offers}<small> of {cap}</small></dd></div>}
         </dl>
         {open
           ? <Button disabled={!!busy} onClick={runWeek}>{rs.week + 1 >= R.weeks ? 'Run the last week' : `Advance to week ${rs.week + 2}`}</Button>
@@ -426,8 +431,9 @@ function ProspectCard({ p, hub }: { p: Prospect; hub: Hub }) {
       {p.committed === null && (hub.open || offered) && (
         <div className="dy-card-part dy-row">
           {hub.open && !onBoard && <Button disabled={hub.full} onClick={() => hub.add(p.id)} title={hub.full ? `Your board is full (${R.boardSize})` : undefined}>Add to board</Button>}
-          {hub.open && onBoard && !offered && <Button onClick={() => hub.offer(p.id)}>Offer a scholarship</Button>}
+          {hub.open && onBoard && !offered && <Button disabled={hub.capped} onClick={() => hub.offer(p.id)} title={hub.capped ? `You can have ${hub.cap} offers out at one time. Withdraw one first.` : undefined}>Offer a scholarship</Button>}
           {offered && <Button variant="quiet" disabled={hub.busy} onClick={() => hub.withdraw(p.id)}>Withdraw offer</Button>}
+          {hub.open && onBoard && !offered && hub.capped && <p className="dy-small dy-dim">You can have {hub.cap} offers out at one time. Withdraw one to offer him.</p>}
           {hub.open && onBoard && <Button variant="quiet" onClick={() => hub.remove(p.id)}>Remove from board</Button>}
         </div>
       )}
@@ -598,7 +604,7 @@ function SchoolTab({ team }: { team: number }) {
           <ul className="dy-rules">
             <li>{R.userPoints.toLocaleString('en-US')} points a week, on up to {R.boardSize} prospects, {R.maxPerProspect} at most on one. In-state and pipeline prospects cost fewer points.</li>
             <li>Interest grows with points, more with an offer, and with how well your school fits what he wants. Prospects rated above your prestige are harder to reach.</li>
-            <li>You can withdraw an offer from a prospect who hasn't committed: without it he can't commit to you or pick you at signing day.</li>
+            <li>You can have your open spots plus {R.offerExtra} offers out at one time; offers to prospects who have committed don't count. You can withdraw an offer from a prospect who hasn't committed: without it he can't commit to you or pick you at signing day.</li>
             <li>One pitch per prospect a week. He has a main interest and {R.pitchInterests > 2 ? 'minor ones' : 'a minor one'}; after the week he reacts. A pitch he doesn't care about costs you a little.</li>
             <li>Scouting a high-school prospect costs {R.scoutOvr} points for his overall, {R.scoutRatings} more for every rating. Portal players show everything.</li>
             <li>He commits when one school that offered has enough interest and a clear lead (the best ones not before week {R.firstWeek[4]} or {R.firstWeek[5]}). At signing day the rest choose among the schools that offered.</li>

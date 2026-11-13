@@ -57,6 +57,8 @@ export interface TeamPlan {
   offers: number[];
   /** The pitch made to a prospect this week (optional). */
   pitches?: Record<number, PitchKey>;
+  /** Offers taken back this week, before the new ones (computer teams; user teams withdraw at once: withdrawOffer). */
+  withdraw?: number[];
 }
 
 /** The five pitches. */
@@ -377,10 +379,35 @@ export function cpuPlan(d: Dynasty, rs: RecruitingState, ctx: WeekContext, team:
     const pitch = learnedPitch(known, r, (k) => reactionValue(R, known[k]!, interestRank(R, c.p, k)), (k) => interestRank(R, c.p, k) === 1, R.pitchInterests);
     if (pitch) pitches[c.p.id] = pitch;
   }
-  return { points, offers: cands.slice(0, open + 6).map((c) => c.p.id), pitches };
+  // Offers within the cap: it keeps the offers to its targets and to prospects it is among the top three
+  // schools for, takes the others back, and offers its best new targets while there is room.
+  const targets = new Set(cands.map((c) => c.p.id));
+  const mine = rs.prospects.filter((p) => p.committed === null && p.offers.includes(team));
+  const keep = mine.filter((p) => targets.has(p.id) || interestRanking(p).slice(0, 3).some((x) => x.team === team));
+  const kept = new Set(keep.map((p) => p.id));
+  const room = offerCap(R, rs, team) - keep.length;
+  const fresh = cands.filter((c) => !c.p.offers.includes(team) && c.p.committed === null).slice(0, Math.max(0, room)).map((c) => c.p.id);
+  // A prospect committed elsewhere whom it tries to flip keeps its offer (those don't count toward the cap).
+  const flips = cands.filter((c) => c.p.committed !== null).map((c) => c.p.id);
+  return { points, offers: [...fresh, ...flips], pitches, withdraw: mine.filter((p) => !kept.has(p.id)).map((p) => p.id) };
 }
 
 /** Why a user team's plan can't be used (empty when it can). */
+/**
+ * Offers are capped (user, 2026-11-13: "I think we do cap offers"; "Plus 5 sounds okay. yes cap cpu teams
+ * too"): a team may have its open spots (those not yet filled by commitments) plus offerExtra offers out
+ * at one time. Only offers to prospects who haven't committed anywhere count. A team over the cap (its
+ * commitments came in, or a dynasty from before the cap) keeps its offers and can't make new ones.
+ */
+export const offersOut = (rs: RecruitingState, team: number) => rs.prospects.filter((p) => p.committed === null && p.offers.includes(team)).length;
+export const offerCap = (R: OffseasonRules, rs: RecruitingState, team: number) =>
+  Math.max(0, (rs.spots[team] ?? 0) - rs.prospects.filter((p) => p.committed === team).length) + R.offerExtra;
+/** A plan's offers that are new and would count (he hasn't committed, the team hasn't offered yet). */
+export const newOffers = (rs: RecruitingState, team: number, plan: TeamPlan) => {
+  const byId = new Map(rs.prospects.map((p) => [p.id, p]));
+  return [...new Set(plan.offers)].filter((id) => { const p = byId.get(id); return !!p && p.committed === null && !p.offers.includes(team); });
+};
+
 /** How far a team sees a prospect: portal players fully, high-school recruits as far as it scouted. */
 export const scoutLevel = (rs: RecruitingState, team: number, p: Prospect): ScoutLevel =>
   p.id > 0 ? 2 : rs.scouted?.[team]?.[p.id] ?? 0;
@@ -460,6 +487,8 @@ export function runRecruitingWeek(d: Dynasty, rs0: RecruitingState, userPlans: R
   const ctx = weekContext(d, rs);
   for (const [t, p] of Object.entries(userPlans)) {
     const bad = planProblems(R, p, rs0.scoutSpent?.[Number(t)] ?? 0, planCost(d, ctx, rs, Number(t), p));
+    const fresh = newOffers(rs, Number(t), p).length, cap = offerCap(R, rs, Number(t)), out = offersOut(rs, Number(t));
+    if (fresh && out + fresh > cap) bad.push(`That's ${out + fresh} offers out: you can have ${cap} (your open spots plus ${R.offerExtra}).`);
     if (bad.length) throw new Error(`${d.teams[Number(t)].school}: ${bad.join(' ')}`);
   }
   const byId = new Map(rs.prospects.map((p) => [p.id, p]));
@@ -471,9 +500,17 @@ export function runRecruitingWeek(d: Dynasty, rs0: RecruitingState, userPlans: R
     plans.set(t.index, own ? (userPlans[t.index] ?? { points: {}, offers: [] }) : cpuPlan(d, rs, ctx, t.index, r));
   }
   for (const [team, plan] of plans) {
+    for (const id of plan.withdraw ?? []) {
+      const p = byId.get(id);
+      if (p && p.committed !== team) p.offers = p.offers.filter((t) => t !== team);
+    }
+    // New offers while the team is under its cap (a user plan over it was refused above).
+    let room = offerCap(R, rs, team) - offersOut(rs, team);
     for (const id of plan.offers) {
       const p = byId.get(id);
-      if (p && !p.offers.includes(team)) p.offers.push(team);
+      if (!p || p.offers.includes(team)) continue;
+      if (p.committed === null && room-- <= 0) continue;
+      p.offers.push(team);
     }
     for (const [idS, pts] of Object.entries(plan.points)) {
       const p = byId.get(Number(idS));
