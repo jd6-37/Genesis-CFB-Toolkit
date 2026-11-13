@@ -9,7 +9,7 @@
 //                    players of the position, as freshmen)
 //   applyCuts        every team down to the roster limit (CPU automatically, user teams by choice),
 //                    walk-ons for positions below their minimum
-//   finishOffseason  depth chart (the best OVR at each spot, depth.ts), unique jersey numbers, the
+//   finishOffseason  depth chart (the best OVR at each spot, depth.ts), jersey numbers (numbers.ts), the
 //                    next season
 //
 // Pure functions: each returns a new dynasty. Randomness is seeded, so the same choices give the
@@ -20,6 +20,7 @@ import { applyWhiteHome } from './kit';
 import { lastGames, makeSchedule, RELEASE_CONF_WEEKS, scheduleSet } from './schedule';
 import { CLASSES, rng, type ClassYear, type DPlayer, type DSeason, type Dynasty, type OffseasonEvent } from './model';
 import { playerLines, seasonView } from './derive';
+import { NO_NUMBER, assignNumbers } from './numbers';
 import { fixChecksums, jerseyByte, openRosterRom, readPlayer, setRating, teamLayout } from '../rosterRom';
 import { GROUP_ATTRS } from '../rosterLayouts';
 import { MAX_PRESTIGE, nextPrestige, seasonPrestige } from './prestige';
@@ -555,7 +556,7 @@ export function makeRecruit(d: Dynasty, tpl: RecruitTemplates, r: Rand, id: numb
   }
   const w0 = clamp(Math.round(t.weight - t.gained + 6 * gauss(r)), 150, 380);
   return {
-    id, first, last, pos, team, cls: 'FR', jersey: 0,
+    id, first, last, pos, team, cls: 'FR', jersey: NO_NUMBER,
     heightIn: clamp(Math.round(t.heightIn + gauss(r)), 64, 82), weight: w0, weight0: w0,
     hometown: town.hometown, state: town.state, ovr, ratings, skin: skinFor(black, r), status: 'active',
     pot: clamp(Math.round(between(r, plo, phi)), ovr + 3, 99), recruit: { stars, year },
@@ -773,41 +774,12 @@ export function applyCuts(d: Dynasty, userCuts: Record<number, number[]> = {}, t
 
 // ---- 5. depth chart and the next season
 
-/** Jersey numbers each position may wear when it needs a new one (college rules, loosely). */
-const NUMBER_POOL: Record<string, [number, number][]> = {
-  QB: [[1, 19]], HB: [[1, 49]], FB: [[30, 49]], WR: [[1, 19], [80, 89]], TE: [[80, 89], [40, 49]],
-  LT: [[50, 79]], LG: [[50, 79]], C: [[50, 79]], RG: [[50, 79]], RT: [[50, 79]],
-  LE: [[90, 99], [40, 59]], RE: [[90, 99], [40, 59]], DT: [[90, 99], [50, 59]],
-  LOLB: [[1, 59]], MLB: [[1, 59]], ROLB: [[1, 59]], CB: [[1, 39]], FS: [[1, 49]], SS: [[1, 49]], K: [[1, 49], [90, 99]], P: [[1, 49], [90, 99]],
-};
-
-/** Every team's players get distinct numbers: the best player keeps his, the others get a free one for their position. */
-export function fixJerseys(players: DPlayer[], r: Rand): DPlayer[] {
-  const out = players.slice();
-  const teams = new Map<number, number[]>();
-  out.forEach((p, i) => { if (p.status === 'active' && p.team !== null) teams.set(p.team, [...(teams.get(p.team) ?? []), i]); });
-  for (const idx of teams.values()) {
-    const used = new Set<number>();
-    const order = idx.slice().sort((a, b) => Number(!!out[a].jersey === false) - Number(!!out[b].jersey === false) || out[b].ovr - out[a].ovr);
-    for (const i of order) {
-      const p = out[i];
-      if (p.jersey > 0 && !used.has(p.jersey)) { used.add(p.jersey); continue; }
-      const pool = (NUMBER_POOL[p.pos] ?? [[1, 99]]).flatMap(([a, b]) => Array.from({ length: b - a + 1 }, (_, k) => a + k)).filter((n) => !used.has(n));
-      const any = Array.from({ length: 99 }, (_, k) => k + 1).filter((n) => !used.has(n));
-      const n = pool.length ? pick(r, pool) : pick(r, any);
-      used.add(n);
-      out[i] = { ...p, jersey: n };
-    }
-  }
-  return out;
-}
-
-/** Ends the offseason: unique numbers, the depth chart, and the next season (same conferences). */
+/** Ends the offseason: jersey numbers (numbers.ts), the depth chart, and the next season (same conferences). */
 export function finishOffseason(d: Dynasty): Dynasty {
   const st = d.offseason;
   if (!st || st.step !== 'ready') throw new Error('Finish the cuts first.');
   const r = stepRand(st, 5);
-  const players = fixJerseys(d.players, r);
+  const players = assignNumbers(d.players, st.year, d.userTeams, r).players;
   const withNumbers = { ...d, players };
   const prev = lastSeason(d);
   const confWeeks = prev.confWeeks ?? RELEASE_CONF_WEEKS;

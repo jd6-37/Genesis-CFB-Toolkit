@@ -17,6 +17,7 @@ import { blackShare, nameScore, SKIN_TONES } from './appearance';
 import type { LookEdit } from './headshot';
 import { POSITIONS } from './offseason';
 import { recordYear } from './career';
+import { NO_NUMBER } from './numbers';
 
 const DEFS_SLOTS = 32;
 const logit = (p: number) => Math.log(p / (1 - p));
@@ -138,7 +139,7 @@ export function playersCsv(d: Dynasty, team?: number): string {
   const rows = d.players
     .filter((p) => p.status === 'active' && p.team !== null && (team === undefined || p.team === team))
     .sort((a, b) => a.team! - b.team! || POSITIONS.indexOf(a.pos) - POSITIONS.indexOf(b.pos) || b.ovr - a.ovr)
-    .map((p) => [p.id, d.teams[p.team!].school, p.first, p.last, p.pos, p.cls, p.jersey, p.heightIn, p.weight, p.hometown, p.state, p.ovr, p.pot ?? '',
+    .map((p) => [p.id, d.teams[p.team!].school, p.first, p.last, p.pos, p.cls, p.jersey < 0 ? '' : p.jersey, p.heightIn, p.weight, p.hometown, p.state, p.ovr, p.pot ?? '',
       ...RATINGS.map((a) => (p.ratings[a] === undefined ? '' : Math.round(p.ratings[a]! * 10) / 10))]);
   return toCsv(CSV_HEADERS, rows);
 }
@@ -202,7 +203,7 @@ export function readPlayersCsv(d: Dynasty, text: string): CsvImport {
     } else {
       if (e.team === undefined || e.team === null || !e.pos) { out.problems.push(`Row ${k + 2}: a new player needs a Team and a Position.`); return; }
       const np: DPlayer = {
-        id: 0, first: e.first ?? '', last: e.last ?? '', pos: e.pos, team: e.team, cls: e.cls ?? 'FR', jersey: e.jersey ?? 0, heightIn: e.heightIn ?? 72, weight: e.weight ?? 200,
+        id: 0, first: e.first ?? '', last: e.last ?? '', pos: e.pos, team: e.team, cls: e.cls ?? 'FR', jersey: e.jersey ?? NO_NUMBER, heightIn: e.heightIn ?? 72, weight: e.weight ?? 200,
         hometown: e.hometown ?? '', state: e.state ?? '', ovr: 0, ratings: { Weight: 140 + 16 * 4, ...e.ratings }, skin: 0, status: 'active', pot: e.pot,
       };
       np.skin = newSkin(np);
