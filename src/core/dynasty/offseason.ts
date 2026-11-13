@@ -260,7 +260,7 @@ export function startOffseason(d: Dynasty, opt: { seed?: number; force?: boolean
 
 /** A team's projected depth chart for next season: the one the user set, else the computer's. */
 export function projectedDepth(d: Dynasty, team: number): (number | null)[] {
-  return d.offseason?.projected?.[team] ?? teamDepth(active(d).filter((p) => p.team === team)).slots;
+  return d.offseason?.projected?.[team] ?? teamDepth(active(d).filter((p) => p.team === team), true).slots;
 }
 
 /** Why a projected depth chart can't be used (empty when it can): his own players, each once. */
@@ -269,8 +269,8 @@ export function projectedProblems(d: Dynasty, team: number, slots: (number | nul
   const out: string[] = [];
   if (slots.length !== LAYOUT.length) out.push('The depth chart needs every spot.');
   if (ids.some((id) => d.players[id - 1]?.team !== team || d.players[id - 1]?.status !== 'active')) out.push('Some of the players aren\'t on the team.');
-  // A player may hold two spots: before signing day rosters are thin, and the depth chart fills a spot
-  // with someone from a close position (as it does for a kicker who also punts).
+  // Spots may be empty: before signing day rosters are thin, and a spot with nobody of its own or a close
+  // position stays open (the computer's chart leaves it so; see teamDepth).
   return out;
 }
 

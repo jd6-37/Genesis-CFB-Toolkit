@@ -28,8 +28,13 @@ const FALLBACK: Record<string, string[]> = {
 /** The pounds the ROM adds to a lineman's shown weight (the OL weight tweak), from the season's ratings. */
 export const olPlusOf = (s: DSeason | undefined) => s?.bw?.flat().find((b) => b?.group === 'OL')?.weightPlus ?? 0;
 
-/** One team's 32 and backups (player IDs per slot). */
-export function teamDepth(players: DPlayer[]): { slots: (number | null)[]; bench: (number | null)[] } {
+/**
+ * One team's 32 and backups (player IDs per slot). With `open`, a spot nobody of its own or a close
+ * position can take stays empty and nobody holds two spots (the projected depth chart; user, 2026-11-13:
+ * "I'd rather the slot stay empty if there is no QB"). Without it every one of the 32 gets a player, as
+ * the game needs.
+ */
+export function teamDepth(players: DPlayer[], open = false): { slots: (number | null)[]; bench: (number | null)[] } {
   const slots = new Array<number | null>(SLOTS).fill(null);
   const bench = new Array<number | null>(SLOTS).fill(null);
   const used = new Set<number>();
@@ -45,6 +50,7 @@ export function teamDepth(players: DPlayer[]): { slots: (number | null)[]; bench
   const own = (p: DPlayer, def: SlotDef) => p.pos === slotPosition(def.label);
   const close = (p: DPlayer, def: SlotDef) => (FALLBACK[slotPosition(def.label)] ?? []).includes(p.pos);
   for (const ok of [own, close]) { fill(slots, DEFS, ok); fill(bench, DEFS, ok); }
+  if (open) return { slots, bench };
   fill(slots, DEFS, () => true);
   // A slot in the game must have a player: a kicker can also punt (and the other way round).
   for (const def of DEFS) {
