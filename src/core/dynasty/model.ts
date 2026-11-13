@@ -49,6 +49,8 @@ export interface DPlayer {
   jersey: number;
   heightIn: number;
   weight: number;
+  /** His weight when he joined the dynasty (new players are modeled on this, not on the pounds put on since). Absent = `weight`. */
+  weight0?: number;
   hometown: string;
   state: string;
   /** OVR at his position from his ratings (ovr.ts formulas on the shown numbers). */
