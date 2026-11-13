@@ -4,11 +4,17 @@ One set of tokens and components for both apps in this repo: the **Mod Toolkit**
 
 Owner's goal (2026-11-12): a documented system and component library, so any session, including cheaper models, produces consistent code and a consistent look.
 
-## The look (owner, 2026-11-12)
+## The look (owner, 2026-11-12 and 2026-11-13)
 
 Picked from three Figma mockups (file "CFB-Toolkit", page "Directions"): **"B's structure with A's pixel numerals."**
 
-- **Dynasty is the booklet from the game box:** white paper, black ink, black bars with reversed uppercase condensed type for section headings, a heavy rule under page titles and table headings, dotted rules between rows, square corners.
+- **Both apps borrow from the game's own menu screens** (owner, 2026-11-13: "you should be taking inspiration from the BW95 in-game menus design … Don't feel like you need to overdo it with the pixel font … The design still need to look good and be legible"):
+  - a page's title sits in a double-line frame over a faint dither (`PageHead`), like the game's "TEAM ROSTER" box;
+  - section headings are slanted block capitals in a bar (`SubHead`), like QUARTERBACK / RUNNING BACKS;
+  - column headings are small uppercase labels in their own color (`--label`), like ENERGY SPEED QUICK;
+  - every other table row sits on a bar (`--row`), with no rules between rows;
+  - figures are in the pixel font. Words never are: headings and labels stay in Barlow Condensed so they read easily.
+- **Dynasty is neutral** (white, black, grays; dark mode as a negative) so that team colors are the only color on a page and never clash. **The Mod Toolkit is blue and yellow**, the game's own colors: yellow headings, light-blue labels, blue row bars.
 - **Pixel numerals** (Press Start 2P, `--font-num`) for figures only: scores, ratings, table numbers. Never for words. The font is wide, so it has its own sizes: `--fs-num-1` (12 px, tables) to `--fs-num-4` (32 px, big ratings). Its digits sit 1/8 em above the baseline, so `tokens.css` loads it as 'Press Start Numerals' with a taller box (centered in table cells and chips); a figure on a shared baseline with text also gets `ui-num-drop`. Two more figure fonts (owner's picks, 2026-11-13): `--font-num-narrow` (Handjet) where Press Start 2P is too wide, and `--font-num-tiny` (Micro 5, at 15 px) for really small figures such as a rank beside a team name.
 - **The Mod Toolkit keeps its indigo and yellow** and takes the same components ("yes, toolkit too").
 - **The Mod Toolkit's tab menu is "the subtle retro design"** (mockup A's toolkit frame): Barlow Condensed as today, square corners, 2 px rules and hard offset shadows. No pixel menu text and no chrome selection bar.

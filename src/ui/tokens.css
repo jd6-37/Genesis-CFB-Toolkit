@@ -74,6 +74,10 @@
   --on-bar: #f6d84a;
   --masthead: #0f0c45;
   --on-masthead: #f2f0ff;
+  /* From the game's menus: light-blue column labels, a lighter blue bar behind every other row, a dither. */
+  --label: #7fc4ff;
+  --row: #2f2ba6;
+  --dither: rgba(255, 255, 255, 0.05);
   --bar-on: #ffffff;
   --accent: #f6d84a;
   --on-accent: #0f0c45;
@@ -101,6 +105,10 @@
   --on-bar: #ffffff;
   --masthead: #000000;
   --on-masthead: #ffffff;
+  /* The same parts as the Toolkit's, in grays (team colors are the only color on a Dynasty page). */
+  --label: #49496d;
+  --row: #f2f2f2;
+  --dither: rgba(0, 0, 0, 0.06);
   --bar-on: #ffdb49;
   --accent: #242424;
   --on-accent: #ffffff;
@@ -128,6 +136,9 @@
   /* The masthead stays black in dark mode (owner, 2026-11-12: "i don't like the white masthead"). */
   --masthead: #000000;
   --on-masthead: #ffffff;
+  --label: #b6b6b6;
+  --row: #303030;
+  --dither: rgba(255, 255, 255, 0.05);
   --bar-on: #b62400;
   --accent: #ffffff;
   --on-accent: #000000;

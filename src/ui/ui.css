@@ -24,16 +24,21 @@
 .ui-note-ok { background: var(--good-wash); border-left-color: var(--good); }
 .ui-note-error { background: var(--bad-wash); border-left-color: var(--bad); }
 
-.ui-pagehead { margin: var(--sp-5) 0 var(--sp-4); display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-2) var(--sp-4); }
-.ui-pagehead { border-bottom: var(--rule-w-strong) solid var(--rule-strong); padding-bottom: var(--sp-2); }
+/* A page's title in a double-line frame over a faint dither, like the title box of the game's menu screens. */
+.ui-pagehead {
+  margin: var(--sp-5) 0 var(--sp-4); padding: var(--sp-3) var(--sp-4);
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-4);
+  border: 6px double var(--rule-strong);
+  background: repeating-conic-gradient(var(--dither) 0% 25%, transparent 0% 50%) 0 0 / 4px 4px;
+}
 .ui-pagehead h2 { margin: 0; font: 900 var(--fs-7)/1 var(--font-display); text-transform: uppercase; color: var(--text); }
 .ui-pagehead p { margin: 0; flex-basis: 100%; color: var(--text-muted); }
 .ui-pagehead-actions { margin-left: auto; display: flex; flex-wrap: wrap; gap: var(--sp-2); }
-/* A section heading: a bar with reversed type, like a manual's section tab. */
+/* A section heading: a bar with slanted block type, like the game's QUARTERBACK / RUNNING BACKS headings. */
 .ui-sub {
   margin: var(--sp-5) 0 var(--sp-2); padding: var(--sp-1) var(--sp-3);
   background: var(--bar); color: var(--on-bar);
-  font: 900 var(--fs-5)/1.2 var(--font-display); text-transform: uppercase; letter-spacing: 0.04em;
+  font: italic 800 var(--fs-5)/1.2 var(--font-display); text-transform: uppercase; letter-spacing: 0.06em;
 }
 
 .ui-field { display: grid; gap: var(--sp-1); font: 700 var(--fs-2)/1.2 var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
@@ -49,10 +54,12 @@
   padding: var(--sp-2); text-align: right; font: 700 var(--fs-2)/1.2 var(--font-display); text-transform: uppercase; letter-spacing: 0.04em;
   color: var(--text-muted); border-bottom: var(--rule-w-strong) solid var(--rule-strong); white-space: nowrap;
 }
-.ui-table td { padding: var(--sp-2); text-align: right; border-bottom: var(--rule-w) dotted var(--rule); }
+.ui-table td { padding: var(--sp-2); text-align: right; }
+/* Every other row on a bar, as the game's rosters are; no rules between rows. */
+.ui-table tbody tr:nth-child(odd) td { background: var(--row); }
 .ui-table .ui-num { font: 400 var(--fs-num-1)/1.2 var(--font-num); }
 .ui-table .ui-left { text-align: left; }
-.ui-table tr.ui-row-mine td { background: var(--highlight); }
+.ui-table tbody tr.ui-row-mine:nth-child(n) td { background: var(--highlight); }
 .ui-table-empty { color: var(--text-muted); }
 
 .ui-stat { padding: var(--sp-3) var(--sp-4); border: 2px solid var(--rule-strong); border-radius: var(--radius); background: var(--surface-raised); }
@@ -88,8 +95,7 @@
 
 /* Table: hand-written tables share DataTable's look. */
 .ui-table caption { padding-bottom: var(--sp-2); text-align: left; font: 700 var(--fs-5)/1.2 var(--font-display); color: var(--text); }
-.ui-table th { color: var(--text); }
-.ui-table tbody tr:hover td { background: var(--surface-sunken); }
+.ui-table th { color: var(--label); }
 .ui-figures td:not(.ui-left):not(.ui-text) { font: 400 var(--fs-num-1)/1.2 var(--font-num); }
 .ui-table tr.ui-total td { font-weight: 700; border-top: 2px solid var(--rule-strong); border-bottom: 0; }
 
