@@ -513,7 +513,16 @@ if (user !== undefined) {
   const pipes = Rec.pipelineStates(f1, user);
   assert.ok(pipes.every((x) => x.n >= RD.pipelineMin));
   const inState = rs0.prospects.find((p) => p.id < 0 && closenessState(p) === 'same')!;
-  assert.equal(Rec.pointValue(f1, ctxW, inState, user), RD.inStateBoost, 'in-state points go further');
+  assert.equal(Rec.pointCost(f1, ctxW, inState, user), RD.inStateCost, 'in-state prospects cost less');
+  assert.equal(Rec.costOf(f1, ctxW, inState, user, 60), 48, '60 points on an in-state prospect cost 48');
+  const far = rs0.prospects.find((p) => p.id < 0 && Rec.pointCost(f1, ctxW, p, user) === 1)!;
+  const mixed = { points: { [inState.id]: 60, [far.id]: 60 }, offers: [] };
+  assert.equal(Rec.planCost(f1, ctxW, rs0, user, mixed), 108, 'a plan costs its points after the discounts');
+  assert.deepEqual(Rec.planProblems({ ...RD, userPoints: 108 }, mixed, 0, 108), []);
+  assert.ok(Rec.planProblems({ ...RD, userPoints: 108 }, mixed).length > 0, 'without the discount the same plan is too much');
+  // Dynasties saved with the old "points count ×" settings keep their strength as a cost.
+  assert.equal(rulesOf({ rules: { inStateBoost: 1.25, pipelineBoost: 1.25 } as never }).inStateCost, 0.8);
+  assert.equal(rulesOf({ rules: { inStateBoost: 1.25, pipelineBoost: 1.25 } as never }).pipelineCost, 0.8);
 }
 ok(`rules: changes stored and applied, files round-trip; academics for all 138; contender and pipelines${user !== undefined ? ` (${f1.teams[user].school}: ${Rec.pipelineStates(f1, user).map((x) => x.state).join(', ') || 'none'})` : ''}`);
 
@@ -531,16 +540,24 @@ if (user !== undefined) {
     return { v: w.offseason!.recruiting!.prospects.find((p) => p.id === tgt.id)!.interest[user] - (tgt.interest[user] ?? 0), r: w.offseason!.recruiting!.reactions?.[user]?.[tgt.id] };
   };
   const none = gain(), withNo = gain(notInt);
-  assert.ok(Math.abs(withNo.v - none.v * RD.pitchNotInterested) < 1e-6 * Math.max(1, none.v), 'not interested: normal points');
+  assert.ok(Math.abs(withNo.v - none.v * RD.pitchNotInterested) < 1e-6 * Math.max(1, none.v), 'not interested: a wrong guess costs a little');
   assert.equal(withNo.r?.[notInt], 'no', 'the reaction is recorded');
   for (const k of ints) {
     const g = gain(k), x = Rec.pitchReaction(RD, tgt, sc, k);
-    assert.ok(Math.abs(g.v - none.v * Rec.reactionValue(RD, x)) < 1e-6 * Math.max(1, none.v), `pitch ${k} (${x}) scales the points`);
+    assert.ok(Math.abs(g.v - none.v * Rec.reactionValue(RD, x, Rec.interestRank(RD, tgt, k))) < 1e-6 * Math.max(1, none.v), `pitch ${k} (${x}) scales the points`);
   }
   // Computer teams learn: keep a +, try untried pitches, never repeat − or ✗.
   const rnd = () => 0.5;
   assert.equal(Rec.learnedPitch({ home: 'good', pt: 'no' }, rnd), 'home');
-  assert.ok(!['pt', 'prestige'].includes(Rec.learnedPitch({ pt: 'no', prestige: 'bad' }, rnd)));
+  assert.ok(!['pt', 'prestige', undefined].includes(Rec.learnedPitch({ pt: 'no', prestige: 'bad' }, rnd)));
+  // Ranked interests (user, 2026-11-13): the main one swings more than a minor one, a miss costs a little.
+  assert.deepEqual([Rec.interestRank(RD, tgt, ints[0]), Rec.interestRank(RD, tgt, ints[1]), Rec.interestRank(RD, tgt, notInt)], [1, 2, 0]);
+  assert.ok(Rec.reactionValue(RD, 'good', 1) > Rec.reactionValue(RD, 'good', 2) && Rec.reactionValue(RD, 'bad', 1) < Rec.reactionValue(RD, 'bad', 2));
+  assert.ok(Rec.reactionValue(RD, 'no') < 1 && Rec.reactionValue(RD, 'no', 2) === Rec.reactionValue(RD, 'no'));
+  const minor = (v: number) => [() => v, () => false] as const;
+  assert.equal(Rec.learnedPitch({ home: 'good' }, rnd, ...minor(1.2)), 'home', 'a minor + is kept');
+  assert.notEqual(Rec.learnedPitch({ home: 'ok' }, rnd, ...minor(1.05)), 'home', 'a minor ~: keep looking for his main interest');
+  assert.equal(Rec.learnedPitch({ home: 'bad', pt: 'bad' }, rnd, () => 0.9, (k) => k === 'pt'), undefined, 'both interests found, both weak: no pitch');
   assert.equal(Rec.learnedPitch({ pt: 'no', prestige: 'bad', home: 'ok', academics: 'no', contender: 'no' }, rnd), 'home');
   ok(`pitching: ${tgt.player.first} ${tgt.player.last}'s interests ${ints.join(', ')}; reactions ${ints.map((k) => Rec.pitchReaction(RD, tgt, sc, k)).join(', ')}, the rest ✗`);
 }

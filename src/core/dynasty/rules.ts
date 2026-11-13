@@ -69,9 +69,9 @@ export interface OffseasonRules {
   /** Prospects in the pool per open roster spot in the country. */
   poolPerSpot: number;
   /** Points count this many times for an in-state prospect (cheaper to recruit) … */
-  inStateBoost: number;
+  inStateCost: number;
   /** … and this many for one from a pipeline state (pipelineMin players from there on the roster). */
-  pipelineBoost: number; pipelineMin: number;
+  pipelineCost: number; pipelineMin: number;
   /** Most players a team signs in a class. */
   classMax: number;
   // Pitches: how much each matters, by stars (multiplied into a random draw, then scaled to add up to 1)
@@ -86,6 +86,8 @@ export interface OffseasonRules {
   pitchStrongAt: number; pitchWeakBelow: number;
   /** Points count (×) after a pitch: his interest and you're strong, middling, weak; not his interest. */
   pitchGood: number; pitchOk: number; pitchBad: number; pitchNotInterested: number;
+  /** The same for his minor interests (every interest after his main one). */
+  pitchMinorGood: number; pitchMinorOk: number; pitchMinorBad: number;
 
   // New players
   /** How far below the player he's modeled on a freshman starts (OVR points). */
@@ -104,11 +106,11 @@ export const DEFAULT_RULES: OffseasonRules = {
   transferStarter: 0.01, transferDepth: 0.08, transferBackup: 0.12, transferBlocked: 0.1, transferSenior: 0.05, playingTimeCut: 0.8, playingTimeShare: 0.5, transfersPerTeam: 4,
   weeks: 5, userPoints: 1000, cpuPoints: 1000, maxPerProspect: 60, boardSize: 35, scoutOvr: 10, scoutRatings: 20, offerBoost: 1.2, noOffer: 0.6,
   commitThreshold: [40, 60, 100, 160, 230, 320], firstWeek: [1, 1, 2, 2, 3, 4], portalThreshold: 0.7, commitLead: 1.25, flipMargin: 1.5, flipChance: 0.5,
-  topStart: [0.5, 0.45, 0.4, 0.35, 0.3], poolPerSpot: 1.4, inStateBoost: 1.25, pipelineBoost: 1.1, pipelineMin: 4, classMax: 25,
+  topStart: [0.5, 0.45, 0.4, 0.35, 0.3], poolPerSpot: 1.4, inStateCost: 0.8, pipelineCost: 0.9, pipelineMin: 4, classMax: 25,
   pitchHome: [1.6, 1.6, 1.5, 1.3, 0.8, 0.6], pitchPrestige: [0.6, 0.6, 0.7, 0.9, 1.4, 1.7],
   pitchAcademics: [0.7, 0.7, 0.7, 0.7, 0.7, 0.7], pitchContender: [0.4, 0.4, 0.5, 0.7, 1.1, 1.4],
   portalPlayingTime: 0.5, contenderLastSeason: 0.5,
-  pitchInterests: 2, pitchStrongAt: 0.65, pitchWeakBelow: 0.4, pitchGood: 1.5, pitchOk: 1.15, pitchBad: 0.7, pitchNotInterested: 1,
+  pitchInterests: 2, pitchStrongAt: 0.65, pitchWeakBelow: 0.4, pitchGood: 1.6, pitchOk: 1.15, pitchBad: 0.6, pitchMinorGood: 1.2, pitchMinorOk: 1.05, pitchMinorBad: 0.9, pitchNotInterested: 0.9,
   freshmanGapMin: 7, freshmanGapMax: 13, diamondChance: 0.03, diamondPotMin: 84, diamondPotMax: 96,
   minQB: 2, minRB: 4, minWR: 5, minTE: 3, minOL: 7, minDL: 5, minLB: 5, minCB: 5, minS: 4, minKP: 2,
   tier6: 10, tier5: 20, tier4: 35, tier3: 70, tier2: 100,
@@ -116,7 +118,13 @@ export const DEFAULT_RULES: OffseasonRules = {
 
 /** The rules a dynasty plays by: the defaults with its changes. */
 export function rulesOf(d: Pick<Dynasty, 'rules'> | undefined): OffseasonRules {
-  return { ...DEFAULT_RULES, ...(d?.rules ?? {}) };
+  const own = (d?.rules ?? {}) as Partial<OffseasonRules> & { inStateBoost?: number; pipelineBoost?: number };
+  const R = { ...DEFAULT_RULES, ...own };
+  // Dynasties saved before 2026-11-13 had "points count ×" for in-state and pipeline prospects; the
+  // same strength as a cost (1.25 → 80%).
+  if (own.inStateCost === undefined && own.inStateBoost) R.inStateCost = Math.min(1, 1 / own.inStateBoost);
+  if (own.pipelineCost === undefined && own.pipelineBoost) R.pipelineCost = Math.min(1, 1 / own.pipelineBoost);
+  return R;
 }
 
 /** The growth rate for the class a player is leaving. */
@@ -203,7 +211,7 @@ export const RULE_SECTIONS: RuleSection[] = [
       { key: 'weeks', label: 'Weeks', help: '', kind: 'int', min: 1, max: 12 },
       { key: 'userPoints', label: 'Your points a week', help: '', kind: 'int', min: 0, max: 10000 },
       { key: 'cpuPoints', label: 'Computer teams\' points a week', help: '', kind: 'int', min: 0, max: 10000 },
-      { key: 'maxPerProspect', label: 'Most points on one prospect a week', help: '', kind: 'int', min: 1, max: 1000 },
+      { key: 'maxPerProspect', label: 'Most points on one prospect a week', help: 'Before the in-state and pipeline discounts.', kind: 'int', min: 1, max: 1000 },
       { key: 'boardSize', label: 'Prospects on your board', help: '', kind: 'int', min: 1, max: 200 },
       { key: 'scoutOvr', label: 'Scouting: OVR', help: 'Points.', kind: 'int', min: 0, max: 500 },
       { key: 'scoutRatings', label: 'Scouting: all ratings (after the OVR)', help: 'Points.', kind: 'int', min: 0, max: 500 },
@@ -217,15 +225,15 @@ export const RULE_SECTIONS: RuleSection[] = [
       { key: 'flipChance', label: 'Chance a flip happens that week', help: '', kind: 'pct', min: 0, max: 1 },
       { key: 'topStart', label: 'Top schools\' starting interest (× the threshold)', help: 'His five top schools, best first.', kind: 'pct', min: 0, max: 2, items: ['1st', '2nd', '3rd', '4th', '5th'] },
       { key: 'poolPerSpot', label: 'Prospects per open roster spot', help: 'The size of the high-school pool.', kind: 'num', min: 0.5, max: 5 },
-      { key: 'inStateBoost', label: 'In-state prospects: points count (×)', help: '1.25 means in-state prospects cost a fifth less.', kind: 'num', min: 0.5, max: 5 },
-      { key: 'pipelineBoost', label: 'Pipeline states: points count (×)', help: 'A state the roster has enough players from.', kind: 'num', min: 0.5, max: 5 },
+      { key: 'inStateCost', label: 'In-state prospects cost (× the points)', help: '80% means in-state prospects cost a fifth less.', kind: 'pct', min: 0.1, max: 1 },
+      { key: 'pipelineCost', label: 'Prospects from pipeline states cost (× the points)', help: 'A state the roster has enough players from.', kind: 'pct', min: 0.1, max: 1 },
       { key: 'pipelineMin', label: 'Players from a state for a pipeline', help: 'Counting the current roster.', kind: 'int', min: 1, max: 30 },
       { key: 'classMax', label: 'Most signings a team makes', help: '', kind: 'int', min: 1, max: 64 },
     ],
   },
   {
     title: 'Pitches',
-    intro: 'What a prospect cares about: a random draw for each pitch, multiplied by these, then scaled to add up to 100%. Playing time is 1 for everyone. His top pitches are his interests: pitching one gets a reaction. Computer teams learn them the way you do, from the reactions.',
+    intro: 'What a prospect cares about: a random draw for each pitch, multiplied by these, then scaled to add up to 100%. Playing time is 1 for everyone. His top pitches are his interests, the first his main interest and the others minor ones: pitching one gets a reaction, and the page says which kind it is. Computer teams learn them the way you do, from the reactions.',
     fields: [
       { key: 'pitchHome', label: 'Being close to home', help: '', kind: 'num', min: 0, max: 5, items: STARS },
       { key: 'pitchPrestige', label: 'Program prestige', help: '', kind: 'num', min: 0, max: 5, items: STARS },
@@ -236,10 +244,13 @@ export const RULE_SECTIONS: RuleSection[] = [
       { key: 'pitchInterests', label: 'His interests: his top … pitches', help: 'Pitching one of these gets a reaction (+, ~ or −).', kind: 'int', min: 1, max: 5 },
       { key: 'pitchStrongAt', label: 'Your school is strong at a pitch from', help: 'School scores are 0-1 (an A+ academic school is 1, F 0.1).', kind: 'pct', min: 0, max: 1 },
       { key: 'pitchWeakBelow', label: 'Your school is weak at a pitch below', help: '', kind: 'pct', min: 0, max: 1 },
-      { key: 'pitchGood', label: 'Points count after a good pitch (+)', help: 'His interest, and you\'re strong at it.', kind: 'num', min: 0, max: 5 },
-      { key: 'pitchOk', label: 'After a middling pitch (~)', help: 'His interest, you\'re in between.', kind: 'num', min: 0, max: 5 },
-      { key: 'pitchBad', label: 'After a bad pitch (−)', help: 'His interest, but you\'re weak at it: less than no pitch.', kind: 'num', min: 0, max: 5 },
-      { key: 'pitchNotInterested', label: 'After a pitch he doesn\'t care about (✗)', help: '', kind: 'num', min: 0, max: 5 },
+      { key: 'pitchGood', label: 'Main interest: points count after a good pitch (+)', help: 'You\'re strong at it.', kind: 'num', min: 0, max: 5 },
+      { key: 'pitchOk', label: 'Main interest: after a middling pitch (~)', help: 'You\'re in between.', kind: 'num', min: 0, max: 5 },
+      { key: 'pitchBad', label: 'Main interest: after a bad pitch (−)', help: 'You\'re weak at it: less than no pitch.', kind: 'num', min: 0, max: 5 },
+      { key: 'pitchMinorGood', label: 'Minor interest: after a good pitch (+)', help: '', kind: 'num', min: 0, max: 5 },
+      { key: 'pitchMinorOk', label: 'Minor interest: after a middling pitch (~)', help: '', kind: 'num', min: 0, max: 5 },
+      { key: 'pitchMinorBad', label: 'Minor interest: after a bad pitch (−)', help: '', kind: 'num', min: 0, max: 5 },
+      { key: 'pitchNotInterested', label: 'After a pitch he doesn\'t care about (✗)', help: 'Below 1, a wrong guess costs something; no pitch counts 1.', kind: 'num', min: 0, max: 5 },
     ],
   },
   {
