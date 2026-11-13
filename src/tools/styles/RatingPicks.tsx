@@ -2,40 +2,27 @@
 // Teams tab. Engine: src/core/teamRatings.ts.
 import { useEffect, useState } from 'react';
 import { WEATHER, weatherChances, type TeamRating, type Weather } from '../../core/teamRatings';
+import { Field } from '../../ui';
 import './teamstyles.css';
 
-/** A number input that accepts what's typed and reports whole numbers within [min, max]. */
-function NumberField({
-  value,
-  min,
-  max,
-  label,
-  onChange,
-  className,
-}: {
+/** A number field that accepts what's typed and reports whole numbers within [min, max]. */
+function NumberField({ value, min, max, label, hideLabel, onChange }: {
   value: number;
   min: number;
   max: number;
   label: string;
+  hideLabel?: boolean;
   onChange: (v: number) => void;
-  className?: string;
 }) {
   const [text, setText] = useState(String(value));
   useEffect(() => setText(String(value)), [value]);
   return (
-    <input
-      className={className}
-      type="number"
-      inputMode="numeric"
-      min={min}
-      max={max}
-      step={1}
-      aria-label={label}
-      value={text}
-      onChange={(e) => {
-        setText(e.target.value);
-        const v = Number(e.target.value);
-        if (e.target.value.trim() !== '' && Number.isInteger(v) && v >= min && v <= max) onChange(v);
+    <Field
+      label={label} hideLabel={hideLabel} compact type="number" min={min} max={max} step={1} value={text}
+      onChange={(t) => {
+        setText(t);
+        const v = Number(t);
+        if (t.trim() !== '' && Number.isInteger(v) && v >= min && v <= max) onChange(v);
       }}
       onBlur={() => setText(String(value))}
     />
@@ -69,46 +56,29 @@ export function RatingPicks({
   /** Where the starting values came from, for the hint (e.g. "College Football USA 97"). */
   source?: string;
 }) {
-  const off = (
-    <NumberField className="rat-num" value={rating.off} min={0} max={99} label={`${team} offense OVR`} onChange={(v) => onRating({ ...rating, off: v })} />
+  const table = mode === 'table';
+  const ovr = (k: 'off' | 'def') => (
+    <NumberField
+      value={rating[k]} min={0} max={99} hideLabel={table}
+      label={table ? `${team} ${k === 'off' ? 'offense' : 'defense'} OVR` : k === 'off' ? 'OFF' : 'DEF'}
+      onChange={(v) => onRating({ ...rating, [k]: v })}
+    />
   );
-  const def = (
-    <NumberField className="rat-num" value={rating.def} min={0} max={99} label={`${team} defense OVR`} onChange={(v) => onRating({ ...rating, def: v })} />
+  const wx = (i: number) => (
+    <NumberField
+      value={weather[i]} min={0} max={15} hideLabel={table}
+      label={table ? `${team} home weather, ${WEATHER[i]} weight` : WEATHER[i]}
+      onChange={(v) => onWeather(weather.map((x, k) => (k === i ? v : x)) as Weather)}
+    />
   );
-  const wx = (
-    <span className="rat-wx" title={chanceText(weather)}>
-      {WEATHER.map((n, i) => (
-        <label key={n}>
-          <span>{n}</span>
-          <NumberField
-            className="rat-num rat-wnum"
-            value={weather[i]}
-            min={0}
-            max={15}
-            label={`${team} home weather, ${n} weight`}
-            onChange={(v) => onWeather(weather.map((x, k) => (k === i ? v : x)) as Weather)}
-          />
-        </label>
-      ))}
-    </span>
-  );
-  if (mode === 'table') {
+  if (table) {
     const tip = chanceText(weather);
     return (
       <>
-        <td className="sty-cell rat-cell">{off}</td>
-        <td className="sty-cell rat-cell">{def}</td>
+        <td className="rat-cell">{ovr('off')}</td>
+        <td className="rat-cell">{ovr('def')}</td>
         {WEATHER.map((n, i) => (
-          <td key={n} className={`sty-cell rat-cell${i === 0 ? ' rat-wx-first' : ''}`} title={tip}>
-            <NumberField
-              className="rat-num rat-wnum"
-              value={weather[i]}
-              min={0}
-              max={15}
-              label={`${team} home weather, ${n} weight`}
-              onChange={(v) => onWeather(weather.map((x, k) => (k === i ? v : x)) as Weather)}
-            />
-          </td>
+          <td key={n} className={`rat-cell rat-wcell${i === 0 ? ' rat-wx-first' : ''}`} title={tip}>{wx(i)}</td>
         ))}
       </>
     );
@@ -117,16 +87,7 @@ export function RatingPicks({
     <div className="rat-picks">
       <div className="rat-field">
         <span className="rat-head">Team OVR</span>
-        <span className="rat-pair">
-          <label>
-            <span>OFF</span>
-            {off}
-          </label>
-          <label>
-            <span>DEF</span>
-            {def}
-          </label>
-        </span>
+        <span className="rat-pair">{ovr('off')}{ovr('def')}</span>
         <small>
           {source ? `From ${source}. ` : ''}
           {was ? `${was.name} had ${was.rating.off}/${was.rating.def}. ` : ''}
@@ -135,7 +96,7 @@ export function RatingPicks({
       </div>
       <div className="rat-field">
         <span className="rat-head">Home weather</span>
-        {wx}
+        <span className="rat-wx" title={chanceText(weather)}>{WEATHER.map((n, i) => <span key={n}>{wx(i)}</span>)}</span>
         <small>
           Chances in home games: {chanceText(weather)}.{was ? ` ${was.name}: ${chanceText(was.weather)}.` : ''}
         </small>

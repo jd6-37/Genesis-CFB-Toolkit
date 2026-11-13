@@ -1,6 +1,6 @@
 // Rosters tool: edit the players of BW95, CF96 or CF97 team by team, or import them from a
 // spreadsheet (CSV or XLSX), export them as CSV, and download the ROM with fixed checksums.
-import { Button, Note, PageHead, Select, SubHead } from '../../ui';
+import { Button, Check, Field, Note, PageHead, Select, SubHead, Table } from '../../ui';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   GAMES, GROUP_COLUMNS, GROUP_ORDER, GROUP_TITLES, nibbleToRating, nibbleToWeight, ratingRangeLabel, weightRangeLabel,
@@ -367,8 +367,7 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
             slots.length > 0 && (
               <section key={g} className="ros-sec">
                 <SubHead>{GROUP_TITLES[g]}</SubHead>
-                <div className="ros-scroll">
-                  <table>
+                <Table edit className="ros-table">
                     <thead>
                       <tr>
                         <th>Pos</th>
@@ -389,8 +388,7 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
                         <PlayerRow key={d.slot} rom={rom} team={team} def={d} base={base(d.slot)} onEdit={bump} />
                       ))}
                     </tbody>
-                  </table>
-                </div>
+                </Table>
               </section>
             )
           );
@@ -419,22 +417,17 @@ function PlayerRow({ rom, team, def, base, onEdit }: { rom: RosterRom; team: num
   };
   return (
     <tr>
-      <td className="ros-pos">{def.label}</td>
-      <td className={p.numberByte !== base.numberByte ? 'chg' : ''}>
-        <input
-          className="ros-num"
-          inputMode="numeric"
-          maxLength={2}
-          value={text}
-          aria-label={`${def.label} jersey number`}
-          onChange={(e) => setText(e.target.value.replace(/\D/g, ''))}
+      <th scope="row">{def.label}</th>
+      <td>
+        <Field
+          label={`${def.label} jersey number`} hideLabel compact digits maxLength={2} value={text} changed={p.numberByte !== base.numberByte}
+          onChange={(v) => setText(v.replace(/\D/g, ''))}
           onBlur={() => {
             if (text === '') return setText(num === null ? '' : String(num));
             const n = Math.min(99, parseInt(text, 10));
             if (jerseyByte(n) !== p.numberByte) save((pl) => (pl.numberByte = jerseyByte(n)));
             setText(String(n));
           }}
-          onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
         />
       </td>
       {GROUP_COLUMNS[def.group].map((a) => {
@@ -442,20 +435,14 @@ function PlayerRow({ rom, team, def, base, onEdit }: { rom: RosterRom; team: num
         const weight = a === 'Weight';
         const plus = weight ? shownWeightOffset(rom, def) : 0;
         return (
-          <td key={a} className={v !== getRating(base, def, a) ? 'chg' : ''}>
-            <select
-              value={v}
-              aria-label={`${def.label} ${a}`}
-              data-step={weight ? undefined : v}
+          <td key={a}>
+            <Select
+              label={`${def.label} ${a}`} hideLabel compact value={v} changed={v !== getRating(base, def, a)}
+              tone={weight ? undefined : v <= 3 ? 'dim' : v >= 12 ? 'strong' : undefined}
               title={weight ? `Import ${weightRangeLabel(v, plus)} lb` : `Import ${ratingRangeLabel(v)}`}
-              onChange={(e) => save((pl) => setRating(pl, def, a, Number(e.target.value)))}
-            >
-              {STEPS.map((s) => (
-                <option key={s} value={s}>
-                  {weight ? nibbleToWeight(s) + plus : nibbleToRating(s)}
-                </option>
-              ))}
-            </select>
+              options={STEPS.map((st) => ({ value: st, label: String(weight ? nibbleToWeight(st) + plus : nibbleToRating(st)) }))}
+              onChange={(nv) => save((pl) => setRating(pl, def, a, Number(nv)))}
+            />
           </td>
         );
       })}
@@ -610,37 +597,39 @@ function Cfb27Preview({
               </Button>
             </legend>
             {[...plan.teams].sort((a, b) => rom.teams[a.team].school.localeCompare(rom.teams[b.team].school)).map((t) => (
-              <label key={t.team}>
-                <input type="checkbox" checked={pick.has(t.team)} onChange={() => toggle(t.team)} />
+              <Check key={t.team} checked={pick.has(t.team)} onChange={() => toggle(t.team)}>
                 {rom.teams[t.team].school}
                 {t.unfilled.length > 0 && <span className="ros-dim"> ({t.fills.length} of {t.fills.length + t.unfilled.length})</span>}
                 {canRate && <span className="ros-dim ros-ovr"> {t.ovr.off}/{t.ovr.def}</span>}
-              </label>
+              </Check>
             ))}
           </fieldset>
           {rom.game === 'bw95' && (
-            <label className="ros-tweak">
-              <input type="checkbox" checked={tweak} disabled={olPatchState(rom.data) === 'unknown'} onChange={(e) => setTweak(e.target.checked)} />
+            <div className="ros-tweak">
+              <Check checked={tweak} disabled={olPatchState(rom.data) === 'unknown'} onChange={setTweak}>
               Show offensive linemen 25 lb heavier on the roster screen (display only). Today's linemen are heavier than
               the original game's, and the conversion keeps the original weights so the line play stays the same.
-            </label>
+            </Check>
+            </div>
           )}
           {canRate && (
-            <label className="ros-tweak">
-              <input type="checkbox" checked={ratings} onChange={(e) => setRatings(e.target.checked)} />
+            <div className="ros-tweak">
+              <Check checked={ratings} onChange={setRatings}>
               Set each team's OFF and DEF (shown after its name) from its CFB 27 starters: the best player at each starting
               position, offense and defense, on an OVR scale of 0-99. Simulated games and the preseason poll use them; they
               can be changed in the Teams tab.
-            </label>
+            </Check>
+            </div>
           )}
           {walsh && (
-            <label className="ros-tweak">
-              <input type="checkbox" checked={useWalsh} disabled={!walsh.data} onChange={(e) => setUseWalsh(e.target.checked)} />
+            <div className="ros-tweak">
+              <Check checked={useWalsh} disabled={!walsh.data} onChange={setUseWalsh}>
               Use the {CFB27_LATEST.season} Walsh Reports for these teams. They name players by their jersey numbers in
               these rosters. Longer reports of teams you leave out are trimmed to 650 characters; edit any report in the
               Teams tab.
               {walsh.error && <span className="ros-warn"> {walsh.error}</span>}
-            </label>
+            </Check>
+            </div>
           )}
           <div className="ros-convert-actions">
             <Button disabled={pick.size === 0} onClick={() => onApply([...pick].sort((a, b) => a - b), tweak, ratings, useWalsh && !!walsh?.data)}>

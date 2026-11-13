@@ -21,7 +21,7 @@ import { History, Home, Leaders, Player, Rankings, Scores, Standings, Team, Team
 import { Offseason, type OffseasonActions } from './OffseasonPage';
 import { seasonRom } from '../../core/dynasty/offseason';
 import { canReplaceBench, randomBench } from '../../core/dynasty/bench';
-import { Button, Field, FileButton, Masthead, Modal, NavBar, Note, Select, Table, ThemeToggle } from '../../ui';
+import { Button, Check, Field, FileButton, Masthead, Modal, NavBar, Note, Select, Table, ThemeToggle } from '../../ui';
 import './dynasty.css';
 
 const THEME_KEY = 'dynasty-theme';
@@ -414,9 +414,7 @@ function Manage({ d, art, list, busy, note, actions }: {
           </p>
           <div className="dy-row">
             <FileButton label="Import save" accept=".srm,.sav,.bin" disabled={!!busy} onFile={(f) => actions.importSave(f, older)} />
-            <label className="dy-check">
-              <input type="checkbox" checked={older} onChange={(e) => setOlder(e.target.checked)} /> Allow a save with fewer results than the last one
-            </label>
+            <Check checked={older} onChange={setOlder}>Allow a save with fewer results than the last one</Check>
           </div>
           {season.imports.length > 0 && (
             <Table figures>

@@ -178,9 +178,13 @@ interface SelectProps {
   placeholder?: string;
   /** A short line under the dropdown (what the choice means). */
   note?: ReactNode;
+  /** The value differs from what was loaded (an edit not yet saved or downloaded). */
+  changed?: boolean;
+  /** `dim`: a weak or placeholder value; `strong`: a standout one. In a grid of values, so the eye finds the extremes. */
+  tone?: 'dim' | 'strong';
 }
 /** A labeled dropdown. */
-export function Select({ label, hideLabel, value, options, onChange, disabled, compact, title, placeholder, note }: SelectProps) {
+export function Select({ label, hideLabel, value, options, onChange, disabled, compact, title, placeholder, note, changed, tone }: SelectProps) {
   // Runs of options with the same group become one <optgroup>.
   const runs: { group?: string; items: Option[] }[] = [];
   for (const o of options) {
@@ -190,7 +194,7 @@ export function Select({ label, hideLabel, value, options, onChange, disabled, c
   }
   const item = (o: Option) => <option key={o.value} value={o.value} disabled={o.disabled}>{o.label}</option>;
   return (
-    <label className={`ui-field${compact ? ' ui-field-compact' : ''}`}>
+    <label className={cx('ui-field', compact && 'ui-field-compact', changed && 'ui-field-changed', tone && `ui-field-${tone}`)}>
       <span className={hideLabel ? 'sr-only' : undefined}>{label}</span>
       <select value={value} disabled={disabled} title={title} onChange={(e) => onChange(e.target.value)}>
         {placeholder !== undefined && <option value="" disabled hidden>{placeholder}</option>}
@@ -218,18 +222,35 @@ interface FieldProps {
   note?: ReactNode;
   /** The value isn't acceptable as it stands (a red border; say why in `note` or a `Note`). */
   invalid?: boolean;
-  /** Called when the reader leaves the field. */
+  /** Called when the reader leaves the field. With it, Enter leaves the field too (the value is taken on leaving). */
   onBlur?: () => void;
+  /** A smaller control for table cells and tight rows. */
+  compact?: boolean;
+  /** The value differs from what was loaded (an edit not yet saved or downloaded). */
+  changed?: boolean;
+  /** Whole numbers typed as text (a jersey number): a number pad on phones, no spinner. */
+  digits?: boolean;
 }
-/** A labeled one-line text, number or search field. */
-export function Field({ label, hideLabel, value, onChange, type = 'text', placeholder, min, max, step, maxLength, disabled, note, invalid, onBlur }: FieldProps) {
+/** A checkbox with its label (a short phrase or a sentence or two). */
+export function Check({ children, checked, onChange, disabled }: { children: ReactNode; checked: boolean; onChange: (checked: boolean) => void; disabled?: boolean }) {
   return (
-    <label className="ui-field">
+    <label className="ui-check">
+      <input type="checkbox" checked={checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
+      <span>{children}</span>
+    </label>
+  );
+}
+
+/** A labeled one-line text, number or search field. */
+export function Field({ label, hideLabel, value, onChange, type = 'text', placeholder, min, max, step, maxLength, disabled, note, invalid, onBlur, compact, changed, digits }: FieldProps) {
+  return (
+    <label className={cx('ui-field', compact && 'ui-field-compact', changed && 'ui-field-changed')}>
       <span className={hideLabel ? 'sr-only' : undefined}>{label}</span>
       <input
-        type={type} inputMode={type === 'number' ? 'decimal' : undefined} value={value} placeholder={placeholder}
+        type={type} inputMode={digits ? 'numeric' : type === 'number' ? 'decimal' : undefined} value={value} placeholder={placeholder}
         min={min} max={max} step={step} maxLength={maxLength} disabled={disabled} aria-invalid={invalid || undefined}
         onChange={(e) => onChange(e.target.value)} onBlur={onBlur}
+        onKeyDown={onBlur ? (e) => { if (e.key === 'Enter') e.currentTarget.blur(); } : undefined}
       />
       {note && <span className="ui-field-note">{note}</span>}
     </label>
@@ -263,8 +284,12 @@ interface DataTableProps<T> {
  * Cell classes: `ui-left` (text columns), `ui-num` (one figure cell), `ui-text` (a word in a `figures` table);
  * a totals row is `<tr className="ui-total">`.
  */
-export function Table({ children, figures, className }: {
+export function Table({ children, figures, edit, words, className }: {
   children: ReactNode;
+  /** Every cell is text (a reference list): left-aligned, with row headings read as text. */
+  words?: boolean;
+  /** An editor: cells hold dropdowns and fields (`compact`), so they are left-aligned and tighter. */
+  edit?: boolean;
   /** Every cell that isn't `ui-left` or `ui-text` is a figure, shown in the pixel numerals. */
   figures?: boolean;
   /** A layout hook only (column widths); the look comes from the component. */
@@ -272,7 +297,7 @@ export function Table({ children, figures, className }: {
 }) {
   return (
     <div className="ui-table-wrap">
-      <table className={['ui-table', figures ? 'ui-figures' : '', className ?? ''].filter(Boolean).join(' ')}>{children}</table>
+      <table className={['ui-table', figures ? 'ui-figures' : '', edit ? 'ui-table-edit' : '', words || edit ? 'ui-table-words' : '', className ?? ''].filter(Boolean).join(' ')}>{children}</table>
     </div>
   );
 }

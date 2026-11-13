@@ -41,35 +41,10 @@
   align-items: start;
 }
 .ros-sec { padding: 10px 12px 12px; background: var(--night); border: 1px solid var(--line); border-radius: var(--radius); }
-.ros-scroll { overflow-x: auto; }
-.ros table { width: 100%; border-collapse: collapse; font-size: 15px; font-variant-numeric: tabular-nums; }
-.ros th {
-  padding: 2px 3px 4px;
-  text-align: left;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--chalk-dim);
-  white-space: nowrap;
-}
-.ros td { padding: 2px 3px; border-top: 1px solid var(--line); }
-.ros td.ros-pos { width: 3.6rem; font-family: var(--display); font-weight: 700; font-size: 17px; color: var(--menu); white-space: nowrap; }
-.ros td select, .ros-num {
-  width: 100%;
-  min-width: 3.7rem;
-  padding: 3px 2px;
-  background: var(--deep);
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  color: var(--chalk);
-}
-.ros td select option { background: var(--deep); color: var(--chalk); }
-.ros-num { width: 2.9rem; min-width: 2.9rem; text-align: center; }
-.ros td.chg select, .ros td.chg .ros-num { border-color: var(--menu); background: rgba(246, 216, 74, 0.16); }
-/* weak and strong ratings stand out a little (weight is left alone) */
-.ros select[data-step='0'], .ros select[data-step='1'], .ros select[data-step='2'], .ros select[data-step='3'] { color: #8f8bc4; }
-.ros select[data-step='12'], .ros select[data-step='13'], .ros select[data-step='14'], .ros select[data-step='15'] { color: #ffffff; font-weight: 600; }
+.ros-table th:first-child { width: 3.6rem; color: var(--accent); }
+.ros .ros-table select { min-width: 3.9rem; padding-left: var(--sp-1); padding-right: 0; }
+.ros .ros-table input { width: 2.9rem; min-width: 2.9rem; text-align: center; }
+.ros-sec { min-width: 0; }
 .ros-scale { max-width: 90ch; margin-top: 12px; }
 .ros-th-note { display: block; font-size: 10px; font-weight: 500; letter-spacing: 0.02em; text-transform: none; }
 .ros .ui-note ul { margin: 6px 0 0; padding-left: 20px; }
@@ -86,8 +61,6 @@
   border-radius: var(--radius);
 }
 .ros-pick legend { padding: 0 6px; color: var(--chalk-dim); }
-.ros-pick label, .ros-tweak { display: flex; align-items: baseline; gap: 8px; cursor: pointer; }
-.ros-pick input, .ros-tweak input { accent-color: var(--menu); }
 .ros-tweak { margin: 12px 0 0; max-width: 90ch; }
 .ros-convert-actions { display: flex; justify-content: flex-end; margin-top: 12px; }
 .ros-fallbacks { margin-top: 6px; }

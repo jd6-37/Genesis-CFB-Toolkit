@@ -48,7 +48,8 @@
   font: italic 800 var(--fs-5)/1.2 var(--font-display); text-transform: uppercase; letter-spacing: 0.06em;
 }
 
-.ui-field { display: grid; align-content: start; gap: var(--sp-1); font: 700 var(--fs-2)/1.2 var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+/* relative: a hidden label stays inside the field, so a field in a scrolling table can't widen the page. */
+.ui-field { position: relative; display: grid; align-content: start; gap: var(--sp-1); font: 700 var(--fs-2)/1.2 var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
 .ui-field select, .ui-field input {
   min-height: 40px; padding: var(--sp-2) var(--sp-3); max-width: 100%;
   border: 2px solid var(--rule-strong); border-radius: var(--radius);
@@ -77,7 +78,26 @@
 .ui-field select:disabled, .ui-field input:disabled { opacity: 0.55; cursor: not-allowed; }
 .ui-field input[aria-invalid='true'] { border-color: var(--bad); }
 .ui-field-note { font: 400 var(--fs-1)/1.3 var(--font-body); text-transform: none; letter-spacing: 0; }
-.ui-field-compact select { min-height: 32px; padding: var(--sp-1) var(--sp-2); border-width: 1px; border-color: var(--rule); font-weight: 600; }
+.ui-field-compact select, .ui-field-compact input { min-height: 32px; padding: var(--sp-1) var(--sp-2); border-width: 1px; border-color: var(--rule); font-weight: 600; }
+.ui-field-compact input[type='number'] { appearance: textfield; -moz-appearance: textfield; text-align: center; }
+.ui-field-compact input[type='number']::-webkit-inner-spin-button, .ui-field-compact input[type='number']::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.ui-field-changed select, .ui-field-changed input { border-color: var(--accent); background: var(--highlight); }
+.ui-field-dim select { color: var(--text-muted); font-weight: 400; }
+.ui-field-strong select { font-weight: 700; }
+
+.ui-check { display: flex; align-items: baseline; gap: var(--sp-2); cursor: pointer; color: var(--text); }
+.ui-check input { flex: none; margin: 0; accent-color: var(--accent); }
+.ui-check input:disabled, .ui-check input:disabled + span { opacity: 0.55; cursor: not-allowed; }
+.ui-check input:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+
+/* A table of words (left-aligned; a row heading reads as text), and an editor table, whose cells hold compact dropdowns and fields. */
+.ui-table.ui-table-words th, .ui-table.ui-table-words td { text-align: left; }
+.ui-table.ui-table-edit td { padding: var(--sp-1); }
+.ui-table.ui-table-words tbody th { border-bottom: 0; font: 700 var(--fs-4)/1.2 var(--font-display); text-transform: none; letter-spacing: 0; color: var(--text); white-space: nowrap; }
+.ui-table-words tbody tr:nth-child(odd) th { background: var(--row); }
+.ui-table.ui-table-edit tbody th { padding: var(--sp-1) var(--sp-2); }
+.ui-table-words tbody tr.ui-row-mine:nth-child(n) th { background: var(--highlight); color: var(--accent); }
+.ui-table-edit .ui-field select, .ui-table-edit .ui-field input { width: 100%; }
 
 .ui-empty { margin: var(--sp-7) auto; max-width: 520px; text-align: center; color: var(--text-muted); }
 

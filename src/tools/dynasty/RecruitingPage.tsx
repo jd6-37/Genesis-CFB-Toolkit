@@ -1,5 +1,5 @@
 // Full recruiting: five weeks of points and offers for the user teams' boards, then signing day.
-import { Button, Field, Meter, Note, Select, SubHead, Table, Tabs } from '../../ui';
+import { Button, Check, Field, Meter, Note, Select, SubHead, Table, Tabs } from '../../ui';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Dynasty } from '../../core/dynasty/model';
 import {
@@ -499,7 +499,7 @@ function ProspectsTab({ hub, portal }: { hub: Hub; portal: boolean }) {
               {!portal && <Select label="From" value={kind} onChange={reset(setKind)} options={[{ value: 'all', label: 'High school and portal' }, { value: 'hs', label: 'High school' }, { value: 'portal', label: 'Transfer portal' }, { value: 'near', label: `Close to ${school}` }]} />}
               <Select label="State" value={state} onChange={reset(setState)} options={[{ value: '', label: 'All states' }, { value: 'home', label: 'In state and pipelines' }, { value: 'pipeline', label: 'Your pipeline states' }, ...states.map((x) => ({ value: x, label: `${x}${pipeSet.has(x) ? ' (pipeline)' : ''}` }))]} />
               <Select label="Sort" value={sort} onChange={reset(setSort)} options={[{ value: 'stars', label: 'Stars' }, { value: 'interest', label: 'Interest in you' }, { value: 'ovr', label: 'OVR (known)' }, ...SORT_RATINGS.map((a) => ({ value: a, label: `${a} (scouted)` }))]} />
-              <label className="dy-check"><input type="checkbox" checked={hide} onChange={(e) => setHide(e.target.checked)} /> Hide prospects on my board</label>
+              <Check checked={hide} onChange={setHide}>Hide prospects on my board</Check>
             </div>
             <p className="dy-small dy-dim">{list.length.toLocaleString('en-US')} uncommitted {portal ? 'portal players' : 'prospects'}.{hub.full ? ` Your board is full (${R.boardSize}).` : ''}</p>
             <Table className="dy-prospect-table">

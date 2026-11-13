@@ -1,6 +1,6 @@
 // The Teams tab's College Football 27 reference: every CFB 27 team's offense style and defensive
 // playbook, and the Bill Walsh '95 styles recommended for it (src/core/cfb27Styles.ts).
-import { Field, SubHead } from '../../ui';
+import { Check, Field, SubHead, Table } from '../../ui';
 import { useMemo, useState } from 'react';
 import { CFB27, OFFENSE_FOR } from '../../core/cfb27Styles';
 import { DEFENSE, OFFENSE } from '../../core/styles';
@@ -60,17 +60,14 @@ export function Cfb27Reference({ onRom }: { onRom: Set<string> | null }) {
           <Field label="Find a team or conference" type="search" value={query} onChange={setQuery} placeholder="e.g. Tulane or SEC" />
         </div>
         {onRom && (
-          <label className="cfb-only">
-            <input type="checkbox" checked={onlyRom} onChange={(e) => setOnlyRom(e.target.checked)} />
-            Only teams on this ROM ({onRom.size})
-          </label>
+          <Check checked={onlyRom} onChange={setOnlyRom}>Only teams on this ROM ({onRom.size})</Check>
         )}
         <span className="cfb-count" aria-live="polite">
           {rows.length} of {CFB27.length} teams{onRom ? ' · ● on this ROM' : ''}
         </span>
       </div>
       <div className="cfb-scroll">
-        <table className="cfb-table">
+        <Table words className="cfb-table">
           <thead>
             <tr>
               <th scope="col">School</th>
@@ -97,7 +94,7 @@ export function Cfb27Reference({ onRom }: { onRom: Set<string> | null }) {
               </tr>
             ))}
           </tbody>
-        </table>
+        </Table>
       </div>
     </section>
   );

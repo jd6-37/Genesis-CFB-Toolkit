@@ -1,6 +1,6 @@
 // Season tool: rename Bill Walsh '95's four conferences, move teams between them, and lock in
 // schedules. Teams that aren't locked keep the game's random schedules.
-import { Button, Field, FileButton, Note, PageHead, Select, SubHead } from '../../ui';
+import { Button, Field, FileButton, Note, PageHead, Select, SubHead, Table } from '../../ui';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CONFERENCES, NAME_LEN, WEEKS, conferenceGames, isLocked, lockAll, lockTeam, readSeason, seasonFile, seasonFromFile,
@@ -391,7 +391,7 @@ function SeasonEditor({ teams, season, onChange }: { teams: string[]; season: Se
 
         {locked ? (
           <div className="sea-scroll">
-            <table className="sea-weeks">
+            <Table edit className="sea-weeks">
               <thead>
                 <tr>
                   <th scope="col">Week</th>
@@ -428,42 +428,24 @@ function SeasonEditor({ teams, season, onChange }: { teams: string[]; season: Se
                         </div>
                       </td>
                       <td>
-                        <select
-                          aria-label={`Week ${g.week + 1} opponent`}
-                          className={'conf' in o ? 'sea-any' : ''}
-                          value={oppValue(o)}
-                          onChange={(e) => {
-                            const opp = parseOpp(e.target.value);
+                        <Select
+                          label={`Week ${g.week + 1} opponent`} hideLabel compact tone={'conf' in o ? 'dim' : undefined} value={oppValue(o)}
+                          onChange={(v) => {
+                            const opp = parseOpp(v);
                             apply(() => setGame(season, team, g.week, opp, teams));
                           }}
-                        >
-                          <optgroup label="Random">
-                            {names.map((nm, c) => (
-                              <option key={c} value={`c${c}`} disabled={!randomLeft(c) && !('conf' in o && o.conf === c)}>
-                                Any {nm} team
-                              </option>
-                            ))}
-                          </optgroup>
-                          {byConf.map((list, c) => (
-                            <optgroup key={c} label={names[c]}>
-                              {list
-                                .filter(({ t }) => t !== team)
-                                .map(({ n, t }) => (
-                                  <option key={t} value={`t${t}`}>
-                                    {isLocked(season, t) ? '● ' : ''}
-                                    {n}
-                                  </option>
-                                ))}
-                            </optgroup>
-                          ))}
-                        </select>
+                          options={[
+                            ...names.map((nm, c) => ({ value: `c${c}`, label: `Any ${nm} team`, group: 'Random', disabled: !randomLeft(c) && !('conf' in o && o.conf === c) })),
+                            ...byConf.flatMap((list, c) => list.filter(({ t }) => t !== team).map(({ n, t }) => ({ value: `t${t}`, label: `${isLocked(season, t) ? '● ' : ''}${n}`, group: names[c] }))),
+                          ]}
+                        />
                       </td>
                       <td className="sea-tag">{oc === season.conf[team] ? 'Conference' : ''}</td>
                     </tr>
                   );
                 })}
               </tbody>
-            </table>
+            </Table>
             <p className="hint sea-foot">
               The game plays weeks 1-{DEFAULT_WEEKS} unless you change Weeks on Game Setup (1-{WEEKS}). Picking a team locks
               that team too (●), and the two teams' old opponents play each other that week. "Any … team" is one of that

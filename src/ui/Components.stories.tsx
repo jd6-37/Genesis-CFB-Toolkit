@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
-import { Button, Field, FileButton, DataTable, Empty, Masthead, Meter, Modal, NavBar, Note, Num, PageHead, Row, Select, Stat, Steps, SubHead, Table, Tabs, ThemeToggle } from './index';
+import { Button, Check, Field, FileButton, DataTable, Empty, Masthead, Meter, Modal, NavBar, Note, Num, PageHead, Row, Select, Stat, Steps, SubHead, Table, Tabs, ThemeToggle } from './index';
 
 const meta: Meta = { title: 'Components' };
 export default meta;
@@ -94,6 +94,40 @@ function ThemeDemo() {
 }
 /** The switch only; the Dynasty app sets data-theme from it. */
 export const ThemeSwitch: Story = { render: () => <ThemeDemo /> };
+
+/** An editor table: compact dropdowns and fields in the cells; a changed row and changed cells are marked. */
+export const EditTable: Story = {
+  render: () => (
+    <Table edit>
+      <thead><tr><th>Pos</th><th>No.</th><th>Speed</th><th>Hands</th></tr></thead>
+      <tbody>
+        <tr>
+          <th scope="row">HB1</th>
+          <td><Field label="HB1 jersey number" hideLabel compact digits maxLength={2} value="4" onChange={() => {}} onBlur={() => {}} /></td>
+          <td><Select label="HB1 Speed" hideLabel compact tone="strong" value={86} options={[{ value: 80, label: '80' }, { value: 86, label: '86' }]} onChange={() => {}} /></td>
+          <td><Select label="HB1 Hands" hideLabel compact tone="dim" value={13} options={[{ value: 13, label: '13' }, { value: 20, label: '20' }]} onChange={() => {}} /></td>
+        </tr>
+        <tr className="ui-row-mine">
+          <th scope="row">HB2</th>
+          <td><Field label="HB2 jersey number" hideLabel compact digits maxLength={2} value="28" onChange={() => {}} onBlur={() => {}} /></td>
+          <td><Select label="HB2 Speed" hideLabel compact changed value={80} options={[{ value: 80, label: '80' }, { value: 86, label: '86' }]} onChange={() => {}} /></td>
+          <td><Select label="HB2 Hands" hideLabel compact value={53} options={[{ value: 53, label: '53' }, { value: 60, label: '60' }]} onChange={() => {}} /></td>
+        </tr>
+      </tbody>
+    </Table>
+  ),
+};
+
+/** Checkboxes: a short phrase, a longer explanation, and one that can't be changed. */
+export const Checks: Story = {
+  render: () => (
+    <div style={{ display: 'grid', gap: 'var(--sp-3)', maxWidth: '60ch' }}>
+      <Check checked onChange={() => {}}>Only teams on this ROM (36)</Check>
+      <Check checked={false} onChange={() => {}}>Show offensive linemen 25 lb heavier on the roster screen (display only). The conversion keeps the original weights so the line play stays the same.</Check>
+      <Check checked={false} disabled onChange={() => {}}>Use the 2026 Walsh Reports for these teams</Check>
+    </div>
+  ),
+};
 
 /** A hand-written table: a caption, a word column inside figures, and a totals row. */
 export const HandTable: Story = {
