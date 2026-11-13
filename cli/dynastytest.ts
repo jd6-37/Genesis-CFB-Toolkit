@@ -480,6 +480,13 @@ assert.throws(() => Rec.recruitingWeek(f2, {}), /signing day/);
 const rsEnd = f2.offseason!.recruiting!;
 for (const t of f2.teams) assert.ok(rsEnd.prospects.filter((p) => p.committed === t.index).length <= rsEnd.spots[t.index]);
 const f3 = Rec.finishRecruiting(f2, tpl);
+// Signing day records, for each user team, the prospects it offered who went elsewhere (the signing page lists them).
+for (const u of f2.userTeams) {
+  const missed = f3.offseason!.missed![u];
+  const offered = f2.offseason!.recruiting!.prospects.filter((p) => p.offers.includes(u) && p.from !== u).length;
+  assert.ok(missed.length <= Math.min(10, offered) && missed.every((m) => m.to !== u && m.place >= 0), 'the ones that got away: offered, not signed by the team, ten at most');
+}
+assert.equal(f3.offseason!.cutsPicked, undefined, 'the cuts are not picked yet after signing day');
 const fSigned = f3.offseason!.events.filter((e) => e.kind === 'signed');
 for (const t of f3.teams) assert.ok(fSigned.filter((e) => e.kind === 'signed' && e.team === t.index).length <= rsEnd.spots[t.index]);
 assert.ok(f3.players.filter((p) => rsEnd.prospects.some((q) => q.id === p.id)).every((p) => p.status === 'transferred' ? p.team === null : p.team !== null), 'portal players moved or left');
