@@ -1,5 +1,5 @@
 // The offseason, step by step: departures, the transfer portal, signing day, cuts, the next season.
-import { Button, Note, PageHead, Select, Steps, SubHead, Table, Tabs } from '../../ui';
+import { Button, Field, Note, PageHead, Select, Steps, SubHead, Table, Tabs } from '../../ui';
 import { useMemo, useState } from 'react';
 import type { DPlayer, Dynasty, OffseasonEvent } from '../../core/dynasty/model';
 import {
@@ -17,6 +17,10 @@ import { Recruiting } from './RecruitingPage';
 import { playerName } from '../../core/dynasty/derive';
 import { Headshot, TeamLink, hometownText, href, mainColor, onColor, useDyn } from './ui';
 import { ScheduleEditor } from './SchedulePage';
+import { EditLook, EditPlayer } from './EditPlayer';
+import { applyEdits, editLock } from '../../core/dynasty/edit';
+import { sideOf } from '../../core/dynasty/numbers';
+import { POSITIONS } from '../../core/dynasty/offseason';
 
 export interface OffseasonActions {
   /** Saves the new dynasty (and shows errors). */
@@ -30,14 +34,15 @@ export interface OffseasonActions {
 
 /** The step whose results the page shows (the button below them runs the next one). */
 /**
- * The offseason's steps, the new season's last three included (user, 2026-11-13: "I think the schedule
- * should be a proper step in the offseason, not a secondary button at the end"). The first five follow the
- * offseason state; the last three come once the new season is set up and can be visited in any order.
+ * The offseason's steps, the new season's last four included (user, 2026-11-13: "I think the schedule
+ * should be a proper step in the offseason, not a secondary button at the end"; "this needs its own step in
+ * offseason, at the end, after cuts, a proper edit players step"). The first six follow the offseason
+ * state; the last four come once the new season is set up and can be visited in any order.
  */
-const STEPS = ['Projected depth chart', 'Players leaving', 'Transfer portal', 'Signing day and cuts', 'Training', 'Training results', 'Depth chart', 'Schedule', 'Download the ROM'] as const;
+const STEPS = ['Projected depth chart', 'Players leaving', 'Transfer portal', 'Signing day and cuts', 'Training', 'Training results', 'Edit players', 'Depth chart', 'Schedule', 'Download the ROM'] as const;
 const STEP_OF = { depth: 0, portal: 1, recruiting: 2, signing: 2, cuts: 3, ready: 5 } as const;
 const FIRST_SEASON_STEP = 6;
-const SEASON_STEPS = ['depth', 'schedule', 'rom'] as const;
+const SEASON_STEPS = ['players', 'depth', 'schedule', 'rom'] as const;
 type SeasonStep = typeof SEASON_STEPS[number];
 const stepList = (full: boolean, links: boolean) => STEPS.map((label, i) => ({
   label: i === 2 && full ? 'Recruiting' : label,
@@ -155,7 +160,7 @@ export function Offseason({ actions, busy, arg }: { actions: OffseasonActions; b
     return (
       <section className={startedNew ? 'dy-off dy-off-wide' : 'dy-off'}>
         <PageHead title={startedNew ? `Offseason ${season.year - 1}` : 'Offseason'} />
-        {startedNew ? <SeasonSteps actions={actions} step={(SEASON_STEPS as readonly string[]).includes(arg ?? '') ? (arg as SeasonStep) : 'depth'} /> : (
+        {startedNew ? <SeasonSteps actions={actions} step={(SEASON_STEPS as readonly string[]).includes(arg ?? '') ? (arg as SeasonStep) : 'players'} /> : (
           <>
             <p>
               {done
@@ -226,14 +231,14 @@ export function Offseason({ actions, busy, arg }: { actions: OffseasonActions; b
             </div>
           ))}
           <p>
-            Next: every team's depth chart for {st.year + 1} (its 32 players in Bill Walsh '95 and their backups, the best OVR at each spot, and the team OVRs). Then you can download
-            the {st.year + 1} ROM.
+            Next: the {st.year + 1} season is set up. New players get their jersey numbers and every team its depth chart (the best OVR at each spot). Then you can
+            change numbers, looks and ratings, set your depth chart and schedule, and download the {st.year + 1} ROM.
           </p>
           <Next
             busy={busy}
-            label={`Next: the ${st.year + 1} depth chart`}
+            label={`Next: set up the ${st.year + 1} season`}
             onClick={() => actions.run('Setting the depth charts…', async () => {
-              await actions.commit(finishOffseason(d), `The ${st.year + 1} season is set up. Three steps are left: your depth chart, your schedule and the ROM.`);
+              await actions.commit(finishOffseason(d), `The ${st.year + 1} season is set up. Four steps are left: your players' numbers and looks, your depth chart, your schedule and the ROM.`);
             })}
           />
         </>
@@ -570,7 +575,7 @@ function TrainingStep({ actions, busy }: { actions: OffseasonActions; busy: stri
 }
 
 /**
- * The new season's three steps (user, 2026-11-13: the schedule "should be a proper step in the offseason"):
+ * The new season's four steps (Edit players first) (user, 2026-11-13: the schedule "should be a proper step in the offseason"):
  * the depth chart, the schedule, the ROM. The season is set up already, so they can be visited in any
  * order; each has a button to the next.
  */
@@ -580,6 +585,7 @@ function SeasonSteps({ actions, step }: { actions: OffseasonActions; step: Seaso
   const [team, setTeam] = useState(d.userTeams[0]);
   const pl = (id: number) => d.players[id - 1];
   const steps = <Steps label="Offseason steps" steps={stepList(true, true)} current={FIRST_SEASON_STEP + SEASON_STEPS.indexOf(step)} />;
+  if (step === 'players') return <>{steps}<EditPlayersStep team={team} onPick={setTeam} /></>;
   if (step === 'depth') {
     const slots = team !== undefined ? season.slots[team] ?? [] : [];
     return (
@@ -634,6 +640,93 @@ function SeasonSteps({ actions, step }: { actions: OffseasonActions; step: Seaso
 }
 
 const LAYOUT = rosterLayout('bw95', false, true, true);
+
+/** A jersey number in a roster row: typed, taken when the field is left (or on Enter). */
+function NumberCell({ p }: { p: DPlayer }) {
+  const { d, commit } = useDyn();
+  const shown = p.jersey < 0 ? '' : String(p.jersey);
+  const [text, setText] = useState(shown);
+  const [error, setError] = useState(false);
+  return (
+    <Field
+      label={`Number of ${playerName(p)}`} hideLabel compact digits maxLength={2} value={text} invalid={error}
+      onChange={(v) => { setText(v.replace(/\D/g, '')); setError(false); }}
+      onBlur={() => {
+        if (text === shown) return;
+        if (text === '') return setText(shown);
+        commit(applyEdits(d, new Map([[p.id, { jersey: Number(text) }]]))).catch(() => { setError(true); });
+      }}
+    />
+  );
+}
+
+/**
+ * Edit players (user, 2026-11-13: "a proper edit players step. There the user can change jersey numbers, edit
+ * appearances, and edit ratings too if they want"): the new season's roster with each number in a field, the
+ * new players marked, and a player's editors (the player page's) opened in place.
+ */
+function EditPlayersStep({ team, onPick }: { team: number | undefined; onPick: (t: number) => void }) {
+  const { d } = useDyn();
+  const season = d.seasons[d.seasons.length - 1];
+  const [open, setOpen] = useState<number | null>(null);
+  const lock = editLock(d);
+  const next = <div className="dy-row dy-next"><Button href={href('offseason/depth')}>Next: the depth chart</Button></div>;
+  if (team === undefined) return <><SubHead>{season.year} players</SubHead><p>You have no team in this dynasty. Every team's new players have their numbers.</p>{next}</>;
+  const roster = d.players.filter((p) => p.status === 'active' && p.team === team)
+    .sort((a, b) => POSITIONS.indexOf(a.pos) - POSITIONS.indexOf(b.pos) || b.ovr - a.ovr || a.id - b.id);
+  const isNew = (p: DPlayer) => p.recruit?.year === season.year ? (p.recruit.stars ? 'Signed' : 'Walk-on')
+    : p.transfers?.some((x) => x.year === season.year - 1 && x.to === team) ? 'Transfer' : null;
+  // A number may be worn once on offense and once on defense.
+  const worn = new Map<string, DPlayer[]>();
+  for (const p of roster) if (p.jersey >= 0) worn.set(`${sideOf(p.pos)}${p.jersey}`, [...(worn.get(`${sideOf(p.pos)}${p.jersey}`) ?? []), p]);
+  const clashes = [...worn.values()].filter((x) => x.length > 1);
+  const sel = open !== null ? roster.find((p) => p.id === open) : undefined;
+  return (
+    <>
+      <SubHead>{season.year} players</SubHead>
+      <p>
+        {d.teams[team].school}'s {roster.length} players for {season.year}. The new players have their numbers. Change a number
+        here; open a player to change his look, his ratings or anything else about him.
+      </p>
+      <TeamSwitch team={team} onPick={(t) => { setOpen(null); onPick(t); }} />
+      {lock && <Note>{lock}</Note>}
+      {clashes.map((x) => (
+        <Note key={x[0].id} kind="error">
+          Number {x[0].jersey} is worn by {x.length} players on {sideOf(x[0].pos) === 'O' ? 'offense' : 'defense'}: {x.map(playerName).join(', ')}. Two players may share a number only across offense and defense.
+        </Note>
+      ))}
+      {sel && (
+        <div className="dy-editp" id="dy-editp">
+          <Headshot p={sel} size={96} />
+          <div>
+            <h4>{sel.jersey >= 0 ? `#${sel.jersey} ` : ''}{playerName(sel)} <span className="dy-dim">{sel.pos}, {sel.cls}, {sel.ovr} OVR</span></h4>
+            <div className="dy-edit-wrap"><EditPlayer key={sel.id} p={sel} /><EditLook key={`l${sel.id}`} p={sel} /><Button variant="quiet" href={href(`player/${sel.id}`)}>His page</Button><Button variant="link" onClick={() => setOpen(null)}>Close</Button></div>
+          </div>
+        </div>
+      )}
+      <Table edit className="dy-editp-table">
+        <thead><tr><th>No.</th><th>Player</th><th>Pos</th><th>Class</th><th>OVR</th><th aria-label="New this year" /><th aria-label="Edit" /></tr></thead>
+        <tbody>
+          {roster.map((p) => {
+            const tag = isNew(p);
+            return (
+              <tr key={p.id} className={p.id === open ? 'ui-row-mine' : undefined}>
+                <td>{lock ? (p.jersey < 0 ? '' : p.jersey) : <NumberCell key={`${p.id}-${p.jersey}`} p={p} />}</td>
+                <th scope="row"><a href={href(`player/${p.id}`)}>{playerName(p)}</a></th>
+                <td>{p.pos}</td>
+                <td>{p.cls}</td>
+                <td className="ui-num">{p.ovr}</td>
+                <td>{tag && <span className="dy-chip">{tag}</span>}</td>
+                <td>{!lock && <Button variant="link" label={`Edit ${playerName(p)}`} onClick={() => { setOpen(p.id); requestAnimationFrame(() => document.getElementById('dy-editp')?.scrollIntoView({ block: 'nearest' })); }}>Edit</Button>}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </Table>
+      {next}
+    </>
+  );
+}
 
 /**
  * The projected depth chart (user, 2026-11-12: "a step for projected depth chart prior to players leaving.
