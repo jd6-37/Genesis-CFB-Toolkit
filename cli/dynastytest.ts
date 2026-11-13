@@ -546,6 +546,19 @@ if (user !== undefined) {
     const g = gain(k), x = Rec.pitchReaction(RD, tgt, sc, k);
     assert.ok(Math.abs(g.v - none.v * Rec.reactionValue(RD, x, Rec.interestRank(RD, tgt, k))) < 1e-6 * Math.max(1, none.v), `pitch ${k} (${x}) scales the points`);
   }
+  // Withdrawing an offer (user, 2026-11-13): gone at once, his interest stays, and he can't pick the team.
+  {
+    const w = Rec.recruitingWeek(f1, { [user]: { points: { [tgt.id]: 50 }, offers: [tgt.id] } });
+    const got = w.offseason!.recruiting!.prospects.find((p) => p.id === tgt.id)!;
+    assert.ok(got.offers.includes(user));
+    if (got.committed !== user) {
+      const back = Rec.withdrawOffer(w, user, tgt.id).offseason!.recruiting!.prospects.find((p) => p.id === tgt.id)!;
+      assert.ok(!back.offers.includes(user) && back.interest[user] === got.interest[user], 'the offer is gone, the interest stays');
+      assert.equal(Rec.withdrawOffer(Rec.withdrawOffer(w, user, tgt.id), user, tgt.id).offseason!.recruiting!.prospects.find((p) => p.id === tgt.id)!.offers.includes(user), false);
+    } else assert.throws(() => Rec.withdrawOffer(w, user, tgt.id), /committed to you/);
+    const cpu = f1.teams.find((t) => !f1.userTeams.includes(t.index))!.index;
+    assert.throws(() => Rec.withdrawOffer(w, cpu, tgt.id), /Only your teams/);
+  }
   // Computer teams learn: keep a +, try untried pitches, never repeat − or ✗.
   const rnd = () => 0.5;
   assert.equal(Rec.learnedPitch({ home: 'good', pt: 'no' }, rnd), 'home');
