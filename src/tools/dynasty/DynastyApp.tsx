@@ -574,7 +574,7 @@ function PlayersCsv({ d, actions }: { d: Dynasty; actions: ManageActions }) {
     <>
       <h3>Players (CSV)</h3>
       <p>
-        Every player with his Bill Walsh '95 ratings as the game shows them (0-100), to edit in a spreadsheet. Import the file again:
+        Every player with his attribute ratings as the game shows them (0-100), to edit in a spreadsheet. Import the file again:
         rows with an ID change that player, rows without one add a player, a cleared Team releases him. You see every change before it's applied.
       </p>
       <div className="dy-row">
