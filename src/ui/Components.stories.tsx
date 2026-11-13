@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
-import { Button, FileButton, DataTable, Empty, Modal, Note, PageHead, Row, Select, Stat, SubHead, Table, ThemeToggle } from './index';
+import { Button, FileButton, DataTable, Empty, Meter, Modal, Note, PageHead, Row, Select, Stat, SubHead, Table, Tabs, ThemeToggle } from './index';
 
 const meta: Meta = { title: 'Components' };
 export default meta;
@@ -125,3 +125,29 @@ function ModalDemo() {
   );
 }
 export const Modals: Story = { render: () => <ModalDemo /> };
+
+function TabsDemo() {
+  const [tab, setTab] = useState<'board' | 'prospects' | 'portal' | 'school' | 'classes'>('board');
+  return (
+    <>
+      <Tabs label="Recruiting sections" value={tab} onChange={setTab} tabs={[
+        { value: 'board', label: 'Board', count: 12 }, { value: 'prospects', label: 'Prospects' }, { value: 'portal', label: 'Transfer portal' },
+        { value: 'school', label: 'My school' }, { value: 'classes', label: 'Top classes' },
+      ]} />
+      <p>The open section: {tab}.</p>
+    </>
+  );
+}
+/** The sections of a hub page; a count is optional. */
+export const TabsRow: Story = { render: () => <TabsDemo /> };
+
+/** Shares from 0 to 1: a prospect's top schools, the user's school in its team color. */
+export const Meters: Story = {
+  render: () => (
+    <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 32px', gap: '8px 12px', alignItems: 'center', maxWidth: 420 }}>
+      <b>Texas State</b><Meter value={0.78} label="Interest in Texas State" color="#501214" /><span>78</span>
+      <span>Houston</span><Meter value={0.66} label="Interest in Houston" /><span>66</span>
+      <span>UTSA</span><Meter value={0.58} label="Interest in UTSA" /><span>58</span>
+    </div>
+  ),
+};

@@ -137,11 +137,12 @@ export const hometownText = (p: { hometown: string; state: string }) =>
   [p.hometown, p.state && p.state !== 'Non-US' ? p.state : ''].filter(Boolean).join(', ');
 
 /** A player's 16-bit headshot (headshot.ts) in his team's colors, drawn crisp at any size. */
-export function Headshot({ p, size = 120 }: { p: DPlayer; size?: number }) {
+export function Headshot({ p, size = 120, plain = false }: { p: DPlayer; size?: number; /** A gray jersey whatever his team (prospects; user, 2026-11-13). */ plain?: boolean }) {
   const { d } = useDyn();
   const ref = useRef<HTMLCanvasElement>(null);
-  const jersey = p.team !== null ? mainColor(d, p.team) : '#6b6e75';
-  const trim = (p.team !== null && SCHOOL_COLORS[d.teams[p.team].school]?.[1]) || '#ffffff';
+  const own = !plain && p.team !== null;
+  const jersey = own ? mainColor(d, p.team!) : '#6b6e75';
+  const trim = (own && SCHOOL_COLORS[d.teams[p.team!].school]?.[1]) || '#ffffff';
   useEffect(() => {
     const c = ref.current?.getContext('2d');
     if (!c) return;

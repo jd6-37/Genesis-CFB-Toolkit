@@ -170,7 +170,7 @@ export function Offseason({ actions, busy }: { actions: OffseasonActions; busy: 
 
   const step = STEP_OF[st.step];
   return (
-    <section className="dy-off">
+    <section className={st.step === 'recruiting' ? 'dy-off dy-off-wide' : 'dy-off'}>
       <PageHead title={`Offseason ${st.year}`} />
       <ol className="dy-steps">
         {STEPS.map((s0, i) => (st.mode === 'full' && i === 2 ? 'Recruiting' : s0)).map((s, i) => <li key={s} className={i < step ? 'dy-done' : i === step ? 'dy-now' : ''} aria-current={i === step ? 'step' : undefined}>{s}</li>)}
