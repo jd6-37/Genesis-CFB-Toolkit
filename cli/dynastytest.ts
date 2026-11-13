@@ -34,6 +34,7 @@ import { gameText, dynastyAreaProblem, dynastyHeaderValid, dynastyRomId, DYN_ARE
 import { simFromOvr } from '../src/core/teamRatings';
 import { parseCsv } from '../src/core/rosterSheet';
 import { rosterLayout } from '../src/core/rosterLayouts';
+import * as Depth from '../src/core/dynasty/depth';
 import { bwSlotOf, fineOf, ovrOf, shownFine, splitFine, stepOf, valueOfFine } from '../src/core/dynasty/ratings';
 import { hasFineRatings, putFineOffsets, readFineOffsets } from '../src/core/dynasty/fine';
 import { GROUP_ATTRS } from '../src/core/rosterLayouts';
@@ -343,6 +344,16 @@ if (spot >= 0) {
   assert.ok(Math.abs(Off.transferChance(promoted, depthGuy) - 0.08) < 1e-9, 'a promised starting job: no longer blocked');
 }
 assert.ok(Off.projectedProblems(o1, team1, [...chart.slice(0, 31), 999999]).length > 0, 'a player from elsewhere is refused');
+// A team with no quarterback: the projected chart leaves the spot open and nobody holds two spots;
+// the season's chart still fills all 32.
+{
+  const noQb = act(o1).filter((p) => p.team === team1 && p.pos !== 'QB').slice(0, 28);
+  const open = Depth.teamDepth(noQb, true).slots;
+  const ids = open.filter((x) => x !== null);
+  assert.equal(open[lay.findIndex((def) => def.label === 'QB')], null, 'no quarterback: the QB spot stays open');
+  assert.equal(new Set(ids).size, ids.length, 'nobody holds two spots on the projected chart');
+  assert.ok(Depth.teamDepth(noQb).slots.every((x) => x !== null), "the season's chart fills every spot");
+}
 const o1p = Off.confirmDepth(o1);
 assert.equal(o1p.offseason!.step, 'portal');
 const entering = o1p.offseason!.portal!;

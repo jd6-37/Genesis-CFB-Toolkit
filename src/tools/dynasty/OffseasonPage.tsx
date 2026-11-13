@@ -664,7 +664,7 @@ function ProjectedDepth({ actions, busy }: { actions: OffseasonActions; busy: st
         Your {st.year + 1} depth chart as it stands after graduation and early entries ({of('graduated').length.toLocaleString('en-US')} graduates and{' '}
         {of('pro').length} early entries across the country; your teams' are listed in the next step). Players who start (★) are much less likely
         to enter the transfer portal, and players who got the ball last season are content too. You can change the depth chart again before the
-        season. Signing day hasn't happened yet, so a thin position may show a player in two spots.
+        season. Signing day hasn't happened yet, so a spot with nobody to play it stays open for now.
       </p>
       {d.userTeams.map((u) => {
         const roster = d.players.filter((p) => p.team === u && p.status === 'active');
@@ -684,10 +684,10 @@ function ProjectedDepth({ actions, busy }: { actions: OffseasonActions; busy: st
                       <td className="ui-left">{def.label}{!DEPTH_SLOTS.has(def.label) && <span className="dy-dim" title="Starting spot"> ★</span>}</td>
                       <td className="ui-left">
                         <select aria-label={`${def.label}`} value={here?.id ?? ''} onChange={(e) => pick(u, slot, Number(e.target.value))}>
-                          {!here && <option value="">Nobody</option>}
+                          {!here && <option value="">Open</option>}
                           {cands.map((p) => {
                             const at = c.indexOf(p.id);
-                            return <option key={p.id} value={p.id}>{playerName(p)}, {p.cls} {p.ovr}{at >= 0 && at !== slot ? ` (${LAYOUT[at].label})` : ''}</option>;
+                            return <option key={p.id} value={p.id}>{playerName(p)}, {p.cls} {p.ovr}{at >= 0 && at !== slot ? ` (now at ${LAYOUT[at].label})` : ''}</option>;
                           })}
                         </select>
                       </td>
