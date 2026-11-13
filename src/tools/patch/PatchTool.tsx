@@ -1,6 +1,7 @@
 // The Patch tab, the first step: load a BW95 ROM; if it's the original game, add one of the mod's
 // released patches (read from the Elevated repo's patches.json) or a .bps file; then take the ROM on
 // to Team Swap, or to Season, Teams and Rosters.
+import { Button, FileButton, Note, PageHead, SubHead } from '../../ui';
 import { useEffect, useMemo, useState } from 'react';
 import { applyBps, BpsError } from '../../core/bps';
 import { sha1Hex } from '../../core/bytes';
@@ -21,7 +22,7 @@ import {
 import { describeUnknown, identifyRom, KNOWN, openRom, WIDE_ROM_TEXT, WIDE_TABS_TEXT, type OpenedRom } from '../../core/romfile';
 import './patch.css';
 
-type Note = { kind: 'error' | 'ok'; text: string } | null;
+type Msg = { kind: 'error' | 'ok'; text: string } | null;
 type ListState = { state: 'loading' } | { state: 'ok'; list: PatchList } | { state: 'error'; text: string };
 
 const STOCK_SHA1 = Object.keys(KNOWN).find((k) => KNOWN[k].kind === 'bw95' && !KNOWN[k].rebalanced)!;
@@ -52,7 +53,7 @@ export interface PatchApi {
   /** What was applied in this tab: a listed patch (its name), or a .bps file not on the list. */
   applied: { name: string; fromFile: boolean } | null;
   busy: boolean;
-  note: Note;
+  note: Msg;
   /** A BW95 ROM opened elsewhere (a file dropped on the Team Swap tab). */
   open: (r: OpenedRom) => void;
   loadFiles: (files: FileList | File[]) => Promise<void>;
@@ -66,7 +67,7 @@ export function usePatchRom(): PatchApi {
   const [loaded, setLoaded] = useState<OpenedRom | null>(null);
   const [applied, setApplied] = useState<PatchApi['applied']>(null);
   const [busy, setBusy] = useState(false);
-  const [note, setNote] = useState<Note>(null);
+  const [note, setNote] = useState<Msg>(null);
   const base = useMemo(() => patchBase(refFromPage(window.location.search)), []);
 
   useEffect(() => {
@@ -186,13 +187,10 @@ export function PatchTool({
 
   return (
     <>
-      <section className="tool-head" aria-label="Patch">
-        <h2>Patch</h2>
-        <p>
+      <PageHead title="Patch">
           Start here. Load your Bill Walsh College Football '95 ROM. If it's the original game, add one of the mod's
           patches below. Then take the ROM on to Team Swap, Season, Teams and Rosters.
-        </p>
-      </section>
+        </PageHead>
 
       <section className="roms pat-roms" aria-label="ROM file">
         <label className={`rom${rom ? ' rom-ok' : ''}`}>
@@ -219,9 +217,9 @@ export function PatchTool({
           />
         </label>
         {note && (
-          <p className={`note ${note.kind}`} role={note.kind === 'error' ? 'alert' : 'status'}>
+          <Note kind={note.kind}>
             {note.text}
-          </p>
+          </Note>
         )}
       </section>
 
@@ -234,7 +232,7 @@ export function PatchTool({
       {original && (
         <section className="pat-add" aria-labelledby="pat-add-h">
           <div className="pat-head">
-            <h3 id="pat-add-h">Add a patch</h3>
+            <SubHead id="pat-add-h">Add a patch</SubHead>
             {release && (
               <p>
                 Latest release: <b>{release.name}</b>
@@ -248,14 +246,14 @@ export function PatchTool({
 
           {list.state === 'loading' && <p className="hint">Loading the patch list…</p>}
           {list.state === 'error' && (
-            <p className="note error" role="alert">
+            <Note kind="error">
               Couldn't load the patch list from GitHub ({list.text}). You can still add a .bps file you've downloaded
               from the{' '}
               <a href={PATCH_REPO_URL} target="_blank" rel="noreferrer">
                 mod's GitHub page
               </a>
               , or use the original game as it is.
-            </p>
+            </Note>
           )}
 
           {chosen && (
@@ -277,26 +275,14 @@ export function PatchTool({
 
           <div className="pat-actions">
             {chosen && (
-              <button
-                className="btn btn-go"
+              <Button
                 onClick={() => void api.apply(chosen)}
                 disabled={busy || applied?.name === chosen.name}
               >
                 {busy ? 'Patching…' : applied?.name === chosen.name ? 'Patched' : 'Apply patch'}
-              </button>
+              </Button>
             )}
-            <label className="btn btn-quiet">
-              Use a .bps file
-              <input
-                type="file"
-                accept=".bps"
-                hidden
-                onChange={(e) => {
-                  if (e.target.files) void api.loadFiles(e.target.files);
-                  e.target.value = '';
-                }}
-              />
-            </label>
+            <FileButton variant="quiet" label="Use a .bps file" accept=".bps" multiple onFiles={(fs) => void api.loadFiles(fs)} />
           </div>
 
           {isPatched && rom && applied && (
@@ -313,12 +299,12 @@ export function PatchTool({
                   : 'Team Swap now uses this patched ROM. Season, Teams and Rosters have changes in another ROM, so they ask before opening it.'}
               </p>
               <div className="pat-done-actions">
-                <button className="btn" onClick={() => download(rom.name, rom.data)}>
+                <Button variant="quiet" onClick={() => download(rom.name, rom.data)}>
                   Download patched ROM
-                </button>
-                <button className="btn btn-quiet" onClick={api.undo}>
+                </Button>
+                <Button variant="quiet" onClick={api.undo}>
                   Back to the original game
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -391,12 +377,12 @@ function NextSteps({
   if (rom.known?.wide) {
     return (
       <section className="pat-next" aria-labelledby="pat-next-h">
-        <h3 id="pat-next-h">Next</h3>
+        <SubHead id="pat-next-h">Next</SubHead>
         <ul>
           <li className="pat-step">
-            <button className="btn" onClick={onEdit}>
+            <Button variant="quiet" onClick={onEdit}>
               Edit season, teams and rosters
-            </button>
+            </Button>
             <p className="hint">{WIDE_TABS_TEXT}</p>
           </li>
           <li className="pat-step">
@@ -410,7 +396,7 @@ function NextSteps({
   const again = !problem && hasSwappedTeams(rom.data); // swapped by Team Swap before, which can swap it again
   return (
     <section className="pat-next" aria-labelledby="pat-next-h">
-      <h3 id="pat-next-h">Next</h3>
+      <SubHead id="pat-next-h">Next</SubHead>
       <ul>
         {problem ? (
           <li className="pat-step">
@@ -418,9 +404,9 @@ function NextSteps({
           </li>
         ) : (
           <li className="pat-step">
-            <button className="btn" onClick={onSwap}>
+            <Button variant="quiet" onClick={onSwap}>
               Swap teams
-            </button>
+            </Button>
             <p className="hint">
               {again
                 ? "Some of this ROM's teams are already swapped in. Replace any team, those too, with one from College Football USA 97. You'll load that ROM in the Team Swap tab."
@@ -429,9 +415,9 @@ function NextSteps({
           </li>
         )}
         <li className="pat-step">
-          <button className="btn" onClick={onEdit}>
+          <Button variant="quiet" onClick={onEdit}>
             Edit season, teams and rosters
-          </button>
+          </Button>
           <p className="hint">
             {inWork ? 'This ROM is already open in the Season, Teams and Rosters tabs.' : 'Opens this ROM in the Season, Teams and Rosters tabs.'}
             {!problem && ' If you also swap teams, do that first: those tabs can take the Team Swap result.'}

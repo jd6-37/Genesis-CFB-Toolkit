@@ -3,18 +3,20 @@
    element: it marks the open row and the Download button, as it marks the selected item
    in the game. */
 :root {
-  --indigo: #23208a;
-  --night: #16135e;
-  --deep: #0f0c45;
-  --chalk: #f2f0ff;
-  --chalk-dim: #b9b5e8;
-  --menu: #f6d84a;
-  --line: rgba(242, 240, 255, 0.16);
-  --error: #ff9a8a;
+  /* The Toolkit's own names for the design system's tokens (src/ui/tokens.css; :root is the Mod Toolkit brand). */
+  --indigo: var(--surface);
+  --night: var(--surface-raised);
+  --deep: var(--surface-sunken);
+  --chalk: var(--text);
+  --chalk-dim: var(--text-muted);
+  --menu: var(--accent);
+  --line: var(--rule);
+  --error: var(--bad);
   --chrome: linear-gradient(180deg, #9fdcff 0%, #e9f7ff 30%, #ffffff 52%, #ffd2a8 72%, #f08a3c 100%);
-  --display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
-  --body: 'Barlow', system-ui, sans-serif;
-  color-scheme: dark;
+  --display: var(--font-display);
+  --body: var(--font-body);
+  /* The subtle retro touch: a hard shadow, no blur. */
+  --hard: 4px 4px 0 var(--surface-sunken);
 }
 
 * { box-sizing: border-box; }
@@ -48,7 +50,7 @@ button, input, select { font: inherit; color: inherit; }
 /* Masthead: set like the game's title, stacked and slanted. */
 .masthead { margin-bottom: 40px; position: relative; }
 .mast-dynasty {
-  position: absolute; top: 0; right: 0; padding: 6px 18px; border: 2px solid var(--menu); border-radius: 4px;
+  position: absolute; top: 0; right: 0; padding: 6px 18px; border: 2px solid var(--menu); border-radius: var(--radius);
   color: var(--menu); font-family: var(--display); font-style: italic; font-weight: 800; font-size: 22px; text-decoration: none;
 }
 .mast-dynasty:hover { background: rgba(246, 216, 74, 0.12); }
@@ -70,18 +72,15 @@ button, input, select { font: inherit; color: inherit; }
 .lede a { color: var(--chalk); text-underline-offset: 3px; }
 
 /* One heading per tool; more tools will follow. */
-.tool-head { margin-bottom: 20px; }
-.tool-head h2 { font-family: var(--display); font-style: italic; font-weight: 800; font-size: 44px; margin: 0; }
-.tool-head p { max-width: 62ch; margin: 6px 0 0; color: var(--chalk-dim); }
 
 /* Tool tabs */
-.tabs { display: flex; gap: 32px; margin: 0 0 32px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tabs { display: flex; gap: 32px; margin: 0 0 32px; border-bottom: 2px solid var(--chalk-dim); overflow-x: auto; }
 .tab {
   padding: 4px 0 10px;
-  margin-bottom: -1px;
+  margin-bottom: -2px;
   background: none;
   border: 0;
-  border-bottom: 3px solid transparent;
+  border-bottom: 4px solid transparent;
   font-family: var(--display);
   font-style: italic;
   font-weight: 800;
@@ -107,8 +106,8 @@ button, input, select { font: inherit; color: inherit; }
   gap: 6px;
   padding: 18px 20px;
   background: var(--night);
-  border: 1px solid var(--line);
-  border-radius: 6px;
+  border: 2px solid var(--chalk-dim);
+  box-shadow: var(--hard);
   cursor: pointer;
 }
 .rom:hover { border-color: var(--chalk-dim); }
@@ -119,13 +118,13 @@ button, input, select { font: inherit; color: inherit; }
 .rom-empty { color: var(--chalk); }
 .rom-choose { text-decoration: underline; text-underline-offset: 3px; }
 .rom-ok { border-color: rgba(246, 216, 74, 0.5); }
-.roms .note { grid-column: 1 / -1; margin: 0; }
+.roms .ui-note { grid-column: 1 / -1; margin: 0; }
 
 .waiting p { color: var(--chalk-dim); font-size: 18px; }
 
 /* Team board */
 .board-head { display: flex; align-items: baseline; gap: 24px; flex-wrap: wrap; margin-bottom: 12px; }
-.board-head h2, .limits h3 { font-family: var(--display); font-weight: 700; font-size: 32px; margin: 0; }
+.board-head h2 { font-family: var(--display); font-weight: 700; font-size: 32px; margin: 0; }
 .board-head p { margin: 0; color: var(--chalk-dim); }
 
 .rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
@@ -153,7 +152,7 @@ button, input, select { font: inherit; color: inherit; }
   padding: 8px 10px;
   background: var(--deep);
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius);
 }
 .row-swapped .row-pick select { color: var(--menu); font-weight: 600; border-color: rgba(246, 216, 74, 0.45); }
 
@@ -162,7 +161,7 @@ button, input, select { font: inherit; color: inherit; }
   padding: 6px 12px;
   background: none;
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius);
   cursor: pointer;
 }
 .row-toggle:hover { border-color: var(--chalk-dim); }
@@ -188,7 +187,7 @@ button, input, select { font: inherit; color: inherit; }
   padding: 8px 10px;
   background: var(--night);
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: var(--radius);
   color: var(--chalk);
   font-size: 16px;
 }
@@ -209,7 +208,7 @@ button, input, select { font: inherit; color: inherit; }
   height: 22px;
   padding: 0;
   border: 1px solid rgba(242, 240, 255, 0.5);
-  border-radius: 3px;
+  border-radius: var(--radius);
   cursor: pointer;
 }
 .swatch:hover { border-color: var(--chalk); }
@@ -223,12 +222,12 @@ button, input, select { font: inherit; color: inherit; }
   padding: 12px;
   background: var(--night);
   border: 1px solid var(--chalk-dim);
-  border-radius: 6px;
+  border-radius: var(--radius);
   box-shadow: 0 12px 32px rgba(6, 4, 30, 0.6);
 }
 .picker-blue { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; margin-bottom: 8px; }
 .picker-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; }
-.picker button { aspect-ratio: 1; padding: 0; border: 1px solid transparent; border-radius: 2px; cursor: pointer; }
+.picker button { aspect-ratio: 1; padding: 0; border: 1px solid transparent; border-radius: var(--radius); cursor: pointer; }
 .picker-blue button { aspect-ratio: 2 / 1; }
 .picker button.on { border-color: var(--menu); box-shadow: 0 0 0 1px var(--menu); }
 .picker-note { margin: 8px 0 0; font-size: 12px; color: var(--chalk-dim); line-height: 1.35; }
@@ -238,11 +237,10 @@ button, input, select { font: inherit; color: inherit; }
 
 .cheer { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
 .cheer-title { font-family: var(--display); font-weight: 700; font-size: 18px; }
-.cheer-stage { background: #2f8a35; padding: 6px 4px; border-radius: 3px; align-self: flex-start; max-width: 100%; overflow: hidden; }
+.cheer-stage { background: #2f8a35; padding: 6px 4px; border-radius: var(--radius); align-self: flex-start; max-width: 100%; overflow: hidden; }
 .cheer .field-row { justify-content: space-between; font-size: 14px; color: var(--chalk-dim); }
 
 .limits { margin-top: 40px; max-width: 64ch; }
-.limits h3 { font-size: 24px; }
 .limits ul { margin: 8px 0 0; padding-left: 20px; color: var(--chalk-dim); }
 
 /* Dock */
@@ -261,28 +259,10 @@ button, input, select { font: inherit; color: inherit; }
   border-top: 1px solid var(--line);
 }
 .dock-count { margin: 0; font-family: var(--display); font-weight: 700; font-size: 22px; }
-.dock .note { margin: 0; flex: 1 1 260px; }
+.dock .ui-note { margin: 0; flex: 1 1 260px; }
 .dock-actions { margin-left: auto; display: flex; gap: 10px; flex-wrap: wrap; }
 
-.btn {
-  display: inline-flex;
-  align-items: center;
-  padding: 10px 16px;
-  background: none;
-  border: 1px solid var(--chalk-dim);
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 600;
-}
-.btn:hover { border-color: var(--chalk); }
-.btn:focus-within { outline: 2px solid var(--menu); outline-offset: 2px; }
-.btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.btn-go { background: var(--chrome); color: var(--night); border-color: #ffffff; font-size: 17px; padding: 10px 22px; }
-.btn-quiet { align-self: flex-start; border-color: var(--line); font-weight: 500; font-size: 14px; padding: 6px 12px; }
 
-.note { font-size: 15px; }
-.note.error { color: var(--error); }
-.note.ok { color: var(--menu); }
 
 @media (max-width: 900px) {
   .page { padding: 32px 18px 200px; }

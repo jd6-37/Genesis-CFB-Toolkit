@@ -1,6 +1,7 @@
 // Teams tab: for each of Bill Walsh '95's 36 teams (or the 2026 Season Edition's 138), the offense and defense style the CPU uses, the
 // team OVRs (offense, defense) and the home weather, on the working ROM that Season and Rosters edit
 // too (src/tools/shared/WorkRom.tsx).
+import { Button, Note, PageHead, SubHead } from '../../ui';
 import { useEffect, useMemo, useState } from 'react';
 import { openRosterRom } from '../../core/rosterRom';
 import {
@@ -26,12 +27,12 @@ import { hasKits } from '../../core/kits';
 import { KitEditor } from './KitEditor';
 import './teamstyles.css';
 
-type Note = { kind: 'error' | 'ok'; text: string } | null;
+type Msg = { kind: 'error' | 'ok'; text: string } | null;
 type Ctx = { problem: string } | { names: string[]; info: StyleInfo; ovrShown: boolean; wide: boolean };
 
 export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapSource | null }) {
   const { work, rev } = api;
-  const [note, setNote] = useState<Note>(null);
+  const [note, setNote] = useState<Msg>(null);
   const [editing, setEditing] = useState<number | null>(null);
   useEffect(() => {
     setNote(null);
@@ -111,7 +112,7 @@ export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapS
     if (n) api.edited();
   };
 
-  const edit = (f: () => Note | void) => {
+  const edit = (f: () => Msg | void) => {
     if (!work) return;
     try {
       setNote(f() ?? null);
@@ -140,7 +141,7 @@ export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapS
     api.edited();
   };
   const saveReport = (t: number, r: Report) =>
-    edit((): Note => {
+    edit((): Msg => {
       const trimmed = writeReports(work!.data, new Map([[t, r]]));
       if (!trimmed.length || !ok) return null;
       const n = trimmed.length;
@@ -149,13 +150,10 @@ export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapS
 
   return (
     <>
-      <section className="tool-head" aria-label="Teams">
-        <h2>Teams</h2>
-        <p>
+      <PageHead title="Teams">
           Set up each of Bill Walsh '95's teams (36, or 138 in the 2026 Season Edition): the offense and defense the
           computer runs, the team's OFF and DEF ratings, the weather in its home games and its Walsh Report.
-        </p>
-      </section>
+        </PageHead>
 
       <WorkRomCard
         api={api}
@@ -167,9 +165,9 @@ export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapS
         <div className="sty-layout">
           <section aria-label="Team settings">
             <div className="sty-apply">
-              <button className="btn" onClick={applyRecommended} disabled={!onRom?.size}>
+              <Button variant="quiet" onClick={applyRecommended} disabled={!onRom?.size}>
                 Apply recommended styles
-              </button>
+              </Button>
               <p className="hint">
                 Sets each team's styles from its College Football 27 playbooks ({onRom?.size ?? 0} of {TEAMS} teams on this
                 ROM have one; see the table below). Undo puts back the styles the ROM was loaded with.
@@ -278,14 +276,14 @@ export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapS
             {api.edits.rosters && <small className="dock-also">+ roster changes</small>}
           </p>
           {note && (
-            <p className={`note ${note.kind}`} role={note.kind === 'error' ? 'alert' : 'status'}>
+            <Note kind={note.kind}>
               {note.text}
-            </p>
+            </Note>
           )}
           <div className="dock-actions">
-            <button className="btn btn-go" onClick={() => setNote(api.save())} disabled={!api.edits.any && !work.checkOff}>
+            <Button onClick={() => setNote(api.save())} disabled={!api.edits.any && !work.checkOff}>
               Download ROM
-            </button>
+            </Button>
           </div>
         </footer>
       )}
@@ -297,7 +295,7 @@ function StyleLegend({ info, ovrShown, wide }: { info: StyleInfo; ovrShown: bool
   return (
     <aside className="sty-legend" aria-label="What the settings do">
       <div>
-      <h3>Offense</h3>
+      <SubHead>Offense</SubHead>
       <dl>
         {OFFENSE.map((n, i) => (
           <div key={n}>
@@ -308,7 +306,7 @@ function StyleLegend({ info, ovrShown, wide }: { info: StyleInfo; ovrShown: bool
       </dl>
       </div>
       <div>
-      <h3>Defense</h3>
+      <SubHead>Defense</SubHead>
       <dl>
         {DEFENSE.map((n, i) => (
           <div key={n}>
@@ -319,7 +317,7 @@ function StyleLegend({ info, ovrShown, wide }: { info: StyleInfo; ovrShown: bool
       </dl>
       </div>
       <div>
-        <h3>Ratings and weather</h3>
+        <SubHead>Ratings and weather</SubHead>
         <p>
           <b>OFF and DEF</b> are team OVRs, 0-99. The season's simulated games (computer against computer) and the
           preseason poll use them.{' '}

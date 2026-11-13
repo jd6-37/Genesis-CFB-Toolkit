@@ -1,3 +1,4 @@
+import { Button, FileButton, Note, PageHead, SubHead } from './ui';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BwTeam, parseBw95 } from './core/bw95';
 import { CfTeam, parseCf97 } from './core/cf97';
@@ -28,7 +29,7 @@ interface CfState {
   rom: OpenedRom;
   teams: CfTeam[];
 }
-type Note = { kind: 'error' | 'ok'; text: string } | null;
+type Msg = { kind: 'error' | 'ok'; text: string } | null;
 
 const EMPTY: (SlotConfig | null)[] = Array(36).fill(null);
 
@@ -75,8 +76,8 @@ export default function App() {
   const [cf, setCf] = useState<CfState | null>(null);
   const [slots, setSlots] = useState<(SlotConfig | null)[]>(EMPTY);
   const [open, setOpen] = useState<number | null>(null);
-  const [romNote, setRomNote] = useState<Note>(null);
-  const [note, setNote] = useState<Note>(null);
+  const [romNote, setRomNote] = useState<Msg>(null);
+  const [note, setNote] = useState<Msg>(null);
   const [dragging, setDragging] = useState(false);
   const [tab, setTab] = useState<Tab>(tabFromHash);
   const work = useWorkRom(); // the ROM the Season, Teams and Rosters tabs edit together
@@ -340,14 +341,11 @@ export default function App() {
       </div>
 
       <div id="panel-swap" role="tabpanel" aria-labelledby="tab-swap" hidden={tab !== 'swap'}>
-      <section className="tool-head" aria-label="Team Swap">
-        <h2>Team Swap</h2>
-        <p>
+      <PageHead title="Team Swap">
           Replace any of Bill Walsh College Football '95's 36 teams with teams from College Football USA 97: logo,
           helmet, wordmark, names, uniform colors and the computer's offense and defense styles. Schedules, rosters and
           saves stay as they are (edit them in the Season and Rosters tabs).
-        </p>
-      </section>
+        </PageHead>
 
       <section className="roms" aria-label="ROM files">
         <RomCard
@@ -363,24 +361,24 @@ export default function App() {
           onFiles={onFiles}
         />
         {romNote && (
-          <p className={`note ${romNote.kind}`} role="alert">
+          <Note kind={romNote.kind}>
             {romNote.text}
-          </p>
+          </Note>
         )}
         {start.original && start.rom === start.original && (
-          <p className="note ok">
+          <Note kind="ok">
             This is the original game. To add the mod's fatigue fix and more first, use the{' '}
             <button className="link-btn" onClick={() => pickTab('patch')}>
               Patch tab
             </button>
             .
-          </p>
+          </Note>
         )}
         {bw && swappedBefore.length > 0 && (
-          <p className="note ok">
+          <Note kind="ok">
             Already swapped in: {swappedBefore.map((s) => bw.teams[s].school).join(', ')}. They stay as they are unless
             you pick another team for their slot.
-          </p>
+          </Note>
         )}
       </section>
 
@@ -416,7 +414,7 @@ export default function App() {
             ))}
           </ol>
           <aside className="limits">
-            <h3>What stays the same</h3>
+            <SubHead>What stays the same</SubHead>
             <ul>
               <li>
                 Rosters, schedules, rankings and battery saves keep the original team's slot. To change the players, use
@@ -449,32 +447,24 @@ export default function App() {
             {swapped.length ? `${swapped.length} of 36 teams swapped` : 'No teams swapped yet'}
           </p>
           {note && (
-            <p className={`note ${note.kind}`} role={note.kind === 'error' ? 'alert' : 'status'}>
+            <Note kind={note.kind}>
               {note.text}
-            </p>
+            </Note>
           )}
           {problems.length > 0 && (
-            <p className="note error" role="alert">
+            <Note kind="error">
               {problems[0]}
               {problems.length > 1 ? ` (and ${problems.length - 1} more)` : ''}
-            </p>
+            </Note>
           )}
           <div className="dock-actions">
-            <label className="btn">
-              Load swap file
-              <input
-                type="file"
-                accept=".json,application/json"
-                hidden
-                onChange={(e) => e.target.files?.[0] && loadSwaps(e.target.files[0]).then(() => (e.target.value = ''))}
-              />
-            </label>
-            <button className="btn" onClick={saveSwaps} disabled={!swapped.length}>
+            <FileButton variant="quiet" label="Load swap file" accept=".json,application/json" onFile={(f) => void loadSwaps(f)} />
+            <Button variant="quiet" onClick={saveSwaps} disabled={!swapped.length}>
               Save swap file
-            </button>
-            <button className="btn btn-go" onClick={doBuild} disabled={!swapped.length || problems.length > 0}>
+            </Button>
+            <Button onClick={doBuild} disabled={!swapped.length || problems.length > 0}>
               Download ROM
-            </button>
+            </Button>
           </div>
         </footer>
       )}
@@ -700,9 +690,9 @@ function TeamRow({
                 </div>
               </div>
             )}
-            <button className="btn btn-quiet" onClick={() => onChange(defaultSlot(bw, cf!))}>
+            <Button variant="quiet" onClick={() => onChange(defaultSlot(bw, cf!))}>
               Reset to CF97 defaults
-            </button>
+            </Button>
           </div>
         </div>
       )}

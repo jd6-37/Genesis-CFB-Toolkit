@@ -697,7 +697,7 @@ export function Player({ id }: { id: number }) {
         </div>
       ))}
       <div className="dy-edit-wrap">{p.status === 'active' && team !== null && <EditPlayer key={p.id} p={p} />}<EditLook key={`look-${p.id}`} p={p} /></div>
-      <SubHead>Bill Walsh '95 ratings</SubHead>
+      <SubHead>Attribute ratings</SubHead>
       {shownSlots.length ? shownSlots.map((slot) => <BwRatings key={slot} team={team!} slot={slot} name={playerName(p)} bench={onBench} player={p} />) : (
         <p className="dy-dim">
           {v.season.bw ? `He isn't one of ${team !== null ? d.teams[team].school : 'his team'}'s 32 players in Bill Walsh '95 this season, so he has no ratings.` : 'Start this dynasty again to see the ratings (it was made before the app kept them).'}

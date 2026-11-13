@@ -1,5 +1,6 @@
 // Season tool: rename Bill Walsh '95's four conferences, move teams between them, and lock in
 // schedules. Teams that aren't locked keep the game's random schedules.
+import { Button, FileButton, Note, PageHead, SubHead } from '../../ui';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CONFERENCES, NAME_LEN, WEEKS, conferenceGames, isLocked, lockAll, lockTeam, readSeason, seasonFile, seasonFromFile,
@@ -13,7 +14,7 @@ import { SeasonWide } from './SeasonWide';
 import { WorkRomCard, type TeamSwapSource, type WorkApi } from '../shared/WorkRom';
 import './season.css';
 
-type Note = { kind: 'error' | 'ok'; text: string } | null;
+type Msg = { kind: 'error' | 'ok'; text: string } | null;
 
 /** Weeks the game plays unless Game Setup's Weeks row is changed. */
 const DEFAULT_WEEKS = 12;
@@ -50,7 +51,7 @@ export function SeasonTool({
   const [romProblem, setRomProblem] = useState<string | null>(null);
   // The 138-team edition: its own settings (as loaded, and now).
   const [wide, setWide] = useState<{ loaded: WideSeason; now: WideSeason } | null>(null);
-  const [note, setNote] = useState<Note>(null);
+  const [note, setNote] = useState<Msg>(null);
 
   // A new working ROM: read its season (Bill Walsh '95 only).
   useEffect(() => {
@@ -160,20 +161,19 @@ export function SeasonTool({
 
   return (
     <>
-      <section className="tool-head" aria-label="Season">
-        <h2>Season</h2>
+      <PageHead title="Season">
         {wide ? (
-          <p>
+          <>
             Rename the 2026 Season Edition's conferences, choose which of the 138 teams play in each, and set when each
             conference plays its conference games in random seasons.
-          </p>
+          </>
         ) : (
-          <p>
+          <>
             Rename Bill Walsh '95's four conferences, choose which teams play in each, and set schedules. Teams you lock
             play the opponents you pick every season; the others keep the game's random schedules.
-          </p>
+          </>
         )}
-      </section>
+      </PageHead>
 
       <WorkRomCard
         api={api}
@@ -199,23 +199,22 @@ export function SeasonTool({
             {api.edits.rosters && <small className="dock-also">+ roster changes</small>}
           </p>
           {note && (
-            <p className={`note ${note.kind}`} role={note.kind === 'error' ? 'alert' : 'status'}>
+            <Note kind={note.kind}>
               {note.text}
-            </p>
+            </Note>
           )}
           <div className="dock-actions">
             {wideChanges(wide) > 0 && (
-              <button className="btn" onClick={undoWide}>
+              <Button variant="quiet" onClick={undoWide}>
                 Undo season changes
-              </button>
+              </Button>
             )}
-            <button
-              className="btn btn-go"
+            <Button
               onClick={() => setNote(api.save())}
               disabled={(!api.edits.any && !work.checkOff) || wideSeasonIssues(wide.now).length > 0}
             >
               Download ROM
-            </button>
+            </Button>
           </div>
         </footer>
       )}
@@ -228,39 +227,26 @@ export function SeasonTool({
             {api.edits.rosters && <small className="dock-also">+ roster changes</small>}
           </p>
           {note && (
-            <p className={`note ${note.kind}`} role={note.kind === 'error' ? 'alert' : 'status'}>
+            <Note kind={note.kind}>
               {note.text}
-            </p>
+            </Note>
           )}
           {problem && (
-            <p className="note error" role="alert">
+            <Note kind="error">
               {problem}
-            </p>
+            </Note>
           )}
           <div className="dock-actions">
-            <label className="btn">
-              Load season file
-              <input
-                type="file"
-                accept=".json,application/json"
-                hidden
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) void loadSeasonFile(f);
-                  e.target.value = '';
-                }}
-              />
-            </label>
-            <button className="btn" onClick={saveFile}>
+            <FileButton variant="quiet" label="Load season file" accept=".json,application/json" onFile={(f) => void loadSeasonFile(f)} />
+            <Button variant="quiet" onClick={saveFile}>
               Save season file
-            </button>
-            <button
-              className="btn btn-go"
+            </Button>
+            <Button
               onClick={() => setNote(api.save())}
               disabled={(!api.edits.any && !work.checkOff) || !!problem}
             >
               Download ROM
-            </button>
+            </Button>
           </div>
         </footer>
       )}
@@ -315,7 +301,7 @@ function SeasonEditor({ teams, season, onChange }: { teams: string[]; season: Se
     <>
       <section className="sea-sec" aria-labelledby="sea-confs-h">
         <div className="sea-head">
-          <h3 id="sea-confs-h">Conferences</h3>
+          <SubHead id="sea-confs-h">Conferences</SubHead>
           <p className="hint">
             Each conference sends its best-ranked team to a bowl, so every conference needs at least 2 teams. Names can be up
             to {NAME_LEN} characters.
@@ -369,14 +355,14 @@ function SeasonEditor({ teams, season, onChange }: { teams: string[]; season: Se
 
       <section className="sea-sec" aria-labelledby="sea-sched-h">
         <div className="sea-head">
-          <h3 id="sea-sched-h">Schedules</h3>
+          <SubHead id="sea-sched-h">Schedules</SubHead>
           <div className="sea-all">
-            <button className="btn btn-quiet" onClick={() => apply(() => lockAll(season))}>
+            <Button variant="quiet" onClick={() => apply(() => lockAll(season))}>
               Lock every team
-            </button>
-            <button className="btn btn-quiet" onClick={() => apply(() => unlockAll(season))}>
+            </Button>
+            <Button variant="quiet" onClick={() => apply(() => unlockAll(season))}>
               Make every team random
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -399,34 +385,34 @@ function SeasonEditor({ teams, season, onChange }: { teams: string[]; season: Se
           {locked ? (
             <>
               <span className="sea-state">Locked · {conferenceGames(season, team, DEFAULT_WEEKS)} conference games in weeks 1-12</span>
-              <button className="btn" onClick={() => apply(() => unlockTeam(season, team))}>
+              <Button variant="quiet" onClick={() => apply(() => unlockTeam(season, team))}>
                 Make random
-              </button>
+              </Button>
             </>
           ) : (
             <>
               <span className="sea-state">Random schedule</span>
-              <button className="btn" onClick={() => apply(() => lockTeam(season, team))}>
+              <Button variant="quiet" onClick={() => apply(() => lockTeam(season, team))}>
                 Lock this team's schedule
-              </button>
+              </Button>
             </>
           )}
         </div>
 
         {error && (
-          <p className="note error" role="alert">
+          <Note kind="error">
             {error}
-          </p>
+          </Note>
         )}
         {notes.length > 0 && (
-          <div className="note ok sea-also" role="status">
+          <Note kind="ok" block>
             <p>This also changed:</p>
             <ul>
               {notes.map((n) => (
                 <li key={n}>{n}</li>
               ))}
             </ul>
-          </div>
+          </Note>
         )}
 
         {locked ? (

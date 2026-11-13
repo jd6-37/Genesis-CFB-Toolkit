@@ -1,20 +1,19 @@
 /* Season tool. Uses the app's tokens from src/styles.css (--night, --deep, --menu, --line …). */
 .sea-sec { margin-bottom: 28px; }
 .sea-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; margin-bottom: 10px; }
-.sea-head h3 { margin: 0; font-family: var(--display); font-style: italic; font-weight: 800; font-size: 30px; }
 .sea-head .hint { max-width: 70ch; }
 .sea-all { margin-left: auto; display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* Four conferences side by side, like the game's four columns of a rankings page. */
 .sea-confs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 12px; }
-.sea-conf { padding: 10px 12px 8px; background: var(--night); border: 1px solid var(--line); border-radius: 6px; }
+.sea-conf { padding: 10px 12px 8px; background: var(--night); border: 1px solid var(--line); border-radius: var(--radius); }
 .sea-name { display: block; margin-bottom: 6px; }
 .sea-name input {
   width: 100%;
   padding: 4px 8px;
   background: var(--deep);
   border: 1px solid rgba(246, 216, 74, 0.45);
-  border-radius: 4px;
+  border-radius: var(--radius);
   color: var(--menu);
   font: 700 22px/1.2 var(--display);
 }
@@ -41,19 +40,19 @@
 /* 138-team edition: conference weeks, team names (moved ones in menu yellow), changed cards. */
 .sea-cweeks { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0 0 8px; font-size: 14px; color: var(--chalk-dim); }
 .sea-cweeks label { display: flex; align-items: center; gap: 6px; }
-.sea-cweeks select { padding: 1px 4px; background: var(--deep); border: 1px solid var(--line); border-radius: 3px; color: var(--chalk); font-size: 14px; }
+.sea-cweeks select { padding: 1px 4px; background: var(--deep); border: 1px solid var(--line); border-radius: var(--radius); color: var(--chalk); font-size: 14px; }
 .sea-cweeks small { flex-basis: 100%; }
 .sea-team-name { flex: 1; min-width: 0; padding: 2px 0; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sea-team-name.on { color: var(--menu); font-weight: 600; }
 .sea-conf-changed { border-color: rgba(246, 216, 74, 0.6); }
-.sea-sec > .note { margin: 0 0 10px; }
-.sea-sec > .note p { margin: 0; }
+.sea-sec > .ui-note { margin: 0 0 10px; }
+.sea-sec > .ui-note p { margin: 0; }
 .sea-conf li select {
   width: 4.6rem;
   padding: 1px 2px;
   background: var(--deep);
   border: 1px solid var(--line);
-  border-radius: 3px;
+  border-radius: var(--radius);
   font-size: 13px;
   color: var(--chalk-dim);
 }
@@ -67,24 +66,24 @@
   padding: 12px 14px;
   background: var(--night);
   border: 1px solid var(--line);
-  border-radius: 6px;
+  border-radius: var(--radius);
 }
 .sea-pick select {
   min-width: 15rem;
   padding: 8px 10px;
   background: var(--deep);
   border: 1px solid rgba(246, 216, 74, 0.45);
-  border-radius: 4px;
+  border-radius: var(--radius);
   color: var(--menu);
   font: 700 20px/1.2 var(--display);
 }
 .sea-chip { padding: 2px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 14px; color: var(--chalk-dim); }
 .sea-state { color: var(--chalk-dim); font-size: 15px; }
-.sea-bar .btn { margin-left: auto; padding: 8px 14px; }
+.sea-bar .ui-button { margin-left: auto; }
 .sea-also { margin: 10px 0 0; }
 .sea-also p { margin: 0; }
 .sea-also ul { margin: 4px 0 0; padding-left: 20px; }
-.sea-sec > .note.error { margin: 10px 0 0; }
+.sea-sec > .ui-note-error { margin: 10px 0 0; }
 .sea-random { max-width: 70ch; margin: 14px 2px; color: var(--chalk-dim); }
 
 .sea-scroll { overflow-x: auto; margin-top: 12px; }
@@ -98,7 +97,7 @@
   padding: 4px 6px;
   background: var(--deep);
   border: 1px solid transparent;
-  border-radius: 3px;
+  border-radius: var(--radius);
   font-size: 15px;
 }
 .sea-weeks select.sea-any { color: var(--chalk-dim); font-style: italic; }
@@ -108,7 +107,7 @@
 .sea-foot { max-width: 80ch; margin-top: 10px; }
 
 /* Home / Away: two halves of one control; the chosen half takes the game's chrome bar. */
-.sea-ha { display: inline-flex; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.sea-ha { display: inline-flex; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
 .sea-ha button {
   padding: 3px 10px;
   background: var(--deep);

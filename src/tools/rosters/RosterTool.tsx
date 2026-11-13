@@ -1,5 +1,6 @@
 // Rosters tool: edit the players of BW95, CF96 or CF97 team by team, or import them from a
 // spreadsheet (CSV or XLSX), export them as CSV, and download the ROM with fixed checksums.
+import { Button, Note, PageHead, SubHead } from '../../ui';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   GAMES, GROUP_COLUMNS, GROUP_ORDER, GROUP_TITLES, nibbleToRating, nibbleToWeight, ratingRangeLabel, weightRangeLabel,
@@ -25,7 +26,7 @@ import './rosters.css';
 
 export type { TeamSwapSource };
 
-type Note = { kind: 'error' | 'ok'; text: string } | null;
+type Msg = { kind: 'error' | 'ok'; text: string } | null;
 
 interface Loaded {
   /** The shared working ROM's bytes, edited in place (the Season tab edits the same bytes). */
@@ -58,7 +59,7 @@ const safeName = (s: string) => s.replace(/[^A-Za-z0-9 &'.()[\]-]+/g, ' ').repla
 
 export function RosterTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapSource | null }) {
   const { work, rev } = api;
-  const [note, setNote] = useState<Note>(null);
+  const [note, setNote] = useState<Msg>(null);
 
   const loaded = useMemo<Loaded | null>(
     () => (work ? { rom: openRosterRom(work.data, true), baseline: work.base, name: work.name } : null),
@@ -79,13 +80,10 @@ export function RosterTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwap
 
   return (
     <>
-      <section className="tool-head" aria-label="Rosters">
-        <h2>Rosters</h2>
-        <p>
+      <PageHead title="Rosters">
           Edit the players of Bill Walsh College Football '95, College Football USA 96 or 97: jersey numbers and
           ratings, team by team, or many teams at once from a spreadsheet (CSV or Excel).
-        </p>
-      </section>
+        </PageHead>
 
       <WorkRomCard
         api={api}
@@ -111,14 +109,14 @@ export function RosterTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwap
             {api.edits.teams && <small className="dock-also">+ team changes</small>}
           </p>
           {note && (
-            <p className={`note ${note.kind}`} role={note.kind === 'error' ? 'alert' : 'status'}>
+            <Note kind={note.kind}>
               {note.text}
-            </p>
+            </Note>
           )}
           <div className="dock-actions">
-            <button className="btn btn-go" onClick={() => setNote(api.save())} disabled={!api.edits.any && !work?.checkOff}>
+            <Button onClick={() => setNote(api.save())} disabled={!api.edits.any && !work?.checkOff}>
               Download ROM
-            </button>
+            </Button>
           </div>
         </footer>
       )}
@@ -308,19 +306,19 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
         )}
         <div className="ros-actions">
           {rom.game === 'bw95' && (
-            <button className="btn" onClick={() => void loadBuiltIn()} disabled={fetching} title={CFB27_LATEST.label}>
+            <Button variant="quiet" onClick={() => void loadBuiltIn()} disabled={fetching} title={CFB27_LATEST.label}>
               {fetching ? 'Loading CFB 27 rosters…' : `CFB 27 rosters (${CFB27_LATEST.season}, Week ${CFB27_LATEST.week})`}
-            </button>
+            </Button>
           )}
-          <button className="btn" onClick={() => sheetRef.current?.click()}>
+          <Button variant="quiet" onClick={() => sheetRef.current?.click()}>
             Import spreadsheet
-          </button>
-          <button className="btn" onClick={() => download(`${safeName(teamName(t))} roster.csv`, exportRostersCsv(rom, [team]), 'text/csv')}>
+          </Button>
+          <Button variant="quiet" onClick={() => download(`${safeName(teamName(t))} roster.csv`, exportRostersCsv(rom, [team]), 'text/csv')}>
             Export team CSV
-          </button>
-          <button className="btn" onClick={() => download(exportName, exportRostersCsv(rom), 'text/csv')}>
+          </Button>
+          <Button variant="quiet" onClick={() => download(exportName, exportRostersCsv(rom), 'text/csv')}>
             Export all teams CSV
-          </button>
+          </Button>
           <input
             ref={sheetRef}
             type="file"
@@ -350,7 +348,7 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
       </div>
 
       {error && (
-        <div className="note error" role="alert">
+        <Note kind="error" block>
           {Array.isArray(error) ? (
             <>
               <p>{error[0]}</p>
@@ -363,7 +361,7 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
           ) : (
             <p>{error}</p>
           )}
-        </div>
+        </Note>
       )}
       {plan && <Cfb27Preview rom={rom} plan={plan.plan} file={plan.file} walsh={plan.walsh} onApply={applyPlan} onCancel={() => setPlan(null)} />}
       {converted && <Cfb27Summary rom={rom} report={converted} onPick={setTeam} onClose={() => setConverted(null)} />}
@@ -375,7 +373,7 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
           return (
             slots.length > 0 && (
               <section key={g} className="ros-sec">
-                <h3>{GROUP_TITLES[g]}</h3>
+                <SubHead>{GROUP_TITLES[g]}</SubHead>
                 <div className="ros-scroll">
                   <table>
                     <thead>
@@ -505,9 +503,9 @@ function ImportSummary({
         <p className="ros-offer">
           This looks like CFB 27 rosters. The roster screen can show offensive linemen 25 lb heavier, closer to today's
           weights (display only).{' '}
-          <button className="btn btn-quiet" onClick={onTweak}>
+          <Button variant="quiet" onClick={onTweak}>
             Show OL weights +25 lb
-          </button>
+          </Button>
         </p>
       )}
       {report.unknownTeams.length > 0 && (
@@ -652,9 +650,9 @@ function Cfb27Preview({
             </label>
           )}
           <div className="ros-convert-actions">
-            <button className="btn btn-go" disabled={pick.size === 0} onClick={() => onApply([...pick].sort((a, b) => a - b), tweak, ratings, useWalsh && !!walsh?.data)}>
+            <Button disabled={pick.size === 0} onClick={() => onApply([...pick].sort((a, b) => a - b), tweak, ratings, useWalsh && !!walsh?.data)}>
               Convert {pick.size} team{pick.size === 1 ? '' : 's'}
-            </button>
+            </Button>
           </div>
         </>
       )}
@@ -753,7 +751,7 @@ const normalize = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
 function SheetHelp() {
   return (
     <aside className="limits ros-help">
-      <h3>Spreadsheet import</h3>
+      <SubHead>Spreadsheet import</SubHead>
       <p>The tool looks at the file and picks one of three ways to read it. The report after the import says which.</p>
       <ul>
         <li>

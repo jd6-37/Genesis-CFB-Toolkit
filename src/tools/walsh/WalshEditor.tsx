@@ -1,6 +1,7 @@
 // Walsh Report editor: a modal with the team's offense and defense paragraphs, a counter, the checks
 // from src/core/walshReports.ts and a preview of the report box as the game wraps it (20 characters
 // per line). Used by the Team Swap edit screen and the Teams tab.
+import { Button } from '../../ui';
 import { useEffect, useId, useRef, useState } from 'react';
 import {
   REPORT_CHARS, REPORT_LIMIT, REPORT_WORD, cleanText, reportLength, reportProblems, trimReport, wrapLines, type Report,
@@ -116,9 +117,7 @@ export function WalshEditor({
         )}
 
         <footer className="wr-actions">
-          <button
-            type="button"
-            className="btn btn-quiet"
+          <Button variant="quiet"
             disabled={isOriginal}
             onClick={() => {
               setOffense(original.offense);
@@ -126,14 +125,14 @@ export function WalshEditor({
             }}
           >
             {originalLabel}
-          </button>
+          </Button>
           <span className="wr-gap" />
-          <button type="button" className="btn" onClick={() => ref.current?.close()}>
+          <Button variant="quiet" onClick={() => ref.current?.close()}>
             Cancel
-          </button>
-          <button type="submit" className="btn btn-go" disabled={problems.length > 0}>
+          </Button>
+          <Button type="submit" disabled={problems.length > 0}>
             Save report
-          </button>
+          </Button>
         </footer>
       </form>
     </dialog>
@@ -166,9 +165,9 @@ export function WalshField({
         Walsh Report <small>{edited ? 'edited' : `${n} characters`}</small>
       </span>
       <p className="wr-snippet">{value.offense}</p>
-      <button type="button" className="btn btn-quiet" onClick={() => setOpen(true)}>
+      <Button variant="quiet" onClick={() => setOpen(true)}>
         Edit Walsh Report
-      </button>
+      </Button>
       {!edited && <p className="hint">The original team's report with the new names.</p>}
       {open && (
         <WalshEditor

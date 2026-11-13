@@ -21,7 +21,7 @@ import { History, Home, Leaders, Player, Rankings, Scores, Standings, Team, Team
 import { Offseason, type OffseasonActions } from './OffseasonPage';
 import { seasonRom } from '../../core/dynasty/offseason';
 import { canReplaceBench, randomBench } from '../../core/dynasty/bench';
-import { Button, Note, Table, ThemeToggle } from '../../ui';
+import { Button, FileButton, Note, Table, ThemeToggle } from '../../ui';
 import './dynasty.css';
 
 const THEME_KEY = 'dynasty-theme';
@@ -394,25 +394,6 @@ function BenchChoice({ onRandom, busy }: { onRandom: () => void; busy: boolean }
   );
 }
 
-function FileButton({ label, accept, onFile, disabled }: { label: string; accept?: string; onFile: (f: File) => void; disabled?: boolean }) {
-  const ref = useRef<HTMLInputElement>(null);
-  return (
-    <>
-      <Button disabled={disabled} onClick={() => ref.current?.click()}>{label}</Button>
-      <input
-        ref={ref}
-        type="file"
-        accept={accept}
-        hidden
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          e.target.value = '';
-          if (f) onFile(f);
-        }}
-      />
-    </>
-  );
-}
 
 function Manage({ d, art, list, busy, note, actions }: {
   d: Dynasty | null;

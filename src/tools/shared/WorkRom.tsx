@@ -1,5 +1,6 @@
 // The working ROM shared by the Season, Teams and Rosters tabs: one buffer they all edit in place,
 // loaded from a file or from the Team Swap tab, downloaded from any of them with all edits in it.
+import { Button, Note } from '../../ui';
 import { useCallback, useMemo, useState } from 'react';
 import { isWideBw95, openRom } from '../../core/romfile';
 import { wideLayoutProblems } from '../../core/wide';
@@ -28,7 +29,7 @@ export interface WorkRom {
   checkOff: boolean;
 }
 
-type Note = { kind: 'error' | 'ok'; text: string } | null;
+type Msg = { kind: 'error' | 'ok'; text: string } | null;
 interface Incoming {
   name: string;
   label: string;
@@ -82,16 +83,16 @@ export interface WorkApi {
   takeRom: (inc: Incoming) => void;
   pending: (Incoming & { carry: boolean }) | null;
   resolve: (choice: 'keep' | 'fresh' | 'cancel') => void;
-  note: Note;
+  note: Msg;
   /** Saves the working ROM with fixed checksums; returns a line for the dock. */
-  save: () => Note;
+  save: () => Msg;
 }
 
 export function useWorkRom(): WorkApi {
   const [work, setWork] = useState<WorkRom | null>(null);
   const [rev, setRev] = useState(0);
   const [pending, setPending] = useState<(Incoming & { carry: boolean }) | null>(null);
-  const [note, setNote] = useState<Note>(null);
+  const [note, setNote] = useState<Msg>(null);
   const [blocker, setBlocker] = useState<string | null>(null);
   const edited = useCallback(() => setRev((r) => r + 1), []);
 
@@ -161,7 +162,7 @@ export function useWorkRom(): WorkApi {
     }
   };
 
-  const save = (): Note => {
+  const save = (): Msg => {
     if (!work) return null;
     if (blocker) return { kind: 'error', text: blocker };
     const out = new Uint8Array(work.data);
@@ -212,9 +213,9 @@ export function WorkRomCard({ api, teamSwap, hint }: { api: WorkApi; teamSwap: T
       </label>
       {teamSwap && (
         <div className="work-from-swap">
-          <button className="btn btn-quiet" onClick={() => api.takeTeamSwap(teamSwap)}>
+          <Button variant="quiet" onClick={() => api.takeTeamSwap(teamSwap)}>
             Use the Team Swap result ({teamSwap.count} team{teamSwap.count === 1 ? '' : 's'} swapped)
-          </button>
+          </Button>
           <p className="hint">Builds the ROM from the Team Swap tab and opens it here, for Season, Teams and Rosters.</p>
         </div>
       )}
@@ -226,16 +227,16 @@ export function WorkRomCard({ api, teamSwap, hint }: { api: WorkApi; teamSwap: T
           </p>
           <div className="work-ask-actions">
             {pending.carry && (
-              <button className="btn btn-go" onClick={() => api.resolve('keep')}>
+              <Button onClick={() => api.resolve('keep')}>
                 Keep my edits
-              </button>
+              </Button>
             )}
-            <button className="btn" onClick={() => api.resolve('fresh')}>
+            <Button variant="quiet" onClick={() => api.resolve('fresh')}>
               {pending.carry ? 'Start fresh' : 'Open it and drop my changes'}
-            </button>
-            <button className="btn btn-quiet" onClick={() => api.resolve('cancel')}>
+            </Button>
+            <Button variant="quiet" onClick={() => api.resolve('cancel')}>
               Cancel
-            </button>
+            </Button>
           </div>
           {pending.carry && (
             <p className="hint">
@@ -246,15 +247,15 @@ export function WorkRomCard({ api, teamSwap, hint }: { api: WorkApi; teamSwap: T
         </div>
       )}
       {note && (
-        <p className={`note ${note.kind}`} role={note.kind === 'error' ? 'alert' : 'status'}>
+        <Note kind={note.kind}>
           {note.text}
-        </p>
+        </Note>
       )}
       {work?.checkOff && (
-        <p className="note ok">
+        <Note kind="ok">
           This ROM's boot checksum check was turned off (CFB-Walsh.exe does that). The download turns it back on with a
           correct checksum.
-        </p>
+        </Note>
       )}
     </section>
   );
