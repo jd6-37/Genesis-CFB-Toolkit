@@ -38,7 +38,7 @@ Run `npm run storybook` to browse the components (port 6006).
 
 1. **Build pages from the components in `src/ui`.** Don't write a new button, table, select, note, page heading, modal or empty state by hand.
 2. **A new kind of element becomes a component first:** add it to `src/ui/index.tsx`, style it in `ui.css`, give it a story, then use it.
-3. **Only tokens in component styles.** No raw colors (`#fff`, `rgb()`) and no raw font sizes outside `tokens.css`. `npm run lint:design` fails otherwise.
+3. **Only tokens in styles.** No raw colors (`#fff`, `rgb()`) and no font sizes in px outside `tokens.css`, in any stylesheet under `src` (the tools' own included). `npm run lint:design` fails otherwise. A lighter or see-through version of a token is `color-mix(in srgb, var(--accent) 50%, transparent)`.
 4. **Colors are semantic.** Use `--surface`, `--text`, `--rule`, `--accent` and so on, never a brand's color by name, so a component works in every brand and theme.
 5. **Mobile first.** Base styles are for a phone. Two breakpoints only: `min-width: 640px` and `min-width: 960px`.
 6. **Check every component in all three looks** in Storybook: Dynasty light, Dynasty dark, Mod Toolkit.
@@ -47,8 +47,8 @@ Run `npm run storybook` to browse the components (port 6006).
 ## Tokens
 
 - **Brand and theme** are set with `data-brand="toolkit|dynasty"` and `data-theme="light|dark"` on a wrapper element. The toolkit has one look today.
-- **Colors:** `--surface`, `--surface-raised`, `--surface-sunken`, `--text`, `--text-muted`, `--rule`, `--rule-strong`, `--bar`, `--on-bar`, `--bar-on` (section bars and the nav), `--masthead`, `--on-masthead` (the app's top bar: black in Dynasty light and dark), `--accent`, `--on-accent`, `--field`, `--highlight`, `--good`, `--good-wash`, `--bad`, `--bad-wash`, `--scrim`.
-- **Type:** `--font-display` (Barlow Condensed), `--font-body` (Barlow), `--font-num` (Press Start 2P, figures only; sizes `--fs-num-1` to `--fs-num-4`); sizes `--fs-1` (12 px) to `--fs-8` (56 px). Every font size in the Dynasty app's stylesheet is one of these (or a `clamp` between two of them for the big titles).
+- **Colors:** `--surface`, `--surface-raised`, `--surface-sunken`, `--text`, `--text-muted`, `--rule`, `--rule-strong`, `--bar`, `--on-bar`, `--bar-on` (section bars and the nav), `--masthead`, `--on-masthead` (the app's top bar: black in Dynasty light and dark), `--accent`, `--on-accent`, `--field`, `--highlight`, `--good`, `--good-wash`, `--bad`, `--bad-wash`, `--scrim`. Mod Toolkit only: `--chrome` (the game's selection bar: the open row, the chosen option), `--on-chrome`, `--chrome-field`, `--elevated` (the red of ELEVATED in the title), `--shadow-deep`, and stand-ins for the game's own screen (`--turf`, `--screen`, `--screen-edge`, `--on-screen`). Dynasty only: `--on-team-shade`, `--on-team-tint`, `--logo-shadow` (on a team's color) and `--star`.
+- **Type:** `--font-display` (Barlow Condensed), `--font-body` (Barlow), `--font-num` (Press Start 2P, figures only; sizes `--fs-num-1` to `--fs-num-4`); sizes `--fs-1` (12 px) to `--fs-8` (56 px), and `--fs-hero` for the Mod Toolkit's title. Every font size in every stylesheet is one of these (or a `clamp` between two of them for Dynasty's big titles).
 - **Spacing:** `--sp-1` (4 px) to `--sp-7` (48 px), built on the Genesis' 8 px tile.
 - **Shape:** `--radius` (0), `--rule-w` (1 px), `--rule-w-strong` (4 px).
 
@@ -85,7 +85,7 @@ Run `npm run storybook` to browse the components (port 6006).
 - **Dynasty's masthead and main menu** are `Masthead` and `NavBar`. The score ticker stays Dynasty's own (it is a scores strip, not a general element) and uses the tokens.
 - **Dynasty, not moved yet:** the checkboxes in the cut list's rows, the training sliders, the rules page's number fields and the recruiting points stepper. The player page's rating tiles stay their own (a pip bar and the bold labels the owner asked for; `Stat` has neither).
 - **Mod Toolkit:** every tab's title (`PageHead`), section headings (`SubHead`), buttons (`Button`, `FileButton`, the text-like `link` buttons), messages (`Note`, with `block` for lists), the dropdowns, text and number fields, checkboxes, and all four tables (the roster grids, the Teams table, a locked schedule's weeks, the CFB 27 list) are shared components. Still their own: the Patch tab's option cards (radio buttons), the Home / Away switch in the weeks table, the color swatches and the ROM cards; `styles.css` maps its own names to the tokens; corners are square and the ROM cards have the hard shadow.
-- **Mod Toolkit, not moved yet:** its four tables, the selects and number fields in the editors, the link-style buttons (`ros-link`, `sty-link`), the tab menu's markup, the Team Swap rows, and the font sizes in its stylesheets.
+- **Mod Toolkit, still its own:** the title block and tab menu, the ROM cards, the Team Swap rows and color pickers, the Patch tab's option cards. Their colors and font sizes come from the tokens.
 - Team colors in charts: use `inkColor(d, team, dark)` so the color shows on the page in both themes.
 - `Select` takes `title` (a tooltip), `note` (a line under it) and `placeholder` (shown while the value is '', for a menu that acts at once such as "Move"); `Field` takes `invalid` (a red border), `onBlur` (with it, Enter leaves the field too), `compact` and `digits` (whole numbers typed as text). `Select` and `Field` take `changed` (the value differs from what was loaded); `Select` takes `tone` (`dim` or `strong`, so the extremes stand out in a grid of values).
 - `Button` takes `title` (a tooltip) and `label` (the name for screen readers); a link button with `disabled` has no address. `SubHead` takes `level={2}` for a section that isn't under a page title.

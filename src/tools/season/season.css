@@ -18,7 +18,7 @@
   background: none;
   border: 0;
   text-align: left;
-  font-size: 15px;
+  font-size: var(--fs-3);
   cursor: pointer;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -28,11 +28,11 @@
 .sea-team-link.on { color: var(--menu); font-weight: 600; }
 .sea-lock { color: var(--menu); }
 /* 138-team edition: conference weeks, team names (moved ones in menu yellow), changed cards. */
-.sea-cweeks { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0 0 8px; font-size: 14px; color: var(--chalk-dim); }
+.sea-cweeks { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0 0 8px; font-size: var(--fs-2); color: var(--chalk-dim); }
 .sea-cweeks small { flex-basis: 100%; }
-.sea-team-name { flex: 1; min-width: 0; padding: 2px 0; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sea-team-name { flex: 1; min-width: 0; padding: 2px 0; font-size: var(--fs-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sea-team-name.on { color: var(--menu); font-weight: 600; }
-.sea-conf-changed { border-color: rgba(246, 216, 74, 0.6); }
+.sea-conf-changed { border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
 .sea-sec > .ui-note { margin: 0 0 10px; }
 .sea-sec > .ui-note p { margin: 0; }
 
@@ -46,8 +46,8 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
 }
-.sea-chip { padding: 2px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 14px; color: var(--chalk-dim); }
-.sea-state { color: var(--chalk-dim); font-size: 15px; }
+.sea-chip { padding: 2px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: var(--fs-2); color: var(--chalk-dim); }
+.sea-state { color: var(--chalk-dim); font-size: var(--fs-3); }
 .sea-bar .ui-button { margin-left: auto; }
 .sea-also { margin: 10px 0 0; }
 .sea-also p { margin: 0; }
@@ -60,7 +60,7 @@
 .sea-weeks tbody th { width: 3.5rem; color: var(--accent); }
 .sea-weeks tr.sea-extra-first th, .sea-weeks tr.sea-extra-first td { border-top: 2px dashed var(--rule-strong); }
 .sea-weeks tr.sea-extra th { color: var(--chalk-dim); }
-.sea-tag { width: 6rem; font-size: 13px; color: var(--chalk-dim); }
+.sea-tag { width: 6rem; font-size: var(--fs-2); color: var(--chalk-dim); }
 .sea-foot { max-width: 80ch; margin-top: 10px; }
 
 /* Home / Away: two halves of one control; the chosen half takes the game's chrome bar. */
@@ -69,7 +69,7 @@
   padding: 3px 10px;
   background: var(--deep);
   border: 0;
-  font-size: 14px;
+  font-size: var(--fs-2);
   color: var(--chalk-dim);
   cursor: pointer;
 }

@@ -12,7 +12,6 @@
   --menu: var(--accent);
   --line: var(--rule);
   --error: var(--bad);
-  --chrome: linear-gradient(180deg, #9fdcff 0%, #e9f7ff 30%, #ffffff 52%, #ffd2a8 72%, #f08a3c 100%);
   --display: var(--font-display);
   --body: var(--font-body);
   /* The subtle retro touch: a hard shadow, no blur. */
@@ -26,7 +25,7 @@ html, body { margin: 0; }
 body {
   background: var(--indigo);
   color: var(--chalk);
-  font: 400 16px/1.5 var(--body);
+  font: 400 var(--fs-3)/1.5 var(--body);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -51,9 +50,9 @@ button, input, select { font: inherit; color: inherit; }
 .masthead { margin-bottom: 40px; position: relative; }
 .mast-dynasty {
   position: absolute; top: 0; right: 0; padding: 6px 18px; border: 2px solid var(--menu); border-radius: var(--radius);
-  color: var(--menu); font-family: var(--display); font-style: italic; font-weight: 800; font-size: 22px; text-decoration: none;
+  color: var(--menu); font-family: var(--display); font-style: italic; font-weight: 800; font-size: var(--fs-5); text-decoration: none;
 }
-.mast-dynasty:hover { background: rgba(246, 216, 74, 0.12); }
+.mast-dynasty:hover { background: var(--highlight); }
 .masthead h1 {
   margin: 0;
   font-family: var(--display);
@@ -64,11 +63,11 @@ button, input, select { font: inherit; color: inherit; }
   display: flex;
   flex-direction: column;
 }
-.mast-1 { font-size: 30px; color: var(--chalk-dim); }
-.mast-2 { font-size: 46px; color: var(--chalk-dim); }
-.mast-elev { color: #ff2d2d; } /* red like ELEVATED on the mod's title screen (its own #a80020 is too dark here) */
-.mast-3 { font-size: clamp(64px, 11vw, 120px); margin-top: 6px; }
-.lede { max-width: 62ch; margin: 20px 0 0; color: var(--chalk-dim); font-size: 18px; }
+.mast-1 { font-size: var(--fs-6); color: var(--chalk-dim); }
+.mast-2 { font-size: var(--fs-7); color: var(--chalk-dim); }
+.mast-elev { color: var(--elevated); }
+.mast-3 { font-size: var(--fs-hero); margin-top: 6px; }
+.lede { max-width: 62ch; margin: 20px 0 0; color: var(--chalk-dim); font-size: var(--fs-4); }
 .lede a { color: var(--chalk); text-underline-offset: 3px; }
 
 /* One heading per tool; more tools will follow. */
@@ -84,7 +83,7 @@ button, input, select { font: inherit; color: inherit; }
   font-family: var(--display);
   font-style: italic;
   font-weight: 800;
-  font-size: 30px;
+  font-size: var(--fs-6);
   color: var(--chalk-dim);
   white-space: nowrap;
   cursor: pointer;
@@ -112,19 +111,19 @@ button, input, select { font: inherit; color: inherit; }
 }
 .rom:hover { border-color: var(--chalk-dim); }
 .rom:focus-within { outline: 2px solid var(--menu); outline-offset: 2px; }
-.rom-title { font-family: var(--display); font-weight: 700; font-size: 22px; }
+.rom-title { font-family: var(--display); font-weight: 700; font-size: var(--fs-5); }
 .rom-status { color: var(--menu); font-weight: 600; }
-.rom-status small { display: block; color: var(--chalk-dim); font-weight: 400; font-size: 14px; overflow-wrap: anywhere; }
+.rom-status small { display: block; color: var(--chalk-dim); font-weight: 400; font-size: var(--fs-2); overflow-wrap: anywhere; }
 .rom-empty { color: var(--chalk); }
 .rom-choose { text-decoration: underline; text-underline-offset: 3px; }
-.rom-ok { border-color: rgba(246, 216, 74, 0.5); }
+.rom-ok { border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
 .roms .ui-note { grid-column: 1 / -1; margin: 0; }
 
-.waiting p { color: var(--chalk-dim); font-size: 18px; }
+.waiting p { color: var(--chalk-dim); font-size: var(--fs-4); }
 
 /* Team board */
 .board-head { display: flex; align-items: baseline; gap: 24px; flex-wrap: wrap; margin-bottom: 12px; }
-.board-head h2 { font-family: var(--display); font-weight: 700; font-size: 32px; margin: 0; }
+.board-head h2 { font-family: var(--display); font-weight: 700; font-size: var(--fs-6); margin: 0; }
 .board-head p { margin: 0; color: var(--chalk-dim); }
 
 .rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
@@ -139,7 +138,7 @@ button, input, select { font: inherit; color: inherit; }
 }
 .row-from { display: flex; flex-direction: column; line-height: 1.2; }
 .row-orig { font-weight: 600; }
-.row-was { font-size: 13px; color: var(--chalk-dim); }
+.row-was { font-size: var(--fs-2); color: var(--chalk-dim); }
 .row-swapped .row-orig { color: var(--chalk-dim); font-weight: 500; }
 
 .row-art { display: flex; align-items: center; gap: 14px; min-height: 48px; }
@@ -163,9 +162,9 @@ button, input, select { font: inherit; color: inherit; }
 /* The open row gets the game's selection bar. */
 .row-open > .row-main { background: var(--chrome); color: var(--night); }
 .row-open .row-orig, .row-open .row-was { color: var(--night); }
-.row-open .row-art { filter: drop-shadow(0 0 1px rgba(15, 12, 69, 0.6)); }
+.row-open .row-art { filter: drop-shadow(0 0 1px color-mix(in srgb, var(--on-chrome) 60%, transparent)); }
 .row-open .row-toggle { border-color: var(--night); color: var(--night); font-weight: 600; }
-.row-open .row-pick select { background: rgba(255, 255, 255, 0.75); color: var(--night); border-color: var(--night); }
+.row-open .row-pick select { background: var(--chrome-field); color: var(--on-chrome); border-color: var(--on-chrome); }
 
 .row-edit {
   display: grid;
@@ -175,13 +174,13 @@ button, input, select { font: inherit; color: inherit; }
   background: var(--deep);
 }
 .names { display: flex; flex-direction: column; gap: 12px; }
-.hint { margin: 0; font-size: 14px; color: var(--chalk-dim); max-width: 40ch; }
+.hint { margin: 0; font-size: var(--fs-2); color: var(--chalk-dim); max-width: 40ch; }
 
 .uniform { margin: 0; padding: 0; border: 0; display: grid; grid-template-columns: 44px 1fr; gap: 4px 14px; }
-.uniform legend { font-family: var(--display); font-weight: 700; font-size: 22px; padding: 0; margin-bottom: 8px; }
+.uniform legend { font-family: var(--display); font-weight: 700; font-size: var(--fs-5); padding: 0; margin-bottom: 8px; }
 .chip { width: 44px; height: 70px; grid-row: span 6; }
 .uniform dl { margin: 0; display: flex; flex-direction: column; gap: 6px; }
-.field-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 14px; }
+.field-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: var(--fs-2); }
 .field-row dt { color: var(--chalk-dim); }
 .field-row dd { margin: 0; display: flex; gap: 4px; }
 
@@ -190,7 +189,7 @@ button, input, select { font: inherit; color: inherit; }
   width: 26px;
   height: 22px;
   padding: 0;
-  border: 1px solid rgba(242, 240, 255, 0.5);
+  border: 1px solid color-mix(in srgb, var(--text) 50%, transparent);
   border-radius: var(--radius);
   cursor: pointer;
 }
@@ -206,22 +205,22 @@ button, input, select { font: inherit; color: inherit; }
   background: var(--night);
   border: 1px solid var(--chalk-dim);
   border-radius: var(--radius);
-  box-shadow: 0 12px 32px rgba(6, 4, 30, 0.6);
+  box-shadow: var(--shadow-deep);
 }
 .picker-blue { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; margin-bottom: 8px; }
 .picker-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; }
 .picker button { aspect-ratio: 1; padding: 0; border: 1px solid transparent; border-radius: var(--radius); cursor: pointer; }
 .picker-blue button { aspect-ratio: 2 / 1; }
 .picker button.on { border-color: var(--menu); box-shadow: 0 0 0 1px var(--menu); }
-.picker-note { margin: 8px 0 0; font-size: 12px; color: var(--chalk-dim); line-height: 1.35; }
+.picker-note { margin: 8px 0 0; font-size: var(--fs-1); color: var(--chalk-dim); line-height: 1.35; }
 
 .extras { display: flex; flex-direction: column; gap: 10px; }
-.extras .field-row { justify-content: flex-start; gap: 14px; font-size: 15px; }
+.extras .field-row { justify-content: flex-start; gap: 14px; font-size: var(--fs-3); }
 
 .cheer { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
-.cheer-title { font-family: var(--display); font-weight: 700; font-size: 18px; }
-.cheer-stage { background: #2f8a35; padding: 6px 4px; border-radius: var(--radius); align-self: flex-start; max-width: 100%; overflow: hidden; }
-.cheer .field-row { justify-content: space-between; font-size: 14px; color: var(--chalk-dim); }
+.cheer-title { font-family: var(--display); font-weight: 700; font-size: var(--fs-4); }
+.cheer-stage { background: var(--turf); padding: 6px 4px; border-radius: var(--radius); align-self: flex-start; max-width: 100%; overflow: hidden; }
+.cheer .field-row { justify-content: space-between; font-size: var(--fs-2); color: var(--chalk-dim); }
 
 .limits { margin-top: 40px; max-width: 64ch; }
 .limits ul { margin: 8px 0 0; padding-left: 20px; color: var(--chalk-dim); }
@@ -241,7 +240,7 @@ button, input, select { font: inherit; color: inherit; }
   background: var(--deep);
   border-top: 1px solid var(--line);
 }
-.dock-count { margin: 0; font-family: var(--display); font-weight: 700; font-size: 22px; }
+.dock-count { margin: 0; font-family: var(--display); font-weight: 700; font-size: var(--fs-5); }
 .dock .ui-note { margin: 0; flex: 1 1 260px; }
 .dock-actions { margin-left: auto; display: flex; gap: 10px; flex-wrap: wrap; }
 
@@ -258,9 +257,9 @@ button, input, select { font: inherit; color: inherit; }
   .row-edit { grid-template-columns: 1fr; }
   .picker { right: auto; left: 0; }
   .tabs { gap: 24px; }
-  .tab { font-size: 26px; }
+  .tab { font-size: var(--fs-5); }
 }
 @media (max-width: 480px) {
   .tabs { gap: 14px; }
-  .tab { font-size: 20px; }
+  .tab { font-size: var(--fs-4); }
 }

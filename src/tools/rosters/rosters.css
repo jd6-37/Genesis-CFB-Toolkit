@@ -10,9 +10,9 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
 }
-.ros-chip { padding: 2px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 14px; color: var(--chalk-dim); }
+.ros-chip { padding: 2px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: var(--fs-2); color: var(--chalk-dim); }
 .ros-actions { margin-left: auto; display: flex; flex-wrap: wrap; gap: 10px; }
-.ros-status { display: flex; flex-wrap: wrap; gap: 6px 20px; min-height: 22px; margin: 10px 2px 12px; font-size: 14px; }
+.ros-status { display: flex; flex-wrap: wrap; gap: 6px 20px; min-height: 22px; margin: 10px 2px 12px; font-size: var(--fs-2); }
 .ros .ui-note { margin: 0 0 12px; }
 
 .ros-report {
@@ -22,7 +22,7 @@
   border: 1px solid var(--line);
   border-left: 4px solid var(--menu);
   border-radius: var(--radius);
-  font-size: 15px;
+  font-size: var(--fs-3);
 }
 .ros-report-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
 .ros-report-head .ui-link { margin-left: auto; }
@@ -31,7 +31,7 @@
 .ros-report summary { cursor: pointer; color: var(--chalk-dim); }
 .ros-teams { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
 .ros-dim { color: var(--chalk-dim); }
-.ros-fills { display: flex; flex-wrap: wrap; gap: 2px 14px; margin-top: 2px; font-size: 14px; color: var(--chalk-dim); }
+.ros-fills { display: flex; flex-wrap: wrap; gap: 2px 14px; margin-top: 2px; font-size: var(--fs-2); color: var(--chalk-dim); }
 .ros-fills b { color: var(--chalk); font-weight: 600; }
 
 .ros-grid {
@@ -46,7 +46,7 @@
 .ros .ros-table input { width: 2.9rem; min-width: 2.9rem; text-align: center; }
 .ros-sec { min-width: 0; }
 .ros-scale { max-width: 90ch; margin-top: 12px; }
-.ros-th-note { display: block; font-size: 10px; font-weight: 500; letter-spacing: 0.02em; text-transform: none; }
+.ros-th-note { display: block; font-size: var(--fs-1); font-weight: 500; letter-spacing: 0.02em; text-transform: none; }
 .ros .ui-note ul { margin: 6px 0 0; padding-left: 20px; }
 .ros .ui-note p { margin: 0; }
 .ros-path { margin: 6px 0 0; max-width: 90ch; }

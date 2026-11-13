@@ -38,6 +38,8 @@
   --fs-6: 32px;
   --fs-7: 44px;
   --fs-8: 56px;
+  /* The Mod Toolkit's title: it grows with the page. */
+  --fs-hero: clamp(64px, 11vw, 120px);
   /* Pixel numerals (--font-num): the font is wide and drawn on an 8 px grid, so it has its own steps. */
   --fs-num-1: 12px;
   --fs-num-2: 16px;
@@ -90,12 +92,29 @@
   --bad: #ff9a8a;
   --bad-wash: rgba(255, 154, 138, 0.14);
   --scrim: rgba(15, 12, 69, 0.7);
+  /* The game's selection bar (sky, white, orange): the open row, the chosen option. The one loud element. */
+  --chrome: linear-gradient(180deg, #9fdcff 0%, #e9f7ff 30%, #ffffff 52%, #ffd2a8 72%, #f08a3c 100%);
+  --on-chrome: #0f0c45;
+  --chrome-field: rgba(255, 255, 255, 0.75);
+  /* Red like ELEVATED on the mod's title screen (its own #a80020 is too dark on indigo). */
+  --elevated: #ff2d2d;
+  /* Stand-ins for the game's own screen: the grass behind the card stunt, the black text screen of a Walsh Report. */
+  --turf: #2f8a35;
+  --screen: #000000;
+  --screen-edge: #c8c8c8;
+  --on-screen: #ffffff;
+  --shadow-deep: 0 12px 32px rgba(6, 4, 30, 0.6);
   color-scheme: dark;
 }
 
 /* Dynasty, light: the booklet from the game box. White paper, black ink and bars; the only color on a page
    is a team's. Grays are Genesis palette values (channel steps of 36). */
 [data-brand='dynasty'] {
+  /* On a team's color: a shade or a tint behind figures, a drop shadow under a logo. Recruiting stars. */
+  --on-team-shade: rgba(0, 0, 0, 0.2);
+  --on-team-tint: rgba(255, 255, 255, 0.45);
+  --logo-shadow: rgba(0, 0, 0, 0.35);
+  --star: #b8860b;
   --surface: #ffffff;
   --surface-raised: #ffffff;
   --surface-sunken: #f2f2f2;
