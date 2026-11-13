@@ -15,7 +15,7 @@ Picked from three Figma mockups (file "CFB-Toolkit", page "Directions"): **"B's 
   - every other table row sits on a bar (`--row`), with no rules between rows;
   - figures are in the pixel font. Words never are: headings and labels stay in Barlow Condensed so they read easily.
 - **Dynasty is neutral** (white, black, grays; dark mode as a negative) so that team colors are the only color on a page and never clash. **The Mod Toolkit is blue and yellow**, the game's own colors: yellow headings, light-blue labels, blue row bars.
-- **Pixel numerals** (Press Start 2P, `--font-num`) for figures only: scores, ratings, table numbers. Never for words. The font is wide, so it has its own sizes: `--fs-num-1` (12 px, tables) to `--fs-num-4` (32 px, big ratings). Its digits sit 1/8 em above the baseline, so `tokens.css` loads it as 'Press Start Numerals' with a taller box (centered in table cells and chips); a figure on a shared baseline with text also gets `ui-num-drop`. Two more figure fonts (owner's picks, 2026-11-13): `--font-num-narrow` (Handjet) where Press Start 2P is too wide, and `--font-num-tiny` (Micro 5, at 15 px) for really small figures such as a rank beside a team name.
+- **Pixel numerals** (Press Start 2P, `--font-num`) for figures only: scores, ratings, table numbers. Never for words. The font is wide, so it has its own sizes: `--fs-num-1` (12 px, tables) to `--fs-num-4` (32 px, big ratings). Its digits sit 1/8 em above the baseline, so `tokens.css` loads it as 'Press Start Numerals' with a taller box (centered in table cells and chips); a figure on a shared baseline with text also gets `ui-num-drop`. Two more figure fonts (owner's picks, 2026-11-13): `--font-num-narrow` (Handjet) where Press Start 2P is too wide, and `--font-num-tiny` (Micro 5, always at `--fs-num-tiny`, 15 px) for really small figures such as a rank beside a team name.
 - **The Mod Toolkit keeps its indigo and yellow** and takes the same components ("yes, toolkit too").
 - **The Mod Toolkit's tab menu is "the subtle retro design"** (mockup A's toolkit frame): Barlow Condensed as today, square corners, 2 px rules and hard offset shadows. No pixel menu text and no chrome selection bar.
 - **Dark mode is for Dynasty only** ("the blue design of the toolkit is enough").
@@ -48,7 +48,7 @@ Run `npm run storybook` to browse the components (port 6006).
 
 - **Brand and theme** are set with `data-brand="toolkit|dynasty"` and `data-theme="light|dark"` on a wrapper element. The toolkit has one look today.
 - **Colors:** `--surface`, `--surface-raised`, `--surface-sunken`, `--text`, `--text-muted`, `--rule`, `--rule-strong`, `--bar`, `--on-bar`, `--bar-on` (section bars and the nav), `--masthead`, `--on-masthead` (the app's top bar: black in Dynasty light and dark), `--accent`, `--on-accent`, `--field`, `--highlight`, `--good`, `--good-wash`, `--bad`, `--bad-wash`, `--scrim`.
-- **Type:** `--font-display` (Barlow Condensed), `--font-body` (Barlow), `--font-num` (Press Start 2P, figures only; sizes `--fs-num-1` to `--fs-num-4`); sizes `--fs-1` (12 px) to `--fs-8` (56 px).
+- **Type:** `--font-display` (Barlow Condensed), `--font-body` (Barlow), `--font-num` (Press Start 2P, figures only; sizes `--fs-num-1` to `--fs-num-4`); sizes `--fs-1` (12 px) to `--fs-8` (56 px). Every font size in the Dynasty app's stylesheet is one of these (or a `clamp` between two of them for the big titles).
 - **Spacing:** `--sp-1` (4 px) to `--sp-7` (48 px), built on the Genesis' 8 px tile.
 - **Shape:** `--radius` (0), `--rule-w` (1 px), `--rule-w-strong` (4 px).
 

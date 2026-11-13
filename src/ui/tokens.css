@@ -43,6 +43,8 @@
   --fs-num-2: 16px;
   --fs-num-3: 24px;
   --fs-num-4: 32px;
+  /* Micro 5 (--font-num-tiny) is drawn on a 5 px grid: 15 px is its one size. */
+  --fs-num-tiny: 15px;
 
   /* Spacing: 4 px steps up to the 8 px tile, then tiles. */
   --sp-1: 4px;
