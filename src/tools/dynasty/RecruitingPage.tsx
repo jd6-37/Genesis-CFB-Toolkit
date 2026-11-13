@@ -302,7 +302,7 @@ function BoardTab({ hub, board, commits, toProspects }: { hub: Hub; board: Prosp
                       const offered = p.offers.includes(team) || plan.offers.includes(p.id);
                       return (
                         <tr key={p.id} className={cur?.id === p.id ? 'ui-row-mine' : undefined}>
-                          <td className="ui-left"><button type="button" className="dy-linkbutton dy-strong" onClick={() => pick(p.id)}>{playerName(p.player)}</button>{offered && <span className="dy-chip">Offered</span>}{p.id > 0 && <span className="dy-chip">Transfer</span>}</td>
+                          <td className="ui-left"><Button variant="link" strong onClick={() => pick(p.id)}>{playerName(p.player)}</Button>{offered && <span className="dy-chip">Offered</span>}{p.id > 0 && <span className="dy-chip">Transfer</span>}</td>
                           <td className="ui-left">{p.player.pos}</td>
                           <td className="dy-wide">{p.stars}</td>
                           <td className="ui-left dy-wide">{stateCode(p.player.state) || '-'}</td>
@@ -510,7 +510,7 @@ function ProspectsTab({ hub, portal }: { hub: Hub; portal: boolean }) {
                   const tag = discountTag(d, hub.pipes, p, team);
                   return (
                     <tr key={p.id} className={cur?.id === p.id ? 'ui-row-mine' : undefined}>
-                      <td className="ui-left"><button type="button" className="dy-linkbutton dy-strong" onClick={() => { setSel(p.id); setShown(true); }}>{playerName(p.player)}</button>{!portal && p.id > 0 && <span className="dy-chip">Transfer</span>}</td>
+                      <td className="ui-left"><Button variant="link" strong onClick={() => { setSel(p.id); setShown(true); }}>{playerName(p.player)}</Button>{!portal && p.id > 0 && <span className="dy-chip">Transfer</span>}</td>
                       <td className="ui-left">{p.player.pos}</td>
                       <td>{p.stars}</td>
                       <td className="ui-left dy-wide">{portal && p.from !== null ? d.teams[p.from].school : hometownText(p.player)}{tag && <span className="dy-small dy-dim"> {tag.split(',')[0]}</span>}</td>
@@ -642,7 +642,7 @@ function ClassesTab({ team }: { team: number }) {
             {list.map((r) => (
               <tr key={r.t} className={r.t === team ? 'ui-row-mine' : undefined}>
                 <td>{place(r.t)}</td>
-                <td className="ui-left"><button type="button" className={`dy-linkbutton${r.t === sel ? ' dy-strong' : ''}`} onClick={() => setSel(r.t)}>{d.teams[r.t].school}</button></td>
+                <td className="ui-left"><Button variant="link" strong={r.t === sel} onClick={() => setSel(r.t)}>{d.teams[r.t].school}</Button></td>
                 <td>{r.n}</td><td className="dy-wide">{r.s5 || ''}</td><td className="dy-wide">{r.s4 || ''}</td><td className="dy-wide">{r.s3 || ''}</td><td className="dy-wide">{r.s2 || ''}</td><td className="dy-wide">{r.tr || ''}</td><td>{r.pts}</td>
               </tr>
             ))}

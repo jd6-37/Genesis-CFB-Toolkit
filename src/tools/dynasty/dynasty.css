@@ -221,7 +221,6 @@
 .dy-cutlist .dy-ovr { text-align: right; }
 .dy-next { margin: 20px 0; }
 .dy-restart { margin-top: 32px; }
-.dy-linkbutton { border: 0; background: none; padding: 0; color: var(--ink); text-decoration: underline; cursor: pointer; font: inherit; }
 @media (min-width: 640px) {
   .dy-plist li > .dy-small { flex-basis: auto; margin-left: auto; }
   .dy-classes li .dy-small { display: inline; margin-left: 10px; }
@@ -475,8 +474,7 @@
 .dy-meter-cell { display: flex; align-items: center; gap: var(--sp-2); min-width: 72px; }
 .dy-meter-cell > span:last-child { width: 28px; text-align: right; font-size: var(--fs-2); }
 .dy-col-meter { width: 22%; }
-.dy-off-wide .ui-table .dy-linkbutton { text-align: left; min-height: 32px; }
-@media (min-width: 640px) { .dy-board-table td:first-child, .dy-prospect-table td:first-child { min-width: 150px; } }
+.dy-off-wide .ui-table @media (min-width: 640px) { .dy-board-table td:first-child, .dy-prospect-table td:first-child { min-width: 150px; } }
 .dy-board-table th, .dy-board-table td, .dy-prospect-table th, .dy-prospect-table td { padding-left: var(--sp-1); padding-right: var(--sp-1); }
 @media (min-width: 640px) { .dy-board-table th, .dy-board-table td, .dy-prospect-table th, .dy-prospect-table td { padding-left: var(--sp-2); padding-right: var(--sp-2); } }
 .dy-prospect-table .ui-button { min-height: 36px; padding: var(--sp-1) var(--sp-3); }

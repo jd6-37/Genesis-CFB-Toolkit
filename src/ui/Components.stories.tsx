@@ -14,6 +14,8 @@ export const Buttons: Story = {
       <Button variant="danger">Release him</Button>
       <Button disabled>Import a save</Button>
       <Button href="#records" variant="quiet">Records book</Button>
+      <Button variant="link">Undo changes to Tulane</Button>
+      <Button variant="link" strong>Sam Reyes</Button>
     </Row>
   ),
 };
@@ -186,6 +188,8 @@ export const Fields: Story = {
       <Field label="First name" value="Sam" onChange={() => {}} />
       <Field label="Awareness" type="number" min={0} max={100} value="71.5" note="In the game: 72" onChange={() => {}} />
       <Field label="Search" type="search" value="" placeholder="Name or hometown" onChange={() => {}} />
+      <Field label="Conference name" value="" maxLength={12} invalid note="0/12" onChange={() => {}} />
+      <Select label="Move Rice to another conference" hideLabel compact value="" placeholder="Move" options={[{ value: 0, label: 'SEC' }, { value: 1, label: 'Big 12' }]} onChange={() => {}} />
     </Row>
   ),
 };

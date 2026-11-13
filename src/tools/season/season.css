@@ -7,18 +7,8 @@
 /* Four conferences side by side, like the game's four columns of a rankings page. */
 .sea-confs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 12px; }
 .sea-conf { padding: 10px 12px 8px; background: var(--night); border: 1px solid var(--line); border-radius: var(--radius); }
-.sea-name { display: block; margin-bottom: 6px; }
-.sea-name input {
-  width: 100%;
-  padding: 4px 8px;
-  background: var(--deep);
-  border: 1px solid rgba(246, 216, 74, 0.45);
-  border-radius: var(--radius);
-  color: var(--menu);
-  font: 700 22px/1.2 var(--display);
-}
-.sea-name input[aria-invalid='true'] { border-color: var(--error); }
-.sea-name small { display: block; margin-top: 2px; color: var(--chalk-dim); font-size: 13px; }
+.sea-name { margin-bottom: var(--sp-2); }
+.sea-name input { width: 100%; font: 700 var(--fs-5)/1.2 var(--font-display); }
 .sea-conf ul { list-style: none; margin: 0; padding: 0; }
 .sea-conf li { display: flex; align-items: center; gap: 6px; padding: 2px 0; border-top: 1px solid var(--line); }
 .sea-team-link {
@@ -39,24 +29,13 @@
 .sea-lock { color: var(--menu); }
 /* 138-team edition: conference weeks, team names (moved ones in menu yellow), changed cards. */
 .sea-cweeks { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0 0 8px; font-size: 14px; color: var(--chalk-dim); }
-.sea-cweeks label { display: flex; align-items: center; gap: 6px; }
-.sea-cweeks select { padding: 1px 4px; background: var(--deep); border: 1px solid var(--line); border-radius: var(--radius); color: var(--chalk); font-size: 14px; }
 .sea-cweeks small { flex-basis: 100%; }
 .sea-team-name { flex: 1; min-width: 0; padding: 2px 0; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sea-team-name.on { color: var(--menu); font-weight: 600; }
 .sea-conf-changed { border-color: rgba(246, 216, 74, 0.6); }
 .sea-sec > .ui-note { margin: 0 0 10px; }
 .sea-sec > .ui-note p { margin: 0; }
-.sea-conf li select {
-  width: 4.6rem;
-  padding: 1px 2px;
-  background: var(--deep);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  font-size: 13px;
-  color: var(--chalk-dim);
-}
-.sea-conf li select option, .sea-weeks select option, .sea-pick select option { background: var(--deep); color: var(--chalk); }
+.sea-weeks select option { background: var(--deep); color: var(--chalk); }
 
 .sea-bar {
   display: flex;
@@ -67,15 +46,6 @@
   background: var(--night);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-}
-.sea-pick select {
-  min-width: 15rem;
-  padding: 8px 10px;
-  background: var(--deep);
-  border: 1px solid rgba(246, 216, 74, 0.45);
-  border-radius: var(--radius);
-  color: var(--menu);
-  font: 700 20px/1.2 var(--display);
 }
 .sea-chip { padding: 2px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 14px; color: var(--chalk-dim); }
 .sea-state { color: var(--chalk-dim); font-size: 15px; }
@@ -118,3 +88,6 @@
 }
 .sea-ha button + button { border-left: 1px solid var(--line); }
 .sea-ha button.on { background: var(--chrome); color: var(--night); font-weight: 700; }
+.sea-conf li .ui-field { flex: none; }
+.sea-conf li .ui-field select { width: 5.5rem; }
+.sea-cweeks { align-items: end; }

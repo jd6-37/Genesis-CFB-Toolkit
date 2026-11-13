@@ -8,7 +8,8 @@ import './ui.css';
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
-export type ButtonVariant = 'primary' | 'quiet' | 'danger';
+/** `link`: an action that reads as underlined text (undo, close, a name in a list), in a sentence or a table cell. */
+export type ButtonVariant = 'primary' | 'quiet' | 'danger' | 'link';
 interface ButtonProps {
   children: ReactNode;
   variant?: ButtonVariant;
@@ -21,10 +22,12 @@ interface ButtonProps {
   title?: string;
   /** The name for screen readers when the text alone doesn't say it ("vs."). */
   label?: string;
+  /** `link` only: bold (the open item of a list, a name that leads its row). */
+  strong?: boolean;
 }
 /** An action. One primary button per view; the rest quiet. */
-export function Button({ children, variant = 'primary', href, onClick, disabled, type = 'button', title, label }: ButtonProps) {
-  const cls = cx('ui-button', variant !== 'primary' && `ui-button-${variant}`);
+export function Button({ children, variant = 'primary', href, onClick, disabled, type = 'button', title, label, strong }: ButtonProps) {
+  const cls = variant === 'link' ? cx('ui-link', strong && 'ui-link-strong') : cx('ui-button', variant !== 'primary' && `ui-button-${variant}`);
   if (href !== undefined) return <a className={cls} href={disabled ? undefined : href} aria-disabled={disabled || undefined} onClick={onClick} title={title} aria-label={label}>{children}</a>;
   return <button type={type} className={cls} onClick={onClick} disabled={disabled} title={title} aria-label={label}>{children}</button>;
 }
@@ -169,9 +172,15 @@ interface SelectProps {
   disabled?: boolean;
   /** A smaller control for table cells and tight rows. */
   compact?: boolean;
+  /** A tooltip (what the choice means). */
+  title?: string;
+  /** Shown while `value` is '' (a menu that acts at once, like "Move"); it can't be picked. */
+  placeholder?: string;
+  /** A short line under the dropdown (what the choice means). */
+  note?: ReactNode;
 }
 /** A labeled dropdown. */
-export function Select({ label, hideLabel, value, options, onChange, disabled, compact }: SelectProps) {
+export function Select({ label, hideLabel, value, options, onChange, disabled, compact, title, placeholder, note }: SelectProps) {
   // Runs of options with the same group become one <optgroup>.
   const runs: { group?: string; items: Option[] }[] = [];
   for (const o of options) {
@@ -183,9 +192,11 @@ export function Select({ label, hideLabel, value, options, onChange, disabled, c
   return (
     <label className={`ui-field${compact ? ' ui-field-compact' : ''}`}>
       <span className={hideLabel ? 'sr-only' : undefined}>{label}</span>
-      <select value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)}>
+      <select value={value} disabled={disabled} title={title} onChange={(e) => onChange(e.target.value)}>
+        {placeholder !== undefined && <option value="" disabled hidden>{placeholder}</option>}
         {runs.map((r, k) => (r.group ? <optgroup key={`${r.group}-${k}`} label={r.group}>{r.items.map(item)}</optgroup> : r.items.map(item)))}
       </select>
+      {note && <span className="ui-field-note">{note}</span>}
     </label>
   );
 }
@@ -205,15 +216,20 @@ interface FieldProps {
   disabled?: boolean;
   /** A short line under the field. */
   note?: ReactNode;
+  /** The value isn't acceptable as it stands (a red border; say why in `note` or a `Note`). */
+  invalid?: boolean;
+  /** Called when the reader leaves the field. */
+  onBlur?: () => void;
 }
 /** A labeled one-line text, number or search field. */
-export function Field({ label, hideLabel, value, onChange, type = 'text', placeholder, min, max, step, maxLength, disabled, note }: FieldProps) {
+export function Field({ label, hideLabel, value, onChange, type = 'text', placeholder, min, max, step, maxLength, disabled, note, invalid, onBlur }: FieldProps) {
   return (
     <label className="ui-field">
       <span className={hideLabel ? 'sr-only' : undefined}>{label}</span>
       <input
         type={type} inputMode={type === 'number' ? 'decimal' : undefined} value={value} placeholder={placeholder}
-        min={min} max={max} step={step} maxLength={maxLength} disabled={disabled} onChange={(e) => onChange(e.target.value)}
+        min={min} max={max} step={step} maxLength={maxLength} disabled={disabled} aria-invalid={invalid || undefined}
+        onChange={(e) => onChange(e.target.value)} onBlur={onBlur}
       />
       {note && <span className="ui-field-note">{note}</span>}
     </label>

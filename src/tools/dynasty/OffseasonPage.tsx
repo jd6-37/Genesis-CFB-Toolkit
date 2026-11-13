@@ -91,9 +91,9 @@ function PlayerList({ rows, note, limit = 8 }: { rows: { p: DPlayer; extra?: str
         ))}
       </ul>
       {sorted.length > limit && (
-        <button type="button" className="dy-linkbutton dy-small" onClick={() => setAll(!all)}>
+        <span className="dy-small"><Button variant="link" onClick={() => setAll(!all)}>
           {all ? 'Show fewer' : `Show all ${sorted.length}`}
-        </button>
+        </Button></span>
       )}
     </>
   );
@@ -240,7 +240,7 @@ export function Offseason({ actions, busy, arg }: { actions: OffseasonActions; b
       )}
 
       <p className="dy-small dy-dim dy-restart">
-        <button type="button" className="dy-linkbutton" onClick={() => actions.run('Starting over…', () => actions.commit(cancelOffseason(d)))}>Start the offseason over</button>
+        <Button variant="link" onClick={() => actions.run('Starting over…', () => actions.commit(cancelOffseason(d)))}>Start the offseason over</Button>
         {' '}(back to the end of the {st.year} season).
       </p>
     </section>

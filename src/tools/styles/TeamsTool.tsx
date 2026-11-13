@@ -216,16 +216,16 @@ export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapS
                       onWeather={(w) => setWeather(t, w)}
                     />
                     <td className="wr-col">
-                      <button className="sty-link" onClick={() => setEditing(t)} aria-label={`Edit ${ok.names[t]}'s Walsh Report`}>
+                      <Button variant="link" onClick={() => setEditing(t)} label={`Edit ${ok.names[t]}'s Walsh Report`}>
                         Edit
-                      </button>
+                      </Button>
                       <small className={reportLength(reports[t]) > REPORT_LIMIT ? 'wr-len wr-len-long' : 'wr-len'}>{reportLength(reports[t])}</small>
                     </td>
                     <td className="sty-undo-cell">
                       {isChanged(t) && (
-                        <button className="sty-link" onClick={() => undo([t])} aria-label={`Undo the changes to ${ok.names[t]}`}>
+                        <Button variant="link" onClick={() => undo([t])} label={`Undo the changes to ${ok.names[t]}`}>
                           Undo
-                        </button>
+                        </Button>
                       )}
                     </td>
                   </tr>
@@ -235,9 +235,9 @@ export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapS
             </div>
             {changed.length > 1 && (
               <div className="sty-table-foot">
-                <button className="sty-link" onClick={() => undo(changed)}>
+                <Button variant="link" onClick={() => undo(changed)}>
                   Undo all team changes
-                </button>
+                </Button>
               </div>
             )}
           </section>

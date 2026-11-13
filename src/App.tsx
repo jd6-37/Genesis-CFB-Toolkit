@@ -1,4 +1,4 @@
-import { Button, FileButton, Note, PageHead, SubHead } from './ui';
+import { Button, Field, FileButton, Note, PageHead, Select, SubHead } from './ui';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BwTeam, parseBw95 } from './core/bw95';
 import { CfTeam, parseCf97 } from './core/cf97';
@@ -560,17 +560,10 @@ function TeamRow({
   const id = `slot-${bw.index}`;
 
   const text = (k: 'school' | 'city' | 'nickname', label: string) => (
-    <label className="text-field">
-      <span>
-        {label} <small>{slot![k].length}/{MAX_LEN[k]}</small>
-      </span>
-      <input
-        value={slot![k]}
-        maxLength={MAX_LEN[k]}
-        onChange={(e) => onChange({ ...slot!, [k]: e.target.value })}
-        aria-invalid={validateSlot(slot!).some((p) => p.startsWith(k))}
-      />
-    </label>
+    <Field
+      label={label} value={slot![k]} maxLength={MAX_LEN[k]} note={`${slot![k].length}/${MAX_LEN[k]}`}
+      onChange={(v) => onChange({ ...slot!, [k]: v })} invalid={validateSlot(slot!).some((p) => p.startsWith(k))}
+    />
   );
 
   return (
@@ -585,24 +578,17 @@ function TeamRow({
           <SpriteCanvas pic={pics.helmet} scale={1} label={`${slot ? slot.school : bw.school} helmet`} />
           <SpriteCanvas pic={pics.word} scale={1} label={`${slot ? slot.school : bw.school} wordmark`} />
         </span>
-        <label className="row-pick">
-          <span className="sr-only">Replacement for {bw.school}</span>
-          <select
+        <div className="row-pick">
+          <Select
+            label={`Replacement for ${bw.school}`} hideLabel
             value={slot ? slot.cf97 : ''}
-            onChange={(e) => {
-              const v = e.target.value;
+            options={[{ value: '', label: `Keep ${bw.school}` }, ...cfTeams.map((c) => ({ value: c.index, label: `${c.school} ${c.nickname}` }))]}
+            onChange={(v) => {
               if (v === '') return onChange(null);
               onChange(defaultSlot(bw, cfTeams.find((c) => c.index === +v)!));
             }}
-          >
-            <option value="">Keep {bw.school}</option>
-            {cfTeams.map((c) => (
-              <option key={c.index} value={c.index}>
-                {c.school} {c.nickname}
-              </option>
-            ))}
-          </select>
-        </label>
+          />
+        </div>
         {slot ? (
           <button className="row-toggle" onClick={onToggle} aria-expanded={open} aria-controls={id}>
             {open ? 'Close' : errs.length ? 'Fix names' : 'Edit'}
