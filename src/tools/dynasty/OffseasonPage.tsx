@@ -11,7 +11,7 @@ import { rulesOf } from '../../core/dynasty/rules';
 import { EVEN_TRAINING, TRAINING_AREAS, TRAINING_POINTS, trainingProblems, type Training } from '../../core/dynasty/training';
 import { simCuts, simOffseason } from '../../core/dynasty/sim';
 import { DEPTH_SLOTS, confirmDepth, projectedDepth, projectedProblems } from '../../core/dynasty/offseason';
-import { slotPosition, teamDepth } from '../../core/dynasty/depth';
+import { SLOT_DEF, slotPosition, teamDepth } from '../../core/dynasty/depth';
 import { rosterLayout } from '../../core/rosterLayouts';
 import { Recruiting } from './RecruitingPage';
 import { playerName } from '../../core/dynasty/derive';
@@ -282,7 +282,7 @@ function Leaving({ actions, busy }: { actions: OffseasonActions; busy: string | 
     );
   }
   const slots = season.slots[team] ?? [];
-  const spotOf = (id: number) => { const i = slots.indexOf(id); return i < 0 ? '' : LAYOUT[i]?.label ?? ''; };
+  const spotOf = (id: number) => { const i = slots.indexOf(id); return i < 0 ? '' : SLOT_DEF[i]?.label ?? ''; };
   const starter = (id: number) => { const s = spotOf(id); return !!s && !DEPTH_SLOTS.has(s); };
   const rows = [
     ...of('pro').filter((e) => e.team === team).map((e) => ({ p: pl(e.player), why: 'Going pro', portal: false })),
@@ -294,7 +294,7 @@ function Leaving({ actions, busy }: { actions: OffseasonActions; busy: string | 
   const list = rows.filter((r) => (show === 'starters' ? starter(r.p.id) : show === 'portal' ? r.portal : true));
   const stay = d.players.filter((p) => p.team === team && p.status === 'active' && !gone.has(p.id));
   const next = teamDepth(stay).slots;
-  const holes = LAYOUT.map((def, i) => ({ label: def.label, was: slots[i] !== null && slots[i] !== undefined ? pl(slots[i]!) : undefined, now: next[i] !== null && pl(next[i]!).pos === slotPosition(def.label) ? pl(next[i]!) : undefined }))
+  const holes = LAYOUT.map((def) => ({ def, i: def.slot })).map(({ def, i }) => ({ label: def.label, was: slots[i] !== null && slots[i] !== undefined ? pl(slots[i]!) : undefined, now: next[i] !== null && pl(next[i]!).pos === slotPosition(def.label) ? pl(next[i]!) : undefined }))
     .filter((h) => !DEPTH_SLOTS.has(h.label) && h.was && gone.has(h.was.id));
   const color = mainColor(d, team);
   const n = (k: string) => rows.filter((r) => r.why.startsWith(k)).length;
@@ -593,7 +593,8 @@ function SeasonSteps({ actions, step }: { actions: OffseasonActions; step: Seaso
             <Table className="dy-depth-final">
               <thead><tr><th className="ui-left">Spot</th><th className="ui-left">Player</th><th className="ui-left">Class</th><th>OVR</th></tr></thead>
               <tbody>
-                {LAYOUT.map((def, i) => {
+                {LAYOUT.map((def) => {
+                  const i = def.slot;
                   const p = slots[i] !== null && slots[i] !== undefined ? pl(slots[i]!) : undefined;
                   return <tr key={def.label}><td className="ui-left dy-strong">{def.label}</td><td className="ui-left">{p ? <a href={href(`player/${p.id}`)}>{playerName(p)}</a> : <span className="dy-dim">Nobody</span>}</td><td className="ui-left">{p?.cls ?? ''}</td><td className="ui-num">{p?.ovr ?? ''}</td></tr>;
                 })}
@@ -675,7 +676,8 @@ function ProjectedDepth({ actions, busy }: { actions: OffseasonActions; busy: st
             <Table figures className="dy-depth">
               <thead><tr><th className="ui-left">Spot</th><th className="ui-left">Player</th><th>OVR</th></tr></thead>
               <tbody>
-                {LAYOUT.map((def, slot) => {
+                {LAYOUT.map((def) => {
+                  const slot = def.slot;
                   const pos = slotPosition(def.label);
                   const here = c[slot] !== null ? pl(c[slot]!) : undefined;
                   const cands = roster.filter((p) => p.pos === pos || p.id === here?.id).sort((a, b) => b.ovr - a.ovr);
@@ -687,7 +689,7 @@ function ProjectedDepth({ actions, busy }: { actions: OffseasonActions; busy: st
                           {!here && <option value="">Open</option>}
                           {cands.map((p) => {
                             const at = c.indexOf(p.id);
-                            return <option key={p.id} value={p.id}>{playerName(p)}, {p.cls} {p.ovr}{at >= 0 && at !== slot ? ` (now at ${LAYOUT[at].label})` : ''}</option>;
+                            return <option key={p.id} value={p.id}>{playerName(p)}, {p.cls} {p.ovr}{at >= 0 && at !== slot ? ` (now at ${SLOT_DEF[at].label})` : ''}</option>;
                           })}
                         </select>
                       </td>
