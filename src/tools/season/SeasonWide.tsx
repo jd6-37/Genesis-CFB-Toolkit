@@ -1,6 +1,6 @@
 // Season tab for the 138-team 2026 Season Edition: conference names and members, and when each
 // conference plays its conference games in a random season (src/core/seasonWide.ts).
-import { Note, SubHead } from '../../ui';
+import { Field, Note, Select, SubHead } from '../../ui';
 import { useMemo, useState } from 'react';
 import {
   CONFS, INDEPENDENT, MAX_CONF_TEAMS, NAME_CHARS, NAME_LEN, POWER4, REG_WEEKS, confSizes, playedGames, roundRobin,
@@ -70,49 +70,23 @@ export function SeasonWide({
           const max = c < INDEPENDENT ? Math.min(roundRobin(sizes[c]), MAX_CONF_TEAMS, REG_WEEKS - season.start[c]) : 0;
           return (
             <div className={`sea-conf${changed ? ' sea-conf-changed' : ''}`} key={c}>
-              <label className="sea-name">
-                <input
-                  aria-label={`Name of conference ${c + 1}`}
-                  value={season.names[c]}
-                  maxLength={NAME_LEN}
-                  onChange={(e) => edit((s) => (s.names[c] = e.target.value))}
-                  aria-invalid={!season.names[c].trim()}
+              <div className="sea-name">
+                <Field
+                  label={`Name of conference ${c + 1}`} hideLabel value={season.names[c]} maxLength={NAME_LEN} invalid={!season.names[c].trim()}
+                  onChange={(v) => edit((s) => (s.names[c] = v))}
+                  note={<>{c < POWER4 ? 'Power 4' : c < INDEPENDENT ? 'Group of 6' : 'Independents'} · {sizes[c]} team{sizes[c] === 1 ? '' : 's'} · {season.names[c].length}/{NAME_LEN}</>}
                 />
-                <small>
-                  {c < POWER4 ? 'Power 4' : c < INDEPENDENT ? 'Group of 6' : 'Independents'} · {sizes[c]} team
-                  {sizes[c] === 1 ? '' : 's'} · {season.names[c].length}/{NAME_LEN}
-                </small>
-              </label>
+              </div>
               {c < INDEPENDENT && (
                 <div className="sea-cweeks">
-                  <label>
-                    Conference games
-                    <select
-                      value={season.games[c]}
-                      onChange={(e) => edit((s) => (s.games[c] = +e.target.value))}
-                      aria-label={`${label(c)} conference games`}
-                    >
-                      {Array.from({ length: Math.max(max, season.games[c]) + 1 }, (_, n) => (
-                        <option key={n} value={n}>
-                          {n}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    from week
-                    <select
-                      value={season.start[c]}
-                      onChange={(e) => edit((s) => (s.start[c] = +e.target.value))}
-                      aria-label={`${label(c)} first conference week`}
-                    >
-                      {Array.from({ length: REG_WEEKS }, (_, w) => (
-                        <option key={w} value={w}>
-                          {w + 1}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <Select
+                    label="Conference games" compact value={season.games[c]} onChange={(v) => edit((s) => (s.games[c] = +v))}
+                    options={Array.from({ length: Math.max(max, season.games[c]) + 1 }, (_, n) => ({ value: n, label: String(n) }))}
+                  />
+                  <Select
+                    label="From week" compact value={season.start[c]} onChange={(v) => edit((s) => (s.start[c] = +v))}
+                    options={Array.from({ length: REG_WEEKS }, (_, w) => ({ value: w, label: String(w + 1) }))}
+                  />
                   {playedGames(season, c) < season.games[c] && (
                     <small>
                       {sizes[c]} teams play at most {playedGames(season, c)}.
@@ -124,18 +98,11 @@ export function SeasonWide({
                 {list.map(({ n, t }) => (
                   <li key={t}>
                     <span className={`sea-team-name${loaded.conf[t] !== c ? ' on' : ''}`}>{n}</span>
-                    <select aria-label={`Move ${n} to another conference`} value="" onChange={(e) => move(t, +e.target.value)}>
-                      <option value="" disabled hidden>
-                        Move
-                      </option>
-                      {season.names.map((_, k) =>
-                        k === c ? null : (
-                          <option key={k} value={k}>
-                            {label(k)}
-                          </option>
-                        ),
-                      )}
-                    </select>
+                    <Select
+                      label={`Move ${n} to another conference`} hideLabel compact value="" placeholder="Move"
+                      options={season.names.map((_, k) => ({ value: k, label: label(k) })).filter((o) => o.value !== c)}
+                      onChange={(v) => move(t, +v)}
+                    />
                   </li>
                 ))}
               </ul>

@@ -1,6 +1,6 @@
 // Rosters tool: edit the players of BW95, CF96 or CF97 team by team, or import them from a
 // spreadsheet (CSV or XLSX), export them as CSV, and download the ROM with fixed checksums.
-import { Button, Note, PageHead, SubHead } from '../../ui';
+import { Button, Note, PageHead, Select, SubHead } from '../../ui';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   GAMES, GROUP_COLUMNS, GROUP_ORDER, GROUP_TITLES, nibbleToRating, nibbleToWeight, ratingRangeLabel, weightRangeLabel,
@@ -273,17 +273,10 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
   return (
     <section className="ros" aria-label="Roster editor">
       <div className="ros-bar">
-        <label className="ros-team">
-          <span>Team</span>
-          <select value={team} onChange={(e) => setTeam(Number(e.target.value))}>
-            {rom.teams.map((x) => (
-              <option key={x.index} value={x.index}>
-                {isChanged(x.index) ? '● ' : ''}
-                {teamName(x)}
-              </option>
-            ))}
-          </select>
-        </label>
+        <Select
+          label="Team" value={team} onChange={(v) => setTeam(Number(v))}
+          options={rom.teams.map((x) => ({ value: x.index, label: `${isChanged(x.index) ? '● ' : ''}${teamName(x)}` }))}
+        />
         {sinfo ? (
           <StylePicks
             mode="bar"
@@ -336,14 +329,14 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
 
       <div className="ros-status">
         {isChanged(team) && (
-          <button className="ros-link" onClick={() => revert([team])}>
+          <Button variant="link" onClick={() => revert([team])}>
             Undo changes to {t.school}
-          </button>
+          </Button>
         )}
         {changed.length > 1 && (
-          <button className="ros-link" onClick={() => revert(changed)}>
+          <Button variant="link" onClick={() => revert(changed)}>
             Undo all roster changes
-          </button>
+          </Button>
         )}
       </div>
 
@@ -490,9 +483,9 @@ function ImportSummary({
             ? 'No team in the sheet matched this ROM.'
             : `${report.teams.length} team${report.teams.length === 1 ? '' : 's'} updated, ${placed} players placed.`}
         </span>
-        <button className="ros-link" onClick={onClose}>
+        <Button variant="link" onClick={onClose}>
           Close
-        </button>
+        </Button>
       </div>
       <p className="ros-dim ros-path">
         {bySlot
@@ -526,9 +519,9 @@ function ImportSummary({
           <ul className="ros-teams">
             {report.teams.map((t) => (
               <li key={t.team}>
-                <button className="ros-link" onClick={() => onPick(t.team)}>
+                <Button variant="link" onClick={() => onPick(t.team)}>
                   {t.teamName}
-                </button>
+                </Button>
                 {t.sheetTeam !== t.teamName && <span className="ros-dim"> (sheet: {t.sheetTeam})</span>}
                 <span className="ros-dim">
                   {' '}
@@ -596,9 +589,9 @@ function Cfb27Preview({
         <span>
           CFB 27 ratings: {n === 0 ? 'no school in the file matches a team in this ROM.' : `${n} of this ROM's ${rom.teams.length} teams found.`}
         </span>
-        <button className="ros-link" onClick={onCancel}>
+        <Button variant="link" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </div>
       {n > 0 && (
         <>
@@ -609,12 +602,12 @@ function Cfb27Preview({
           <fieldset className="ros-pick">
             <legend>
               Teams to write{' '}
-              <button type="button" className="ros-link" onClick={() => setPick(new Set(plan.teams.map((t) => t.team)))}>
+              <Button variant="link" onClick={() => setPick(new Set(plan.teams.map((t) => t.team)))}>
                 all
-              </button>{' '}
-              <button type="button" className="ros-link" onClick={() => setPick(new Set())}>
+              </Button>{' '}
+              <Button variant="link" onClick={() => setPick(new Set())}>
                 none
-              </button>
+              </Button>
             </legend>
             {[...plan.teams].sort((a, b) => rom.teams[a.team].school.localeCompare(rom.teams[b.team].school)).map((t) => (
               <label key={t.team}>
@@ -680,9 +673,9 @@ function Cfb27Summary({ rom, report, onPick, onClose }: { rom: RosterRom; report
         <span>
           Converted from CFB 27: {done.length} team{done.length === 1 ? '' : 's'}, {report.slots} players.
         </span>
-        <button className="ros-link" onClick={onClose}>
+        <Button variant="link" onClick={onClose}>
           Close
-        </button>
+        </Button>
       </div>
       <p className="ros-dim ros-path">
         Ratings follow the original game's spread for each position (ranked among the {plan.teams.length} team
@@ -727,9 +720,9 @@ function Cfb27Summary({ rom, report, onPick, onClose }: { rom: RosterRom; report
         <ul className="ros-teams">
           {done.map((t) => (
             <li key={t.team}>
-              <button className="ros-link" onClick={() => onPick(t.team)}>
+              <Button variant="link" onClick={() => onPick(t.team)}>
                 {t.teamName}
-              </button>
+              </Button>
               {normalize(t.sheetTeam) !== normalize(rom.teams[t.team].school) && <span className="ros-dim"> (file: {t.sheetTeam})</span>}
               <div className="ros-fills">
                 {t.fills.map((f) => (

@@ -135,9 +135,9 @@ export function Rules({ actions, busy }: { actions: OffseasonActions; busy: stri
               );
             })}
             {secChanged && (
-              <button type="button" className="dy-linkbutton dy-small" onClick={() => { setMsg(null); setDraft((x) => ({ ...x, ...Object.fromEntries(sec.fields.map((f) => [f.key, DEFAULT_RULES[f.key]])) })); }}>
+              <span className="dy-small"><Button variant="link" onClick={() => { setMsg(null); setDraft((x) => ({ ...x, ...Object.fromEntries(sec.fields.map((f) => [f.key, DEFAULT_RULES[f.key]])) })); }}>
                 Reset {sec.title.toLowerCase()} to the defaults
-              </button>
+              </Button></span>
             )}
           </section>
         );

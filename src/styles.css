@@ -147,14 +147,8 @@ button, input, select { font: inherit; color: inherit; }
 .sprite { image-rendering: pixelated; display: block; }
 .sprite-empty { width: 1px; height: 1px; }
 
-.row-pick select {
-  width: 100%;
-  padding: 8px 10px;
-  background: var(--deep);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-}
-.row-swapped .row-pick select { color: var(--menu); font-weight: 600; border-color: rgba(246, 216, 74, 0.45); }
+.row-pick select { width: 100%; }
+.row-swapped .row-pick select { color: var(--accent); font-weight: 600; border-color: var(--accent); }
 
 .row-toggle {
   justify-self: end;
@@ -181,17 +175,6 @@ button, input, select { font: inherit; color: inherit; }
   background: var(--deep);
 }
 .names { display: flex; flex-direction: column; gap: 12px; }
-.text-field { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--chalk-dim); }
-.text-field small { float: right; }
-.text-field input {
-  padding: 8px 10px;
-  background: var(--night);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  color: var(--chalk);
-  font-size: 16px;
-}
-.text-field input[aria-invalid='true'] { border-color: var(--error); }
 .hint { margin: 0; font-size: 14px; color: var(--chalk-dim); max-width: 40ch; }
 
 .uniform { margin: 0; padding: 0; border: 0; display: grid; grid-template-columns: 44px 1fr; gap: 4px 14px; }

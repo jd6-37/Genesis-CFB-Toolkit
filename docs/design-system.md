@@ -56,7 +56,7 @@ Run `npm run storybook` to browse the components (port 6006).
 
 | Component | Use it for |
 |---|---|
-| `Button` | An action, or a link that looks like one (`href`). `variant`: `primary` (one per view), `quiet`, `danger`. |
+| `Button` | An action, or a link that looks like one (`href`). `variant`: `primary` (one per view), `quiet`, `danger`, `link` (an action that reads as underlined text: undo, close, a name in a list or a table cell; `strong` makes it bold). |
 | `Row` | Buttons or controls side by side; wraps on phones. |
 | `Note` | A message about what happened or what to do next. `kind`: `info`, `ok`, `error`. |
 | `PageHead`, `SubHead` | A page's title with its line of text and controls; a section heading (a bar with reversed type). |
@@ -83,7 +83,8 @@ Run `npm run storybook` to browse the components (port 6006).
 - **Dynasty tables** all use `Table` (18 of them); figures are in the pixel numerals.
 - **Dynasty's masthead and main menu** are `Masthead` and `NavBar`. The score ticker stays Dynasty's own (it is a scores strip, not a general element) and uses the tokens.
 - **Dynasty, not moved yet:** checkboxes, the training sliders, the rules page's number fields and the recruiting points stepper. `dynasty.css` still has its own font sizes. The player page's rating tiles stay their own (a pip bar and the bold labels the owner asked for; `Stat` has neither).
-- **Mod Toolkit:** every tab's title (`PageHead`), section headings (`SubHead`), buttons (`Button`, `FileButton`) and messages (`Note`, with `block` for lists) are shared components; `styles.css` maps its own names to the tokens; corners are square and the ROM cards have the hard shadow.
+- **Mod Toolkit:** every tab's title (`PageHead`), section headings (`SubHead`), buttons (`Button`, `FileButton`, the text-like `link` buttons), messages (`Note`, with `block` for lists), and the dropdowns and text fields outside the editor tables (team pickers, style pickers, Team Swap's replacement menu and name fields, the Season tab's conference names, games, weeks and Move menus, the CFB 27 search) are shared components. Still their own: the cells of the editor tables (roster ratings and jersey numbers, the locked schedule's opponents, team OVR and weather), checkboxes and radio buttons; `styles.css` maps its own names to the tokens; corners are square and the ROM cards have the hard shadow.
 - **Mod Toolkit, not moved yet:** its four tables, the selects and number fields in the editors, the link-style buttons (`ros-link`, `sty-link`), the tab menu's markup, the Team Swap rows, and the font sizes in its stylesheets.
 - Team colors in charts: use `inkColor(d, team, dark)` so the color shows on the page in both themes.
+- `Select` takes `title` (a tooltip), `note` (a line under it) and `placeholder` (shown while the value is '', for a menu that acts at once such as "Move"); `Field` takes `invalid` (a red border) and `onBlur`.
 - `Button` takes `title` (a tooltip) and `label` (the name for screen readers); a link button with `disabled` has no address. `SubHead` takes `level={2}` for a section that isn't under a page title.

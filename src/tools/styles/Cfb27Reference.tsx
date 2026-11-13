@@ -1,6 +1,6 @@
 // The Teams tab's College Football 27 reference: every CFB 27 team's offense style and defensive
 // playbook, and the Bill Walsh '95 styles recommended for it (src/core/cfb27Styles.ts).
-import { SubHead } from '../../ui';
+import { Field, SubHead } from '../../ui';
 import { useMemo, useState } from 'react';
 import { CFB27, OFFENSE_FOR } from '../../core/cfb27Styles';
 import { DEFENSE, OFFENSE } from '../../core/styles';
@@ -56,10 +56,9 @@ export function Cfb27Reference({ onRom }: { onRom: Set<string> | null }) {
         </div>
       </div>
       <div className="cfb-tools">
-        <label className="cfb-search">
-          <span>Find a team or conference</span>
-          <input type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="e.g. Tulane or SEC" />
-        </label>
+        <div className="cfb-search">
+          <Field label="Find a team or conference" type="search" value={query} onChange={setQuery} placeholder="e.g. Tulane or SEC" />
+        </div>
         {onRom && (
           <label className="cfb-only">
             <input type="checkbox" checked={onlyRom} onChange={(e) => setOnlyRom(e.target.checked)} />

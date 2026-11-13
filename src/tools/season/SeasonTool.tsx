@@ -1,6 +1,6 @@
 // Season tool: rename Bill Walsh '95's four conferences, move teams between them, and lock in
 // schedules. Teams that aren't locked keep the game's random schedules.
-import { Button, FileButton, Note, PageHead, SubHead } from '../../ui';
+import { Button, Field, FileButton, Note, PageHead, Select, SubHead } from '../../ui';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CONFERENCES, NAME_LEN, WEEKS, conferenceGames, isLocked, lockAll, lockTeam, readSeason, seasonFile, seasonFromFile,
@@ -310,18 +310,13 @@ function SeasonEditor({ teams, season, onChange }: { teams: string[]; season: Se
         <div className="sea-confs">
           {byConf.map((list, c) => (
             <div className="sea-conf" key={c}>
-              <label className="sea-name">
-                <input
-                  aria-label={`Name of conference ${c + 1}`}
-                  value={season.names[c]}
-                  maxLength={NAME_LEN}
-                  onChange={(e) => apply(() => setName(season, c, e.target.value))}
-                  aria-invalid={!season.names[c].trim()}
+              <div className="sea-name">
+                <Field
+                  label={`Name of conference ${c + 1}`} hideLabel value={season.names[c]} maxLength={NAME_LEN} invalid={!season.names[c].trim()}
+                  onChange={(v) => apply(() => setName(season, c, v))}
+                  note={<>{list.length} teams · {season.names[c].length}/{NAME_LEN}</>}
                 />
-                <small>
-                  {list.length} teams · {season.names[c].length}/{NAME_LEN}
-                </small>
-              </label>
+              </div>
               <ul>
                 {list.map(({ n, t }) => (
                   <li key={t}>
@@ -329,22 +324,11 @@ function SeasonEditor({ teams, season, onChange }: { teams: string[]; season: Se
                       {n}
                       {isLocked(season, t) && <span className="sea-lock" title="Locked schedule"> ●</span>}
                     </button>
-                    <select
-                      aria-label={`Move ${n} to another conference`}
-                      value=""
-                      onChange={(e) => apply(() => setConference(season, t, +e.target.value))}
-                    >
-                      <option value="" disabled hidden>
-                        Move
-                      </option>
-                      {names.map((nm, k) =>
-                        k === c ? null : (
-                          <option key={k} value={k}>
-                            {nm}
-                          </option>
-                        ),
-                      )}
-                    </select>
+                    <Select
+                      label={`Move ${n} to another conference`} hideLabel compact value="" placeholder="Move"
+                      options={names.map((nm, k) => ({ value: k, label: nm })).filter((o) => o.value !== c)}
+                      onChange={(v) => apply(() => setConference(season, t, +v))}
+                    />
                   </li>
                 ))}
               </ul>
@@ -367,20 +351,10 @@ function SeasonEditor({ teams, season, onChange }: { teams: string[]; season: Se
         </div>
 
         <div className="sea-bar">
-          <label className="sea-pick">
-            <select aria-label="Team" value={team} onChange={(e) => setTeam(+e.target.value)}>
-              {byConf.map((list, c) => (
-                <optgroup key={c} label={names[c]}>
-                  {list.map(({ n, t }) => (
-                    <option key={t} value={t}>
-                      {isLocked(season, t) ? '● ' : ''}
-                      {n}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-          </label>
+          <Select
+            label="Team" value={team} onChange={(v) => setTeam(+v)}
+            options={byConf.flatMap((list, c) => list.map(({ n, t }) => ({ value: t, label: `${isLocked(season, t) ? '● ' : ''}${n}`, group: names[c] })))}
+          />
           <span className="sea-chip">{names[season.conf[team]]}</span>
           {locked ? (
             <>

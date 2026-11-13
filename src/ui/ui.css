@@ -13,6 +13,13 @@
 .ui-button-quiet:hover { border-color: var(--text); filter: none; }
 .ui-button-danger { background: transparent; color: var(--bad); border-color: var(--bad); }
 
+/* A button that reads as underlined text. It takes the text's size and face from where it sits. */
+.ui-link { padding: 0; border: 0; background: none; color: var(--accent); font: inherit; text-align: left; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.ui-link:hover { text-decoration-thickness: 2px; }
+.ui-link:disabled, .ui-link[aria-disabled='true'] { opacity: 0.5; cursor: default; }
+.ui-link:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.ui-link-strong { font-weight: 700; }
+
 .ui-field .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 .ui-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-3); }
@@ -68,6 +75,7 @@
 .ui-stat-note { font-size: var(--fs-1); color: var(--text-muted); }
 
 .ui-field select:disabled, .ui-field input:disabled { opacity: 0.55; cursor: not-allowed; }
+.ui-field input[aria-invalid='true'] { border-color: var(--bad); }
 .ui-field-note { font: 400 var(--fs-1)/1.3 var(--font-body); text-transform: none; letter-spacing: 0; }
 .ui-field-compact select { min-height: 32px; padding: var(--sp-1) var(--sp-2); border-width: 1px; border-color: var(--rule); font-weight: 600; }
 

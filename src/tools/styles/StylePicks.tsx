@@ -1,6 +1,7 @@
 // Offense and defense style selects, shared by the Team Swap edit screen, the Teams tab and the
 // Rosters tab.
 import { DEFENSE, OFFENSE, defensePlan, offenseFormations, type StyleInfo, type TeamStyle } from '../../core/styles';
+import { Select } from '../../ui';
 import './teamstyles.css';
 
 export function StylePicks({
@@ -26,36 +27,17 @@ export function StylePicks({
 }) {
   const mark = (k: 'offense' | 'defense', i: number) => (was && wasName && was[k] === i ? ` (${wasName})` : '');
   const tip = mode !== 'full';
-  const off = (
-    <select
-      aria-label={`${team} offense style`}
-      title={tip ? offenseFormations(value.offense, info) : undefined}
-      value={value.offense}
-      onChange={(e) => onChange({ ...value, offense: Number(e.target.value) })}
-    >
-      {OFFENSE.map((n, i) => (
-        <option key={n} value={i}>
-          {n}
-          {mark('offense', i)}
-        </option>
-      ))}
-    </select>
+  const pick = (k: 'offense' | 'defense', names: readonly string[], means: string) => (
+    <Select
+      label={mode === 'table' ? `${team} ${k} style` : k === 'offense' ? 'Offense' : 'Defense'}
+      hideLabel={mode === 'table'} compact={mode !== 'full'}
+      title={tip ? means : undefined} note={tip ? undefined : means}
+      value={value[k]} onChange={(v) => onChange({ ...value, [k]: Number(v) })}
+      options={names.map((n, i) => ({ value: i, label: `${n}${mark(k, i)}` }))}
+    />
   );
-  const def = (
-    <select
-      aria-label={`${team} defense style`}
-      title={tip ? defensePlan(value.defense, info) : undefined}
-      value={value.defense}
-      onChange={(e) => onChange({ ...value, defense: Number(e.target.value) })}
-    >
-      {DEFENSE.map((n, i) => (
-        <option key={n} value={i}>
-          {n}
-          {mark('defense', i)}
-        </option>
-      ))}
-    </select>
-  );
+  const off = pick('offense', OFFENSE, offenseFormations(value.offense, info));
+  const def = pick('defense', DEFENSE, defensePlan(value.defense, info));
   if (mode === 'table') {
     return (
       <>
@@ -64,32 +46,5 @@ export function StylePicks({
       </>
     );
   }
-  if (mode === 'bar') {
-    return (
-      <span className="sty-picks sty-bar">
-        <label>
-          <span>Offense</span>
-          {off}
-        </label>
-        <label>
-          <span>Defense</span>
-          {def}
-        </label>
-      </span>
-    );
-  }
-  return (
-    <div className="sty-picks">
-      <label className="sty-field">
-        <span>Offense</span>
-        {off}
-        <small>{offenseFormations(value.offense, info)}</small>
-      </label>
-      <label className="sty-field">
-        <span>Defense</span>
-        {def}
-        <small>{defensePlan(value.defense, info)}</small>
-      </label>
-    </div>
-  );
+  return <div className={`sty-picks${mode === 'bar' ? ' sty-bar' : ''}`}>{off}{def}</div>;
 }
