@@ -12,6 +12,7 @@ import { detectImport, importSheet, teamMatcher } from '../src/core/rosterImport
 import { parseCsv, readSheet, toCsv } from '../src/core/rosterSheet';
 import { BW95_LABELS_43, GROUP_ATTRS, nibbleToWeight, ratingToNibble, weightToNibble, type Game } from '../src/core/rosterLayouts';
 import { openRom } from '../src/core/romfile';
+import { numberAllowed, replacementNumber } from '../src/core/dynasty/numbers';
 import { applyCfb27, bw95Role, CFB27_COLUMNS, convertCfb27 } from '../src/core/rosterCfb27';
 import { installOlPatch, OL_PATCH, olPatchState, restoreOlPatch } from '../src/core/rosterOlPatch';
 import { stockDistributionsJson } from './stockdists';
@@ -261,6 +262,25 @@ const FULL = ['QB', 'QB', 'HB', 'HB', 'HB', 'FB', 'WR', 'WR', 'WR', 'WR', 'WR', 
   assert.ok(['ROLB', 'MLB'].includes(fill('Army', 'LOLB').player.pos) && fill('Army', 'LOLB').how === 'fallback');
   ok('CFB 27: fallbacks (FB from HB/TE by blocking, shared K/P, LOLB)');
 
+  // Numbers a position can't wear in the game are replaced (numbers.ts); the others are the file's.
+  {
+    const fills = plan.teams.flatMap((t) => t.fills);
+    const changed = fills.filter((f) => f.player.jerseyWas !== undefined);
+    assert.ok(changed.length > 0, 'the made-up sheet has numbers to fix');
+    for (const f of fills) {
+      assert.ok(numberAllowed(f.player.pos, f.player.jersey), `${f.player.pos} ${f.player.jersey}`);
+      const inFile = Number(sheet.rows[f.player.row][CFB_HEAD.indexOf('Jersey Number')]);
+      assert.equal(f.player.jerseyWas ?? f.player.jersey, inFile);
+      assert.equal(f.player.jerseyWas !== undefined, !numberAllowed(f.player.pos, inFile));
+    }
+    assert.equal(plan.numbers.size, new Set([...plan.numbers.keys()]).size);
+    assert.equal(replacementNumber('TE', 53, new Set()), 83);
+    assert.equal(replacementNumber('TE', 53, new Set([83])), 43);
+    assert.equal(replacementNumber('FB', 57, new Set()), 47);
+    assert.equal(replacementNumber('RG', 97, new Set()), 77);
+    ok(`CFB 27: ${changed.length} numbers their position can't wear replaced, the rest as in the file`);
+  }
+
   // Deterministic: the same sheet gives the same bytes.
   const again = openRosterRom(load('bw95'));
   applyCfb27(again, convertCfb27(again, sheet));
@@ -379,6 +399,30 @@ const FULL = ['QB', 'QB', 'HB', 'HB', 'HB', 'FB', 'WR', 'WR', 'WR', 'WR', 'WR', 
   assert.deepEqual(importSheet(openRosterRom(load('bw95')), unknown).unknownTeams, [{ name: 'Atlantis Tritons', rows: 1 }]);
   // Sheets without a Slot column and without CFB 27 columns use the ranked import.
   assert.equal(detectImport(stock, parseCsv(readFileSync(fixture('sample.csv'), 'utf8'))).path, 'ranked');
+  {
+    // A number the slot's position can't wear is replaced, unless the slot already had it (an exported sheet
+    // comes back unchanged).
+    const c = openRosterRom(load('bw95'));
+    const t = c.teams[0];
+    const slot = (label: string) => teamLayout(c, t.index).find((d) => d.label === label)!.slot;
+    const hb = readPlayer(c, t.index, slot('HB1')); hb.numberByte = jerseyByte(66); writePlayer(c, t.index, slot('HB1'), hb);
+    const te1 = jerseyNumber(readPlayer(c, t.index, slot('TE1')).numberByte)!;
+    const out = parseCsv(exportRostersCsv(c, [t.index]));
+    const cS = out.headers.indexOf('Slot'), cN = out.headers.indexOf('Jersey Number');
+    const want: Record<string, number> = { HB1: 66, FB: 57, TE2: 50 + (te1 % 10), LG: 91, LDE: 55 };
+    for (const r of out.rows) if (want[r[cS]] !== undefined) r[cN] = String(want[r[cS]]);
+    const rep = importSheet(c, out);
+    const got = (label: string) => jerseyNumber(readPlayer(c, t.index, slot(label)).numberByte);
+    assert.equal(got('HB1'), 66, 'the number he had stays');
+    assert.equal(got('LDE'), 55, 'defense may wear anything');
+    assert.deepEqual(rep.teams[0].renumbered.map((n) => [n.label, n.from]), [['FB', 57], ['LG', 91], ['TE2', 50 + (te1 % 10)]]);
+    assert.ok(got('FB')! % 10 === 7 && (got('FB')! < 50 || got('FB')! > 79));
+    assert.ok(got('LG')! >= 50 && got('LG')! <= 79);
+    assert.ok(got('TE2') !== te1 && (got('TE2')! < 50 || got('TE2')! > 79), 'not a number a teammate on offense wears');
+    const offense = teamLayout(c, t.index).filter((d) => ['QB', 'RB', 'OL', 'REC'].includes(d.group)).map((d) => got(d.label));
+    for (const n of rep.teams[0].renumbered) assert.equal(offense.filter((x) => x === n.to).length, 1);
+    ok('spreadsheet import: numbers a position can\'t wear replaced; unchanged and defensive numbers kept');
+  }
   ok('import paths: slots, refused (other layout, duplicates), ranked; Elevated layout and labels, old and new');
 }
 

@@ -17,7 +17,7 @@ import { blackShare, nameScore, SKIN_TONES } from './appearance';
 import type { LookEdit } from './headshot';
 import { POSITIONS } from './offseason';
 import { recordYear } from './career';
-import { NO_NUMBER } from './numbers';
+import { NO_NUMBER, numberAllowed, replacementNumber, sideOf } from './numbers';
 
 const DEFS_SLOTS = 32;
 const logit = (p: number) => Math.log(p / (1 - p));
@@ -150,6 +150,8 @@ export interface CsvImport {
   /** What would change, one line per player. */
   changes: string[];
   problems: string[];
+  /** Numbers in the file a player's position can't wear in the game, and what he gets instead (numbers.ts). */
+  warnings: string[];
 }
 
 /**
@@ -160,7 +162,16 @@ export interface CsvImport {
 export function readPlayersCsv(d: Dynasty, text: string): CsvImport {
   const sheet = parseCsv(text);
   const col = (h: string) => sheet.headers.findIndex((x) => x.replace(/^﻿/, '').trim().toLowerCase() === h.toLowerCase());
-  const out: CsvImport = { edits: new Map(), adds: [], changes: [], problems: [] };
+  const out: CsvImport = { edits: new Map(), adds: [], changes: [], problems: [], warnings: [] };
+  // Numbers worn per team and side of the ball, for replacing one a position can't wear.
+  const worn = new Map<string, Set<number>>();
+  const wornBy = (team: number, pos: string, but?: number) => {
+    const k = `${team}:${sideOf(pos)}`;
+    if (!worn.has(k)) worn.set(k, new Set(d.players.filter((q) => q.status === 'active' && q.team === team && sideOf(q.pos) === sideOf(pos)).map((q) => q.jersey)));
+    const set = new Set(worn.get(k)!);
+    if (but !== undefined) set.delete(but);
+    return { set, add: (n: number) => worn.get(k)!.add(n) };
+  };
   if (col('First Name') < 0 || col('Last Name') < 0) { out.problems.push('The file needs at least the columns First Name and Last Name (export one to see them all).'); return out; }
   const teamOf = new Map(d.teams.map((t) => [t.school.toLowerCase(), t.index]));
   sheet.rows.forEach((r, k) => {
@@ -182,6 +193,19 @@ export function readPlayersCsv(d: Dynasty, text: string): CsvImport {
     if (Object.keys(ratings).length) e.ratings = ratings;
     const id = num('ID');
     const p = id !== undefined ? d.players[id - 1] : undefined;
+    {
+      // A new number his position can't wear in the game (a number he already has is left alone).
+      const pos = e.pos ?? p?.pos, team = e.team !== undefined ? e.team : p?.team;
+      const n = e.jersey;
+      if (n !== undefined && Number.isInteger(n) && n >= 0 && n <= 99 && pos && POSITIONS.includes(pos) && team !== null && team !== undefined && n !== p?.jersey && !numberAllowed(pos, n)) {
+        const w = wornBy(team, pos, p?.jersey);
+        const to = replacementNumber(pos, n, w.set);
+        if (to !== null) {
+          e.jersey = to; w.add(to);
+          out.warnings.push(`Row ${k + 2}: ${pos} ${(e.first ?? p?.first ?? '')} ${(e.last ?? p?.last ?? '')} can't wear ${n} in the game (offensive linemen wear 50-79, nobody else on offense does); he gets ${to}.`);
+        }
+      }
+    }
     out.problems.push(...editProblems(d, p ?? null, e).map((m) => `Row ${k + 2}: ${m}`));
     if (p) {
       // Only what differs.

@@ -167,7 +167,8 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
     create: (name, romFile) => run('Creating the dynasty…', async () => {
       const rom = (await openRom(romFile.name, await readFile(romFile))).data;
       const csv = new TextDecoder().decode(await fetchCfb27Latest());
-      const dyn = createDynasty(rom, csv, { name });
+      let renumbered: { player: number; from: number; to: number }[] = [];
+      const dyn = createDynasty(rom, csv, { name, onNumbers: (list) => { renumbered = list; } });
       const pics = teamArt(rom);
       await saveDynasty(dyn);
       await saveArt(dyn.id, pics);
@@ -176,7 +177,10 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       setArt(pics);
       setCurrent(dyn.id);
       await refresh();
-      setNote({ kind: 'ok', text: `${dyn.name} is ready: ${dyn.players.length.toLocaleString('en-US')} players on ${dyn.teams.length} teams. Play the ${dyn.seasons[0].year} season on your ROM as it is, and import your save whenever you like (after the last game at the latest). After the offseason the app gives you the next season's ROM.` });
+      setNote({ kind: 'ok', text: `${dyn.name} is ready: ${dyn.players.length.toLocaleString('en-US')} players on ${dyn.teams.length} teams. Play the ${dyn.seasons[0].year} season on your ROM as it is, and import your save whenever you like (after the last game at the latest). After the offseason the app gives you the next season's ROM.` +
+        (renumbered.length
+          ? ` ${renumbered.length} player${renumbered.length === 1 ? ' has' : 's have'} a number the game doesn't allow at ${renumbered.length === 1 ? 'his' : 'their'} position in the rosters file (a tight end in the 50s, say) and got a new one: ${renumbered.map((n) => { const p = dyn.players[n.player - 1]; return `${p.pos} ${p.first} ${p.last} (${dyn.teams[p.team!].school}) ${n.from} → ${n.to}`; }).join(', ')}. Your ROM still shows the old numbers this season.`
+          : '') });
     }),
     importSave: (f, allowOlder) => run('Importing the save…', async () => {
       if (!d) return;
@@ -578,6 +582,12 @@ function PlayersCsv({ d, actions }: { d: Dynasty; actions: ManageActions }) {
             <>
               <p><strong>{pending.problems.length} {pending.problems.length === 1 ? 'problem' : 'problems'}</strong>: fix the file and import it again.</p>
               <ul className="dy-small">{pending.problems.slice(0, 20).map((m) => <li key={m}>{m}</li>)}</ul>
+            </>
+          )}
+          {pending.problems.length === 0 && pending.warnings.length > 0 && (
+            <>
+              <p><strong>{pending.warnings.length} {pending.warnings.length === 1 ? 'number was' : 'numbers were'} replaced</strong>:</p>
+              <ul className="dy-small">{pending.warnings.slice(0, 50).map((m) => <li key={m}>{m}</li>)}</ul>
             </>
           )}
           {pending.problems.length === 0 && (

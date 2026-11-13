@@ -25,6 +25,8 @@ export interface RosterBuild {
    * him to (defensive linemen as linebackers and the other way round), rated on the same scale.
    */
   extra: Map<number, Partial<Record<Attr, number>>>;
+  /** Per sheet row, the number given in place of one the player's position can't wear (rosterCfb27.ts). */
+  numbers: Map<number, { from: number; to: number }>;
 }
 
 /** The role a player of a role may move to with a different rating group (lineup.ts MOVES: DE/OLB). */
@@ -51,10 +53,11 @@ const slotOf = (f: Cfb27Fill, olPlus: number): BwSlot => {
 export function buildRosters(rom: RosterRom, sheet: Sheet): RosterBuild {
   const n = rom.teams.length;
   const empty = <T>() => Array.from({ length: n }, () => new Array<T | null>(SLOTS).fill(null));
-  const out: RosterBuild = { slots: empty(), bench: empty(), bw: empty(), benchBw: empty(), extra: new Map() };
+  const out: RosterBuild = { slots: empty(), bench: empty(), bw: empty(), benchBw: empty(), extra: new Map(), numbers: new Map() };
   const olPlus = hasOlPatch(rom) ? OL_PATCH.pounds : 0;
 
   const first = convertCfb27(rom, sheet);
+  out.numbers = first.numbers;
   const used = new Set<number>();
   for (const t of first.teams) {
     for (const f of t.fills) {
