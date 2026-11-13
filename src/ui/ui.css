@@ -112,6 +112,8 @@ a.ui-button-quiet, a.ui-button-quiet:hover { color: var(--text); }
 a.ui-button-danger, a.ui-button-danger:hover { color: var(--bad); }
 
 /* A pixel figure that shares a baseline with text: its ink starts 1/8 em above the baseline, so drop it. */
+/* Num: the comma of a thousands figure, drawn tight in the pixel numerals (elsewhere it is a plain comma). */
+.ui-figures td:not(.ui-left):not(.ui-text) .ui-comma, .ui-num .ui-comma, .ui-stat-value .ui-comma { margin: 0 -0.3em 0 -0.15em; }
 .ui-num-drop { display: inline-block; transform: translateY(0.125em); }
 
 /* Tabs: the sections of a hub page. The open one carries a heavy marker, as the Toolkit's tab menu does. */

@@ -1,6 +1,6 @@
 // The records book (records.ts): single-season and career player records and team records,
 // league-wide or one school's. Mobile first: the tables stack on phones.
-import { PageHead, Select, SubHead, Table } from '../../ui';
+import { Num, PageHead, Select, SubHead, Table } from '../../ui';
 import { useMemo, useState } from 'react';
 import { playerName, RECORD_STATS, seasonRecords } from '../../core/dynasty/derive';
 import { careerRecords, teamRecords } from '../../core/dynasty/records';
@@ -45,7 +45,7 @@ export function Records({ arg }: { arg?: string }) {
                     <td className="dy-dim">{i + 1}</td>
                     <td className="ui-left">{who(r.player)}{school === undefined && <div className="dy-small dy-dim">{d.teams[r.team].school}</div>}</td>
                     <td className="ui-text dy-rec-year">{r.year}</td>
-                    <td className="dy-strong">{r.value.toLocaleString('en-US')}</td>
+                    <td className="dy-strong"><Num value={r.value} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -62,7 +62,7 @@ export function Records({ arg }: { arg?: string }) {
                     <td className="dy-dim">{i + 1}</td>
                     <td className="ui-left">{who(r.player)}{school === undefined && <div className="dy-small dy-dim">{d.teams[r.team].school}</div>}</td>
                     <td className="ui-text dy-rec-year">{r.first === r.last ? r.first : `${r.first}-${String(r.last).slice(2)}`}</td>
-                    <td className="dy-strong">{r.value.toLocaleString('en-US')}</td>
+                    <td className="dy-strong"><Num value={r.value} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -80,7 +80,7 @@ export function Records({ arg }: { arg?: string }) {
                 <tbody>
                   {t.list.map((r, i) => (
                     <tr key={i}>
-                      <td className="dy-strong">{r.value.toLocaleString('en-US')}</td>
+                      <td className="dy-strong"><Num value={r.value} /></td>
                       <td className="ui-left">{school === undefined && <TeamLink team={r.team} rank={false} size={16} />}<div className="dy-small dy-dim">{r.note}</div></td>
                       <td className="ui-text dy-rec-year">{r.year}</td>
                     </tr>

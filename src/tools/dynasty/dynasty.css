@@ -43,7 +43,9 @@
 .dy-nav a {
   padding: 12px 0 9px; border-bottom: 3px solid transparent; font-weight: 600; font-size: 15px; white-space: nowrap;
 }
-.dy-nav a:hover { text-decoration: none; border-bottom-color: var(--rule); }
+/* One mark on hover: the bar under the item, not the link underline too. */
+.dy-nav a:not(.ui-button):hover { text-decoration: none; border-bottom-color: var(--rule); }
+.dy-nav a[aria-current='page']:hover { border-bottom-color: var(--ink); }
 .dy-nav a[aria-current='page'] { border-bottom-color: var(--ink); }
 .dy-nav a.dy-off { color: var(--gray); opacity: 0.6; pointer-events: none; }
 
@@ -150,6 +152,8 @@
 .dy-teamhead-id .dy-mark .sprite { height: 64px !important; width: auto !important; }
 .dy-teamhead h2 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 8vw, 54px); line-height: 1; margin: 0; }
 .dy-teamhead p { margin: 6px 0 0; display: flex; flex-wrap: wrap; gap: 2px 16px; font-size: 15px; }
+.dy-academics { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; }
+.dy-academics svg { flex: none; }
 .dy-teamhead-helmet { display: none; }
 .dy-teamovr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 0; }
 .dy-teamovr > div { background: rgba(0, 0, 0, 0.2); border-radius: var(--radius); padding: 8px 12px; display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }

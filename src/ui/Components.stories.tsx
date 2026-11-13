@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
-import { Button, Field, FileButton, DataTable, Empty, Meter, Modal, Note, PageHead, Row, Select, Stat, Steps, SubHead, Table, Tabs, ThemeToggle } from './index';
+import { Button, Field, FileButton, DataTable, Empty, Meter, Modal, Note, Num, PageHead, Row, Select, Stat, Steps, SubHead, Table, Tabs, ThemeToggle } from './index';
 
 const meta: Meta = { title: 'Components' };
 export default meta;
@@ -81,6 +81,7 @@ export const Stats: Story = {
       <Stat label="Offense" value={72} />
       <Stat label="Defense" value={60} />
       <Stat label="Speed" value={85} note="50th of 276 HBs" />
+      <Stat label="Passing yards" value={<Num value={12757} />} />
     </Row>
   ),
 };

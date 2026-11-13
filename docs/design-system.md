@@ -64,6 +64,7 @@ Run `npm run storybook` to browse the components (port 6006).
 | `Field` | A labeled one-line field: `type` `text` (default), `number` or `search`; `hideLabel` as `Select`; `note` for a short line under it. |
 | `DataTable` | Any table of records: columns (`left` for text, `num` for figures in pixel numerals), rows, `mine` to mark the user's rows, `empty` text. Scrolls sideways inside itself on phones. |
 | `Stat` | One number with a label (an OVR, a record). |
+| `Num` | A figure with commas in the thousands (`<Num value={12356} />`). In the pixel numerals it draws the comma tight against the digits; use it for any figure that can pass 999. |
 | `Empty` | A page with nothing yet: say what to do next. |
 | `Table` | A hand-written table (`thead`, `tbody`, `caption`) with the shared look, for tables `DataTable`'s columns can't describe: selects in cells, a totals row, columns that come and go. `figures` puts every cell in the pixel numerals except `ui-left` (text columns) and `ui-text` (a word, like a class or position); `ui-num` marks one figure cell in a table without `figures`; a totals row is `<tr className="ui-total">`. `className` is for column widths only. |
 | `FileButton` | A button that asks for a file: `label`, `accept`, `onFile` (the first file) or `onFiles` with `multiple`; `variant` as `Button`. |
