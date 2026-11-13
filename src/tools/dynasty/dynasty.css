@@ -497,3 +497,6 @@
 .dy-theme { justify-self: start; }
 .dy-mast-left { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; justify-self: start; }
 .dy-tile-top strong small { font: 700 var(--fs-3)/1 var(--font-display); }
+/* Records book: the year is a small note beside the record itself. */
+.dy-rec-year { font: 400 15px/1 var(--font-num-tiny); color: var(--gray); white-space: nowrap; }
+.dy-records .ui-figures td.dy-strong { font-size: var(--fs-num-2); }

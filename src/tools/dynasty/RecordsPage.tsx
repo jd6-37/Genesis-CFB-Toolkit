@@ -43,7 +43,7 @@ export function Records({ arg }: { arg?: string }) {
                   <tr key={i}>
                     <td className="dy-dim">{i + 1}</td>
                     <td className="ui-left">{who(r.player)}{school === undefined && <div className="dy-small dy-dim">{d.teams[r.team].school}</div>}</td>
-                    <td>{r.year}</td>
+                    <td className="ui-text dy-rec-year">{r.year}</td>
                     <td className="dy-strong">{r.value.toLocaleString('en-US')}</td>
                   </tr>
                 ))}
@@ -60,7 +60,7 @@ export function Records({ arg }: { arg?: string }) {
                   <tr key={r.player}>
                     <td className="dy-dim">{i + 1}</td>
                     <td className="ui-left">{who(r.player)}{school === undefined && <div className="dy-small dy-dim">{d.teams[r.team].school}</div>}</td>
-                    <td>{r.first === r.last ? r.first : `${r.first}-${String(r.last).slice(2)}`}</td>
+                    <td className="ui-text dy-rec-year">{r.first === r.last ? r.first : `${r.first}-${String(r.last).slice(2)}`}</td>
                     <td className="dy-strong">{r.value.toLocaleString('en-US')}</td>
                   </tr>
                 ))}
@@ -81,7 +81,7 @@ export function Records({ arg }: { arg?: string }) {
                     <tr key={i}>
                       <td className="dy-strong">{r.value.toLocaleString('en-US')}</td>
                       <td className="ui-left">{school === undefined && <TeamLink team={r.team} rank={false} size={16} />}<div className="dy-small dy-dim">{r.note}</div></td>
-                      <td>{r.year}</td>
+                      <td className="ui-text dy-rec-year">{r.year}</td>
                     </tr>
                   ))}
                 </tbody>
