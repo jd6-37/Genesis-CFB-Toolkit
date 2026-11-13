@@ -23,6 +23,7 @@ import { readRating } from '../src/core/teamRatings';
 import { hasKits, readKits } from '../src/core/kits';
 import { setWhiteHome, whiteHomeLock } from '../src/core/dynasty/kit';
 import * as Off from '../src/core/dynasty/offseason';
+import * as Num from '../src/core/dynasty/numbers';
 import * as Rec from '../src/core/dynasty/recruiting';
 import * as Sim from '../src/core/dynasty/sim';
 import { DEFAULT_RULES as RD, readRulesFile, rulesFileText, rulesOf, setRules } from '../src/core/dynasty/rules';
@@ -443,14 +444,50 @@ const diamonds = walkons.filter((p) => (p.pot ?? 0) >= Off.DIAMOND_POT[0]);
 assert.ok(diamonds.length > 0 && diamonds.length < walkons.length * 0.08, `a few walk-ons are diamonds in the rough (${diamonds.length} of ${walkons.length})`);
 assert.ok(o5.players.filter((p) => p.recruit && p.recruit.stars > 0).every((p) => p.recruit!.year === o5.seasons[1].year), 'recruits keep their stars and class year');
 ok(`walk-ons: ${diamonds.length} of ${walkons.length} are diamonds in the rough; recruits keep their stars`);
+// Jersey numbers (numbers.ts): returning players keep theirs, new players pick best first from where their
+// position wears its numbers, nobody new shares one, and only computer teams' veterans may move to a single digit.
+{
+  const before = new Map(o4.players.map((p) => [p.id, p]));
+  const { players: numbered, changes } = Num.assignNumbers(o4.players, o4.offseason!.year, o4.userTeams, () => 0.5);
+  assert.deepEqual(Num.assignNumbers(o4.players, o4.offseason!.year, o4.userTeams, () => 0.5).changes, changes, 'same input, same numbers');
+  const fresh = changes.filter((c) => c.why === 'new' || c.why === 'taken');
+  const kept = numbered.filter((p) => p.status === 'active' && p.team !== null && !changes.some((c) => c.player === p.id));
+  assert.ok(kept.every((p) => p.jersey === before.get(p.id)!.jersey), 'a player without a change keeps his number');
+  for (const c of fresh) {
+    const p = numbered[c.player - 1];
+    assert.equal(numbered.filter((q) => q.status === 'active' && q.team === p.team && q.jersey === p.jersey).length, 1, 'a new number is nobody else\'s on the team');
+    if (['LT', 'LG', 'C', 'RG', 'RT'].includes(p.pos)) assert.ok(p.jersey >= 50 && p.jersey <= 79, 'a lineman wears 50-79');
+    if (p.pos === 'QB') assert.ok(p.jersey <= 19, 'a quarterback wears 0-19');
+  }
+  const shared = changes.filter((c) => c.why === 'shared'), ups = changes.filter((c) => c.why === 'upgrade');
+  assert.ok(ups.every((c) => !o4.userTeams.includes(c.team) && c.to < 10 && c.from >= 10), 'only computer teams move a veteran to a single digit');
+  assert.ok(new Set(ups.map((c) => c.team)).size === ups.length, 'one such move per team at most');
+  let seed = 7;
+  const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
+  const real = Num.assignNumbers(o4.players, o4.offseason!.year, o4.userTeams, rnd).changes;
+  const realUps = real.filter((c) => c.why === 'upgrade');
+  assert.ok(realUps.length < 138 * Num.UPGRADE_CHANCE, `single-digit moves are rare (${realUps.length} on 138 teams)`);
+  // The best new players get the single digits: among new skill players, the top quarter by OVR against the bottom.
+  const newSkill = real.filter((c) => c.why === 'new').map((c) => ({ c, p: before.get(c.player)! })).filter(({ p }) => ['QB', 'HB', 'WR', 'CB', 'FS', 'SS'].includes(p.pos)).sort((a, b) => b.p.ovr - a.p.ovr);
+  const q = Math.floor(newSkill.length / 4), share = (xs: typeof newSkill) => xs.filter((x) => x.c.to < 10).length / xs.length;
+  assert.ok(share(newSkill.slice(0, q)) > share(newSkill.slice(-q)) + 0.1, `better new players wear single digits more often (${share(newSkill.slice(0, q)).toFixed(2)} vs ${share(newSkill.slice(-q)).toFixed(2)})`);
+  assert.ok(real.some((c) => c.to === 0), 'number 0 is given out');
+  // A transfer keeps his number when it's free at the new school.
+  const moved = numbered.filter((p) => p.status === 'active' && p.transfers?.at(-1)?.year === o4.offseason!.year && p.transfers.at(-1)!.to === p.team);
+  const keptMove = moved.filter((p) => p.jersey === before.get(p.id)!.jersey).length;
+  assert.ok(moved.length > 0 && keptMove > 0 && keptMove < moved.length, `transfers keep a free number (${keptMove} of ${moved.length})`);
+  ok(`jersey numbers: ${fresh.length} new, ${keptMove} of ${moved.length} transfers kept theirs, ${shared.length} shared on one side changed, ${realUps.length} veterans moved to a single digit; single digits among new skill players: top quarter ${Math.round(100 * share(newSkill.slice(0, q)))}%, bottom quarter ${Math.round(100 * share(newSkill.slice(-q)))}%`);
+}
 const next = o5.seasons[1];
 assert.deepEqual(next.prestige, o1.offseason!.prestige, 'the new season has the new stars');
 assert.equal(o5.offseason, undefined);
 assert.equal(next.year, 2027);
 assert.equal(next.slots.flat().filter((x) => x !== null).length, 138 * 32, 'every slot filled');
 for (const t of o5.teams) {
-  const nums = act(o5).filter((p) => p.team === t.index).map((p) => p.jersey);
-  assert.equal(new Set(nums).size, nums.length, `${t.school} numbers are unique`);
+  const mates = act(o5).filter((p) => p.team === t.index);
+  assert.ok(mates.every((p) => Number.isInteger(p.jersey) && p.jersey >= 0 && p.jersey <= 99), `${t.school}: everybody has a number 0-99`);
+  const perSide = mates.map((p) => `${Num.sideOf(p.pos)}${p.jersey}`);
+  assert.equal(new Set(perSide).size, perSide.length, `${t.school}: a number is worn once on offense and once on defense at most`);
   next.slots[t.index].forEach((id) => assert.equal(o5.players[id! - 1].team, t.index));
 }
 ok(`offseason: ${o1.offseason!.events.filter((e) => e.kind !== 'returns').length} departures, ${moves.length} transfers, ${signed.length} signed, ${o4.offseason!.events.filter((e) => e.kind === 'cut').length} cut, ${o4.offseason!.events.filter((e) => e.kind === 'walkon').length} walk-ons; ${act(o5).length} players in ${next.year}`);

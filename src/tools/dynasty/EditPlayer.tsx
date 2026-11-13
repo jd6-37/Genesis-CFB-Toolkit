@@ -42,7 +42,7 @@ export function EditPlayer({ p }: { p: DPlayer }) {
     <Field label={label} value={String(val(k) ?? '')} onChange={(x) => set(k, x)} />
   );
   const number = (k: 'jersey' | 'heightIn' | 'weight' | 'pot', label: string) => (
-    <Field label={label} type="number" value={String(val(k) ?? '')} onChange={(x) => set(k, x === '' ? undefined : Number(x))} />
+    <Field label={label} type="number" value={k === 'jersey' && Number(val(k)) < 0 ? '' : String(val(k) ?? '')} onChange={(x) => set(k, x === '' ? undefined : Number(x))} />
   );
   return (
     <form className="dy-edit" onSubmit={(e) => { e.preventDefault(); void save(form); }}>

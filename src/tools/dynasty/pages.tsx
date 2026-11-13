@@ -595,7 +595,7 @@ function RosterTable({ rows, edit }: { rows: RosterRow[]; edit?: { team: number;
                   />
                 ) : label}
               </td>
-              <td className="ui-num">{p.jersey}</td>
+              <td className="ui-num">{p.jersey < 0 ? '' : p.jersey}</td>
               <td className="ui-left"><a href={href(`player/${p.id}`)}>{playerName(p)}</a></td>
               <td className="ui-num">{ovr ?? ''}</td>
               <td>{p.cls}</td>
@@ -657,7 +657,7 @@ export function Player({ id }: { id: number }) {
         <Headshot p={p} size={120} />
         <div>
           {/* The number before the name in the school's second color, then a thin bar (user, 2026-11-12: "make the jersey number bigger, more prominent"; "i like how LSU roster puts the player number in yellow before the name"). */}
-          <h2 className="dy-player-name"><span className="dy-jersey" aria-label={`Number ${p.jersey}`} style={team !== null ? { color: accentOn(d, team) } : undefined}>{p.jersey}</span><span className="dy-jersey-bar" aria-hidden="true" /><span>{playerName(p)}</span></h2>
+          <h2 className="dy-player-name">{p.jersey >= 0 && <><span className="dy-jersey" aria-label={`Number ${p.jersey}`} style={team !== null ? { color: accentOn(d, team) } : undefined}>{p.jersey}</span><span className="dy-jersey-bar" aria-hidden="true" /></>}<span>{playerName(p)}</span></h2>
           <p>
             <span>{shownSlots.length ? shownSlots.map((x) => (onBench ? backupLabel(x) : rated(x).label)).join(', ') : p.pos}</span>
             {team !== null && <span className="dy-status">{bwSlots.length ? 'Active Roster' : 'Backup'}</span>}
