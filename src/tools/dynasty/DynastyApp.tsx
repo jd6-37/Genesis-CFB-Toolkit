@@ -325,7 +325,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
               title={`Download the ${s.year} ROM`}
               actions={<>
                 <Button disabled={!!busy} onClick={() => offActions.downloadRom(s.year)}>Download the {s.year} ROM</Button>
-                <Button variant="quiet" onClick={() => { location.hash = href('offseason/depth'); }}>Depth chart and schedule first</Button>
+                <Button variant="quiet" onClick={() => { location.hash = href('offseason/players'); }}>Players, depth chart and schedule first</Button>
                 <Button variant="quiet" onClick={() => setRomLater(s.year)}>Later</Button>
               </>}
             >

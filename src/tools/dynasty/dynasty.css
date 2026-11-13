@@ -554,3 +554,11 @@
 .dy-school aside .ui-table th:first-child, .dy-school aside .ui-table td:first-child { padding-left: var(--sp-4); }
 .dy-school aside .ui-table th:last-child, .dy-school aside .ui-table td:last-child { padding-right: var(--sp-4); }
 .dy-card .dy-training { margin: 0; }
+
+/* Edit players (an offseason step): a player's editors opened above the roster. */
+.dy-editp { display: flex; flex-wrap: wrap; gap: var(--sp-3) var(--sp-4); align-items: flex-start; margin: var(--sp-4) 0; padding: var(--sp-4); border: 2px solid var(--rule-strong); background: var(--surface-raised); scroll-margin-top: var(--sp-4); }
+.dy-editp > div { flex: 1 1 16rem; min-width: 0; }
+.dy-editp h4 { margin: 0; font: 700 var(--fs-5)/1.2 var(--font-display); }
+.dy-editp h4 .dy-dim { font: 400 var(--fs-2)/1.2 var(--font-body); }
+.ui-table.ui-table-edit.dy-editp-table .ui-field input { width: 3.2rem; min-width: 3.2rem; padding-left: var(--sp-1); padding-right: var(--sp-1); text-align: center; }
+.dy-editp-table .dy-chip { margin-left: 0; }
