@@ -212,6 +212,8 @@ export interface CreateOptions {
   seed?: number;
   id?: string;
   created?: string;
+  /** Told which players got a number other than the file's, because their position can't wear it in the game. */
+  onNumbers?: (changed: { player: number; from: number; to: number }[]) => void;
 }
 
 /** A new dynasty from the user's 138-team ROM and the CFB 27 ratings CSV (the built-in Week 9 file). */
@@ -282,7 +284,7 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
       pos: r[cPos].trim().replace(/^LEDG$/, 'LE').replace(/^REDG$/, 'RE'),
       team: teamOfRow.get(row)!,
       cls: startingClass(r[cClass], r[cRs]),
-      jersey: Number(r[cJersey]) || 0,
+      jersey: build.numbers.get(row)?.to ?? (Number(r[cJersey]) || 0),
       heightIn: Number(r[cHeight]) || 0,
       weight: Number(r[cWeight]) || 0,
       hometown: r[cTown].trim(),
@@ -298,6 +300,7 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
   }
   // Skin tones: each position's share of Black players, given by how the names point (appearance.ts).
   assignBlack(players, random).forEach((black, i) => { players[i].skin = skinFor(black, random); });
+  opt.onNumbers?.([...build.numbers].filter(([row]) => idOfRow.has(row)).map(([row, n]) => ({ player: idOfRow.get(row)!, ...n })));
   const ids = (grid: (number | null)[][]) => grid.map((sl) => sl.map((row) => (row === null ? null : idOfRow.get(row) ?? null)));
   const slots = ids(build.slots);
   const bench = ids(build.bench);

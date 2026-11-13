@@ -654,6 +654,7 @@ function Cfb27Summary({ rom, report, onPick, onClose }: { rom: RosterRom; report
   const skipped = plan.teams.filter((t) => !report.teams.includes(t.team));
   const fallbacks = done.flatMap((t) => t.fills.filter((f) => f.how === 'fallback').map((f) => ({ t, f })));
   const partial = done.filter((t) => t.unfilled.length);
+  const renumbered = done.flatMap((t) => t.fills.filter((f) => f.player.jerseyWas !== undefined).map((f) => ({ t, f })));
   const names = (ids: number[]) => ids.map((i) => rom.teams[i].school).join(', ');
   return (
     <div className="ros-report" role="status">
@@ -668,7 +669,7 @@ function Cfb27Summary({ rom, report, onPick, onClose }: { rom: RosterRom; report
       </div>
       <p className="ros-dim ros-path">
         Ratings follow the original game's spread for each position (ranked among the {plan.teams.length} team
-        {plan.teams.length === 1 ? '' : 's'} in the file). Jersey numbers are the real ones.
+        {plan.teams.length === 1 ? '' : 's'} in the file). Jersey numbers are the real ones{renumbered.length ? ', except those listed below' : ''}.
         {report.tweak === 'installed' && ' The roster screen now shows offensive linemen 25 lb heavier.'}
         {report.tweak === 'already' && ' The roster screen already showed offensive linemen 25 lb heavier.'}
         {report.ratings > 0 && ` OFF and DEF set from the CFB 27 starters for ${report.ratings} team${report.ratings === 1 ? '' : 's'} (see the Teams tab).`}
@@ -690,6 +691,13 @@ function Cfb27Summary({ rom, report, onPick, onClose }: { rom: RosterRom; report
         </p>
       )}
       {plan.blankCells > 0 && <p className="ros-warn">{plan.blankCells} empty or non-numeric rating cells counted as 0.</p>}
+      {renumbered.length > 0 && (
+        <p className="ros-warn">
+          {renumbered.length} player{renumbered.length === 1 ? '' : 's'} had a number the game doesn't allow at{' '}
+          {renumbered.length === 1 ? 'his' : 'their'} position (offensive linemen wear 50-79, nobody else on offense does) and got a new one:{' '}
+          {renumbered.map(({ t, f }) => `${rom.teams[t.team].school} ${f.label} ${f.player.name} ${f.player.jerseyWas} → ${f.player.jersey}`).join('; ')}.
+        </p>
+      )}
       {fallbacks.length > 0 && (
         <details>
           <summary>

@@ -18,6 +18,7 @@
 // BW95 only for now; the stock tables for CF96/97 are in rosterStockDists.json already.
 import { starterOvr, type StarterOvr } from './teamRatings';
 import { GROUP_ATTRS, type Attr, type Group, type SlotDef } from './rosterLayouts';
+import { fixNumbers } from './dynasty/numbers';
 import { jerseyByte, readPlayer, setRating, teamLayout, teamName, writePlayer, type RosterRom } from './rosterRom';
 import { teamMatcher } from './rosterImport';
 import { cellNumber, type Sheet } from './rosterSheet';
@@ -87,6 +88,8 @@ interface Cfb27Player {
   id: number;
   ovr: number;
   jersey: number;
+  /** The file's number, when his position can't wear it in the game and he got another (numbers.ts). */
+  jerseyWas?: number;
   v: (c: Column) => number;
 }
 
@@ -122,6 +125,8 @@ export interface Cfb27Plan {
   unknownPositions: { position: string; rows: number }[];
   /** Rating cells that were empty or not a number (counted as 0). */
   blankCells: number;
+  /** Sheet row → the number in the file and the one given instead, for every player whose position can't wear his. */
+  numbers: Map<number, { from: number; to: number }>;
 }
 
 const byOvr = (a: Cfb27Player, b: Cfb27Player) => b.ovr - a.ovr || a.id - b.id || a.row - b.row;
@@ -218,6 +223,14 @@ export function convertCfb27(rom: RosterRom, sheet: Sheet): Cfb27Plan {
       v: (c) => cache.get(c) ?? cache.set(c, num(c)).get(c)!,
     });
   });
+  // Numbers a position can't wear in the game (a tight end in the 50s, a guard in the 90s) are replaced, school by
+  // school over everybody in the file, so the Rosters tab and a dynasty give a player the same new number.
+  const bySchool = new Map<string, Cfb27Player[]>();
+  for (const p of players) bySchool.set(p.team, [...(bySchool.get(p.team) ?? []), p]);
+  for (const list of bySchool.values()) {
+    for (const [i, to] of fixNumbers(list)) { list[i].jerseyWas = list[i].jersey; list[i].jersey = to; }
+  }
+  const numbers = new Map(players.filter((p) => p.jerseyWas !== undefined).map((p) => [p.row, { from: p.jerseyWas!, to: p.jersey }]));
   // Read every rating cell once up front, so the blank count doesn't depend on which scores get used.
   const ratingColumns = CFB27_COLUMNS.filter((c) => !['Team', 'Name', 'Position', 'Overall', 'Jersey Number', 'EA Player ID'].includes(c));
   for (const p of players) for (const c of ratingColumns) p.v(c);
@@ -303,6 +316,7 @@ export function convertCfb27(rom: RosterRom, sheet: Sheet): Cfb27Plan {
     otherSheetTeams,
     unknownPositions: list(unknownPositions),
     blankCells,
+    numbers,
   };
 }
 

@@ -12,6 +12,7 @@ import { detectImport, importSheet, teamMatcher } from '../src/core/rosterImport
 import { parseCsv, readSheet, toCsv } from '../src/core/rosterSheet';
 import { BW95_LABELS_43, GROUP_ATTRS, nibbleToWeight, ratingToNibble, weightToNibble, type Game } from '../src/core/rosterLayouts';
 import { openRom } from '../src/core/romfile';
+import { numberAllowed, replacementNumber } from '../src/core/dynasty/numbers';
 import { applyCfb27, bw95Role, CFB27_COLUMNS, convertCfb27 } from '../src/core/rosterCfb27';
 import { installOlPatch, OL_PATCH, olPatchState, restoreOlPatch } from '../src/core/rosterOlPatch';
 import { stockDistributionsJson } from './stockdists';
@@ -260,6 +261,25 @@ const FULL = ['QB', 'QB', 'HB', 'HB', 'HB', 'FB', 'WR', 'WR', 'WR', 'WR', 'WR', 
   assert.equal(fill('Air Force', 'K').how, 'fallback');
   assert.ok(['ROLB', 'MLB'].includes(fill('Army', 'LOLB').player.pos) && fill('Army', 'LOLB').how === 'fallback');
   ok('CFB 27: fallbacks (FB from HB/TE by blocking, shared K/P, LOLB)');
+
+  // Numbers a position can't wear in the game are replaced (numbers.ts); the others are the file's.
+  {
+    const fills = plan.teams.flatMap((t) => t.fills);
+    const changed = fills.filter((f) => f.player.jerseyWas !== undefined);
+    assert.ok(changed.length > 0, 'the made-up sheet has numbers to fix');
+    for (const f of fills) {
+      assert.ok(numberAllowed(f.player.pos, f.player.jersey), `${f.player.pos} ${f.player.jersey}`);
+      const inFile = Number(sheet.rows[f.player.row][CFB_HEAD.indexOf('Jersey Number')]);
+      assert.equal(f.player.jerseyWas ?? f.player.jersey, inFile);
+      assert.equal(f.player.jerseyWas !== undefined, !numberAllowed(f.player.pos, inFile));
+    }
+    assert.equal(plan.numbers.size, new Set([...plan.numbers.keys()]).size);
+    assert.equal(replacementNumber('TE', 53, new Set()), 83);
+    assert.equal(replacementNumber('TE', 53, new Set([83])), 43);
+    assert.equal(replacementNumber('FB', 57, new Set()), 47);
+    assert.equal(replacementNumber('RG', 97, new Set()), 77);
+    ok(`CFB 27: ${changed.length} numbers their position can't wear replaced, the rest as in the file`);
+  }
 
   // Deterministic: the same sheet gives the same bytes.
   const again = openRosterRom(load('bw95'));

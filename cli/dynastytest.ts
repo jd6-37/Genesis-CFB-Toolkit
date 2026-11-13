@@ -45,7 +45,7 @@ import { blackShare, MAX_FIRST, MAX_LAST, SKIN_TONES } from '../src/core/dynasty
 import { backupLabel, lineupLock, moveToSpot, SPOTS, spotLabel, spotsFor } from '../src/core/dynasty/lineup';
 import { nextPrestige, tierOfRank } from '../src/core/dynasty/prestige';
 import { EVEN_TRAINING, trainingFactor, trainingOf, trainingProblems, weightGain } from '../src/core/dynasty/training';
-import { openRosterRom, readPlayer, getRating, jerseyNumber, teamLayout } from '../src/core/rosterRom';
+import { openRosterRom, readPlayer, getRating, jerseyByte, jerseyNumber, teamLayout } from '../src/core/rosterRom';
 
 const [romPath, savePath] = process.argv.slice(2);
 if (!romPath || !savePath) {
@@ -118,9 +118,20 @@ assert.equal(startingClass('Freshman', 'Redshirted'), 'SO');
 assert.equal(startingClass('Senior', 'Redshirted'), 'SR+');
 assert.equal(startingClass('Junior', 'Not Redshirted'), 'JR');
 const t0 = Date.now();
-const d0 = createDynasty(rom, csv, { name: 'Test', seed: 1, id: 'test', created: '2026-01-01T00:00:00.000Z' });
+let renumbered: { player: number; from: number; to: number }[] = [];
+const d0 = createDynasty(rom, csv, { name: 'Test', seed: 1, id: 'test', created: '2026-01-01T00:00:00.000Z', onNumbers: (l) => { renumbered = l; } });
 const took = Date.now() - t0;
 assert.equal(d0.teams.length, 138);
+{
+  // Numbers a position can't wear in the game (the file has tight ends in the 50s) are replaced at the start.
+  assert.ok(renumbered.length > 0 && d0.players.every((p) => Num.numberAllowed(p.pos, p.jersey)), 'every starting number is one the position may wear');
+  for (const n of renumbered) {
+    const p = d0.players[n.player - 1];
+    assert.ok(p.jersey === n.to && !Num.numberAllowed(p.pos, n.from));
+    assert.equal(d0.players.filter((q) => q.team === p.team && q.jersey === p.jersey && Num.sideOf(q.pos) === Num.sideOf(p.pos)).length, 1, 'a replaced number is nobody else\'s on his side');
+  }
+  ok(`starting numbers: ${renumbered.length} replaced (a position can't wear them in the game)`);
+}
 assert.ok(d0.players.length > 8000 && d0.players.length <= 138 * 64, 'players: the 32 and the bench of every team');
 assert.ok(d0.players.every((p) => first0Has(p.id)), 'every player is in the game or on the bench');
 assert.ok(d0.players.every((p) => CLASSES.includes(p.cls) && p.skin >= 0 && p.skin < 4 && (p.ratings.Weight ?? 0) >= 140 && p.ovr === ovrOf(p)));
@@ -768,12 +779,18 @@ const areaRecord = (d: Uint8Array, t: number, slot: number) => {
   return { numberByte: d[a], ratings: [d[a + 1] >> 4, d[a + 1] & 15, d[a + 2] >> 4, d[a + 2] & 15, d[a + 3] >> 4, d[a + 3] & 15] };
 };
 const stockRosters = openRosterRom(rom);
-/** Season one: the area holds the ROM's own rosters; nothing outside it changes but the checksums. */
+/** Season one: the area holds the ROM's own rosters; nothing outside it changes but the checksums … */
 const isRomOwn = (out: Uint8Array) => {
   let outside = 0;
   for (let i = 0; i < DYN_AREA; i++) if (out[i] !== rom[i]) outside++;
   const base = u32at(out, DYN_AREA + 0x14);
-  return outside <= 4 && stockRosters.teams.every((t) => out.subarray(base + 128 * t.index, base + 128 * t.index + 128).every((b, k) => b === rom[t.rosterOffset + k]));
+  // … except the numbers the dynasty replaced at its start (a position can't wear them in the game).
+  const newNumber = new Map(renumbered.map((n) => [n.player, n.to]));
+  const want = (t: number, k: number) => {
+    const id = k % 4 === 0 ? d0.seasons[0].slots[t][k / 4] : null;
+    return id !== null && newNumber.has(id) ? jerseyByte(newNumber.get(id)!) : rom[stockRosters.teams[t].rosterOffset + k];
+  };
+  return outside <= 4 && stockRosters.teams.every((t) => out.subarray(base + 128 * t.index, base + 128 * t.index + 128).every((b, k) => b === want(t.index, k)));
 };
 
 // A random bench for the first season: the 32 stay (the ROM is unchanged), every slot gets a backup.

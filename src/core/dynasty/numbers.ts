@@ -48,6 +48,41 @@ const allowed = (pos: string, n: number) => {
 };
 const ALL = Array.from({ length: 100 }, (_, n) => n);
 
+/** May a player of this position wear the number in the game? (0-99; linemen 50-79, passers, backs and receivers not.) */
+export const numberAllowed = (pos: string, n: number) => Number.isInteger(n) && n >= 0 && n <= 99 && allowed(pos, n);
+
+/**
+ * The number an imported player gets in place of one his position can't wear (user, 2026-11-13). No dice, so an
+ * import always gives the same result: the same last digit if it can be kept, in the tens his position wears
+ * most (SHARE), then the nearest one; never a number in `taken`.
+ */
+export function replacementNumber(pos: string, n: number, taken: ReadonlySet<number>): number | null {
+  const near = Number.isFinite(n) ? n : 0;
+  const digit = ((Math.round(near) % 10) + 10) % 10;
+  const free = ALL.filter((c) => allowed(pos, c) && !taken.has(c));
+  if (!free.length) return null;
+  const key = (c: number) => [c % 10 === digit ? 0 : 1, -weightOf(pos, c), Math.abs(c - near), c];
+  return free.sort((a, b) => { const x = key(a), y = key(b); for (let i = 0; i < 4; i++) if (x[i] !== y[i]) return x[i] - y[i]; return 0; })[0];
+}
+
+/**
+ * For a whole imported roster: the new number of every player whose number his position can't wear, by his
+ * place in `roster`. A new number is one nobody on his side of the ball wears.
+ */
+export function fixNumbers(roster: { pos: string; jersey: number }[]): Map<number, number> {
+  const taken = { O: new Set<number>(), D: new Set<number>() };
+  for (const p of roster) if (numberAllowed(p.pos, p.jersey)) taken[sideOf(p.pos)].add(p.jersey);
+  const out = new Map<number, number>();
+  roster.forEach((p, i) => {
+    if (!Number.isFinite(p.jersey) || numberAllowed(p.pos, p.jersey)) return; // no number in the file: not this function's job
+    const to = replacementNumber(p.pos, p.jersey, taken[sideOf(p.pos)]);
+    if (to === null) return;
+    taken[sideOf(p.pos)].add(to);
+    out.set(i, to);
+  });
+  return out;
+}
+
 type Rand = () => number;
 function weighted(r: Rand, nums: number[], w: (n: number) => number): number | null {
   const total = nums.reduce((a, n) => a + w(n), 0);
