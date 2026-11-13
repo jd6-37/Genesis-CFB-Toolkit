@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
-import { Button, FileButton, DataTable, Empty, Meter, Modal, Note, PageHead, Row, Select, Stat, SubHead, Table, Tabs, ThemeToggle } from './index';
+import { Button, FileButton, DataTable, Empty, Meter, Modal, Note, PageHead, Row, Select, Stat, Steps, SubHead, Table, Tabs, ThemeToggle } from './index';
 
 const meta: Meta = { title: 'Components' };
 export default meta;
@@ -149,5 +149,15 @@ export const Meters: Story = {
       <span>Houston</span><Meter value={0.66} label="Interest in Houston" /><span>66</span>
       <span>UTSA</span><Meter value={0.58} label="Interest in UTSA" /><span>58</span>
     </div>
+  ),
+};
+
+/** A process in order: steps before the current one are done; a step with a link can be jumped to. On a phone only the current step shows. */
+export const StepsBar: Story = {
+  render: () => (
+    <Steps label="Offseason steps" current={2} steps={[
+      { label: 'Projected depth chart' }, { label: 'Players leaving' }, { label: 'Recruiting' }, { label: 'Signing day and cuts' },
+      { label: 'Training results' }, { label: 'Depth chart', href: '#depth' }, { label: 'Schedule', href: '#schedule' }, { label: 'Download the ROM', href: '#rom' },
+    ]} />
   ),
 };

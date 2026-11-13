@@ -290,7 +290,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       case 'awards': return <Awards arg={arg} />;
       case 'records': return <Records arg={arg} />;
       case 'schedule': return <ScheduleEditor arg={arg} />;
-      case 'offseason': return <Offseason actions={offActions} busy={busy} />;
+      case 'offseason': return <Offseason actions={offActions} busy={busy} arg={arg} />;
       case 'rules': return <Rules actions={offActions} busy={busy} />;
       case 'training': return <TrainingResults arg={arg} />;
       default: return <Home />;
@@ -332,16 +332,17 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
           // The new season's ROM (user, 2026-11-12: the download "needs to be VERY obvious, like a modal window"):
           // asks until it's downloaded or the season's first save is imported; "Later" hides it until the next visit.
           const s = d.seasons[d.seasons.length - 1];
-          if (s.romDownloaded || s.imports.length || romLater === s.year) return null;
+          // Not on the offseason's own pages: its last step is the download (user, 2026-11-13).
+          if (s.romDownloaded || s.imports.length || romLater === s.year || page === 'offseason' || page === 'schedule') return null;
           return (
             <div className="dy-modal-back" role="presentation">
               <div className="dy-modal" role="dialog" aria-modal="true" aria-labelledby="dy-rom-title">
                 <h2 id="dy-rom-title">Download the {s.year} ROM</h2>
                 <p>The {s.year} season is set up. Download its ROM and start a <b>New Season</b> in the game with it: it has the new rosters{s.schedule ? ' and schedule' : ''}, and the app can only import saves of seasons started with it.</p>
-                <p className="dy-small dy-dim">You can still change your depth chart{s.schedule ? ' or your schedule' : ''} first (your team's page); then download it again.</p>
+                <p className="dy-small dy-dim">The offseason's last steps are your depth chart{s.schedule ? ', your schedule' : ''} and this download. If you change either after downloading, download the ROM again.</p>
                 <div className="dy-row">
                   <Button disabled={!!busy} onClick={() => offActions.downloadRom(s.year)}>Download the {s.year} ROM</Button>
-                  {s.schedule && d.userTeams.length > 0 && <Button variant="quiet" onClick={() => { setRomLater(s.year); location.hash = href(`schedule/${d.userTeams[0]}`); }}>See the schedule first</Button>}
+                  <Button variant="quiet" onClick={() => { location.hash = href('offseason/depth'); }}>Depth chart and schedule first</Button>
                   <Button variant="quiet" onClick={() => setRomLater(s.year)}>Later</Button>
                 </div>
               </div>

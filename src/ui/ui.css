@@ -121,3 +121,19 @@ a.ui-button-danger, a.ui-button-danger:hover { color: var(--bad); }
 /* Meter: a share from 0 to 1 as a bar. */
 .ui-meter { display: block; flex: 1; min-width: 40px; height: 12px; background: var(--rule); }
 .ui-meter > span { display: block; height: 100%; background: var(--text); }
+
+/* Steps: a process in order. The current step is on the bar color; on a phone it shows alone. */
+.ui-steps { list-style: none; margin: var(--sp-3) 0; padding: 0; display: flex; flex-wrap: wrap; background: var(--surface-sunken); border-bottom: 2px solid var(--rule-strong); font: 700 var(--fs-2)/1.2 var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+.ui-steps li { display: none; padding: var(--sp-3) var(--sp-3); }
+.ui-steps li.ui-step-now { display: block; flex: 1; background: var(--bar); color: var(--on-bar); }
+.ui-steps a { color: inherit; }
+.ui-step-n { margin-right: var(--sp-2); }
+.ui-step-now .ui-step-n::after { content: ':'; }
+.ui-step-check { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.ui-step-done { color: var(--text); }
+@media (min-width: 900px) {
+  .ui-steps li { display: block; }
+  .ui-steps li.ui-step-now { flex: none; }
+  .ui-step-now .ui-step-n { display: none; }
+  .ui-steps li:not(.ui-step-now) .ui-step-n::after { content: '.'; }
+}

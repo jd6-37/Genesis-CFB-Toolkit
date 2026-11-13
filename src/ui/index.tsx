@@ -220,6 +220,25 @@ export function Tabs<T extends string>({ label, tabs, value, onChange }: {
 }
 
 /**
+ * The steps of a process in order, with the one the user is on (an offseason, a setup). Steps before it
+ * are done. A step with `href` is a link (only for steps the user may jump to). On a phone only the
+ * current step shows, as "Step 3 of 8: Recruiting".
+ */
+export function Steps({ label, steps, current }: { label: string; steps: { label: string; href?: string }[]; current: number }) {
+  return (
+    <ol className="ui-steps" aria-label={label}>
+      {steps.map((s, i) => (
+        <li key={s.label} className={i < current ? 'ui-step-done' : i === current ? 'ui-step-now' : undefined} aria-current={i === current ? 'step' : undefined}>
+          <span className="ui-step-n">{i === current ? `Step ${i + 1} of ${steps.length}` : i + 1}</span>
+          {s.href && i !== current ? <a href={s.href}>{s.label}</a> : <span>{s.label}</span>}
+          {i < current && <span className="ui-step-check"> (done)</span>}
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/**
  * A bar for a share from 0 to 1 (a prospect's interest in a school, how strong a pitch is). `label` says
  * what it measures, for screen readers; put the figure beside it when it matters. `color` is for a team's
  * color only; without it the bar is the text color.

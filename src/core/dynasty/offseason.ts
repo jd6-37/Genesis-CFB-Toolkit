@@ -98,6 +98,17 @@ export interface OffseasonState {
    * transfer"). A player there in a starting spot counts as a starter for the transfer chances.
    */
   projected?: Record<number, (number | null)[]>;
+  /**
+   * After full recruiting: for each user team, the prospects it offered who signed elsewhere or with nobody
+   * ("the ones that got away"), best first, ten at most. `to` null = he signed nowhere; `place` = the team's
+   * place among his schools by interest (0 = none).
+   */
+  missed?: Record<number, { name: string; pos: string; stars: number; to: number | null; place: number }[]>;
+  /**
+   * The user has picked the cuts (they are in suggestedCuts) and is on the training step (user, 2026-11-13:
+   * cuts and training focus "should probably be separate steps"). The cuts and the training still run together.
+   */
+  cutsPicked?: boolean;
   /** After signing day: the cuts suggested for each user team (the user can change them). */
   suggestedCuts?: Record<number, number[]>;
   /** Next season's prestige stars, set when the season ends (one star at most toward the final poll's tier). */

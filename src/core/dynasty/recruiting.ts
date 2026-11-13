@@ -561,7 +561,7 @@ export function runRecruitingWeek(d: Dynasty, rs0: RecruitingState, userPlans: R
  * and a spot left; portal players nobody takes leave, unsigned high-school players aren't kept.
  * Returns the players (recruits get real IDs) and the events.
  */
-export function signingDay(d: Dynasty, rs: RecruitingState, year: number): { players: DPlayer[]; events: OffseasonEvent[] } {
+export function signingDay(d: Dynasty, rs: RecruitingState, year: number): { players: DPlayer[]; events: OffseasonEvent[]; went: Map<number, number | null> } {
   const prs = rs.prospects.map((p) => ({ ...p }));
   const count = new Map<number, number>();
   for (const p of prs) if (p.committed !== null) count.set(p.committed, (count.get(p.committed) ?? 0) + 1);
@@ -621,7 +621,8 @@ export function signingDay(d: Dynasty, rs: RecruitingState, year: number): { pla
   }
   [...points.entries()].sort((a, b) => b[1].points - a[1].points || a[0] - b[0])
     .forEach(([team, c], i) => events.push({ kind: 'class', team, rank: i + 1, signed: c.signed, points: c.points }));
-  return { players, events };
+  // Where every prospect ended up (by prospect ID; null = nowhere).
+  return { players, events, went: new Map(prs.map((p) => [p.id, p.committed])) };
 }
 
 /** A prospect's interest from each team, best first. */
@@ -659,9 +660,17 @@ export function finishRecruiting(d: Dynasty, tpl: RecruitTemplates): Dynasty {
   if (!st || st.step !== 'recruiting' || !st.recruiting) throw new Error('It isn\'t recruiting time.');
   const W = rulesOf(d).weeks;
   if (st.recruiting.week < W) throw new Error(`Recruiting has ${W - st.recruiting.week} weeks left.`);
-  const { players: signed, events } = signingDay(d, st.recruiting, st.year + 1);
+  const { players: signed, events, went } = signingDay(d, st.recruiting, st.year + 1);
+  // The ones that got away: prospects a user team offered who ended up elsewhere.
+  const missed: NonNullable<typeof st.missed> = {};
+  for (const t of d.userTeams) {
+    missed[t] = st.recruiting.prospects
+      .filter((p) => p.offers.includes(t) && went.get(p.id) !== t && p.from !== t)
+      .sort((a, b) => b.stars - a.stars || b.player.ovr - a.player.ovr).slice(0, 10)
+      .map((p) => ({ name: `${p.player.first} ${p.player.last}`, pos: p.player.pos, stars: p.stars, to: went.get(p.id) ?? null, place: interestRanking(p).findIndex((x) => x.team === t) + 1 }));
+  }
   const players = fillMinimums(d, signed, tpl, seeded(st.seed, 30), st.year + 1, events);
-  const next: Dynasty = { ...d, players, offseason: { ...st, step: 'cuts', recruiting: undefined, events: [...st.events, ...events] } };
+  const next: Dynasty = { ...d, players, offseason: { ...st, step: 'cuts', recruiting: undefined, missed, events: [...st.events, ...events] } };
   const suggestedCuts: Record<number, number[]> = {};
   for (const t of d.userTeams) suggestedCuts[t] = suggestCuts(next, t);
   return { ...next, offseason: { ...next.offseason!, suggestedCuts } };
