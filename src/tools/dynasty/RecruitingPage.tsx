@@ -12,7 +12,7 @@ import { playerName } from '../../core/dynasty/derive';
 import { GROUP_COLUMNS, type Attr } from '../../core/rosterLayouts';
 import { rulesOf } from '../../core/dynasty/rules';
 import { academicGrade, academicsOf, gradeOf } from '../../core/dynasty/academics';
-import { costOf, interestRank, pipelineStates, planCost, pointCost } from '../../core/dynasty/recruiting';
+import { costOf, interestRank, pipelineStates, planCost, pointCost, withdrawOffer } from '../../core/dynasty/recruiting';
 import { SCHOOL_STATE, stateCode } from '../../core/dynasty/schoolStates';
 import { GROUP_OF_ROLE, roleOfPos, shownOf } from '../../core/dynasty/ratings';
 import { Empty, Headshot, heightText, hometownText, inkColor, mainColor, onColor, useDyn } from './ui';
@@ -121,6 +121,8 @@ interface Hub {
   setPoints: (id: number, v: number) => void;
   setPitch: (id: number, k: PitchKey | '') => void;
   offer: (id: number) => void;
+  /** Takes an offer back: one made this week leaves the plan, an older one is withdrawn at once. */
+  withdraw: (id: number) => void;
   scout: (id: number, level: ScoutLevel) => void;
 }
 
@@ -158,6 +160,10 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
     setPoints: (id, v) => setPlan((p) => ({ ...p, points: { ...p.points, [id]: Math.max(0, Math.min(R.maxPerProspect, Math.round(v) || 0)) } })),
     setPitch: (id, k) => setPlan((p) => { const pitches = { ...p.pitches }; if (k) pitches[id] = k; else delete pitches[id]; return { ...p, pitches }; }),
     offer: (id) => setPlan((p) => ({ ...p, offers: p.offers.includes(id) ? p.offers : [...p.offers, id] })),
+    withdraw: (id) => {
+      setPlan((p) => ({ ...p, offers: p.offers.filter((x) => x !== id) }));
+      if (byId.get(id)?.offers.includes(team)) void actions.run('Withdrawing the offer…', async () => actions.commit(withdrawOffer(d, team, id)));
+    },
     scout: (id, level) => void actions.run('Scouting…', async () => actions.commit(scoutProspect(d, team, id, level, spent))),
   };
 
@@ -417,11 +423,12 @@ function ProspectCard({ p, hub }: { p: Prospect; hub: Hub }) {
         {hub.open && lv < 2 && <div className="dy-row"><ScoutButtons p={p} team={team} lv={lv} left={hub.left} onScout={hub.scout} /></div>}
       </div>
 
-      {hub.open && p.committed === null && (
+      {p.committed === null && (hub.open || offered) && (
         <div className="dy-card-part dy-row">
-          {!onBoard && <Button disabled={hub.full} onClick={() => hub.add(p.id)} title={hub.full ? `Your board is full (${R.boardSize})` : undefined}>Add to board</Button>}
-          {onBoard && !offered && <Button onClick={() => hub.offer(p.id)}>Offer a scholarship</Button>}
-          {onBoard && <Button variant="quiet" onClick={() => hub.remove(p.id)}>Remove from board</Button>}
+          {hub.open && !onBoard && <Button disabled={hub.full} onClick={() => hub.add(p.id)} title={hub.full ? `Your board is full (${R.boardSize})` : undefined}>Add to board</Button>}
+          {hub.open && onBoard && !offered && <Button onClick={() => hub.offer(p.id)}>Offer a scholarship</Button>}
+          {offered && <Button variant="quiet" disabled={hub.busy} onClick={() => hub.withdraw(p.id)}>Withdraw offer</Button>}
+          {hub.open && onBoard && <Button variant="quiet" onClick={() => hub.remove(p.id)}>Remove from board</Button>}
         </div>
       )}
     </section>
@@ -591,6 +598,7 @@ function SchoolTab({ team }: { team: number }) {
           <ul className="dy-rules">
             <li>{R.userPoints.toLocaleString('en-US')} points a week, on up to {R.boardSize} prospects, {R.maxPerProspect} at most on one. In-state and pipeline prospects cost fewer points.</li>
             <li>Interest grows with points, more with an offer, and with how well your school fits what he wants. Prospects rated above your prestige are harder to reach.</li>
+            <li>You can withdraw an offer from a prospect who hasn't committed: without it he can't commit to you or pick you at signing day.</li>
             <li>One pitch per prospect a week. He has a main interest and {R.pitchInterests > 2 ? 'minor ones' : 'a minor one'}; after the week he reacts. A pitch he doesn't care about costs you a little.</li>
             <li>Scouting a high-school prospect costs {R.scoutOvr} points for his overall, {R.scoutRatings} more for every rating. Portal players show everything.</li>
             <li>He commits when one school that offered has enough interest and a clear lead (the best ones not before week {R.firstWeek[4]} or {R.firstWeek[5]}). At signing day the rest choose among the schools that offered.</li>

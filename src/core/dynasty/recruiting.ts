@@ -417,6 +417,25 @@ export function scoutProspect(d: Dynasty, team: number, id: number, level: Scout
   return { ...d, offseason: { ...st, recruiting } };
 }
 
+/**
+ * A user team takes back its offer to a prospect who hasn't committed, at once (user, 2026-11-13: "if
+ * we're too far behind on someone midway through recruiting we can shift focus to another recruit").
+ * Without an offer he can't commit to the team or pick it at signing day, and its points count as for any
+ * school that hasn't offered. His interest stays; the team can offer again later.
+ */
+export function withdrawOffer(d: Dynasty, team: number, id: number): Dynasty {
+  const st = d.offseason;
+  const rs = st?.recruiting;
+  if (!st || !rs || st.step !== 'recruiting') throw new Error('Offers can only be withdrawn during recruiting.');
+  if (!d.userTeams.includes(team)) throw new Error('Only your teams withdraw offers.');
+  const p = rs.prospects.find((x) => x.id === id);
+  if (!p) throw new Error('No such prospect.');
+  if (p.committed === team) throw new Error('He has committed to you: the offer stands.');
+  if (!p.offers.includes(team)) return d;
+  const prospects = rs.prospects.map((x) => (x.id === id ? { ...x, offers: x.offers.filter((t) => t !== team) } : x));
+  return { ...d, offseason: { ...st, recruiting: { ...rs, prospects } } };
+}
+
 /** `cost` = what the plan costs after the in-state and pipeline discounts (planCost); without it, its points. */
 export function planProblems(R: OffseasonRules, plan: TeamPlan, scoutSpent = 0, cost?: number): string[] {
   const out: string[] = [];
