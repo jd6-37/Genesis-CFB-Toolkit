@@ -770,8 +770,8 @@ function SheetHelp() {
           <b>Any other sheet</b>: one row per player, columns <b>Team</b>, <b>Position</b>, <b>Overall Rating</b>,
           Jersey Number, Weight (lb), Speed, Quickness, Awareness, Power, Catching, Blocking, Tackling, Throw Power, Kick
           Power, Kick Accuracy, ratings 0-99. Positions: QB, HB, FB, LT, LG, C, RG, RT, WR, TE, K, P, LE, DT, RE, LOLB,
-          MLB, ROLB, CB, SS, FS. The best players by Overall Rating fill each position's slots (four WRs for SE, FL, WR1,
-          WR2; the best DT is the NT on 3-4 teams). Slots nobody fills keep their player. Hands comes from Catching; QB
+          MLB, ROLB, CB, SS, FS. The best players by Overall Rating fill each position's slots (four WRs for SE, FL and
+          the next two receiver slots; the best DT is the NT on 3-4 teams). Slots nobody fills keep their player. Hands comes from Catching; QB
           Range from Throw Power; kicker Range and Accuracy from Kick Power and Kick Accuracy. A Name (or First Name and
           Last Name) column shows up in the report.
         </li>

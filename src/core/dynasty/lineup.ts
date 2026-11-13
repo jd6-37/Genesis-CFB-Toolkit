@@ -16,7 +16,7 @@ import { SLOTS } from './rosters';
 import { recordYear } from './career';
 
 /** The 138-team edition's 32 slots in the game's roster order (every team plays the 4-3). */
-export const SLOT_DEFS = rosterLayout('bw95', false, true);
+export const SLOT_DEFS = rosterLayout('bw95', false, true, true);
 const DEF = new Map(SLOT_DEFS.map((x) => [x.slot, x]));
 const defOf = (slot: number) => DEF.get(slot)!;
 
@@ -41,7 +41,7 @@ export type Kind = 'QB' | 'HB' | 'FB' | 'WR' | 'TE' | 'OL' | 'DE' | 'DT' | 'OLB'
 
 const LABEL_KIND: Record<string, Kind> = {
   QB: 'QB', HB: 'HB', FB: 'FB', SE: 'WR', FL: 'WR', WR: 'WR', TE: 'TE', LT: 'OL', LG: 'OL', C: 'OL', RG: 'OL', RT: 'OL',
-  LDE: 'DE', RDE: 'DE', DT: 'DT', LOLB: 'OLB', ROLB: 'OLB', MLB: 'MLB', LCB: 'CB', RCB: 'CB', SS: 'S', FS: 'S', K: 'K', P: 'P',
+  LDE: 'DE', RDE: 'DE', DT: 'DT', LOLB: 'OLB', ROLB: 'OLB', MLB: 'MLB', CB: 'CB', SS: 'S', FS: 'S', K: 'K', P: 'P',
 };
 export const slotKind = (slot: number): Kind => LABEL_KIND[base(defOf(slot).label)];
 

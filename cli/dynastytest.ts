@@ -334,7 +334,7 @@ assert.ok(Math.abs(Off.transferChance(o1, depthGuy, busy) - 0.18 * 0.2) < 1e-9, 
 // Promoting him to a starting spot on the projected depth chart takes away the "blocked" 10%.
 const team1 = depthGuy.team!;
 const chart = Off.projectedDepth(o1, team1).slice();
-const lay = rosterLayout('bw95', false, true);
+const lay = rosterLayout('bw95', false, true, true);
 const spot = lay.find((def) => !Off.DEPTH_SLOTS.has(def.label) && chart[def.slot] !== null && o1.players[chart[def.slot]! - 1].pos === depthGuy.pos)?.slot ?? -1;
 if (spot >= 0) {
   const was = chart.indexOf(depthGuy.id);
@@ -1012,7 +1012,7 @@ ok('a new season refuses the last season\'s save');
   const L = { ...d0, userTeams: [T] };
   const labels = SPOTS.map(spotLabel);
   assert.equal(new Set(labels).size, 64);
-  for (const x of ['QB2', 'HB3', 'HB4', 'FB2', 'SE2', 'WR3', 'WR4', 'TE3', 'LT2', 'DT3', 'LOLB2', 'MLB4', 'LCB3', 'RCB4', 'SS2', 'FS3', 'FS4', 'K2', 'P2']) assert.ok(labels.includes(x), x);
+  for (const x of ['QB2', 'HB3', 'HB4', 'FB2', 'SE2', 'WR5', 'WR6', 'TE3', 'LT2', 'DT3', 'LOLB2', 'MLB4', 'CB5', 'CB8', 'SS2', 'FS3', 'FS4', 'K2', 'P2']) assert.ok(labels.includes(x), x);
   assert.equal(backupLabel(1), 'HB3');
   const s = L.seasons[0];
   const at = (dd: typeof L, spot: number) => (spot >= 32 ? dd.seasons[0].bench![T][spot - 32] : dd.seasons[0].slots[T][spot]);

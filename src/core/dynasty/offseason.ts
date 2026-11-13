@@ -354,7 +354,7 @@ export function transferChance(d: Dynasty, p: DPlayer, ctx: PortalContext = port
 }
 
 /** Labels of the Active Roster spots that aren't starting jobs. */
-export const DEPTH_SLOTS = new Set(['HB2', 'WR1', 'WR2', 'TE2', 'DT2', 'MLB2', 'LCB2', 'RCB2', 'FS2']);
+export const DEPTH_SLOTS = new Set(['HB2', 'WR3', 'WR4', 'TE2', 'DT2', 'MLB2', 'CB3', 'CB4', 'FS2']);
 const LAYOUT = SLOT_DEF; // by slot number
 
 export interface PortalContext {

@@ -9,7 +9,7 @@ import { playerOvr, roleOfSlot } from './ovr';
 import { bwSlotOf, ovrAt } from './ratings';
 import { SLOTS } from './rosters';
 
-const DEFS = rosterLayout('bw95', false, true);
+const DEFS = rosterLayout('bw95', false, true, true);
 
 /**
  * The 32 spots by slot number. The layout lists them in the order the game shows them, which is not the
@@ -21,7 +21,7 @@ export const SLOT_DEF: SlotDef[] = DEFS.reduce((acc, def) => { acc[def.slot] = d
 /** The position that plays a slot, by its label in the 138-team edition. */
 export function slotPosition(label: string): string {
   const l = label.replace(/\d+$/, '');
-  return ({ SE: 'WR', FL: 'WR', LDE: 'LE', RDE: 'RE', LCB: 'CB', RCB: 'CB' } as Record<string, string>)[l] ?? l;
+  return ({ SE: 'WR', FL: 'WR', LDE: 'LE', RDE: 'RE' } as Record<string, string>)[l] ?? l;
 }
 
 /** Positions that stand in when a team has nobody left at a slot's own position. */
