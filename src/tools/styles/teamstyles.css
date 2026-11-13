@@ -19,11 +19,11 @@
   border: 1px solid var(--line);
   border-radius: var(--radius);
 }
-.sty-legend p { margin: 8px 0 0; color: var(--chalk-dim); font-size: 14px; line-height: 1.4; }
+.sty-legend p { margin: 8px 0 0; color: var(--chalk-dim); font-size: var(--fs-2); line-height: 1.4; }
 .sty-legend p b { color: var(--chalk); font-weight: 600; }
 .sty-legend dl { margin: 0; }
 .sty-legend dt { margin-top: 8px; color: var(--menu); font-weight: 600; }
-.sty-legend dd { margin: 2px 0 0; color: var(--chalk-dim); font-size: 14px; line-height: 1.4; }
+.sty-legend dd { margin: 2px 0 0; color: var(--chalk-dim); font-size: var(--fs-2); line-height: 1.4; }
 .sty-legend .hint { margin-top: 12px; }
 
 @media (max-width: 860px) {
@@ -40,18 +40,18 @@
 .cfb-ref { margin: 8px 0 32px; }
 .cfb-ref-lede { max-width: 70ch; margin: 0 0 14px; color: var(--chalk-dim); }
 .cfb-rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 8px 32px; max-width: 60rem; margin-bottom: 16px; }
-.cfb-rules h4 { margin: 0 0 4px; font-size: 15px; color: var(--menu); }
-.cfb-rules ul { margin: 0; padding-left: 18px; color: var(--chalk-dim); font-size: 14px; line-height: 1.5; }
+.cfb-rules h4 { margin: 0 0 4px; font-size: var(--fs-3); color: var(--menu); }
+.cfb-rules ul { margin: 0; padding-left: 18px; color: var(--chalk-dim); font-size: var(--fs-2); line-height: 1.5; }
 .cfb-rules b { color: var(--chalk); }
 .cfb-tools { display: flex; flex-wrap: wrap; align-items: end; gap: 10px 20px; margin-bottom: 10px; }
 .cfb-search input { width: 16rem; }
-.cfb-count { color: var(--chalk-dim); font-size: 14px; }
+.cfb-count { color: var(--chalk-dim); font-size: var(--fs-2); }
 .cfb-scroll .ui-table-wrap { max-height: 34rem; overflow: auto; border: var(--rule-w) solid var(--rule); }
 .cfb-table th, .cfb-table td { white-space: nowrap; }
 .cfb-table thead th { position: sticky; top: 0; background: var(--surface-raised); }
 .cfb-table .cfb-bw { color: var(--menu); }
 .cfb-table thead .cfb-bw { color: var(--menu); }
-.cfb-on-rom th[scope='row']::after { content: ' ●'; color: var(--menu); font-size: 10px; vertical-align: middle; }
+.cfb-on-rom th[scope='row']::after { content: ' ●'; color: var(--menu); font-size: var(--fs-1); vertical-align: middle; }
 
 /* Team OVR and home weather (Team Swap edit screen, Teams tab). */
 .sty-table .rat-cell { width: 1%; }
@@ -59,10 +59,10 @@
 .sty-table td.rat-wcell input, .rat-wx input { width: 2.8em; }
 .sty-table .rat-wx-first, .sty-table .rat-wx-head { border-left: var(--rule-w) solid var(--rule); }
 .rat-picks { display: flex; flex-direction: column; gap: 12px; }
-.rat-field { display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--chalk-dim); }
-.rat-field small { font-size: 13px; line-height: 1.35; max-width: 40ch; }
+.rat-field { display: flex; flex-direction: column; gap: 6px; font-size: var(--fs-2); color: var(--chalk-dim); }
+.rat-field small { font-size: var(--fs-2); line-height: 1.35; max-width: 40ch; }
 .rat-head { color: var(--chalk-dim); }
 .rat-pair { display: flex; flex-wrap: wrap; gap: 6px 12px; }
 .rat-wx { display: grid; grid-template-columns: repeat(4, max-content); gap: 8px; }
-.rat-wx label { display: flex; flex-direction: column; gap: 3px; font-size: 13px; color: var(--chalk-dim); }
+.rat-wx label { display: flex; flex-direction: column; gap: 3px; font-size: var(--fs-2); color: var(--chalk-dim); }
 .sty-table .ui-link, .sty-table-foot .ui-link { font-size: var(--fs-2); }

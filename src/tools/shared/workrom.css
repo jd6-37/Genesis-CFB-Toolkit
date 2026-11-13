@@ -14,7 +14,7 @@
 .work-ask .hint { max-width: 80ch; margin-top: 8px; }
 .work-ask-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
 .work-ask-actions .ui-button-quiet { align-self: center; }
-.dock-also { display: block; font-family: var(--body); font-weight: 400; font-size: 14px; color: var(--chalk-dim); }
+.dock-also { display: block; font-family: var(--body); font-weight: 400; font-size: var(--fs-2); color: var(--chalk-dim); }
 /* One column on phones (this rule would otherwise override .roms's), and long file names wrap. */
 .work-roms > * { min-width: 0; }
 .work-roms .rom-status small { overflow-wrap: anywhere; }
