@@ -1,0 +1,42 @@
+export const meta = { slug: 'fatigue', title: 'Why your halfback was always tired', dek: 'In the original game a back lost about a quarter of his energy on every carry and got almost none of it back. Here is how the fatigue system works, what was wrong with it, and what replaced it.', date: '2026-11-13', tag: 'Fatigue', minutes: 6 }
+
+Anyone who played Bill Walsh College Football '95 for long knows the feeling: your best back breaks a long run, gets two more carries, and by the third down of the drive he's jogging. Check Team Rosters and he's at 50%. The only cure was a timeout. Fixing that is why this mod exists.
+
+## How fatigue works
+
+Each team keeps a fatigue table, one byte per roster slot: 0 is fresh, 255 is spent. The roster screen turns it into ENERGY: 100% at 0, down about 0.3% per point.
+
+At every snap the game copies each player's ratings onto the field, scaled by his fatigue. Up to about 94% energy nothing changes; below that, every rating loses a little. At 88% a player plays at about 95% of his ratings, at 75% about 82%, and an empty player at about a third. Speed, quickness, hands, power: all of it.
+
+## What drained it
+
+Fatigue came only from a handful of events, each adding a fixed amount:
+
+| Event | Fatigue added |
+|---|---|
+| Ball carrier tackled | 40 |
+| Making the tackle | 30 |
+| Engaging a block (blocker and defender) | 20 |
+| A run tick for the ball carrier | 10 |
+| A receiver's route ending | 10 |
+| Spins and other moves | 2 to 5 |
+
+A short carry cost a halfback 90 to 110 points, about 27% energy. Measured over CPU-vs-CPU games, a halfback averaged 42 points a play, a fullback 17, a lineman 9, a cornerback 5.
+
+## What gave it back
+
+Recovery ran off a timer that ticks about once a second at the play-call screen, at the line and during the play. At each snap, everyone got back half a point per tick. A typical play cycle is about 24 ticks: 12 points back. So a back paid 100 and got 12 back. Linemen and defenders paid less than they recovered and sat at 100% all game.
+
+That's the whole problem in one line: recovery was the same flat amount for everyone, and drain was huge for one position and tiny for the rest. No setting of those two numbers fixes both. Make recovery bigger and the back is fine but nobody else ever tires; make it smaller and the back is even worse.
+
+## What replaced it
+
+Elevated keeps the fatigue table and the way it scales ratings, and changes where fatigue comes from:
+
+- **What you do on the play.** While the play is live, every player tires from the distance he runs (from his speed, every frame), the time he spends locked in a block, and the game's own events at a quarter of their old cost.
+- **A quarter back at every snap.** Recovery is a share of each player's fatigue, not a flat amount: a fresh player gets back a little, a tired one a lot.
+- **Timeouts and halftime** still put everyone back to full.
+
+Now a back who carries three times in a row feels it, a receiver who runs deep routes all drive feels it, and linemen in long drives finally show some wear. Hold Z before the snap on a 6-button pad to see everyone's energy.
+
+<Fixed label="Elevated">Both Elevated editions, and the Fixed Fatigue patches for anyone who wants only the fix. The Game Genie codes give the first version of the fix: half the drain and four times the recovery.</Fixed>

@@ -1,0 +1,60 @@
+export const meta = { slug: 'season-sim', title: 'How the season sim picks a winner, and why it had offense and defense backwards', dek: 'Every CPU-vs-CPU game in a season is decided by one short routine. We read it, found the bug, and fixed it by swapping two numbers.', date: '2026-11-14', tag: 'Game logic', minutes: 7 }
+
+When you press Play Week, the game doesn't play the other games on the field. It simulates them: two teams' ratings go in, a score comes out. The routine that does it is short enough to read in one sitting, and it holds one of the oldest bugs in EA's college football games.
+
+## Two numbers per team
+
+Every team in the game carries a small block of four words. One holds the home team's climate (the odds of fair weather, wind, rain or snow at its stadium), one the conference, and two are what the sim cares about:
+
+| Word | What it holds | Range |
+|---|---|---|
+| +2 | Offense rating | 0 to 100 |
+| +4 | Defense rating | 0 to 100 |
+
+These are EA's own numbers, typed in by hand in 1994, not computed from the rosters. They follow the rosters only loosely: BYU, a passing team with no defense, has 55 and 0; Washington State's "Palouse Posse" defense has 23 and 86. In Elevated, Game Setup shows them as OFF and DEF under each team's logo.
+
+## A game, four quarters at a time
+
+The sim runs each game as four quarters. In each quarter, each team gets a number of scoring chances (more in longer games: the Game Length setting counts). For a chance, the game works out a strength:
+
+```
+strength = 150 - other team's DEFENSE + this team's OFFENSE
+```
+
+and draws a random number from 0 to 1,350 − 2 × strength. If the draw comes in at or under the strength, it's a touchdown, then an extra point that's usually good. After the touchdown chances, a second loop hands out field goals. If the game is tied after four quarters, the home team usually gets three more points; in a game that can't end in a tie, always.
+
+The formula is generous to good offenses in two ways at once: a higher strength both raises the bar and shrinks the range of the draw. A team with 100 offense against a team with 0 defense has a strength of 250: nearly three chances in ten score. Flip it, and a strength of 50 scores about one chance in 25.
+
+## The bug
+
+That's how it was meant to work. The code that loads the two ratings reads them crosswise:
+
+```
+; 0x06F1A8, the original game
+move.w  $2(a1),d1    ; the OFFENSE word, used as the defense
+move.w  $4(a1),d2    ; the DEFENSE word, used as the offense
+```
+
+So a team scored with its own defense, against the other team's offense. In a season, a great defense won shootouts, and a great offense held the other team down. Lopsided teams like BYU and Washington State were simulated almost exactly backwards, while balanced teams looked fine, which is probably why nobody noticed. The same code is in College Football USA 96 and 97.
+
+## The fix
+
+Two words of code: the two reads trade places.
+
+```
+; Elevated
+move.w  $4(a1),d1
+move.w  $2(a1),d2
+```
+
+<Fixed>In both Elevated editions, and in the Fixed Fatigue + Fixes patch.</Fixed>
+
+## The ratings themselves
+
+The fix makes the sim follow the ratings, so the ratings have to be right. In the 2026 Season Edition each team's OFF and DEF come from its 2026 roster: the average College Football 27 overall of its starters, put on a modern 60s-to-90s scale for the screen and stretched back to EA's 0 to 100 for the sim. The stretch matters. With "150 − defense + offense", teams whose ratings sit a few points apart would make every simulated game a coin flip; stretched, a gap of 18 on the screen is a gap of 50 in the sim, about the spread EA used.
+
+The 1994 edition keeps EA's numbers for its 36 original teams and gives the 71 new ones ratings from their 1994 conference, record and schedule strength.
+
+## What it doesn't change
+
+The preseason poll also reads the two ratings, but it adds them together, so the bug never touched it. And games you play yourself never go through the sim at all: on the field, it's the players' ratings that count. That's the next story: [who wins at the line](/insights/who-wins-at-the-line).

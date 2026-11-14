@@ -1,0 +1,81 @@
+export const meta = { n: 6, slug: 'offense', title: 'Running the offense', summary: 'The play-call screen, the new formations, audibles, motion and flips at the line, running, and passing to five receivers.' }
+
+Every offensive play starts on the play-call screen: pick a formation, then a play. The play clock runs while you choose; take too long and it's a delay of game, 5 yards.
+
+## Calling a play
+
+<Shot src="/media/manual/swap-on.png" alt="A play page: the top row has SWAP HBS, SET FORM., FLIP PLAY and TEAM ROSTER; the plays are below" points={[
+  [27, 13, <>SWAP HBS: send in your second halfback <New /></>],
+  [47, 13, <>SET FORM.: back to the formations <New /></>],
+  [68, 13, <>FLIP PLAY: mirror the play <New /></>],
+  [55, 34, 'The plays of the formation you picked, with their diagrams'],
+]} />
+
+Move the three boxes, marked A, B and C, with the D-pad, and press the button of the box over the formation you want. The plays of that formation come up; choose one the same way. Scroll up to reach the top row of tiles.
+
+**Play Call mode** (pause menu): *3 Box* is the default described here. *1 Box* moves one box: <Btn k="C" /> chooses, and <Btn k="B" /> makes a fake choice that sounds the same, so the player beside you can't read your call. Only the last real choice counts.
+
+**The top row** <New />:
+- **SWAP HBS** puts your second halfback (HB2) in for your starter, or back. He keeps the job until you swap back, and plays with his own ratings, energy, jersey number and stats. Halftime and the start of a game put the starters back. Kicks, punts and field goals always use the starters. On a 6-button pad, <Btn k="Z" /> does the same from anywhere on the play-call screen.
+- **SET FORM.** goes back to the formations. <Btn k="Y" /> <Six /> does it too.
+- **FLIP PLAY** mirrors the formation, every assignment and the play diagrams; the tile turns yellow. Choose it again to flip back. <Btn k="X" /> <Six /> does it too.
+- **TEAM ROSTER** shows your roster and everyone's energy.
+
+Timeouts are on the pause menu (chapter 9).
+
+## The formations
+
+The first two rows are new in Elevated <New />: **Singleback, SB 3WR, SB 4WR, Pistol** and **4 WR, Empty, Trips, Shotgun 2RB**, with plays adapted from Madden NFL 97. The original formations follow: Shotgun, I-Form, Pro Form, Near, Far, Veer, Wishbone, and the special teams. Many have extra rows with 67 plays from College Football USA 97 <New />, and the Shotgun has two all-new plays <New />:
+
+- **RPO:** the quarterback keeps it and rolls out right to pass, unless you press <Btn k="B" /> within about a second of the snap: then he pitches to the halfback.
+- **HB SWING:** the halfback swings across in front of the quarterback and up the sideline.
+
+## Before the snap
+
+<Controls rows={[
+  [['C'], 'Snap the ball'],
+  [['A'], 'Audible: open the menu, then A, B or C for one of your three audibles'],
+  [['A', 'X'], 'Flip the play at the line: everyone runs to his mirrored spot', 'new six'],
+  [['up', 'down'], 'Pick a back or receiver to send in motion; a marker shows under him', 'new'],
+  [['left', 'right'], 'Send him in motion; press the other way to bring him back', 'new'],
+  [['Y'], 'Hold: the play’s art, and each receiver’s jersey number', 'new six'],
+  [['Z'], 'Hold: energy bars over every player', 'new six'],
+]} />
+
+**Motion** <New />: toward the middle he crosses the formation; toward the sideline he takes a short motion. Your selected defender follows him, and CPU defenders in man coverage go with him. The end man on the line (a tight end or split end) can go in motion too, when a receiver off the line on his side can step up to take his place.
+
+**Audibles:** each team has three. Set yours on the pause menu or in the pregame.
+
+<Shot src="/media/manual/presnap-offense.png" alt="Y held before the snap: the play art and the receiver icons with their numbers" caption="Hold Y before the snap: the play art and who's where." />
+
+## Running
+
+The ball carrier runs where you point the D-pad.
+
+<Controls rows={[
+  [['B'], 'Tap: lower a shoulder and drive forward'],
+  [['B'], 'Hold: spin'],
+  [['C'], 'Dive'],
+  [['C'], 'Quarterback on an option play: pitch to the back'],
+]} />
+
+A ball carrier keeps his full speed for about the first 1.5 seconds, then slows down, faster when he's tired. Elevated cuts the slowdown on long runs and runs after the catch <New />, so breakaways happen. Pitches to fast backs are aimed again in flight, so they no longer land behind them <New />.
+
+## Passing
+
+<Shot src="/media/xy-passing.png" alt="A pass play with the A, B, C, X and Y receiver icons" />
+
+1. After the snap, press <Btn k="C" /> to bring up the receiver icons. Moving the quarterback with the D-pad first lets him scramble or roll out.
+2. Press the button of the receiver you want: <Btn k="A" />, <Btn k="B" /> or <Btn k="C" /> for receivers 1 to 3, and on a 6-button pad <Btn k="X" /> and <Btn k="Y" /> for receivers 4 and 5 <New /> <Six />. Tap for a lob, hold for a bullet.
+
+A quarterback's RANGE rating sets how far he can throw (about 40 to 56 yards), and a throw longer than his range is less accurate the lower his INTEL. Long floating passes fly faster in Elevated <New />: the slowest deep throws hang in the air less.
+
+**Pass Catch** (pause menu): *Auto* catches for you; *Manual* lets you take the receiver once the ball is in the air. As a receiver, <Btn k="C" /> jumps for the ball, <Btn k="A" /> dives, and <Btn k="B" /> switches to the receiver nearest the ball.
+
+**Pass Window** (pause menu): Off by default, as in the original game. On brings back the older style with a window for each receiver.
+
+## Fatigue
+
+Every player tires from what he does on the play: the distance he runs, the time he spends locked in a block, the hits he takes <New />. Everyone gets a quarter of his fatigue back at every snap, and a timeout or halftime puts everyone back at full energy. A tired player is slower and weaker in every rating. Check with <Btn k="Z" /> before the snap, or on TEAM ROSTER.
+
+<Tip>Two long runs in a row will slow your best back down. SWAP HBS for a series, or call a timeout before the big third down.</Tip>

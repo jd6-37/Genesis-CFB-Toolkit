@@ -1,0 +1,36 @@
+export const meta = { n: 12, slug: 'saves', title: 'Saves, hardware and patching', summary: 'Save memory, emulators and flash carts, 6-button pads, checksums, and patching a new version.' }
+
+## Saves
+
+The game saves your season, your audibles and the menu music setting in the cartridge's battery-backed save memory, or in your emulator's save file (`.srm` in RetroArch). Keep that file next to the ROM.
+
+<Edition only="2026">
+
+The 2026 Season Edition is a 4 MB ROM with 32 KB of save memory (the original game has 8 KB). A season saved with v1.1.0 doesn't carry over.
+
+</Edition>
+
+<Edition only="1994">
+
+The 1994 Season Edition is a 4 MB ROM. Its season save is laid out for 107 teams, so seasons saved with earlier versions start over.
+
+</Edition>
+
+## Emulators and flash carts
+
+- **RetroArch with Genesis Plus GX:** the reference setup the mod is tested on.
+- **Mega EverDrive Pro:** tested on real hardware, including a full 2026 season saved and reloaded.
+- Other emulators should work if they handle 4 MB games with save memory.
+
+## 6-button pads
+
+The patched ROMs tell the emulator or console that they support 6-button pads. With a 3-button pad the game plays as before; you just don't get the controls marked <Six /> in this manual. In RetroArch, if <Btn k="X" />, <Btn k="Y" /> and <Btn k="Z" /> do nothing, set the port's Device Type to MD Joypad 6 Button (chapter 1).
+
+## Checksums and Game Genie
+
+Every patched ROM has the game's built-in checksum corrected, so none needs a Game Genie master code. The patcher checks your original ROM before it builds anything. To update to a new version, patch the original ROM again; don't patch an already patched one.
+
+## The apps
+
+- The **[Mod Toolkit](/toolkit)** patches the game in your browser and edits a ROM: rosters (also from College Football 27 ratings), team swaps, offense and defense styles, Walsh Reports, alternate uniforms.
+- **[Dynasty](/dynasty)** runs a multi-season dynasty for the 2026 Season Edition: recruiting, progression and schedules, written into a new ROM for each season.

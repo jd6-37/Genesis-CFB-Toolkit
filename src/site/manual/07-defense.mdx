@@ -1,0 +1,42 @@
+export const meta = { n: 7, slug: 'defense', title: 'Playing defense', summary: 'Defensive calls, switching players, audibles, shifts and flips at the line, and tackling.' }
+
+On defense you call the formation and the play the same way as on offense (chapter 6). The defensive formations are **4-4, 4-3, 3-4, Nickel** (five defensive backs), **Dime** (six), **Goal Line** and the special teams.
+
+**SWAP MLBS** <New /> on the top row puts your second middle linebacker (MLB2) in for your starter, or back, just like SWAP HBS on offense. <Btn k="Z" /> <Six /> does it too.
+
+## Before the snap
+
+<Controls rows={[
+  [['B'], 'Switch to another defender'],
+  [['A'], 'Audible: open the menu, then A, B or C'],
+  [['A', 'X'], 'Flip your alignment and assignments; again to flip back', 'new six'],
+  [['X'], 'Shift the line', 'new six'],
+  [['Z'], 'Shift the linebackers', 'new six'],
+  [['Y'], 'Shift the safeties', 'new six'],
+  [['Y'], 'Hold: the call’s art and each defender’s assignment', 'new six'],
+  [['Z'], 'Hold: energy bars', 'new six'],
+]} />
+
+**Shifts** <New /> <Six />: tap <Btn k="X" />, <Btn k="Z" /> or <Btn k="Y" /> to pick a group; Shift Line, Shift LBs or Shift Safeties shows at the top right. Then left or right moves the group a step that way (up to two). Down and up pinch or spread the line and linebackers, or move the safeties up or back. The same button again puts them back where the call lines them up. The players sidestep into place, facing the line.
+
+<Shot src="/media/defense-shifts.png" video="/media/defense-shifts.mp4" alt="The defensive line shifting before the snap" />
+
+When you hold <Btn k="Y" />, each defender gets a marker: **R** rush, **Z** zone, **M** man, **S** spy.
+
+<Shot src="/media/manual/presnap-defense.png" alt="Y held on defense: the call's art and the R, Z, M and S markers" />
+
+After a defensive audible, your players walk to their new spots twice as fast as in the original game <New />, so an audible doesn't leave them out of place at the snap.
+
+## After the snap
+
+<Controls rows={[
+  [['B'], 'Switch to the defender nearest the ball'],
+  [['A'], 'Dive at the ball carrier'],
+  [['C'], 'Jump: knock down or pick off a pass, block a kick'],
+]} />
+
+Every contact between a ball carrier and a defender is a tackle roll: the defender's TACKLE against the carrier's POWER. A missed roll is a broken tackle, and the next defender gets his chance. More in chapter 11, and in [Insights](/insights).
+
+## What the CPU does
+
+From the Smart difficulty up, the CPU offense audibles against your formation (against your Nickel or Dime, usually to a run), leans toward stopping what's working for you, and goes for it on 4th and short. When you flip a play, a CPU defense mirrors its alignment nine times in ten and its assignments follow <New />. CPU teams also rotate their halfbacks and middle linebackers as they tire <New />.
