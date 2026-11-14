@@ -21,6 +21,10 @@ The Bill Walsh '95 Elevated website: the homepage (`/`), the manual (`/manual`) 
 
 Old addresses keep working: `/#rosters` and the other tab hashes go to `/toolkit#…`, `/#dynasty/…` to `/dynasty#…` (the script in `index.html`, and `legacyAppUrl` in `src/appNav.ts` for `app.html`).
 
+## Writing the copy
+
+All of the site's text is direct and literal (owner, 2026-11-14). A heading names the feature or screen ("Swap in your backup halfback or middle linebacker", not "Fresh legs in the backfield"); a sentence says what happens and who does it. No slogans, wordplay, puns or figures of speech, and no vague words where a button or number can be named. Say what a control does in the game's own terms (the button, the screen, the label on it).
+
 ## Adding a manual chapter
 
 Make `src/site/manual/NN-slug.mdx`:
@@ -47,7 +51,7 @@ Write what the player sees and does, in the order he meets it. Mark everything t
 Make `src/site/insights/slug.mdx`:
 
 ```mdx
-export const meta = { slug: 'slug', title: 'The title', dek: 'One or two sentences under it.', date: '2026-11-14', tag: 'Game logic', minutes: 6 }
+export const meta = { slug: 'slug', title: 'The title', dek: 'One or two sentences under it.', date: '2026-11-14', tag: 'Season sim', minutes: 6 }
 ```
 
 Newest first on `/insights` and the homepage (the homepage shows three). `##` headings make the "In this post" list. Facts about the game's code come from the project's notes, with the addresses where they help; say what was measured and what wasn't.
