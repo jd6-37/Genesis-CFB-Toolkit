@@ -207,3 +207,43 @@ a.ui-button-danger, a.ui-button-danger:hover { color: var(--bad); }
   .ui-step-now .ui-step-n { display: none; }
   .ui-steps li:not(.ui-step-now) .ui-step-n::after { content: '.'; }
 }
+
+/* The site's one loud action: the game's selection bar (the Mod Toolkit brand's --chrome). */
+.ui-button-chrome { background: var(--chrome); border-color: var(--on-chrome); color: var(--on-chrome); box-shadow: 4px 4px 0 var(--surface-sunken); font-style: italic; font-weight: 800; }
+a.ui-button-chrome, a.ui-button-chrome:hover { color: var(--on-chrome); }
+
+/* A controller button: a white circle with a black letter, as on the game's music hint. */
+.ui-glyph {
+  display: inline-grid; place-items: center; width: 1.6em; height: 1.6em; vertical-align: -0.35em; margin: 0 0.1em;
+  border: 2px solid var(--screen); border-radius: 50%; background: var(--on-screen); color: var(--screen);
+  box-shadow: 2px 2px 0 color-mix(in srgb, var(--screen) 60%, transparent);
+  font: italic 900 0.85em/1 var(--font-display);
+}
+.ui-glyph-wide { width: auto; padding: 0 0.5em; border-radius: 0.8em; font-size: 0.7em; height: 2.2em; letter-spacing: 0.04em; }
+.ui-glyph-pad { border: 0; border-radius: 0; background: none; box-shadow: none; width: 1.7em; height: 1.7em; }
+.ui-glyph-pad svg { width: 100%; height: 100%; display: block; }
+.ui-glyph-cross { fill: var(--on-screen); stroke: var(--screen); stroke-width: 1.5; }
+.ui-glyph-dir { fill: var(--screen); }
+
+.ui-tag { display: inline-block; padding: 2px var(--sp-2); font: 700 var(--fs-1)/1.4 var(--font-display); text-transform: uppercase; letter-spacing: 0.06em; vertical-align: 0.15em; }
+.ui-tag-accent { background: var(--bar-on); color: var(--bar); }
+.ui-tag-ink { background: var(--bar); color: var(--on-bar); }
+.ui-tag-plain { border: 1px solid currentColor; color: var(--text-muted); }
+
+/* The game's screen: hard pixels, a light frame, a hard shadow. 320 x 224 is the Genesis' picture. */
+.ui-screen { margin: 0; }
+.ui-screen-glass { position: relative; aspect-ratio: 320 / 224; border: var(--rule-w-strong) solid var(--screen-edge); background: var(--screen); box-shadow: var(--shadow-hard); }
+.ui-screen-wide .ui-screen-glass { aspect-ratio: auto; }
+.ui-screen-wide img { height: auto; image-rendering: auto; }
+.ui-screen img, .ui-screen video { display: block; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+.ui-screen video { position: absolute; inset: 0; }
+.ui-screen figcaption { margin-top: var(--sp-3); font-size: var(--fs-2); color: var(--text-muted); }
+@media (prefers-reduced-motion: reduce) { .ui-screen video { display: none; } }
+
+/* Game Setup rows: a label in the label color, the value beside it, every other row on a bar. */
+.ui-setup { margin: 0; }
+.ui-setup-row { display: grid; grid-template-columns: minmax(6.5em, 30%) 1fr; gap: var(--sp-3); padding: var(--sp-2) var(--sp-3); }
+.ui-setup-row:nth-child(odd) { background: var(--row); }
+.ui-setup dt { font: 700 var(--fs-2)/1.5 var(--font-display); text-transform: uppercase; letter-spacing: 0.06em; color: var(--label); }
+.ui-setup dd { margin: 0; font-size: var(--fs-2); color: var(--text); }
+@media (min-width: 640px) { .ui-setup dd { font-size: var(--fs-3); } }
