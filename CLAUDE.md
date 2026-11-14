@@ -31,7 +31,7 @@ Read this before changing anything. More than one person or Claude session may b
 
 ## Shared files
 
-- Every tool touches `src/App.tsx`, `src/styles.css`, `README.md` and `package.json`. Keep changes to these small, and put a tool's own code in its own files (for example `src/tools/rosters/` and `src/core/rosters*.ts`).
+- Every tool touches `src/App.tsx`, `src/styles.css`, `README.md` and `package.json`. The website is `src/site/` (`docs/site.md`): a manual chapter or an Insights post is one new file there. Keep changes to these small, and put a tool's own code in its own files (for example `src/tools/rosters/` and `src/core/rosters*.ts`).
 - If two branches change the same lines, resolve the conflict so that both changes survive. Never drop someone else's change to make a merge go through; ask if it's unclear.
 - `package-lock.json`: if a rebase conflicts there, take `main`'s version and run `npm install` again instead of editing it by hand.
 
@@ -48,8 +48,9 @@ Read this before changing anything. More than one person or Claude session may b
 - If the change touches the Patch tab (`src/core/bps.ts`, `src/core/patches.ts`, `src/tools/patch/`), `npm run test:patch -- BW95 path/to/Bill-Walsh-CFB-95-Elevated CF97` passes.
 - Saved files keep loading: swap files written by earlier versions must still open (see `isSwapFile` in `src/core/build.ts`). Any new file format gets an `app`, `tool` and `version` field from the start.
 - ROM space: every area the app writes must be checked as free first, and every piece of code it patches as unchanged (like `swapProblems` in `src/core/build.ts`), because the tools also take modded ROMs. New areas must not overlap the areas the README lists or those used by Bill Walsh College Football '95 Elevated (formerly Rebalanced).
-- No ROMs, ROM data or game art in the repo. Everything is read from the user's own ROMs in the browser.
-- Update the README when anything a user sees changes.
+- No ROMs, ROM data or game art in the repo. Everything is read from the user's own ROMs in the browser. The one exception (owner, 2026-11-14): the website's screenshots, GIFs and short clips of the mod under `public/media` (`docs/site.md`).
+- Update the README when anything a user sees changes, and the site's manual (`src/site/manual/`) when a control, screen or mode of the game changes.
+- If the change touches the website (`src/site/`, `index.html`, `vercel.json`, `src/appNav.ts`), `npm run build` writes every page (the count is printed), and the pages, `/toolkit` and `/dynasty` are checked in the browser at phone and desktop width.
 - Follow the design system (`docs/design-system.md`): build UI from the components in `src/ui`, use only its tokens for colors and sizes, add a story for anything new, and run `npm run lint:design`.
 - Design mobile-first, always: base styles for a phone, then `min-width` media queries for wider screens. Check every page at phone width.
 - US English spelling everywhere: code, UI labels, file names, docs ("color", "catalog").
@@ -58,4 +59,4 @@ Read this before changing anything. More than one person or Claude session may b
 
 - Small commits with a message that says what changed and why.
 - Claude sessions end each commit message with the attribution lines the session gives them.
-- Claude sessions also record each step and decision in the project notes of the claude.ai project "Bill Walsh 95 Genesis modding" (`claude/bw95-swap-webapp-notes.md` for the app and the Patch tab, `claude/bw95-roster-editor-notes.md` for rosters, `claude/bw95-season-schedule-notes.md` for the Season tool, `claude/bw95-offense-styles-notes.md`, `claude/bw95-defense-styles-notes.md` and `claude/bw95-team-ratings-notes.md` for the Teams tool, `claude/bw95-design-system-notes.md` for the design system, `claude/bw95-alt-uniforms-app-notes.md` for the alternate uniforms).
+- Claude sessions also record each step and decision in the project notes of the claude.ai project "Bill Walsh 95 Genesis modding" (`claude/bw95-swap-webapp-notes.md` for the app and the Patch tab, `claude/bw95-roster-editor-notes.md` for rosters, `claude/bw95-season-schedule-notes.md` for the Season tool, `claude/bw95-offense-styles-notes.md`, `claude/bw95-defense-styles-notes.md` and `claude/bw95-team-ratings-notes.md` for the Teams tool, `claude/bw95-design-system-notes.md` for the design system, `claude/bw95-alt-uniforms-app-notes.md` for the alternate uniforms, `claude/bw95-website-notes.md` for the website).
