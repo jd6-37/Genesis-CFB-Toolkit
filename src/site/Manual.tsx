@@ -27,8 +27,8 @@ function ManualHead({ edition, setEdition }: { edition?: EditionId; setEdition?:
       <div className="manual-head-inner">
         <h1 className="manual-title"><a href="/manual">The Manual</a></h1>
         <p>
-          Everything from the original instruction booklet, rewritten for the Elevated editions, plus every new control and mode. What the mod added is
-          marked <span className="ui-tag ui-tag-accent">Elevated</span>.
+          How to play the game: everything in the original manual, updated for the Elevated editions, plus every new control and mode. Anything the mod
+          added is marked <span className="ui-tag ui-tag-accent">Elevated</span>.
         </p>
         {edition && setEdition && (
           <div className="manual-switch" role="group" aria-label="Show the text for">

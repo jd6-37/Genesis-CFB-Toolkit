@@ -11,7 +11,7 @@ export function InsightsIndex() {
     <div className="insights">
       <div className="insights-head">
         <h1 className="home-h2">Insights</h1>
-        <p>Deep dives into the Elevated mod and into the game's own code: what the ratings do, how a play is decided, how the CPU thinks.</p>
+        <p>Articles on how the game's code works and what the mod changes: what each rating does, how simulated games are decided, how fatigue works.</p>
       </div>
       <ul className="insights-list">
         {posts.map((p) => (

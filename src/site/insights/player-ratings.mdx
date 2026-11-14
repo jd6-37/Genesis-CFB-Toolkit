@@ -1,0 +1,63 @@
+export const meta = { slug: 'player-ratings', title: 'What each player rating does in the game', dek: 'We read every part of the game’s code that uses a player rating. Some ratings do what their names say. BLOCK is almost unused, kickers kick with QUICK, and blocks are decided by PWR, weight and speed.', date: '2026-11-12', tag: 'Ratings', minutes: 8 }
+
+Team Rosters shows seven ratings for every player. Their names suggest what they do, but the only way to know for sure is to read the code. We read every instruction that uses a player’s ratings during a play. This is what each rating does.
+
+## How ratings are stored
+
+A roster stores each rating as a step from 0 to 15. The screen shows step × 100 / 15, so the shown values are 0, 6, 13, 20 … 93, 100. At every snap, the game copies the 22 players’ ratings onto the field and lowers them by each player’s fatigue (except weight). During the play, the game only reads those copies.
+
+Each player has six rating slots. Which rating is in which slot depends on the position, so the same slot has different labels for different positions.
+
+## SPEED and QUICK
+
+- **SPEED** is a player’s top speed. In the original game a ball carrier also slows down as he runs; Elevated reduces that slowdown on long runs.
+- **QUICK** is acceleration: how fast a player gets up to speed. For linemen the same slot is labeled **PWR**. A lineman’s push in a block is his acceleration.
+
+## WT. (weight)
+
+**WT.** is the only rating that fatigue doesn’t lower. When two players collide, the game moves momentum between them based on their weights: the heavier player pushes the lighter one back. A heavier player also keeps his momentum longer when he isn’t pushing.
+
+There is no separate blocking calculation. A block is two players running into each other, and the one with more PWR, more weight and more speed wins. A 330-pound tackle with good PWR pushes a 250-pound end back. A light guard gets pushed into the backfield.
+
+## BLOCK is almost unused
+
+An offensive lineman’s last rating is labeled **BLOCK**, but no blocking code reads it. It is used only by two checks that every position has: staying up after a hard hit, and making a tackle after a turnover. The 2026 rosters still set it from real blocking ratings. When you edit a lineman, change PWR and weight instead.
+
+## The tackle check
+
+Every time a ball carrier and a defender touch, the game rolls a random number:
+
+```
+tackle if random(0 .. 140) <= 2 * (16 - carrier POWER + tackler TACKLE)
+```
+
+Ratings here are steps (0 to 15) after fatigue. So **POWER** on a back, receiver, tight end or quarterback is how well he breaks tackles, and **TACKLE** is how well a defender makes them. With both at 8, the defender has about a 23% chance to make the tackle on each contact. TACKLE 15 against POWER 4 gives about 39%. If the tackle fails, the ball carrier keeps running until the next contact. On some run plays the random range is four times larger, so one contact rarely ends the play.
+
+The same slot also decides whether a player stays up after a big hit: his chance of going down is 2 in (6 + rating).
+
+## HANDS
+
+**HANDS** is used for catches and interceptions (a roll against 8 + HANDS), fumbles (after a tackle, about 1 in 55, minus the force of the hit, plus 2 × HANDS), recovering loose balls, and blocking kicks. On defense, a cornerback with high HANDS knocks down and intercepts more passes.
+
+## A hidden interception rule
+
+When a team is ahead and keeps passing, its passes are intercepted more often. The game keeps a weighted count of the leading team’s recent pass plays; the higher the count, the easier the interception roll. This applies to human and CPU teams. We found nothing else in the game that depends on the score.
+
+## Quarterback: RANGE and INTEL
+
+- **RANGE** sets how far he can throw: 40 yards plus his RANGE step, so about 40 to 56 yards. If the receiver is farther away, the ball lands at that limit.
+- **INTEL** sets his accuracy on longer throws. Up to as many yards as his RANGE step (0 to 15), a throw goes exactly where it is aimed. Past that, it drifts off target; the lower his INTEL and the longer the throw, the more it drifts.
+
+So a quarterback’s accuracy depends on both INTEL and RANGE. A quarterback with low RANGE is inaccurate on deep throws.
+
+## INTEL for other positions
+
+INTEL is reaction time. A CPU ball carrier with high INTEL sees a defender in his path sooner and cuts sooner. Defenders with high INTEL read the play, start chasing and pick up their man sooner. For a player you control, INTEL doesn’t matter, because you decide when he reacts.
+
+## Kickers
+
+The kicker’s ratings are labeled RANGE and ACCURACY, but the kick code uses **QUICK** for distance (in every kick routine), **ACCURACY** for how far a kick can drift off line, and never RANGE. The labels were probably copied from the quarterback’s. In the 2026 Season Edition the kicker’s leg strength is stored in QUICK, where the game reads it.
+
+## How the 2026 ratings were made
+
+The 2026 rosters were converted from College Football 27. Each BW95 rating was set from the CFB 27 ratings that do the same job in this game: SPEED from Speed; QUICK from Acceleration and Agility; a lineman’s PWR from Strength and his blocking or block shedding; POWER from Break Tackle, Trucking and Strength; TACKLE from Tackle, Hit Power and Pursuit; a quarterback’s INTEL from his awareness and throwing accuracy. The Mod Toolkit’s Rosters tab uses the same conversion when you import a roster.
