@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && vite build --ssr src/site/server.tsx --outDir dist-ssr && tsx cli/prerender.ts",
     "preview": "vite preview",
     "cli": "tsx cli/build.ts",
     "test": "tsx cli/selftest.ts",
@@ -33,13 +33,16 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@mdx-js/rollup": "^3.1.1",
     "@storybook/react": "^8.6.19",
     "@storybook/react-vite": "^8.6.19",
+    "@types/mdx": "^2.0.14",
     "@types/node": "^26.6.6",
     "@types/react": "^18.3.31",
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.7.0",
     "chromatic": "^18.14.3",
+    "remark-gfm": "^4.0.1",
     "storybook": "^8.6.19",
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
