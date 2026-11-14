@@ -13,7 +13,7 @@ export interface DynCtx {
   d: Dynasty;
   v: SeasonView;
   art: TeamArt[] | null;
-  /** Hash path under #dynasty/, e.g. "team/12". */
+  /** Hash path on /dynasty, e.g. "team/12". */
   go: (path: string) => void;
   /** Saves a changed dynasty (the lineup editor). */
   commit: (next: Dynasty) => Promise<void>;
@@ -25,7 +25,7 @@ export interface DynCtx {
 export const Ctx = createContext<DynCtx | null>(null);
 export const useDyn = () => useContext(Ctx)!;
 
-export const href = (path: string) => `#dynasty/${path}`;
+export const href = (path: string) => `#${path}`;
 
 const css = (c: number) => `#${toLevels(c).map((x) => LEVELS[x].toString(16).padStart(2, '0')).join('')}`;
 const lum = (hex: string) => {
