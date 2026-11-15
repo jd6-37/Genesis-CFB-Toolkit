@@ -82,7 +82,8 @@ export function weekName(v: SeasonView, week: number): string {
   const s = v.save?.season;
   if (!s) return `Week ${week + 1}`;
   if (week <= s.lastRegularWeek) return `Week ${s.realSchedule ? week : week + 1}`;
-  if (v.bowls) return 'Bowl Games';
+  // 1994: the bowl week last; before it, from test31, the SEC Championship Game (1994's only title game).
+  if (v.bowls) return week === s.lastRegularWeek + 1 && week < v.weeks - 1 ? 'SEC Championship' : 'Bowl Games';
   const rounds = v.weeks - 1 - s.lastRegularWeek; // title games + playoff rounds
   const k = week - s.lastRegularWeek; // 1 = title games
   if (k === 1 && rounds >= 1) return 'Conference Championships';
@@ -105,9 +106,12 @@ export const BOWLS_1994 = [
   'Las Vegas Bowl',
 ];
 
-/** A 1994 bowl game's name (null for any other game). */
+/** The 1994 bowl week (the season's last week, after the regular season), or -1. */
+export const bowlWeek = (v: SeasonView) => (v.bowls && v.save?.season?.postseason && v.weeks - 1 > v.lastRegularWeek ? v.weeks - 1 : -1);
+
+/** A 1994 bowl game's name (null for any other game, the SEC Championship Game included). */
 export function bowlOf(v: SeasonView, g: SaveGame): string | null {
-  if (!v.bowls || g.week <= v.lastRegularWeek) return null;
+  if (g.week !== bowlWeek(v)) return null;
   const k = v.games.filter((x) => x.week === g.week).indexOf(g);
   return BOWLS_1994[k] ?? null;
 }

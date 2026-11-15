@@ -4,7 +4,7 @@
 
 import { SubHead, Table } from '../../ui';
 import { useMemo } from 'react';
-import { bowlOf, INDEPENDENT, leaders, playerLines, playerName, standings, statValue, weekName, type PlayerLine, type StatCategory } from '../../core/dynasty/derive';
+import { bowlOf, bowlWeek, INDEPENDENT, leaders, playerLines, playerName, standings, statValue, weekName, type PlayerLine, type StatCategory } from '../../core/dynasty/derive';
 import { bigGames, heismanWatch, playoffPicture } from '../../core/dynasty/outlook';
 import { classRankings, STAR_POINTS } from '../../core/dynasty/offseason';
 import { TeamLink, href, playerOf, recordText, useDyn } from './ui';
@@ -84,7 +84,7 @@ function BigGames() {
 function Bowls() {
   const { v } = useDyn();
   if (!v.bowls) return null;
-  const games = v.games.filter((g) => g.week > v.lastRegularWeek && g.visitor !== null && g.home !== null);
+  const games = v.games.filter((g) => g.week === bowlWeek(v) && g.visitor !== null && g.home !== null);
   if (!games.length) return null;
   return (
     <section>

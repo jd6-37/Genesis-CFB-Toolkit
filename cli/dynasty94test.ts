@@ -16,7 +16,7 @@ import { EDITIONS, editionOf, editionOfRom, dynastyFormat } from '../src/core/dy
 import { parseRosters1994, nameKey, ROSTERS_1994 } from '../src/core/dynasty/rosters1994';
 import { DYN_AREA, dynastyHeaderValid, dynastyRomId, readNamesTable, readStamp, scheduleAddress, fineAddress } from '../src/core/dynasty/dynastyArea';
 import { hasFineRatings, readFineOffsets } from '../src/core/dynasty/fine';
-import { seasonView, weekName, bowlOf, BOWLS_1994, champions, playerName } from '../src/core/dynasty/derive';
+import { seasonView, weekName, bowlOf, bowlWeek, BOWLS_1994, champions, playerName } from '../src/core/dynasty/derive';
 import { stories } from '../src/core/dynasty/news';
 import { playoffSize } from '../src/core/dynasty/outlook';
 import { checkSchedule, makeSchedule, protectedPairs, setOpponent, teamSchedule, scheduleSet, weeksOf } from '../src/core/dynasty/schedule';
@@ -160,7 +160,7 @@ const srm = stamp(new Uint8Array(readFileSync(savePath)));
 const save = readDynastySave(srm);
 assert.equal(save.teams, 107);
 assert.equal(save.stats.length, 107);
-assert.ok(save.season && save.season.lastRegularWeek === 10, 'an 11-week regular season');
+assert.ok(save.season && (save.season.lastRegularWeek === 10 || (save.season.realSchedule && save.season.lastRegularWeek === 13)), 'an 11-week regular season (Random), or Weeks 0-13 (Real 1994, test30 on)');
 assert.ok(save.season!.games.every((g) => (g.visitor === null || g.visitor < 107) && (g.home === null || g.home < 107)));
 const other = srm.slice(); other[1] = 0x6f; // the 2026 signature: a save of the other edition
 assert.throws(() => importSave(d0, other), /2026 Season Edition/);
@@ -169,12 +169,24 @@ assert.equal(imp.warning, undefined);
 const d1 = imp.dynasty;
 const v = seasonView(d1, d1.seasons[0]);
 assert.ok(v.bowls && playoffSize(v) === 0, 'bowls, no playoff');
-assert.equal(weekName(v, 0), 'Week 1');
-if (v.weeks > 11) assert.equal(weekName(v, 11), 'Bowl Games');
-const bowlWeek = v.games.filter((g) => g.week === v.lastRegularWeek + 1);
-if (bowlWeek.length && bowlWeek[0].visitor !== null) {
-  assert.equal(bowlWeek.length, 19);
-  assert.deepEqual(bowlWeek.map((g) => bowlOf(v, g)), BOWLS_1994);
+assert.equal(weekName(v, 0), save.season!.realSchedule ? 'Week 0' : 'Week 1');
+const post = v.weeks - 1 - v.lastRegularWeek; // 1: the bowls; 2: the SEC Championship Game, then the bowls (test31 on)
+if (save.season!.postseason) {
+  assert.ok(post === 1 || post === 2, 'one or two postseason weeks');
+  assert.equal(bowlWeek(v), v.weeks - 1);
+  assert.equal(weekName(v, v.weeks - 1), 'Bowl Games');
+  if (post === 2) {
+    assert.equal(weekName(v, v.lastRegularWeek + 1), 'SEC Championship');
+    const sec = v.games.filter((g) => g.week === v.lastRegularWeek + 1);
+    assert.equal(sec.length, 1);
+    assert.equal(bowlOf(v, sec[0]), null, 'the SEC title game is not a bowl');
+    if (sec[0].visitor !== null) assert.ok([sec[0].visitor, sec[0].home].every((t) => d1.seasons[0].confNames[d1.seasons[0].conf[t!]] === 'SEC'));
+  }
+}
+const bowls = v.games.filter((g) => g.week === bowlWeek(v));
+if (bowls.length && bowls[0].visitor !== null) {
+  assert.equal(bowls.length, 19);
+  assert.deepEqual(bowls.map((g) => bowlOf(v, g)), BOWLS_1994);
 }
 if (v.done) {
   assert.equal(v.champion, v.order[0], 'the No. 1 team in the final poll is the champion');

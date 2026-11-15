@@ -1,7 +1,7 @@
 // Stories for the Dynasty's news homepage, written from the season's results with templates.
 // Pure functions: the same season gives the same stories.
 
-import { bowlOf, INDEPENDENT, leaders, playerLabel, playerLines, playerName, RECORD_STATS, seasonView, standings, statValue, weekName, type SeasonView } from './derive';
+import { bowlOf, bowlWeek, INDEPENDENT, leaders, playerLabel, playerLines, playerName, RECORD_STATS, seasonView, standings, statValue, weekName, type SeasonView } from './derive';
 import { rivalryOf } from './rivalries';
 import { fromBase64, type Dynasty, type OffseasonEvent } from './model';
 import { readDynastySave, type DynastySave, type SaveGame } from './save';
@@ -80,9 +80,9 @@ export function stories(d: Dynasty, v: SeasonView = seasonView(d, d.seasons[d.se
     const rl = pre[l] <= 25 ? pre[l] : 0;
     const where = w === g.home ? 'at home' : 'on the road';
     const id = `${year}-${week}-${g.index}`;
-    if (v.bowls && post) {
-      // 1994: each bowl's result (the champion comes from the final poll, below).
-      const bowl = bowlOf(v, g) ?? 'bowl game';
+    if (v.bowls && bowlOf(v, g)) {
+      // 1994: each bowl's result (the champion comes from the final poll, below; the SEC title game is a title story).
+      const bowl = bowlOf(v, g)!;
       out.push({
         id: `${id}-bowl`, kind: 'title', week, weight: 36 + (26 - Math.min(26, rw || 26)) + (26 - Math.min(26, rl || 26)) / 2, teams: [w, l],
         headline: pick(id, [`${rk(rw)}${name(w)} wins the ${bowl}`, `${rk(rw)}${name(w)} takes the ${bowl} over ${rk(rl)}${name(l)}`]),
@@ -160,12 +160,12 @@ export function stories(d: Dynasty, v: SeasonView = seasonView(d, d.seasons[d.se
 
   // 1994: the bowl lineup once the game has set it, and the champion of the final poll.
   if (v.bowls) {
-    const bw = v.games.filter((g) => g.week > v.lastRegularWeek && g.visitor !== null && g.home !== null);
+    const bw = v.games.filter((g) => g.week === bowlWeek(v) && g.visitor !== null && g.home !== null);
     if (bw.length) {
       const top = bw.slice(0, 5).map((g) => `${bowlOf(v, g)}: ${name(g.home!)} vs. ${name(g.visitor!)}`);
       const first = bw[0];
       out.push({
-        id: `${year}-bowls`, kind: 'cfp', week: v.lastRegularWeek + 1, weight: v.champion === null && !bw.some((g) => g.vs !== null) ? 70 : 20,
+        id: `${year}-bowls`, kind: 'cfp', week: bowlWeek(v), weight: v.champion === null && !bw.some((g) => g.vs !== null) ? 70 : 20,
         teams: [first.home!, first.visitor!],
         headline: `Bowl lineup set: ${name(first.home!)} and ${name(first.visitor!)} in the ${bowlOf(v, first)}`,
         dek: `${bw.length} bowl games. ${top.join('; ')}.`,
