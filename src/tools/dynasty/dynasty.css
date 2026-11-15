@@ -288,6 +288,9 @@
 @media (min-width: 600px) { .dy-front-more { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; } }
 @media (min-width: 900px) { .dy-front-more { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; } }
 .dy-side-games li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+/* 1994: the bowl games, each bowl's name on its own line above the two teams. */
+.dy-bowl-name { flex-basis: 100%; }
+.dy-bowl-team { display: inline-flex; align-items: center; gap: var(--sp-1); }
 
 /* Player editor (mobile first: one column, two from 600 px, three from 900 px). */
 .dy-edit-wrap { margin: 16px 0; }
@@ -473,7 +476,7 @@
 .dy-meter-cell { display: flex; align-items: center; gap: var(--sp-2); min-width: 72px; }
 .dy-meter-cell > span:last-child { width: 28px; text-align: right; font-size: var(--fs-2); }
 .dy-col-meter { width: 22%; }
-.dy-off-wide .ui-table @media (min-width: 640px) { .dy-board-table td:first-child, .dy-prospect-table td:first-child { min-width: 150px; } }
+@media (min-width: 640px) { .dy-board-table td:first-child, .dy-prospect-table td:first-child { min-width: 150px; } }
 .dy-board-table th, .dy-board-table td, .dy-prospect-table th, .dy-prospect-table td { padding-left: var(--sp-1); padding-right: var(--sp-1); }
 @media (min-width: 640px) { .dy-board-table th, .dy-board-table td, .dy-prospect-table th, .dy-prospect-table td { padding-left: var(--sp-2); padding-right: var(--sp-2); } }
 .dy-prospect-table .ui-button { min-height: 36px; padding: var(--sp-1) var(--sp-3); }
