@@ -562,7 +562,7 @@ ok(`full recruiting: ${rs0.prospects.length} prospects, ${rsEnd.prospects.filter
 
 const closenessState = (p: { player: { state: string } }) => (stateCode(p.player.state) === SCHOOL_STATE[f1.teams[user].school] ? 'same' : 'other');
 // Offseason rules: changed numbers take effect; only changes are stored; rules files round-trip and are checked.
-assert.equal(Object.keys(CFB27_ACADEMICS).length, 138);
+assert.equal(Object.keys(CFB27_ACADEMICS).length, 138 + 6, 'the 138 schools, the 1994 names of five of them and Pacific');
 assert.ok(d1.teams.every((t) => CFB27_ACADEMICS[t.school]), 'every school has an academic grade');
 assert.ok(academicsOf('Stanford') > academicsOf('Alabama'));
 const ruled = setRules(f1, { ...RD, scoutOvr: 25, userPoints: 500, transferBackup: 0.5 });
