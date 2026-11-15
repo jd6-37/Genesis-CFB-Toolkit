@@ -87,8 +87,23 @@ export const RIVALRIES: [string, string, string][] = [
   ['Notre Dame', 'Navy', 'the Notre Dame-Navy game'],
 ];
 
+/**
+ * The 1994 Season Edition's school names that are another name in these lists (the 2026 ROM's), so the
+ * name-keyed tables (rivalries, school states, colors, academics) work for both editions.
+ */
+export const SCHOOL_ALIASES: Record<string, string> = {
+  California: 'Cal', 'Miami (Ohio)': 'Miami of Ohio', 'N. Illinois': 'NIU', 'NE Louisiana': 'UL Monroe', 'SW Louisiana': 'Louisiana',
+};
+export const canonicalSchool = (s: string) => SCHOOL_ALIASES[s] ?? s;
+/** A name-keyed table with the 1994 names added (in place). */
+export function withAliases<T>(table: Record<string, T>): Record<string, T> {
+  for (const [a, b] of Object.entries(SCHOOL_ALIASES)) if (table[b] !== undefined && table[a] === undefined) table[a] = table[b];
+  return table;
+}
+
 /** The rivalry name for a pair of schools, if they have one (the first listed wins). */
-export function rivalryOf(a: string, b: string): string | null {
+export function rivalryOf(a0: string, b0: string): string | null {
+  const a = canonicalSchool(a0), b = canonicalSchool(b0);
   const hit = RIVALRIES.find(([x, y]) => (x === a && y === b) || (x === b && y === a));
   return hit ? hit[2] : null;
 }
@@ -146,5 +161,59 @@ export const PROTECTED: { a: string; b: string; last?: boolean }[] = [
   { a: 'Ohio', b: 'Miami of Ohio' },
   { a: 'Western Kentucky', b: 'Middle Tennessee' },
   { a: 'UCF', b: 'South Florida' },
+  { a: 'Cincinnati', b: 'Louisville' },
+];
+
+/**
+ * The 1994 Season Edition's protected rivalries (Claude's pick, 2026-11-15, for the 1994 conferences): the
+ * finales of that era in the last week (Nebraska-Oklahoma, Kansas-Missouri, North Carolina-Duke, Tennessee-
+ * Kentucky, BYU-Utah …), the other annual games of 1994 any week. School names as the 1994 ROM has them.
+ */
+export const PROTECTED_1994: { a: string; b: string; last?: boolean }[] = [
+  // Finales
+  { a: 'Alabama', b: 'Auburn', last: true },
+  { a: 'Ohio State', b: 'Michigan', last: true },
+  { a: 'Ole Miss', b: 'Mississippi St.', last: true },
+  { a: 'Texas', b: 'Texas A&M', last: true },
+  { a: 'Georgia', b: 'Georgia Tech', last: true },
+  { a: 'Florida', b: 'Florida State', last: true },
+  { a: 'Clemson', b: 'South Carolina', last: true },
+  { a: 'Virginia', b: 'Virginia Tech', last: true },
+  { a: 'North Carolina', b: 'Duke', last: true },
+  { a: 'Tennessee', b: 'Kentucky', last: true },
+  { a: 'Indiana', b: 'Purdue', last: true },
+  { a: 'Minnesota', b: 'Wisconsin', last: true },
+  { a: 'Nebraska', b: 'Oklahoma', last: true },
+  { a: 'Kansas', b: 'Missouri', last: true },
+  { a: 'USC', b: 'UCLA', last: true },
+  { a: 'Washington', b: 'Washington State', last: true },
+  { a: 'Oregon', b: 'Oregon State', last: true },
+  { a: 'Arizona', b: 'Arizona State', last: true },
+  { a: 'California', b: 'Stanford', last: true },
+  { a: 'BYU', b: 'Utah', last: true },
+  { a: 'Army', b: 'Navy', last: true },
+  // Every season, any week
+  { a: 'Texas', b: 'Oklahoma' },
+  { a: 'Oklahoma', b: 'Oklahoma State' },
+  { a: 'Kansas', b: 'Kansas State' },
+  { a: 'Alabama', b: 'Tennessee' },
+  { a: 'Alabama', b: 'LSU' },
+  { a: 'Auburn', b: 'Georgia' },
+  { a: 'Florida', b: 'Georgia' },
+  { a: 'Michigan', b: 'Michigan State' },
+  { a: 'Michigan', b: 'Notre Dame' },
+  { a: 'Minnesota', b: 'Iowa' },
+  { a: 'Iowa', b: 'Iowa State' },
+  { a: 'Notre Dame', b: 'USC' },
+  { a: 'Notre Dame', b: 'Navy' },
+  { a: 'North Carolina', b: 'NC State' },
+  { a: 'Pitt', b: 'West Virginia' },
+  { a: 'Miami', b: 'Florida State' },
+  { a: 'Air Force', b: 'Army' },
+  { a: 'Air Force', b: 'Navy' },
+  { a: 'SMU', b: 'TCU' },
+  { a: 'Rice', b: 'Houston' },
+  { a: 'Toledo', b: 'Bowling Green' },
+  { a: 'Ohio', b: 'Miami (Ohio)' },
   { a: 'Cincinnati', b: 'Louisville' },
 ];

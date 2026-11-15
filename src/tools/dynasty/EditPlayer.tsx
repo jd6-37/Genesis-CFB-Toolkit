@@ -11,6 +11,7 @@ import { GROUP_OF_ROLE, RATINGS, roleOfPos, shownOf, type Ratings } from '../../
 import { GROUP_COLUMNS } from '../../core/rosterLayouts';
 import { rng } from '../../core/dynasty/model';
 import { Headshot, useDyn } from './ui';
+import { playerName } from '../../core/dynasty/derive';
 
 const LABEL: Partial<Record<string, string>> = { Weight: 'Game weight (lb)', Quickness: 'Quickness (K/P: kick distance)' };
 
@@ -46,7 +47,7 @@ export function EditPlayer({ p }: { p: DPlayer }) {
   );
   return (
     <form className="dy-edit" onSubmit={(e) => { e.preventDefault(); void save(form); }}>
-      <SubHead>Edit {p.first} {p.last}</SubHead>
+      <SubHead>Edit {playerName(p)}</SubHead>
       <div className="dy-edit-grid">
         {text('first', 'First name')}
         {text('last', 'Last name')}

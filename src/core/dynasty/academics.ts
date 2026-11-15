@@ -1,6 +1,7 @@
 // Academic Prestige per school (user, 2026-11-12: "We might want to add academics data now (See if you can
 // find what CFB27 uses)"): College Football 27's dynasty grade for each of the 138 schools, read from a
 // public CFB 27 team grades table on 2026-11-12. A recruit who cares about academics favors high grades.
+import { withAliases } from './rivalries';
 
 export const CFB27_ACADEMICS: Record<string, string> = {
   'Air Force': 'A', Akron: 'F', Alabama: 'D+', 'App State': 'D', Arizona: 'C', 'Arizona State': 'C', Arkansas: 'D+',
@@ -27,6 +28,9 @@ export const CFB27_ACADEMICS: Record<string, string> = {
   'Washington State': 'D+', 'West Virginia': 'D', 'Western Kentucky': 'F', 'Western Michigan': 'D-', Wisconsin: 'B+',
   Wyoming: 'D',
 };
+// The 1994 Season Edition's names (rivalries.ts), and Pacific, which CFB 27 doesn't have (Claude's pick, 2026-11-15).
+withAliases(CFB27_ACADEMICS);
+CFB27_ACADEMICS.Pacific = 'B';
 
 const GRADE_VALUE: Record<string, number> = {
   'A+': 1, A: 0.93, 'A-': 0.86, 'B+': 0.79, B: 0.72, 'B-': 0.65, 'C+': 0.58, C: 0.51, 'C-': 0.44,

@@ -15,9 +15,10 @@
 // Pure functions: each returns a new dynasty. Randomness is seeded, so the same choices give the
 // same offseason. The players before the offseason are kept so it can be started over.
 
-import { FINE_SET_BYTES, putFineOffsets } from './fine';
+import { fineSetBytes, putFineOffsets } from './fine';
 import { applyWhiteHome } from './kit';
 import { lastGames, makeSchedule, RELEASE_CONF_WEEKS, scheduleSet } from './schedule';
+import { editionOf, editionOfRom } from './edition';
 import { CLASSES, rng, type ClassYear, type DPlayer, type DSeason, type Dynasty, type OffseasonEvent } from './model';
 import { playerLines, seasonView } from './derive';
 import { NO_NUMBER, assignNumbers } from './numbers';
@@ -496,8 +497,10 @@ export function recruitTemplates(d: Dynasty): RecruitTemplates {
   for (const p of d.players) {
     real.add(`${p.first} ${p.last}`);
     if (p.srcId === undefined) continue; // names and towns from the starting players only
-    first.set(p.first, (first.get(p.first) ?? 0) + 1);
-    last.set(p.last, (last.get(p.last) ?? 0) + 1);
+    if (p.first && p.last) { // a 1994 player the ROM has no name for has none
+      first.set(p.first, (first.get(p.first) ?? 0) + 1);
+      last.set(p.last, (last.get(p.last) ?? 0) + 1);
+    }
     if (p.hometown && p.state && p.state !== 'Non-US') towns.push({ hometown: p.hometown, state: p.state });
   }
   for (const p of active(d)) (byPos[p.pos] ??= []).push({ ratings: p.ratings, ovr: p.ovr, heightIn: p.heightIn, weight: p.weight, gained: p.weight - (p.weight0 ?? p.weight) });
@@ -796,6 +799,8 @@ export function finishOffseason(d: Dynasty): Dynasty {
       confWeeks,
       last: lastGames(d, prev),
       seed: Math.floor(r() * 0x7fffffff),
+      weeks: editionOf(d).regWeeks,
+      edition: editionOf(d).id,
     }),
     ...depthChart(withNumbers),
     prestige: st.prestige ?? seasonPrestige(d, prev),
@@ -814,17 +819,18 @@ export function classRankings(events: OffseasonEvent[]) {
 
 /**
  * A copy of the user's ROM with a season's 32 per team (jersey numbers and game ratings, on each
- * slot's 2026 record) and team OVRs in the dynasty area, which Season mode reads, with the ID block
- * New Season stamps into the save; Exhibition keeps the real 2026 rosters. Checksums fixed.
+ * slot's record) and team OVRs in the dynasty area, which Season mode reads, with the ID block
+ * New Season stamps into the save; Exhibition keeps the ROM's own rosters. Checksums fixed.
  */
 export function seasonRom(d: Dynasty, season: DSeason, rom: Uint8Array, now = Date.now()): Uint8Array {
   const out = openRosterRom(rom);
   const problem = out.wide ? dynastyAreaProblem(out.data) : `This isn't ${DYNASTY_EDITION}.`;
   if (problem) throw new Error(problem);
+  if (editionOfRom(out.data)?.id !== editionOf(d).id) throw new Error(`This dynasty is played in the ${editionOf(d).name}: use that ROM.`);
   const records: Uint8Array[] = [];
   const ovr: { off: number; def: number }[] = [];
   const names: (DynastyName | null)[][] = [];
-  const fine = new Uint8Array(FINE_SET_BYTES); // every slot's fine-ratings offsets (fine.ts)
+  const fine = new Uint8Array(fineSetBytes(d.teams.length)); // every slot's fine-ratings offsets (fine.ts)
   for (let t = 0; t < d.teams.length; t++) {
     const rec = new Uint8Array(128);
     const teamNames: (DynastyName | null)[] = new Array(32).fill(null);

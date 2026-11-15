@@ -21,6 +21,7 @@ import { whiteHomeOf } from './kit';
 import { assignBlack, skinFor } from './appearance';
 import { recordYear, type YearRecord } from './career';
 import { DYNASTY_EDITION, dynastyRomId, hasDynastyHooks, readStamp } from './dynastyArea';
+import { editionOf, editionOfRom } from './edition';
 
 /** Version 2 (2026-11-12): players keep the Bill Walsh '95 ratings (ratings.ts); version 1 dynasties (CFB 27 ratings) aren't supported. */
 export const DYNASTY_FILE = { app: 'genesis-cfb-toolkit', tool: 'dynasty', version: 2 } as const;
@@ -149,6 +150,8 @@ export interface Dynasty {
   app: typeof DYNASTY_FILE.app;
   tool: typeof DYNASTY_FILE.tool;
   version: number;
+  /** The edition it's played in (edition.ts; absent = 2026, the dynasties made before the 1994 edition). */
+  edition?: import('./edition').EditionId;
   id: string;
   name: string;
   created: string;
@@ -221,6 +224,7 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
   const roster = openRosterRom(rom);
   // Only ROMs with the dynasty support until the first public release (user, 2026-11-12).
   if (!roster.wide || !hasDynastyHooks(rom)) throw new Error(`A dynasty needs ${DYNASTY_EDITION}.`);
+  if (editionOfRom(rom)?.id !== '2026') throw new Error('This is the 1994 Season Edition: its dynasty is made from the ROM\'s own rosters (createDynasty1994).');
   const p = wideSeasonProblems(rom);
   if (p.length) throw new Error(`This ROM's season settings can't be read: ${p.join('; ')}.`);
   const n = teamsOf(rom);
@@ -362,6 +366,10 @@ export function weeksDone(s: DynastySave): number {
  */
 export function importSave(d: Dynasty, file: Uint8Array, opt: { at?: string; allowOlder?: boolean } = {}): ImportResult {
   const save = readDynastySave(file);
+  if (save.teams !== d.teams.length) {
+    const other = save.teams === 107 ? '1994' : '2026';
+    throw new Error(`This is a save of the ${other} Season Edition, and this dynasty is played in the ${editionOf(d).name}.`);
+  }
   if (!save.season) throw new Error('This save has no season yet: start a New Season in the game and play at least one week.');
   const season = d.seasons[d.seasons.length - 1];
   if (save.season.games.some((g) => (g.visitor !== null && g.visitor >= d.teams.length) || (g.home !== null && g.home >= d.teams.length))) {

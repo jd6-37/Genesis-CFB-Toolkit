@@ -1,7 +1,7 @@
 // Stories for the Dynasty's news homepage, written from the season's results with templates.
 // Pure functions: the same season gives the same stories.
 
-import { INDEPENDENT, leaders, playerLines, playerName, RECORD_STATS, seasonView, standings, statValue, weekName, type SeasonView } from './derive';
+import { bowlOf, INDEPENDENT, leaders, playerLabel, playerLines, playerName, RECORD_STATS, seasonView, standings, statValue, weekName, type SeasonView } from './derive';
 import { rivalryOf } from './rivalries';
 import { fromBase64, type Dynasty, type OffseasonEvent } from './model';
 import { readDynastySave, type DynastySave, type SaveGame } from './save';
@@ -80,6 +80,16 @@ export function stories(d: Dynasty, v: SeasonView = seasonView(d, d.seasons[d.se
     const rl = pre[l] <= 25 ? pre[l] : 0;
     const where = w === g.home ? 'at home' : 'on the road';
     const id = `${year}-${week}-${g.index}`;
+    if (v.bowls && post) {
+      // 1994: each bowl's result (the champion comes from the final poll, below).
+      const bowl = bowlOf(v, g) ?? 'bowl game';
+      out.push({
+        id: `${id}-bowl`, kind: 'title', week, weight: 36 + (26 - Math.min(26, rw || 26)) + (26 - Math.min(26, rl || 26)) / 2, teams: [w, l],
+        headline: pick(id, [`${rk(rw)}${name(w)} wins the ${bowl}`, `${rk(rw)}${name(w)} takes the ${bowl} over ${rk(rl)}${name(l)}`]),
+        dek: `${rk(rw)}${name(w)} beat ${rk(rl)}${name(l)} ${ws}-${ls} to finish ${v.records[w].w}-${v.records[w].l}.`,
+      });
+      continue;
+    }
     if (v.champion === w && week === v.weeks - 1) {
       out.push({
         id: `${id}-champ`, kind: 'champion', week, weight: 100, teams: [w, l],
@@ -146,6 +156,34 @@ export function stories(d: Dynasty, v: SeasonView = seasonView(d, d.seasons[d.se
       headline: unbeaten.length === 1 ? `${name(list[0].team)} is the last unbeaten team` : `${unbeaten.length} unbeaten teams left`,
       dek: list.map((r) => `${name(r.team)} ${r.w}-0`).join(', ') + '.',
     });
+  }
+
+  // 1994: the bowl lineup once the game has set it, and the champion of the final poll.
+  if (v.bowls) {
+    const bw = v.games.filter((g) => g.week > v.lastRegularWeek && g.visitor !== null && g.home !== null);
+    if (bw.length) {
+      const top = bw.slice(0, 5).map((g) => `${bowlOf(v, g)}: ${name(g.home!)} vs. ${name(g.visitor!)}`);
+      const first = bw[0];
+      out.push({
+        id: `${year}-bowls`, kind: 'cfp', week: v.lastRegularWeek + 1, weight: v.champion === null && !bw.some((g) => g.vs !== null) ? 70 : 20,
+        teams: [first.home!, first.visitor!],
+        headline: `Bowl lineup set: ${name(first.home!)} and ${name(first.visitor!)} in the ${bowlOf(v, first)}`,
+        dek: `${bw.length} bowl games. ${top.join('; ')}.`,
+      });
+    }
+    if (v.champion !== null) {
+      const c = v.champion;
+      const g = bw.find((x) => x.vs !== null && (x.visitor === c || x.home === c));
+      const won = g && ((g.home === c) === (g.hs! > g.vs!));
+      const opp = g ? (g.home === c ? g.visitor! : g.home!) : null;
+      out.push({
+        id: `${year}-champ`, kind: 'champion', week: v.weeks - 1, weight: 100, teams: opp === null ? [c] : [c, opp],
+        headline: `${name(c)} finishes No. 1: the ${year} national champion`,
+        dek: g && won && opp !== null
+          ? `${full(c)} beat ${name(opp)} ${Math.max(g.vs!, g.hs!)}-${Math.min(g.vs!, g.hs!)} in the ${bowlOf(v, g)} and finish ${v.records[c].w}-${v.records[c].l}, first in the final poll.`
+          : `${full(c)} finish ${v.records[c].w}-${v.records[c].l} and first in the final poll.`,
+      });
+    }
   }
 
   // Playoff field.
@@ -312,7 +350,7 @@ export function stories(d: Dynasty, v: SeasonView = seasonView(d, d.seasons[d.se
         const id = `${year}-${week}-ms-${p.id}-${field}-${mark}`;
         ms.push({ id, kind: 'milestone', week, weight: 28 + marks.indexOf(mark) * 4 + (d.userTeams.includes(team) ? 10 : 0), teams: [team], player: p.id,
           headline: pick(id, [`${playerName(p)} passes ${mark.toLocaleString('en-US')} ${what}`, `${mark.toLocaleString('en-US')} ${what} and counting for ${name(team)}'s ${playerName(p)}`, `${name(team)}'s ${playerName(p)} reaches ${mark.toLocaleString('en-US')} ${what}`]),
-          dek: `#${p.jersey} ${p.pos} ${playerName(p)} has ${b.toLocaleString('en-US')} ${what} after ${wk}.` });
+          dek: `${playerLabel(p)} has ${b.toLocaleString('en-US')} ${what} after ${wk}.` });
       }
     }
     out.push(...ms.sort((x, y) => y.weight - x.weight).slice(0, 4));
@@ -367,7 +405,7 @@ export function stories(d: Dynasty, v: SeasonView = seasonView(d, d.seasons[d.se
         const line = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0];
         out.push({ id, kind: 'potw', week, weight: 48, teams: [team], player: pid, box: boxFor(team, pid),
           headline: pick(id, [`${playerName(p)} is the player of the week`, `${name(team)}'s ${playerName(p)} leads the way in ${wk}`, `Big day for ${name(team)}'s ${playerName(p)}`]),
-          dek: `#${p.jersey} ${p.pos} ${playerName(p)} ${line}${result(team)}.` });
+          dek: `${playerLabel(p)} ${line}${result(team)}.` });
       }
       // The defensive player of the week: tackles + 3 per sack + 4 per interception.
       const def = [...now.keys()].filter((k) => k.split('/')[1] === 'defense')
@@ -382,7 +420,7 @@ export function stories(d: Dynasty, v: SeasonView = seasonView(d, d.seasons[d.se
         const id = `${year}-${week}-dpotw-${p.id}`;
         out.push({ id, kind: 'potw', week, weight: 42, teams: [team], player: p.id, box: boxFor(team, p.id),
           headline: pick(id, [`${playerName(p)} is the defensive player of the week`, `${name(team)}'s ${playerName(p)} wrecks the game in ${wk}`, `${playerName(p)} leads ${name(team)}'s defense`]),
-          dek: `#${p.jersey} ${p.pos} ${playerName(p)} had ${bits.length > 1 ? `${bits.slice(0, -1).join(', ')} and ${bits[bits.length - 1]}` : bits[0]}${result(team)}.` });
+          dek: `${playerLabel(p)} had ${bits.length > 1 ? `${bits.slice(0, -1).join(', ')} and ${bits[bits.length - 1]}` : bits[0]}${result(team)}.` });
       }
     }
   }

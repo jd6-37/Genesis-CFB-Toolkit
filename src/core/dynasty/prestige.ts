@@ -55,3 +55,25 @@ export function startingPrestige(schools: string[], teamOvr: { off: number; def:
 export function seasonPrestige(d: Dynasty, season: DSeason): number[] {
   return season.prestige ?? startingPrestige(d.teams.map((t) => t.school), d.seasons[0].teamOvr);
 }
+
+/** The real 1994 preseason AP poll (Aug. 21, 1994: the Top 25, then the others receiving votes), as the 1994 ROM sets it. */
+export const AP_1994_PRESEASON = [
+  'Florida', 'Notre Dame', 'Florida State', 'Nebraska', 'Michigan', 'Miami', 'Arizona', 'Colorado', 'Penn State', 'Wisconsin', 'Auburn', 'Alabama',
+  'Tennessee', 'UCLA', 'Texas A&M', 'Oklahoma', 'USC', 'Texas', 'North Carolina', 'Ohio State', 'Illinois', 'Virginia Tech', 'Washington',
+  'West Virginia', 'Clemson', 'Stanford', 'BYU', 'Georgia', 'Virginia', 'Boston College', 'Kansas State', 'Syracuse', 'Michigan State',
+  'California', 'Kansas', 'Mississippi St.', 'Louisville',
+];
+
+/**
+ * A 1994 dynasty's starting stars (Claude's pick, 2026-11-15; CFB 27's prestige is 2026's): the schools of the
+ * 1994 preseason AP poll in its order, then the rest by the team's OVR in the ROM, each given its place's tier.
+ */
+export function startingPrestige1994(schools: string[], teamOvr: { off: number; def: number }[] | undefined): number[] {
+  const ap = (s: string) => { const k = AP_1994_PRESEASON.indexOf(s); return k < 0 ? 999 : k; };
+  const order = schools
+    .map((s, t) => ({ t, a: ap(s), o: teamOvr ? teamOvr[t].off + teamOvr[t].def : 0 }))
+    .sort((x, y) => x.a - y.a || y.o - x.o || x.t - y.t);
+  const out = new Array<number>(schools.length).fill(1);
+  order.forEach((x, i) => (out[x.t] = tierOfRank(i + 1)));
+  return out;
+}

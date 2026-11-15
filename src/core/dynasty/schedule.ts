@@ -2,7 +2,7 @@
 // edit … Basically use same rules"; "I would like to be able to edit conference games too"; "let's keep
 // protected rivalries"). Pure functions.
 //
-// The game's Random schedule (the 138-team season engine's GEN): 12 weeks, every team plays every week;
+// The game's Random schedule (the season engine's GEN): 12 weeks (the 1994 Season Edition: 11), every team plays every week;
 // each conference plays its conference games (the ROM's count, CWN) in the weeks from its first conference
 // week (CWS) on, as circle-method rounds of a shuffled order; every team without a conference game that week
 // is paired at random, another conference first, no repeat games. The app does the same, and first makes sure
@@ -10,14 +10,20 @@
 // conferences in a week both teams are free; the season finales go in the last week.
 
 import { INDEPENDENT, seasonView } from './derive';
-import { PROTECTED } from './rivalries';
+import type { EditionId } from './edition';
+import { canonicalSchool, PROTECTED, PROTECTED_1994 } from './rivalries';
 
+/** Weeks of a 2026 schedule (and of every schedule made before the 1994 edition). */
 export const SCHED_WEEKS = 12;
+/** A schedule's regular-season weeks. */
+export const weeksOf = (s: Pick<DSchedule, 'weeks'> | undefined) => s?.weeks ?? SCHED_WEEKS;
 
 /** A game: week (0-based, like the save), visitor, home. */
 export interface SchedGame { week: number; visitor: number; home: number }
 export interface DSchedule {
   games: SchedGame[];
+  /** Regular-season weeks (absent = 12; the 1994 Season Edition has 11). */
+  weeks?: number;
   /** The seed it was made from ("Make a new schedule" picks another). */
   seed: number;
   /** A user changed it (any team's games). */
@@ -36,6 +42,10 @@ export interface ScheduleInput {
   /** Last season's games (visitor, home), so rivalry games switch sites. */
   last?: { visitor: number; home: number }[];
   seed: number;
+  /** Regular-season weeks (default 12). */
+  weeks?: number;
+  /** Whose protected rivalries (default the 2026 list). */
+  edition?: EditionId;
 }
 
 const key = (a: number, b: number) => (a < b ? a * 1000 + b : b * 1000 + a);
@@ -57,9 +67,9 @@ function shuffle<T>(a: T[], r: () => number): T[] {
 }
 
 /** The protected rivalries as team pairs (pairs whose schools aren't in the league are left out). */
-export function protectedPairs(schools: string[]): { a: number; b: number; last: boolean }[] {
-  const at = new Map(schools.map((s, i) => [s, i]));
-  return PROTECTED.flatMap((p) => {
+export function protectedPairs(schools: string[], edition?: EditionId): { a: number; b: number; last: boolean }[] {
+  const at = new Map(schools.flatMap((s, i) => [[s, i], [canonicalSchool(s), i]] as [string, number][]));
+  return (edition === '1994' ? PROTECTED_1994 : PROTECTED).flatMap((p) => {
     const a = at.get(p.a), b = at.get(p.b);
     return a === undefined || b === undefined ? [] : [{ a, b, last: !!p.last }];
   });
@@ -85,7 +95,7 @@ function rounds(teams: number[]): [number, number][][] {
 class Grid {
   opp: Int16Array[];
   met = new Map<number, number>();
-  constructor(n: number) { this.opp = Array.from({ length: SCHED_WEEKS }, () => new Int16Array(n).fill(-1)); }
+  constructor(n: number, readonly weeks: number) { this.opp = Array.from({ length: weeks }, () => new Int16Array(n).fill(-1)); }
   free(w: number, t: number) { return this.opp[w][t] < 0; }
   add(w: number, a: number, b: number) { this.opp[w][a] = b; this.opp[w][b] = a; this.met.set(key(a, b), (this.met.get(key(a, b)) ?? 0) + 1); }
   remove(w: number, a: number) {
@@ -96,16 +106,17 @@ class Grid {
     if (c > 0) this.met.set(k, c); else this.met.delete(k);
     return b;
   }
-  weekOf(a: number, b: number) { for (let w = 0; w < SCHED_WEEKS; w++) if (this.opp[w][a] === b) return w; return -1; }
+  weekOf(a: number, b: number) { for (let w = 0; w < this.weeks; w++) if (this.opp[w][a] === b) return w; return -1; }
 }
 
 /** A new regular season for every team. */
 export function makeSchedule(inp: ScheduleInput): DSchedule {
   const n = inp.schools.length;
   const r = rand(inp.seed);
-  const g = new Grid(n);
-  const last = SCHED_WEEKS - 1;
-  const prot = protectedPairs(inp.schools);
+  const WEEKS = inp.weeks ?? SCHED_WEEKS;
+  const g = new Grid(n, WEEKS);
+  const last = WEEKS - 1;
+  const prot = protectedPairs(inp.schools, inp.edition);
   const sameConf = (a: number, b: number) => inp.conf[a] === inp.conf[b] && inp.conf[a] !== INDEPENDENT;
 
   // 1. Conference games: rounds that hold the conference's protected games, the finale's round last.
@@ -114,7 +125,7 @@ export function makeSchedule(inp: ScheduleInput): DSchedule {
     if (teams.length < 2) continue;
     const all = rounds(teams).length;
     const start = Math.min(inp.confWeeks.start[c] ?? 3, last);
-    const games = Math.max(0, Math.min(inp.confWeeks.games[c] ?? 8, all, SCHED_WEEKS - start));
+    const games = Math.max(0, Math.min(inp.confWeeks.games[c] ?? 8, all, WEEKS - start));
     if (!games) continue;
     const mine = prot.filter((p) => inp.conf[p.a] === c && inp.conf[p.b] === c);
     let best: { order: [number, number][][]; score: number } | null = null;
@@ -152,7 +163,7 @@ export function makeSchedule(inp: ScheduleInput): DSchedule {
     g.add(last, p.a, p.b);
   }
   const placeAnywhere = (a: number, b: number, prefer: 'late' | 'any') => {
-    const weeks = Array.from({ length: SCHED_WEEKS }, (_, w) => w).filter((w) => g.free(w, a) && g.free(w, b));
+    const weeks = Array.from({ length: WEEKS }, (_, w) => w).filter((w) => g.free(w, a) && g.free(w, b));
     if (!weeks.length) return false;
     g.add(prefer === 'late' ? weeks[weeks.length - 1] : weeks[Math.floor(r() * weeks.length)], a, b);
     return true;
@@ -163,7 +174,7 @@ export function makeSchedule(inp: ScheduleInput): DSchedule {
   for (const p of prot) if (!g.met.has(key(p.a, p.b))) placeAnywhere(p.a, p.b, 'any');
 
   // 4. Everyone else, week by week: another conference first, then anyone new, then anyone (the game's passes).
-  for (let w = 0; w < SCHED_WEEKS; w++) {
+  for (let w = 0; w < WEEKS; w++) {
     let bestPairs: [number, number][] = [], bestRepeats = Infinity;
     for (let tries = 0; tries < 40 && bestRepeats > 0; tries++) {
       const pool = shuffle(Array.from({ length: n }, (_, t) => t).filter((t) => g.free(w, t)), r);
@@ -187,7 +198,7 @@ export function makeSchedule(inp: ScheduleInput): DSchedule {
   for (const x of inp.last ?? []) lastHome.set(key(x.visitor, x.home), x.home);
   const homes = new Int16Array(n);
   const pairs: { week: number; a: number; b: number }[] = [];
-  for (let w = 0; w < SCHED_WEEKS; w++) for (let a = 0; a < n; a++) { const b = g.opp[w][a]; if (b > a) pairs.push({ week: w, a, b }); }
+  for (let w = 0; w < WEEKS; w++) for (let a = 0; a < n; a++) { const b = g.opp[w][a]; if (b > a) pairs.push({ week: w, a, b }); }
   const isProt = new Set(prot.map((p) => key(p.a, p.b)));
   const games: SchedGame[] = [];
   const order = [...pairs.filter((p) => isProt.has(key(p.a, p.b))), ...shuffle(pairs.filter((p) => !isProt.has(key(p.a, p.b))), r)];
@@ -211,14 +222,14 @@ export function makeSchedule(inp: ScheduleInput): DSchedule {
     }
   }
   games.sort((x, y) => x.week - y.week || x.home - y.home);
-  return { games, seed: inp.seed };
+  return { games, seed: inp.seed, ...(WEEKS !== SCHED_WEEKS ? { weeks: WEEKS } : {}) };
 }
 
 // ---- reading and editing
 
 /** Each week, each team's game (index into games), or -1. */
 export function weekGrid(s: DSchedule, n: number): number[][] {
-  const out = Array.from({ length: SCHED_WEEKS }, () => new Array<number>(n).fill(-1));
+  const out = Array.from({ length: weeksOf(s) }, () => new Array<number>(n).fill(-1));
   s.games.forEach((x, i) => { out[x.week][x.visitor] = i; out[x.week][x.home] = i; });
   return out;
 }
@@ -228,13 +239,22 @@ const opponentIn = (x: SchedGame, t: number) => (x.visitor === t ? x.home : x.vi
 /**
  * Gives `team` a new opponent in a week (user, 2026-11-12: the user's teams only, conference games too).
  * His old opponent plays the new opponent's old opponent instead, so every team still plays once that week.
+ * With a bye that week (an odd number of teams), the bye goes to whoever is left over.
  */
 export function setOpponent(s: DSchedule, week: number, team: number, opp: number): DSchedule {
   if (opp === team) return s;
   const games = s.games.map((x) => ({ ...x }));
   const ia = games.findIndex((x) => x.week === week && (x.visitor === team || x.home === team));
   const ib = games.findIndex((x) => x.week === week && (x.visitor === opp || x.home === opp));
-  if (ia < 0 || ib < 0 || ia === ib) return s;
+  if (ia >= 0 && ia === ib) return s;
+  if (ia < 0 && ib < 0) return { ...s, games: [...games, { week, visitor: opp, home: team }], edited: true };
+  if (ia < 0 || ib < 0) {
+    // One of the two has the bye: the game that has the other one becomes team vs opp, its other team gets the bye.
+    const k = ia < 0 ? ib : ia;
+    const homeSide = games[k].home === (ia < 0 ? opp : team) ? (ia < 0 ? opp : team) : null;
+    games[k] = homeSide === null ? { week, visitor: ia < 0 ? opp : team, home: ia < 0 ? team : opp } : { week, visitor: homeSide === team ? opp : team, home: homeSide };
+    return { ...s, games, edited: true };
+  }
   const a = games[ia], b = games[ib];
   const x = opponentIn(a, team), y = opponentIn(b, opp);
   const teamHome = a.home === team;
@@ -275,7 +295,7 @@ export function flipHome(s: DSchedule, week: number, team: number): DSchedule {
 
 /** A team's season: per week, the opponent and whether he's at home (null = no game). */
 export function teamSchedule(s: DSchedule, team: number): ({ opp: number; home: boolean } | null)[] {
-  const out: ({ opp: number; home: boolean } | null)[] = new Array(SCHED_WEEKS).fill(null);
+  const out: ({ opp: number; home: boolean } | null)[] = new Array(weeksOf(s)).fill(null);
   for (const x of s.games) if (x.visitor === team || x.home === team) out[x.week] = { opp: opponentIn(x, team), home: x.home === team };
   return out;
 }
@@ -292,9 +312,9 @@ export interface ScheduleCheck {
   homeGames: number[];
 }
 
-export function checkSchedule(s: DSchedule, schools: string[], conf: number[]): ScheduleCheck {
+export function checkSchedule(s: DSchedule, schools: string[], conf: number[], edition?: EditionId): ScheduleCheck {
   const n = schools.length;
-  const count = Array.from({ length: SCHED_WEEKS }, () => new Int16Array(n));
+  const count = Array.from({ length: weeksOf(s) }, () => new Int16Array(n));
   const met = new Map<number, number>();
   const confGames = new Array<number>(n).fill(0), homeGames = new Array<number>(n).fill(0);
   for (const x of s.games) {
@@ -304,9 +324,17 @@ export function checkSchedule(s: DSchedule, schools: string[], conf: number[]): 
     if (conf[x.visitor] === conf[x.home] && conf[x.home] !== INDEPENDENT) { confGames[x.visitor]++; confGames[x.home]++; }
   }
   const broken: string[] = [];
-  for (let w = 0; w < SCHED_WEEKS; w++) for (let t = 0; t < n; t++) if (count[w][t] !== 1) broken.push(`${schools[t]} has ${count[w][t]} games in week ${w + 1}`);
+  // Every team plays once a week; with an odd number of teams (the 1994 Season Edition's 107) one team a week has a bye.
+  for (let w = 0; w < weeksOf(s); w++) {
+    const free: number[] = [];
+    for (let t = 0; t < n; t++) {
+      if (count[w][t] > 1) broken.push(`${schools[t]} has ${count[w][t]} games in week ${w + 1}`);
+      else if (!count[w][t]) free.push(t);
+    }
+    if (free.length > n % 2) for (const t of free) broken.push(`${schools[t]} has no game in week ${w + 1}`);
+  }
   const repeats = [...met].filter(([, c]) => c > 1).map(([k]) => [Math.floor(k / 1000), k % 1000] as [number, number]);
-  const missing = protectedPairs(schools).filter((p) => !met.has(key(p.a, p.b))).map((p) => [p.a, p.b] as [number, number]);
+  const missing = protectedPairs(schools, edition).filter((p) => !met.has(key(p.a, p.b))).map((p) => [p.a, p.b] as [number, number]);
   return { broken, repeats, missing, confGames, homeGames };
 }
 
@@ -318,8 +346,8 @@ export function checkSchedule(s: DSchedule, schools: string[], conf: number[]): 
  * real 2026 table (REALTAB).
  */
 export function scheduleSet(s: DSchedule): Uint8Array {
-  const out: number[] = [0x53, 0x43, 0x48, 0x31, SCHED_WEEKS];
-  for (let w = 0; w < SCHED_WEEKS; w++) {
+  const out: number[] = [0x53, 0x43, 0x48, 0x31, weeksOf(s)];
+  for (let w = 0; w < weeksOf(s); w++) {
     const games = s.games.filter((x) => x.week === w);
     out.push(games.length);
     for (const x of games) out.push(x.visitor, x.home);
@@ -330,10 +358,11 @@ export function scheduleSet(s: DSchedule): Uint8Array {
 // ---- the dynasty's current season
 
 import type { DSeason, Dynasty } from './model';
+import { editionOf } from './edition';
 
 /** Why the season's schedule can't be changed now, or null. */
 export function scheduleLock(s: DSeason): string | null {
-  if (!s.schedule) return 'The first season plays the schedule chosen in the game (Real 2026 or Random).';
+  if (!s.schedule) return 'The first season plays the schedule the game makes at New Season.';
   if (s.imports.length) return 'The season has started: its schedule is set.';
   return null;
 }
@@ -369,5 +398,7 @@ export function remakeSchedule(d: Dynasty, seed: number): Dynasty {
     confWeeks: s.confWeeks ?? RELEASE_CONF_WEEKS,
     last: prev ? lastGames(d, prev) : undefined,
     seed,
+    weeks: editionOf(d).regWeeks,
+    edition: editionOf(d).id,
   }));
 }
