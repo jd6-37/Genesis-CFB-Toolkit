@@ -2,10 +2,12 @@
 //   npx tsx cli/seasontest.ts BW95 CF97 [more BW95 ROMs, e.g. Elevated builds]
 // A 138-team 2026 Season Edition among the extra ROMs gets the 138-team test instead (its own season settings).
 // The emulator checks (the game's own deal and schedule) are described in docs/season.md.
+import { SIM_DEFAULTS, SIM_RANGES, SIM_STOCK, hasSimSettings, readSimSettings, writeSimSettings, type SimSettings } from '../src/core/simSettings';
 import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { strict as assert } from 'node:assert';
 import { isWideBw95, openRom } from '../src/core/romfile';
+import { teamsOf } from '../src/core/wide';
 import {
   confSizes, playedGames, readWideSeason, restoreWideSeason, wideSeasonIssues, wideSeasonProblems, wideSeasonRanges,
   wideSeasonTables, writeWideSeason,
@@ -32,7 +34,8 @@ const bw = await read(paths[0]);
 const cf = await read(paths[1]);
 const all = await Promise.all(paths.slice(2).map(read));
 const extra = all.filter((d) => !isWideBw95(d));
-const wides = all.filter((d) => isWideBw95(d));
+// The 107-team 1994 Season Edition isn't a Season tab ROM yet; it only gets the sim settings check at the end.
+const wides = all.filter((d) => isWideBw95(d) && teamsOf(d) === 138);
 let passed = 0;
 const ok = (name: string) => {
   passed++;
@@ -341,6 +344,32 @@ for (const wide of wides) {
     assert.deepEqual(wideSeasonIssues(x), [], 'a conference without a title game may have one team');
   }
   ok(`138-team 2026 Season Edition: conference names, members and weeks${readWideSeason(wide).titleGames ? ', title game switches' : ''} read, written in place, tracked, carried, undone; bad settings refused`);
+}
+
+// The season sim settings (H-016; 2026 test33 / 1994 test36 on): read, written in their 6 bytes, refused when out of range.
+for (const path of paths) {
+  const rom = await read(path);
+  const sim = readSimSettings(rom);
+  if (!sim) {
+    assert.equal(hasSimSettings(rom), false);
+    assert.throws(() => writeSimSettings(rom.slice(), SIM_DEFAULTS), /sim settings/);
+    continue;
+  }
+  assert.deepEqual(sim, SIM_DEFAULTS, `${basename(path)}: ships with the defaults`);
+  for (const s of [SIM_STOCK, { weight: 12, chances: 9, roll: 800 } as SimSettings, { weight: 1, chances: 3, roll: 1600 } as SimSettings]) {
+    const w = rom.slice();
+    writeSimSettings(w, s);
+    assert.deepEqual(readSimSettings(w), s);
+    const changed = [...w.keys()].filter((i) => w[i] !== rom[i]);
+    assert.ok(changed.every((i) => SIM_RANGES.some(([a, b]) => i >= a && i < b)), 'only the settings bytes change');
+  }
+  const stock = rom.slice(); writeSimSettings(stock, SIM_STOCK);
+  assert.deepEqual([...stock.subarray(0x06f120, 0x06f122)], [0xe3, 0x42]);
+  assert.deepEqual([...stock.subarray(0x06f124, 0x06f126)], [0x03, 0x20]);
+  for (const bad of [{ weight: 0 }, { weight: 17 }, { roll: 690 }, { chances: 4 }]) {
+    assert.throws(() => writeSimSettings(rom.slice(), { ...SIM_DEFAULTS, ...bad } as SimSettings), /must be/);
+  }
+  ok(`${basename(path)}: season sim settings read (defaults), written in their 6 bytes, bad values refused`);
 }
 
 console.log(`\n${passed} passed`);

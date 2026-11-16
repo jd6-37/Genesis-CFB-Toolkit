@@ -155,9 +155,16 @@ export interface StarterOvr extends TeamRating {
   nDef: number;
 }
 
-export const ovrFromStarters = (avg: number) => clamp(Math.round(65 + 3 * (avg - 77)), 0, 99);
+/**
+ * The starters' mean CFB 27 Overall → a team OVR. Two scales (ROM lane, H-016, 2026-11-16):
+ * - 'v2' (2026 test33 on, with the season sim settings mod): 74 + 2 × (avg − 77), a narrower spread for the new sim;
+ * - 'v1' (before: v1.1.0 and the 138-team edition up to test32, whose stock sim needs the wide spread): 65 + 3 × (avg − 77).
+ */
+export type OvrScale = 'v1' | 'v2';
+export const ovrFromStarters = (avg: number, scale: OvrScale = 'v2') =>
+  clamp(Math.round(scale === 'v2' ? 74 + 2 * (avg - 77) : 65 + 3 * (avg - 77)), 0, 99);
 
-export function starterOvr(players: { pos: string; ovr: number }[]): StarterOvr {
+export function starterOvr(players: { pos: string; ovr: number }[], scale: OvrScale = 'v2'): StarterOvr {
   const mean = (spec: [string, number][]) => {
     const v: number[] = [];
     for (const [p, n] of spec) v.push(...players.filter((x) => x.pos === p).map((x) => x.ovr).sort((a, b) => b - a).slice(0, n));
@@ -165,5 +172,5 @@ export function starterOvr(players: { pos: string; ovr: number }[]): StarterOvr 
   };
   const o = mean(OFF_STARTERS);
   const d = mean(DEF_STARTERS);
-  return { off: ovrFromStarters(o.avg), def: ovrFromStarters(d.avg), avgOff: o.avg, avgDef: d.avg, nOff: o.n, nDef: d.n };
+  return { off: ovrFromStarters(o.avg, scale), def: ovrFromStarters(d.avg, scale), avgOff: o.avg, avgDef: d.avg, nOff: o.n, nDef: d.n };
 }

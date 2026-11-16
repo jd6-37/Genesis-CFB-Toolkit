@@ -3,6 +3,8 @@
 // The ROM is the 107-team 1994 Season Edition (Elevated v2.0.1-test29 or later). The save is a Genesis Plus GX
 // (RetroArch) .srm of it with a season started and at least one week played (a whole season, bowls included,
 // also tests the champion and the bowl stories); the test puts its dynasty's mark into it.
+import { teamOvrs1994 } from '../src/core/dynasty/teamOvr94';
+import { hasSimSettings } from '../src/core/simSettings';
 import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { strict as assert } from 'node:assert';
@@ -301,6 +303,18 @@ ok(`offseason: ${d2.players.filter((p) => p.status === 'active').length} players
     assert.ok(Off.seasonRom(d3, s3, rom), 'and takes the default ones');
   }
   ok(`conferences: Penn State to the SEC (${psSec} SEC games), Notre Dame to the Big Ten, into the 1995 ROM; title game switches${readTitleGames(rom) ? ' written' : ' refused by this older ROM'}`);
+}
+
+// Team OVRs from the rosters (H-016, ovrfit94): from 1994 test36 the ROM's own OVRs are this method's, so the
+// app's port gives them back (within 1 point: the ROM's reference was the OVRs before test36).
+{
+  const s0 = d0.seasons[0];
+  const got = teamOvrs1994(s0.bw!, s0.teamOvr!);
+  const off = got.map((g, t) => Math.max(Math.abs(g.off - s0.teamOvr![t].off), Math.abs(g.def - s0.teamOvr![t].def)));
+  if (hasSimSettings(rom)) {
+    assert.ok(Math.max(...off) <= 1 && off.filter((x) => x).length <= 5, `test36 on: ${off.filter((x) => x).length} teams differ`);
+    ok(`team OVRs from the rosters: the ROM's ${off.filter((x) => x === 0).length} of 107 exactly, the rest within 1`);
+  } else ok('team OVRs: a ROM before test36 (its OVRs are not from the rosters; not compared)');
 }
 
 console.log(`\n${passed} passed (${EDITIONS['1994'].name})`);

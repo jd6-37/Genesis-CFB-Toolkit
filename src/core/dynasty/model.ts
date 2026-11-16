@@ -172,6 +172,8 @@ export interface Dynasty {
   training?: Record<number, import('./training').Training>;
   /** Per team: wears its white jersey at home (kit.ts; the ROM's alternate-uniforms table). Absent on a ROM without it. */
   whiteHome?: boolean[];
+  /** The season sim's settings for this dynasty's season ROMs (seasonSim.ts); absent = the ROM's own. */
+  sim?: import('../simSettings').SimSettings;
 }
 
 // ---- small helpers

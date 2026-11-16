@@ -5,6 +5,8 @@
 // imported (the game's stats belong to the slots). In the preseason the season's lineups and ratings
 // follow at once (download the ROM again); in the offseason the depth charts come at its end.
 
+import { editionOf } from './edition';
+import { shiftTeamOvrs1994 } from './teamOvr94';
 import { parseCsv, toCsv } from '../rosterSheet';
 import type { Attr } from '../rosterLayouts';
 import { CLASSES, type ClassYear, type DPlayer, type DSeason, type Dynasty } from './model';
@@ -106,6 +108,7 @@ function followSeason(d: Dynasty, s: DSeason, touched: Set<number>, moved: Set<n
   const olPlus = olPlusOf(s);
   const slots = s.slots.slice(), bench = (s.bench ?? []).slice(), bw = (s.bw ?? []).slice(), benchBw = (s.benchBw ?? []).slice();
   let teamOvr = s.teamOvr?.slice();
+  const is1994 = editionOf(d).id === '1994';
   const ovrOfTeam = (sl: (number | null)[], rated: (ReturnType<typeof bwSlotOf> | null)[]) =>
     starterOvr(sl.flatMap((id, slot) => (id && rated[slot] ? [{ pos: d.players[id - 1].pos, ovr: playerOvr(slot, rated[slot]!) }] : [])));
   for (const t of new Set([...touched, ...moved])) {
@@ -121,12 +124,13 @@ function followSeason(d: Dynasty, s: DSeason, touched: Set<number>, moved: Set<n
     });
     bw[t] = rate(slots[t]);
     benchBw[t] = rate(bench[t] ?? []);
-    if (teamOvr) {
+    if (teamOvr && !is1994) {
       const after = ovrOfTeam(slots[t], bw[t]);
       const clamp = (n: number) => Math.max(0, Math.min(99, n));
       teamOvr[t] = { off: clamp(teamOvr[t].off + after.off - before.off), def: clamp(teamOvr[t].def + after.def - before.def) };
     }
   }
+  if (teamOvr && is1994 && s.bw) teamOvr = shiftTeamOvrs1994(s.bw, bw, teamOvr, new Set([...touched, ...moved]));
   return { ...s, slots, bench, bw, benchBw, teamOvr, lineupEdited: true, rosterVersion: s.lineupEdited ? s.rosterVersion ?? 1 : (s.rosterVersion ?? 1) + 1 };
 }
 
