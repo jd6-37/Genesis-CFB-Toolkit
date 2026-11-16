@@ -1,0 +1,78 @@
+export const meta = { slug: 'sim-study', title: 'Making simulated seasons look like real ones', dek: 'In the original game, top-5 teams lost to unranked teams almost a third of the time, and teams scored 14.5 points a game. We compared hundreds of simulated seasons with every real season from 1990 to 2000 and from 2014 to 2024, then changed the sim and the team ratings until the numbers matched.', date: '2026-11-16', tag: 'Season sim', minutes: 10 }
+
+Every game you don’t play in a season is decided by the season sim. [How the season sim decides games](/insights/season-sim) explains the routine and the bug that swapped each team’s offense and defense. With that bug fixed, simulated seasons still didn’t look like real ones. This post explains how we measured that, what we changed, and where the two editions still differ from real seasons.
+
+## The problem
+
+The original sim gives each team 3 scoring chances a quarter. For each chance it compares the team’s offense rating with the other team’s defense rating, then rolls a random number. The rating difference moves the odds very little: a 30-point advantage on the 0-to-100 scale raises a team’s chance to score from about 14% to about 18%. So big favorites lost often, and teams scored few points.
+
+In the 1994 Season Edition with the original sim, over 119 simulated seasons:
+
+- Top-5 teams lost to unranked teams in 31.6% of those games. In real seasons from 1990 to 2000 it was 6.8%.
+- 0.24 teams a season went through the regular season unbeaten. The real number was 2.5.
+- Teams scored 14.5 points a game. The real number was 25.0.
+
+## How we measured it
+
+**Real seasons.** We read every 1990-2000 Division I-A team-season page on Wikipedia: 1,295 pages and 13,826 games. Each schedule row has the date, both teams’ AP ranks at the time of the game, the site and the score. Games against Division I-AA teams were left out. For the 2026 Season Edition we did the same for the 2014-2024 FBS seasons.
+
+**Simulated seasons.** We ran the ROM in an emulator with the CPU playing every game, simulated whole seasons with the real 1994 or 2026 schedule, and read every game, score and weekly poll back from the game’s memory. Each test used 40 to 120 seasons.
+
+**What we compared.** For each game we noted the ranked team’s rank, its opponent’s rank and the time of the season, and counted how often the ranked team lost. Rank groups: 1-5, 6-10, 11-25 and unranked. We also counted unbeaten teams, teams with one loss, points per team, margins and home wins. The final standings were not a target: a simulated season should look like a real season, not repeat 1994’s results.
+
+## What we changed
+
+**More, smaller scoring chances.** Each team now gets 5 scoring chances a quarter, each less likely to score. This raised scoring to the real level without making every game a shootout.
+
+**Ratings count more.** The rating difference counts twice as much as before, so a much better team wins about as often as it did in real seasons.
+
+**1994 team ratings from the rosters.** EA set each team’s OFF and DEF by hand in 1994. Florida State, Colorado and Florida were far above everyone else, then came a big drop: Nebraska, the real 1994 champion, was 9th, and Penn State 25th. With those ratings, the sim’s top 5 were nearly always the same three teams. Now each team’s OFF and DEF come from its own players’ ratings, with the same average and spread as EA’s numbers. No player’s ratings changed. Florida State is still the strongest team.
+
+**2026 team ratings narrowed.** The 2026 ratings come from each team’s starters in College Football 27. They were spread much wider than 1994’s: many teams had an OFF or DEF in the 50s, so favorites almost never lost. The formula now gives about the same spread as College Football 27’s own team ratings, with most teams’ OFF and DEF between the mid-60s and the low 90s, and the best units rise faster above a starters’ average of 85.5 (up to 99), so the top teams stand apart from the next group.
+
+**A home-field edge.** The home team of a regular-season game gets a small bonus on each scoring chance. Home teams now win about 57% of simulated games. In real 1990-2000 seasons they won 60.1%.
+
+**The real preseason poll.** A new season starts from the real preseason AP poll in both editions: Aug. 21, 1994 and Aug. 17, 2026. In a dynasty, later seasons start from the Dynasty app’s own preseason poll, which counts last season’s finish and the program’s reputation as well as this year’s ratings.
+
+**A ceiling for blowouts.** With a big rating gap, a touchdown became almost certain on every chance, and a few games ended 120-3. Now a team that leads by 15 or more gets no more touchdowns after 60 points. A close shootout still plays on.
+
+**The postseason order.** Conference title games, bowls and playoff games move the power ratings from the loser to the winner, and no team finishes above the team that beat it in the postseason.
+
+## The results
+
+The share of games the ranked team lost, and other numbers per season. Simulated numbers are from about 55 seasons of each edition on the current builds, with the default settings.
+
+| Ranked team | Opponent | Real 1990-2000 | 1994, original sim | 1994 now | Real 2014-2024 | 2026 now |
+|---|---|---|---|---|---|---|
+| 1-5 | Unranked | 6.8% | 31.6% | 8.9% | 7.6% | 5.2% |
+| 1-5 | 11-25 | 28.1% | 39.2% | 20.8% | 18.5% | 20.2% |
+| 1-5 | Top 10 | 41.5% | 49.5% | 41.2% | 46.9% | 45.1% |
+| 6-10 | Unranked | 11.3% | 37.1% | 17.7% | 17.1% | 8.5% |
+| 11-25 | Unranked | 21.4% | 42.0% | 23.8% | 24.5% | 21.4% |
+
+| Per season | Real 1990-2000 | 1994, original sim | 1994 now | Real 2014-2024 | 2026 now |
+|---|---|---|---|---|---|
+| Unbeaten teams before the postseason | 2.5 | 0.24 | 2.4 | 2.6 | 2.1 |
+| Points per team per game | 25.0 | 14.5 | 25.8 | 28.0 | 28.4 |
+| Home teams’ win rate | 60.1% | about 50% | 56.5% | | 57.7% |
+
+## The settings
+
+The Mod Toolkit’s Season tab and the Dynasty app’s offseason rules let you change four sim settings. They are written into the ROM, and every simulated game uses them.
+
+| Setting | Default | Original game | What it does |
+|---|---|---|---|
+| Rating weight | 8 | 4 | How much the rating difference counts. Higher: the better team wins more often. |
+| Scoring chances | 5 | 3 | Scoring chances per team per quarter: 3, 5 or 9. More chances: more points and fewer upsets. |
+| Roll range | 1,100 | 1,350 | The range of each chance’s random roll. Lower: more points. With 3 chances it can be 700 to 1,600, with 5 chances 900 to 1,600, with 9 chances 1,300 to 1,600, so scores stay realistic. |
+| Home edge | 16 | 0 | The home team’s bonus in regular-season games. 0 turns it off. |
+
+If you play with a longer Game Length, the games you play have more plays than the simulated ones. The scoring settings don’t change that.
+
+## What is still different
+
+**1994: top-5 teams lose to 11-25 teams less often** than in real seasons: 21% against 28%. The sim’s rankings follow the ratings closely. Real polls also ranked some teams higher than their strength, and those teams lost more often to teams ranked below them.
+
+**2026: top-10 teams lose to unranked teams less often** than in 2014-2024: 5.2% against 7.6% for the top 5, and 8.5% against 17.1% for ranks 6 to 10. Fewer teams also finish the regular season unbeaten: 2.1 against 2.6. Two reasons we see: the best 2026 rosters are in the same few conferences, so a top-5 team plays about 4 or 5 games a season against other top-10 teams; and the sim’s rankings follow the ratings, so an unranked team is usually a much weaker team. Fixing one of these numbers made the other worse in every version we tested.
+
+**What we didn’t measure:** player statistics in simulated games. Those come from a separate routine that makes up each team’s box score.
