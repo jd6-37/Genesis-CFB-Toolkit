@@ -12,6 +12,7 @@
 // about the original game's spread). Without that table (the original game, older builds) the app
 // shows the OVR the words stand for. Details: docs/teams.md.
 
+import { hasHomeEdge, hasSimSettings } from './simSettings';
 import { rl, rw, ww } from './bytes';
 import { isWide, teamsOf, WIDE } from './wide';
 
@@ -155,9 +156,22 @@ export interface StarterOvr extends TeamRating {
   nDef: number;
 }
 
-export const ovrFromStarters = (avg: number) => clamp(Math.round(65 + 3 * (avg - 77)), 0, 99);
+/**
+ * The starters' mean CFB 27 Overall → a team OVR. Three scales (the ROM lane, H-016, 2026-11-16), each matching the
+ * 2026 Season Edition builds made with it:
+ * - 'v1' (v1.1.0, and the 138-team edition up to test32, whose stock sim needs the wide spread): 65 + 3 × (avg − 77);
+ * - 'v2' (test33, the first with the season sim settings): 74 + 2 × (avg − 77);
+ * - 'v3' (test34 on, the sim settings with a home edge): as v2 up to avg 85.5, then 91 + 4 × (avg − 85.5), so the top
+ *   units stand out more.
+ */
+export type OvrScale = 'v1' | 'v2' | 'v3';
+export const ovrFromStarters = (avg: number, scale: OvrScale = 'v3') =>
+  clamp(Math.round(scale === 'v1' ? 65 + 3 * (avg - 77) : scale === 'v3' && avg > 85.5 ? 91 + 4 * (avg - 85.5) : 74 + 2 * (avg - 77)), 0, 99);
 
-export function starterOvr(players: { pos: string; ovr: number }[]): StarterOvr {
+/** The scale a ROM's OVRs were made on (by the season sim mod it has). */
+export const ovrScaleOf = (d: Uint8Array): OvrScale => (hasHomeEdge(d) ? 'v3' : hasSimSettings(d) ? 'v2' : 'v1');
+
+export function starterOvr(players: { pos: string; ovr: number }[], scale: OvrScale = 'v3'): StarterOvr {
   const mean = (spec: [string, number][]) => {
     const v: number[] = [];
     for (const [p, n] of spec) v.push(...players.filter((x) => x.pos === p).map((x) => x.ovr).sort((a, b) => b - a).slice(0, n));
@@ -165,5 +179,5 @@ export function starterOvr(players: { pos: string; ovr: number }[]): StarterOvr 
   };
   const o = mean(OFF_STARTERS);
   const d = mean(DEF_STARTERS);
-  return { off: ovrFromStarters(o.avg), def: ovrFromStarters(d.avg), avgOff: o.avg, avgDef: d.avg, nOff: o.n, nDef: d.n };
+  return { off: ovrFromStarters(o.avg, scale), def: ovrFromStarters(d.avg, scale), avgOff: o.avg, avgDef: d.avg, nOff: o.n, nDef: d.n };
 }

@@ -6,6 +6,8 @@
 // stats belong to the slot) and outside the offseason; the next offseason sets the depth chart again.
 // A moved player plays with his own ratings (ratings.ts), as the new slot's rating group uses them.
 
+import { shiftTeamOvrs1994 } from './teamOvr94';
+import { editionOf } from './edition';
 import { rosterLayout } from '../rosterLayouts';
 import { starterOvr } from '../teamRatings';
 import type { BwSlot, DPlayer, DSeason, Dynasty } from './model';
@@ -167,7 +169,8 @@ export function moveToSpot(d: Dynasty, team: number, id: number, spot: number): 
 
   // Team OVRs move by the change in the starters' OVR (the season's values may be the ROM's own).
   let teamOvr = s.teamOvr;
-  if (teamOvr) {
+  if (teamOvr && editionOf(d).id === '1994') teamOvr = shiftTeamOvrs1994(s.bw!, bw, teamOvr, [team]);
+  else if (teamOvr) {
     const old = teamStarters(d, s.slots[team], s.bw![team]);
     const now = teamStarters(next, slots[team], bw[team]);
     const clamp = (n: number) => Math.max(0, Math.min(99, n));

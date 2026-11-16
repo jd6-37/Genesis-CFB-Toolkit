@@ -3,6 +3,8 @@
 // The ROM is the 138-team 2026 Season Edition with the dynasty support (Elevated v2.0.1-test9 or later). The
 // save is a Genesis Plus GX (RetroArch) .srm of the 138-team edition with a season started and at least one week
 // played; the test puts its dynasty's mark (the ID block New Season copies) into it.
+import { setSim } from '../src/core/dynasty/seasonSim';
+import { SIM_DEFAULTS, readSimSettings, simForRom } from '../src/core/simSettings';
 import { careerRecords, teamRecords } from '../src/core/dynasty/records';
 import { checkSchedule, editSchedule, flipHome, moveGame, protectedPairs, remakeSchedule, SCHED_WEEKS, setOpponent, teamSchedule, type SchedGame } from '../src/core/dynasty/schedule';
 import { AWARD_SPOTS, AWARD_STATS_WEIGHT, POSITION_AWARDS, awardsOf, candidates, playerHonors, seasonAwards } from '../src/core/dynasty/awards';
@@ -1325,6 +1327,23 @@ if (hasKits(rom)) {
   assert.ok(total(even, 0) > 0, 'a player whose ratings stay put still gains weight');
   for (const p of some) { const q = Off.develop(p, 3, rng(7), RD, heavy); assert.ok(q.weight - p.weight >= 0 && q.weight - p.weight <= Math.round(p.weight * 0.03)); assert.equal((q.ratings.Weight ?? 0) - (p.ratings.Weight ?? 0), Math.min(380, (p.ratings.Weight ?? 0) + q.weight - p.weight) - (p.ratings.Weight ?? 0)); }
   ok('weight gain: a share of his weight, every position but K and P, scaled by the Strength program');
+}
+
+// The season sim settings (H-016): kept with the dynasty and written into its season ROMs; the defaults leave the ROM's own.
+{
+  const S = { weight: 12, chances: 9, roll: 900 } as const;
+  const plain = Off.seasonRom(d0, d0.seasons[0], rom);
+  const withSim = Off.seasonRom(setSim(d0, S), d0.seasons[0], rom);
+  if (readSimSettings(rom)) {
+    assert.deepEqual(readSimSettings(plain), readSimSettings(rom));
+    assert.deepEqual(readSimSettings(withSim), simForRom(rom, S));
+    assert.equal(setSim(setSim(d0, S), SIM_DEFAULTS).sim, undefined, 'the defaults clear it');
+    assert.throws(() => setSim(d0, { ...S, roll: 100 }), /must be/);
+    ok('season sim: the dynasty\'s settings go into its season ROMs; the defaults leave the ROM\'s own');
+  } else {
+    assert.deepEqual(withSim.subarray(0x06f100, 0x06f130), plain.subarray(0x06f100, 0x06f130));
+    ok('season sim: this ROM has no sim settings (before test33); a dynasty\'s settings are left out');
+  }
 }
 
 console.log(`\n${passed} passed`);

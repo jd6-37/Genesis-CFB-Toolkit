@@ -8,6 +8,10 @@ import {
 } from '../../core/dynasty/rules';
 import { href, useDyn } from './ui';
 import type { OffseasonActions } from './OffseasonPage';
+import { simOf, setSim } from '../../core/dynasty/seasonSim';
+import { SIM_DEFAULTS } from '../../core/simSettings';
+import { SimSettingsBox } from '../season/SimSettingsBox';
+import '../season/season.css';
 
 const SEEN_KEY = 'dy-rules-spoilers-ok';
 
@@ -96,6 +100,15 @@ export function Rules({ actions, busy }: { actions: OffseasonActions; busy: stri
         }} />
       </div>
       {msg && <Note kind={msg.kind}>{msg.text}</Note>}
+
+      <SimSettingsBox
+        value={simOf(d)} loaded={SIM_DEFAULTS} disabled={!!busy} homeNote="2026 test34 / 1994 test37 or later"
+        intro="How the game decides the games you don't play (CPU vs CPU). Saved at once; it goes into every season ROM you download from now on (2026 test33 / 1994 test36 or later). Each setting changes scoring and upsets together."
+        onChange={(s) => void actions.run('Saving the season sim…', async () => {
+          await actions.commit(setSim(d, s));
+          setMsg({ kind: 'ok', text: 'The season sim settings are saved. Download the season ROM again to use them.' });
+        })}
+      />
 
       {RULE_SECTIONS.map((sec) => {
         const secChanged = sec.fields.some((f) => JSON.stringify(draft[f.key]) !== JSON.stringify(DEFAULT_RULES[f.key]));

@@ -583,3 +583,7 @@
 @media (min-width: 900px) {
   .dy-rivals-list li > label { flex: 0 1 220px; }
 }
+
+/* The season sim settings on the Offseason rules page (SimSettingsBox, the Toolkit's box on the Dynasty tokens). */
+.dy-rules .sim-box-intro { color: var(--text-muted); }
+.dy-rules .sim-box-bad { color: var(--bad); }

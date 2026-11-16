@@ -5,6 +5,7 @@
 // (ELEVATED: the Elevated edition, v1.1.0 or later; ELEVATED_2026: the 2026 Season Edition v1.1.0, the 36-team one;
 // ELEVATED_2026_138, optional: the 138-team 2026 Season Edition of v2.0.0 on, for the whole Teams tab on it)
 // The CFB 27 data is the built-in file, public/data/ea-cfb27-ratings-2026-week9.csv.
+import { hasSimSettings } from '../src/core/simSettings';
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 import { strict as assert } from 'node:assert';
@@ -19,7 +20,7 @@ import { carryEdits, editsSince } from '../src/core/workRom';
 import { CFB27_LATEST } from '../src/core/cfb27Latest';
 import {
   OVR_TABLE, groupAt, hasOvrTable, ovrFromSim, ratingChanges, ratingProblems, ratingRanges, readRating, readSim, readWeather, restoreTeam,
-  simFromOvr, starterOvr, weatherChances, weatherWord, writeRating, writeWeather,
+  ovrFromStarters, ovrScaleOf, simFromOvr, starterOvr, weatherChances, weatherWord, writeRating, writeWeather,
 } from '../src/core/teamRatings';
 import { rw } from '../src/core/bytes';
 import { readStyle, readStyles, restoreStyle, styleProblems, styleRanges, writeStyle } from '../src/core/styles';
@@ -264,6 +265,23 @@ if (widePath) {
   writeReports(big, all);
   assert.deepEqual(readReports(big)[last], long);
   ok(`138-team 2026 Season Edition: styles (${same} of 138 as recommended), OFF/DEF, weather and Walsh Reports edited in its own tables, tracked, carried and undone`);
+}
+
+// 9. 2026 test33 on (the season sim settings mod): its OVR table is the built-in data on the narrower 'v2' scale, from
+// test34 (with the home edge) on 'v3' (H-016).
+if (widePath) {
+  const wide = await read(widePath);
+  if (hasSimSettings(wide)) {
+    const plan = convertCfb27(openRosterRom(wide), sheet);
+    assert.equal(plan.teams.length, 138);
+    for (const t of plan.teams) assert.deepEqual({ off: t.ovr.off, def: t.ovr.def }, readRating(wide, t.team), `${t.teamName} OVR`);
+    assert.equal(ovrFromStarters(77, 'v2'), 74);
+    assert.equal(ovrFromStarters(77, 'v1'), 65);
+    assert.equal(ovrFromStarters(85.5, 'v3'), 91);
+    assert.equal(ovrFromStarters(87, 'v3'), 97);
+    assert.equal(ovrFromStarters(87, 'v2'), 94);
+    ok(`2026 test33 on: all 138 OVRs = the built-in starters on the ${ovrScaleOf(wide)} scale`);
+  } else ok('138-team edition before test33: no season sim settings, OVRs on the v1 scale (not checked here)');
 }
 
 console.log(`${passed} passed`);

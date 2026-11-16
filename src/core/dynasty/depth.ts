@@ -2,6 +2,8 @@
 // go to the players with the best OVR at the slot's role (ovr.ts formulas on the shown numbers), by
 // position: first players of the slot's position, then of close positions, then anyone left.
 
+import { editionOf } from './edition';
+import { teamOvrs1994 } from './teamOvr94';
 import { rosterLayout, type SlotDef } from '../rosterLayouts';
 import { starterOvr } from '../teamRatings';
 import type { BwSlot, DPlayer, DSeason, Dynasty } from './model';
@@ -87,5 +89,8 @@ export function depthChart(d: Dynasty): Pick<DSeason, 'slots' | 'bw' | 'bench' |
     const o = starterOvr(slots.flatMap((id, slot) => (id && bw[slot] ? [{ pos: d.players[id - 1].pos, ovr: playerOvr(slot, bw[slot]!) }] : [])));
     out.teamOvr.push({ off: o.off, def: o.def });
   }
+  // The 1994 Season Edition rates teams from all their slots, on last season's scale (teamOvr94.ts, H-016).
+  const ref = d.seasons[d.seasons.length - 1]?.teamOvr;
+  if (editionOf(d).id === '1994' && ref) out.teamOvr = teamOvrs1994(out.bw, ref);
   return out;
 }

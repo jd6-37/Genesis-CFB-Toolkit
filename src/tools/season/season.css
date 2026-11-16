@@ -79,3 +79,13 @@
 .sea-conf li .ui-field { flex: none; }
 .sea-conf li .ui-field select { width: 5.5rem; }
 .sea-cweeks { align-items: end; }
+
+/* Season sim settings (SimSettingsBox): one column on phones, three side by side when there is room. */
+.sim-box { margin: 18px 0 0; }
+.sim-box-intro { max-width: 70ch; margin: 6px 2px 10px; color: var(--chalk-dim); }
+.sim-box-fields { display: grid; gap: 12px; }
+.sim-box-fields .ui-field input, .sim-box-fields .ui-field select { width: 8rem; }
+.sim-box-bad { margin: 8px 2px 0; color: var(--bad); }
+@media (min-width: 760px) {
+  .sim-box-fields { grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
+}

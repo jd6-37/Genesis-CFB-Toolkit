@@ -15,6 +15,7 @@
 // Pure functions: each returns a new dynasty. Randomness is seeded, so the same choices give the
 // same offseason. The players before the offseason are kept so it can be started over.
 
+import { writeDynastySim } from './seasonSim';
 import { fineSetBytes, putFineOffsets } from './fine';
 import { applyWhiteHome } from './kit';
 import { lastGames, makeSchedule, RELEASE_CONF_WEEKS, rivalriesOf, scheduleSet } from './schedule';
@@ -869,6 +870,7 @@ export function seasonRom(d: Dynasty, season: DSeason, rom: Uint8Array, now = Da
   });
   applyWhiteHome(out.data, d);
   writeConferences(out.data, d, season);
+  writeDynastySim(out.data, d);
   fixChecksums(out.data, out.game);
   return out.data;
 }
