@@ -7,8 +7,8 @@ import { rewriteWalshReport, seasonReports, setWalshReport, teamReport, walshLoc
 import { readReports, reportProblems } from '../src/core/walshReports';
 import { walshReports } from '../src/core/dynasty/walshGen';
 import { AP_2026_PRESEASON, VOTERS, pollSet, preseasonPoll } from '../src/core/dynasty/poll';
-import { setSim } from '../src/core/dynasty/seasonSim';
-import { SIM_DEFAULTS, readSimSettings, simForRom } from '../src/core/simSettings';
+import { setSim, simOf } from '../src/core/dynasty/seasonSim';
+import { SIM_DEFAULTS, readSimSettings, simForRom, type SimSettings } from '../src/core/simSettings';
 import { careerRecords, teamRecords } from '../src/core/dynasty/records';
 import { checkSchedule, editSchedule, flipHome, moveGame, protectedPairs, remakeSchedule, SCHED_WEEKS, setOpponent, teamSchedule, type SchedGame } from '../src/core/dynasty/schedule';
 import { AWARD_SPOTS, AWARD_STATS_WEIGHT, POSITION_AWARDS, awardsOf, candidates, playerHonors, seasonAwards } from '../src/core/dynasty/awards';
@@ -1401,7 +1401,7 @@ if (hasKits(rom)) {
 
 // The season sim settings (H-016): kept with the dynasty and written into its season ROMs; the defaults leave the ROM's own.
 {
-  const S = { weight: 12, chances: 9, roll: 900 } as const;
+  const S = { weight: 12, chances: 9, roll: 1300 } as const;
   const plain = Off.seasonRom(d0, d0.seasons[0], rom);
   const withSim = Off.seasonRom(setSim(d0, S), d0.seasons[0], rom);
   if (readSimSettings(rom)) {
@@ -1409,6 +1409,10 @@ if (hasKits(rom)) {
     assert.deepEqual(readSimSettings(withSim), simForRom(rom, S));
     assert.equal(setSim(setSim(d0, S), SIM_DEFAULTS).sim, undefined, 'the defaults clear it');
     assert.throws(() => setSim(d0, { ...S, roll: 100 }), /must be/);
+    assert.throws(() => setSim(d0, { ...S, roll: 900 }), /with 9 scoring chances/, 'H-018: 9 chances need 1300 or more');
+    const older = { ...d0, sim: { weight: 12, chances: 9, roll: 900 } as SimSettings }; // saved before H-018
+    assert.equal(simOf(older).roll, 1300);
+    assert.equal(readSimSettings(Off.seasonRom(older, d0.seasons[0], rom))!.roll, 1300, 'an older dynasty\'s roll range is moved into range');
     ok('season sim: the dynasty\'s settings go into its season ROMs; the defaults leave the ROM\'s own');
   } else {
     assert.deepEqual(withSim.subarray(0x06f100, 0x06f130), plain.subarray(0x06f100, 0x06f130));

@@ -27,6 +27,19 @@ export interface SimSettings {
 export const SIM_DEFAULTS: SimSettings = { weight: 8, chances: 5, roll: 1100, home: 16 };
 export const SIM_STOCK: SimSettings = { weight: 4, chances: 3, roll: 1350, home: 0 };
 export const SIM_LIMITS = { weight: [1, 16], roll: [700, 1600], home: [0, 40] } as const;
+
+/**
+ * The roll range allowed with each number of scoring chances (H-018, the ROM lane: more chances need a higher roll
+ * range, or a team averages far more than about 38 points; the ROM's score ceiling holds either way).
+ */
+export const ROLL_BY_CHANCES: Record<SimSettings['chances'], [number, number]> = { 3: [700, 1600], 5: [900, 1600], 9: [1300, 1600] };
+export const rollLimits = (chances: SimSettings['chances']): [number, number] => ROLL_BY_CHANCES[chances] ?? [...SIM_LIMITS.roll];
+
+/** The settings with the roll range moved into what its scoring chances allow (an older dynasty's or ROM's settings). */
+export const fitRoll = (s: SimSettings): SimSettings => {
+  const [r0, r1] = rollLimits(s.chances);
+  return s.roll < r0 ? { ...s, roll: r0 } : s.roll > r1 ? { ...s, roll: r1 } : s;
+};
 export const SIM_CHANCES: SimSettings['chances'][] = [3, 5, 9];
 
 const HOOK = 0x06f10c;
@@ -68,10 +81,10 @@ export const simForRom = (d: Uint8Array, s: SimSettings): SimSettings => {
 export function simProblems(s: SimSettings): string[] {
   const out: string[] = [];
   const [k0, k1] = SIM_LIMITS.weight;
-  const [r0, r1] = SIM_LIMITS.roll;
+  const [r0, r1] = rollLimits(s.chances);
   if (!Number.isInteger(s.weight) || s.weight < k0 || s.weight > k1) out.push(`Rating weight must be a whole number from ${k0} to ${k1}.`);
   if (!SIM_CHANCES.includes(s.chances)) out.push(`Scoring chances must be ${SIM_CHANCES.join(', ')}.`);
-  if (!Number.isInteger(s.roll) || s.roll < r0 || s.roll > r1) out.push(`Roll range must be a whole number from ${r0} to ${r1}.`);
+  if (!Number.isInteger(s.roll) || s.roll < r0 || s.roll > r1) out.push(`Roll range must be a whole number from ${r0} to ${r1}${SIM_CHANCES.includes(s.chances) ? ` with ${s.chances} scoring chances` : ''}.`);
   const [h0, h1] = SIM_LIMITS.home;
   if (s.home !== undefined && (!Number.isInteger(s.home) || s.home < h0 || s.home > h1)) out.push(`Home edge must be a whole number from ${h0} to ${h1}.`);
   return out;
