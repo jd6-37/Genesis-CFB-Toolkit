@@ -16,8 +16,7 @@
 //   4. Jersey numbers straight from CFB 27.
 // Reference implementation and the decisions behind it: docs/rosters.md, "CFB 27 conversion".
 // BW95 only for now; the stock tables for CF96/97 are in rosterStockDists.json already.
-import { hasSimSettings } from './simSettings';
-import { starterOvr, type StarterOvr } from './teamRatings';
+import { ovrScaleOf, starterOvr, type StarterOvr } from './teamRatings';
 import { GROUP_ATTRS, type Attr, type Group, type SlotDef } from './rosterLayouts';
 import { fixNumbers } from './dynasty/numbers';
 import { jerseyByte, readPlayer, setRating, teamLayout, teamName, writePlayer, type RosterRom } from './rosterRom';
@@ -289,7 +288,7 @@ export function convertCfb27(rom: RosterRom, sheet: Sheet): Cfb27Plan {
       team: t, teamName: teamName(rom.teams[t]), sheetTeam: school,
       fills: [...got.values()].sort((a, b) => order.get(a.slot)! - order.get(b.slot)!),
       unfilled,
-      ovr: starterOvr(roster, hasSimSettings(rom.data) ? 'v2' : 'v1'),
+      ovr: starterOvr(roster, ovrScaleOf(rom.data)),
     });
   }
 

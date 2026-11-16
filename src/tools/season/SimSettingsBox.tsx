@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { Button, Field, Select, SubHead } from '../../ui';
 import { SIM_CHANCES, SIM_DEFAULTS, SIM_LIMITS, sameSim, simProblems, type SimSettings } from '../../core/simSettings';
 
-export function SimSettingsBox({ value, loaded, onChange, disabled, intro }: {
+export function SimSettingsBox({ value, loaded, onChange, disabled, intro, homeNote }: {
   value: SimSettings;
   /** What the ROM or dynasty had (the "changed" marks). */
   loaded: SimSettings;
@@ -13,17 +13,21 @@ export function SimSettingsBox({ value, loaded, onChange, disabled, intro }: {
   onChange: (s: SimSettings) => void;
   disabled?: boolean;
   intro?: string;
+  /** A line added to the home edge's hint (the Dynasty app: which ROMs have it). */
+  homeNote?: string;
 }) {
   // Typed text, so a half-typed number doesn't snap back.
   const [weight, setWeight] = useState(String(value.weight));
   const [roll, setRoll] = useState(String(value.roll));
-  useEffect(() => { setWeight(String(value.weight)); setRoll(String(value.roll)); }, [value.weight, value.roll]);
+  const [home, setHome] = useState(String(value.home ?? ''));
+  useEffect(() => { setWeight(String(value.weight)); setRoll(String(value.roll)); setHome(String(value.home ?? '')); }, [value.weight, value.roll, value.home]);
 
-  const typed: SimSettings = { weight: Number(weight), chances: value.chances, roll: Number(roll) };
+  const typed: SimSettings = { weight: Number(weight), chances: value.chances, roll: Number(roll), ...(value.home !== undefined ? { home: Number(home) } : {}) };
   const bad = simProblems(typed);
   const take = (s: SimSettings) => { if (!simProblems(s).length) onChange(s); };
   const [k0, k1] = SIM_LIMITS.weight;
   const [r0, r1] = SIM_LIMITS.roll;
+  const [h0, h1] = SIM_LIMITS.home;
 
   return (
     <section className="sim-box" aria-labelledby="sim-box-head">
@@ -50,6 +54,14 @@ export function SimSettingsBox({ value, loaded, onChange, disabled, intro }: {
           onChange={setRoll} onBlur={() => { if (typed.roll !== value.roll) take(typed); }}
           note={`Lower: each chance scores more often, so more points. ${r0}-${r1}, default ${SIM_DEFAULTS.roll}.`}
         />
+        {value.home !== undefined && (
+          <Field
+            label="Home edge" type="number" min={h0} max={h1} step={1} value={home} disabled={disabled}
+            changed={typed.home !== (loaded.home ?? SIM_DEFAULTS.home)} invalid={!Number.isInteger(typed.home) || typed.home! < h0 || typed.home! > h1}
+            onChange={setHome} onBlur={() => { if (typed.home !== value.home) take(typed); }}
+            note={`Extra strength for the home team in regular-season games. ${SIM_DEFAULTS.home}: home teams win about 58%. 0 = none. ${h0}-${h1}, default ${SIM_DEFAULTS.home}${homeNote ? `. ${homeNote}` : ''}.`}
+          />
+        )}
       </div>
       {bad.length > 0 && <p className="sim-box-bad" role="alert">{bad[0]}</p>}
       {!sameSim(value, SIM_DEFAULTS) && (

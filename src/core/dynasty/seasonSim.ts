@@ -2,7 +2,7 @@
 // season ROM the app makes. Absent = the ROM's own settings (the defaults the ROM ships with).
 
 import type { Dynasty } from './model';
-import { SIM_DEFAULTS, readSimSettings, sameSim, simProblems, writeSimSettings, type SimSettings } from '../simSettings';
+import { SIM_DEFAULTS, readSimSettings, sameSim, simForRom, simProblems, writeSimSettings, type SimSettings } from '../simSettings';
 
 export const simOf = (d: Dynasty): SimSettings => d.sim ?? SIM_DEFAULTS;
 
@@ -21,5 +21,5 @@ export function setSim(d: Dynasty, s: SimSettings | null): Dynasty {
 /** Writes the dynasty's settings into a season ROM that has the sim settings mod; older ROMs stay as they are. */
 export function writeDynastySim(rom: Uint8Array, d: Dynasty): void {
   if (!d.sim || !readSimSettings(rom)) return;
-  writeSimSettings(rom, d.sim);
+  writeSimSettings(rom, simForRom(rom, d.sim));
 }

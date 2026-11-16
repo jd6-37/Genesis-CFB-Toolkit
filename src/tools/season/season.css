@@ -87,5 +87,5 @@
 .sim-box-fields .ui-field input, .sim-box-fields .ui-field select { width: 8rem; }
 .sim-box-bad { margin: 8px 2px 0; color: var(--bad); }
 @media (min-width: 760px) {
-  .sim-box-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .sim-box-fields { grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
 }

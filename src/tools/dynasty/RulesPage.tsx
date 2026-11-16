@@ -102,7 +102,7 @@ export function Rules({ actions, busy }: { actions: OffseasonActions; busy: stri
       {msg && <Note kind={msg.kind}>{msg.text}</Note>}
 
       <SimSettingsBox
-        value={simOf(d)} loaded={SIM_DEFAULTS} disabled={!!busy}
+        value={simOf(d)} loaded={SIM_DEFAULTS} disabled={!!busy} homeNote="2026 test34 / 1994 test37 or later"
         intro="How the game decides the games you don't play (CPU vs CPU). Saved at once; it goes into every season ROM you download from now on (2026 test33 / 1994 test36 or later). Each setting changes scoring and upsets together."
         onChange={(s) => void actions.run('Saving the season sim…', async () => {
           await actions.commit(setSim(d, s));

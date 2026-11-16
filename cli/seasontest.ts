@@ -2,7 +2,7 @@
 //   npx tsx cli/seasontest.ts BW95 CF97 [more BW95 ROMs, e.g. Elevated builds]
 // A 138-team 2026 Season Edition among the extra ROMs gets the 138-team test instead (its own season settings).
 // The emulator checks (the game's own deal and schedule) are described in docs/season.md.
-import { SIM_DEFAULTS, SIM_RANGES, SIM_STOCK, hasSimSettings, readSimSettings, writeSimSettings, type SimSettings } from '../src/core/simSettings';
+import { SIM_DEFAULTS, SIM_RANGES, SIM_STOCK, hasHomeEdge, hasSimSettings, readSimSettings, simForRom, writeSimSettings, type SimSettings } from '../src/core/simSettings';
 import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { strict as assert } from 'node:assert';
@@ -355,21 +355,22 @@ for (const path of paths) {
     assert.throws(() => writeSimSettings(rom.slice(), SIM_DEFAULTS), /sim settings/);
     continue;
   }
-  assert.deepEqual(sim, SIM_DEFAULTS, `${basename(path)}: ships with the defaults`);
-  for (const s of [SIM_STOCK, { weight: 12, chances: 9, roll: 800 } as SimSettings, { weight: 1, chances: 3, roll: 1600 } as SimSettings]) {
+  assert.deepEqual(sim, simForRom(rom, SIM_DEFAULTS), `${basename(path)}: ships with the defaults`);
+  for (const s of [SIM_STOCK, { weight: 12, chances: 9, roll: 800, home: 40 } as SimSettings, { weight: 1, chances: 3, roll: 1600 } as SimSettings]) {
     const w = rom.slice();
     writeSimSettings(w, s);
-    assert.deepEqual(readSimSettings(w), s);
+    assert.deepEqual(readSimSettings(w), simForRom(rom, s.home === undefined && hasHomeEdge(rom) ? { ...s, home: sim.home } : s));
     const changed = [...w.keys()].filter((i) => w[i] !== rom[i]);
     assert.ok(changed.every((i) => SIM_RANGES.some(([a, b]) => i >= a && i < b)), 'only the settings bytes change');
   }
   const stock = rom.slice(); writeSimSettings(stock, SIM_STOCK);
   assert.deepEqual([...stock.subarray(0x06f120, 0x06f122)], [0xe3, 0x42]);
   assert.deepEqual([...stock.subarray(0x06f124, 0x06f126)], [0x03, 0x20]);
-  for (const bad of [{ weight: 0 }, { weight: 17 }, { roll: 690 }, { chances: 4 }]) {
+  for (const bad of [{ weight: 0 }, { weight: 17 }, { roll: 690 }, { chances: 4 }, { home: 41 }]) {
     assert.throws(() => writeSimSettings(rom.slice(), { ...SIM_DEFAULTS, ...bad } as SimSettings), /must be/);
   }
-  ok(`${basename(path)}: season sim settings read (defaults), written in their 6 bytes, bad values refused`);
+  if (hasHomeEdge(rom)) { const h = rom.slice(); writeSimSettings(h, { ...SIM_DEFAULTS, home: 0 }); assert.deepEqual([...h.subarray(0x2d601e, 0x2d6020)], [0, 0]); }
+  ok(`${basename(path)}: season sim settings read (defaults${hasHomeEdge(rom) ? ', home edge 16' : ''}), written in their bytes, bad values refused`);
 }
 
 console.log(`\n${passed} passed`);

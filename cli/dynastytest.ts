@@ -4,7 +4,7 @@
 // save is a Genesis Plus GX (RetroArch) .srm of the 138-team edition with a season started and at least one week
 // played; the test puts its dynasty's mark (the ID block New Season copies) into it.
 import { setSim } from '../src/core/dynasty/seasonSim';
-import { SIM_DEFAULTS, readSimSettings } from '../src/core/simSettings';
+import { SIM_DEFAULTS, readSimSettings, simForRom } from '../src/core/simSettings';
 import { careerRecords, teamRecords } from '../src/core/dynasty/records';
 import { checkSchedule, editSchedule, flipHome, moveGame, protectedPairs, remakeSchedule, SCHED_WEEKS, setOpponent, teamSchedule, type SchedGame } from '../src/core/dynasty/schedule';
 import { AWARD_SPOTS, AWARD_STATS_WEIGHT, POSITION_AWARDS, awardsOf, candidates, playerHonors, seasonAwards } from '../src/core/dynasty/awards';
@@ -1336,7 +1336,7 @@ if (hasKits(rom)) {
   const withSim = Off.seasonRom(setSim(d0, S), d0.seasons[0], rom);
   if (readSimSettings(rom)) {
     assert.deepEqual(readSimSettings(plain), readSimSettings(rom));
-    assert.deepEqual(readSimSettings(withSim), S);
+    assert.deepEqual(readSimSettings(withSim), simForRom(rom, S));
     assert.equal(setSim(setSim(d0, S), SIM_DEFAULTS).sim, undefined, 'the defaults clear it');
     assert.throws(() => setSim(d0, { ...S, roll: 100 }), /must be/);
     ok('season sim: the dynasty\'s settings go into its season ROMs; the defaults leave the ROM\'s own');
