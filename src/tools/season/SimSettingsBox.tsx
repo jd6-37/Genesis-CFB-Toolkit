@@ -3,7 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { Button, Field, Select, SubHead } from '../../ui';
-import { SIM_CHANCES, SIM_DEFAULTS, SIM_LIMITS, sameSim, simProblems, type SimSettings } from '../../core/simSettings';
+import { SIM_CHANCES, SIM_DEFAULTS, SIM_LIMITS, fitRoll, rollLimits, sameSim, simProblems, type SimSettings } from '../../core/simSettings';
 
 export function SimSettingsBox({ value, loaded, onChange, disabled, intro, homeNote }: {
   value: SimSettings;
@@ -26,7 +26,7 @@ export function SimSettingsBox({ value, loaded, onChange, disabled, intro, homeN
   const bad = simProblems(typed);
   const take = (s: SimSettings) => { if (!simProblems(s).length) onChange(s); };
   const [k0, k1] = SIM_LIMITS.weight;
-  const [r0, r1] = SIM_LIMITS.roll;
+  const [r0, r1] = rollLimits(value.chances);
   const [h0, h1] = SIM_LIMITS.home;
 
   return (
@@ -45,14 +45,14 @@ export function SimSettingsBox({ value, loaded, onChange, disabled, intro, homeN
         <Select
           label="Scoring chances" value={value.chances} disabled={disabled} changed={value.chances !== loaded.chances}
           options={SIM_CHANCES.map((n) => ({ value: n, label: `${n} a quarter` }))}
-          onChange={(v) => take({ ...typed, chances: Number(v) as SimSettings['chances'] })}
-          note={`Chances each team gets to score. More: more points and fewer upsets. Default ${SIM_DEFAULTS.chances}.`}
+          onChange={(v) => take(fitRoll({ ...typed, roll: Number.isInteger(typed.roll) ? typed.roll : value.roll, chances: Number(v) as SimSettings['chances'] }))}
+          note={`Chances each team gets to score. More: more points and fewer upsets; 9 gives very high scores. Changing it can move the roll range into its allowed range. Default ${SIM_DEFAULTS.chances}.`}
         />
         <Field
           label="Roll range" type="number" min={r0} max={r1} step={10} value={roll} disabled={disabled}
           changed={typed.roll !== loaded.roll} invalid={!Number.isInteger(typed.roll) || typed.roll < r0 || typed.roll > r1}
           onChange={setRoll} onBlur={() => { if (typed.roll !== value.roll) take(typed); }}
-          note={`Lower: each chance scores more often, so more points. ${r0}-${r1}, default ${SIM_DEFAULTS.roll}.`}
+          note={`Lower: each chance scores more often, so more points; a low roll range gives very high scores. ${r0}-${r1} with ${value.chances} scoring chances (3: 700-1600, 5: 900-1600, 9: 1300-1600), default ${SIM_DEFAULTS.roll}.`}
         />
         {value.home !== undefined && (
           <Field
