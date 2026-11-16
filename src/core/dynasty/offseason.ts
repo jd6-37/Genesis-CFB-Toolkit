@@ -16,6 +16,7 @@
 // same offseason. The players before the offseason are kept so it can be started over.
 
 import { writeDynastySim } from './seasonSim';
+import { pollSet, preseasonPoll } from './poll';
 import { fineSetBytes, putFineOffsets } from './fine';
 import { applyWhiteHome } from './kit';
 import { lastGames, makeSchedule, RELEASE_CONF_WEEKS, rivalriesOf, scheduleSet } from './schedule';
@@ -867,6 +868,7 @@ export function seasonRom(d: Dynasty, season: DSeason, rom: Uint8Array, now = Da
     names,
     fine,
     schedule: season.schedule ? scheduleSet(season.schedule) : undefined,
+    poll: (() => { const p = preseasonPoll(d, season); return p ? pollSet(p) : undefined; })(),
   });
   applyWhiteHome(out.data, d);
   writeConferences(out.data, d, season);
