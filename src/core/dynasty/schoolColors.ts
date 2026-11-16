@@ -1,6 +1,7 @@
 // Schools' official colors (primary, secondary) for the Dynasty pages, by the ROM's school name.
 // The game's own colors are tuned for the Genesis palette and its uniforms, so they often read wrong
 // on a web page (LSU too blue, Iowa blue, Georgia too dark); a school missing here falls back to them.
+import { withAliases } from './rivalries';
 export const SCHOOL_COLORS: Record<string, [string, string]> = {
   'Air Force': ['#003087', '#8A8D8F'],
   Akron: ['#041E42', '#A89968'],
@@ -141,3 +142,6 @@ export const SCHOOL_COLORS: Record<string, [string, string]> = {
   Wisconsin: ['#C5050C', '#FFFFFF'],
   Wyoming: ['#492F24', '#FFC425'],
 };
+// The 1994 Season Edition's names (rivalries.ts), and Pacific's orange and black.
+withAliases(SCHOOL_COLORS);
+SCHOOL_COLORS.Pacific = ['#F47920', '#000000'];

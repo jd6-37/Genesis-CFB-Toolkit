@@ -1,4 +1,5 @@
 // Each school's state (two-letter code) by the ROM's school name, for recruiting distance.
+import { withAliases } from './rivalries';
 export const SCHOOL_STATE: Record<string, string> = {
   'Air Force': 'CO', Akron: 'OH', Alabama: 'AL', 'App State': 'NC', Arizona: 'AZ', 'Arizona State': 'AZ', Arkansas: 'AR',
   'Arkansas State': 'AR', Army: 'NY', Auburn: 'AL', 'Ball State': 'IN', Baylor: 'TX', 'Boise State': 'ID', 'Boston College': 'MA',
@@ -22,6 +23,9 @@ export const SCHOOL_STATE: Record<string, string> = {
   Washington: 'WA', 'Washington State': 'WA', 'West Virginia': 'WV', 'Western Kentucky': 'KY', 'Western Michigan': 'MI',
   Wisconsin: 'WI', Wyoming: 'WY',
 };
+// The 1994 Season Edition's names (rivalries.ts), and Pacific (Stockton; not in the 2026 edition).
+withAliases(SCHOOL_STATE);
+SCHOOL_STATE.Pacific = 'CA';
 
 /** US regions for "close to home" (a recruit's state and the school's). */
 const REGION: Record<string, string> = Object.fromEntries(Object.entries({

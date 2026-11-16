@@ -14,6 +14,7 @@ import { bwSlotOf, ovrOf } from './ratings';
 import { playerOvr } from './ovr';
 import { SLOTS } from './rosters';
 import { recordYear } from './career';
+import { playerName } from './derive';
 
 /** The 138-team edition's 32 slots in the game's roster order (every team plays the 4-3). */
 export const SLOT_DEFS = rosterLayout('bw95', false, true, true);
@@ -121,7 +122,7 @@ export function moveToSpot(d: Dynasty, team: number, id: number, spot: number): 
   const s = last(d);
   const p = d.players[id - 1];
   if (!p || p.team !== team) throw new Error('He isn\'t on this team.');
-  if (!spotsFor(d, team, p).includes(spot)) throw new Error(`${p.first} ${p.last} can't play ${spotLabel(spot)}.`);
+  if (!spotsFor(d, team, p).includes(spot)) throw new Error(`${playerName(p)} can't play ${spotLabel(spot)}.`);
   const from = spotsOf(s, team, id);
   if (from.includes(spot)) return d;
   const other = holder(s, team, spot);

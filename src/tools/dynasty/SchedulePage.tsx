@@ -5,8 +5,9 @@ import { Button, Modal, Note, PageHead, Select, SubHead } from '../../ui';
 import { useMemo, useState } from 'react';
 import { INDEPENDENT } from '../../core/dynasty/derive';
 import { rivalryOf } from '../../core/dynasty/rivalries';
+import { editionOf } from '../../core/dynasty/edition';
 import {
-  checkSchedule, editSchedule, flipHome, moveGame, protectedPairs, remakeSchedule, SCHED_WEEKS, scheduleLock, setOpponent, teamSchedule,
+  checkSchedule, editSchedule, flipHome, moveGame, protectedPairs, remakeSchedule, scheduleLock, setOpponent, teamSchedule, weeksOf,
   type DSchedule,
 } from '../../core/dynasty/schedule';
 import { Empty, TeamLink, href, useDyn } from './ui';
@@ -20,8 +21,8 @@ export function ScheduleEditor({ arg }: { arg?: string }) {
   const [note, setNote] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const [confirmNew, setConfirmNew] = useState(false);
   const schools = useMemo(() => d.teams.map((t) => t.school), [d]);
-  const check = useMemo(() => (sched ? checkSchedule(sched, schools, season.conf) : null), [sched, schools, season.conf]);
-  if (!sched || !check) return <Empty><p>From the second season on, the app makes each season's schedule and you can change your teams' games. The first season plays the schedule chosen in the game (Real 2026 or Random).</p></Empty>;
+  const check = useMemo(() => (sched ? checkSchedule(sched, schools, season.conf, editionOf(d).id) : null), [sched, schools, season.conf, d]);
+  if (!sched || !check) return <Empty><p>From the second season on, the app makes each season's schedule and you can change your teams' games. The first season plays the schedule the game makes at New Season.</p></Empty>;
   if (team === undefined) return <Empty><p>Pick your teams first (Manage): you can change their schedules.</p></Empty>;
 
   const lock = scheduleLock(season);
@@ -34,7 +35,7 @@ export function ScheduleEditor({ arg }: { arg?: string }) {
   const restTeams = others.filter((t) => !sameConf(team, t.index));
   const myMissing = check.missing.filter(([a, b]) => a === team || b === team);
   const myRepeats = check.repeats.filter(([a, b]) => a === team || b === team);
-  const isProtected = new Set(protectedPairs(schools).map((p) => `${Math.min(p.a, p.b)}-${Math.max(p.a, p.b)}`));
+  const isProtected = new Set(protectedPairs(schools, editionOf(d).id).map((p) => `${Math.min(p.a, p.b)}-${Math.max(p.a, p.b)}`));
   const confTarget = conf[team] === INDEPENDENT ? 0 : season.confWeeks?.games[conf[team]];
 
   const change = async (fn: (s: DSchedule) => DSchedule, done: (s: DSchedule) => string) => {
@@ -50,11 +51,12 @@ export function ScheduleEditor({ arg }: { arg?: string }) {
   const pickOpponent = (week: number, opp: number) => {
     // Already on the schedule another week: that game moves here.
     const already = rows.findIndex((x) => x?.opp === opp);
-    if (already >= 0) { pickWeek(already, week); return; }
-    const old = rows[week]!.opp;
-    const oldOfNew = teamSchedule(sched, opp)[week]!.opp;
+    if (already >= 0) { if (rows[week]) pickWeek(already, week); return; } // a game can't move into a bye week
+    const old = rows[week]?.opp ?? null;
+    const oldOfNew = teamSchedule(sched, opp)[week]?.opp ?? null;
     void change((s) => setOpponent(s, week, team, opp), () =>
-      `Week ${week + 1}: ${name(team)} plays ${name(opp)}; ${name(old)} plays ${name(oldOfNew)} instead.`);
+      `Week ${week + 1}: ${name(team)} plays ${name(opp)}; ` +
+      (old !== null && oldOfNew !== null ? `${name(old)} plays ${name(oldOfNew)} instead.` : `${name(old ?? oldOfNew!)} has the bye instead.`));
   };
   const pickWeek = (from: number, to: number) => {
     const a = rows[from]!.opp, b = rows[to]!.opp;
@@ -100,7 +102,27 @@ export function ScheduleEditor({ arg }: { arg?: string }) {
 
       <ol className="dy-sched-list">
         {rows.map((g, w) => {
-          if (!g) return <li key={w}><span className="dy-sched-week">Week {w + 1}</span><span className="dy-dim">No game</span></li>;
+          if (!g) {
+            // A bye (the 1994 Season Edition's 107 teams leave one team out each week): the user may still give his team a game.
+            return (
+              <li key={w}>
+                <span className="dy-sched-week">Week {w + 1}</span>
+                {lock ? <span className="dy-dim">Bye</span> : (
+                  <div className="dy-sched-game">
+                    <Select
+                      label={`Week ${w + 1} opponent`} hideLabel value={-1}
+                      options={[
+                        { value: -1, label: 'Bye' },
+                        ...confTeams.map((t) => ({ value: t.index, label: t.school, group: 'Conference' })),
+                        ...restTeams.map((t) => ({ value: t.index, label: t.school, group: 'Other teams' })),
+                      ]}
+                      onChange={(x) => { if (Number(x) >= 0) pickOpponent(w, Number(x)); }}
+                    />
+                  </div>
+                )}
+              </li>
+            );
+          }
           const tags: string[] = [];
           if (sameConf(team, g.opp)) tags.push('Conference');
           const riv = rivalryOf(name(team), name(g.opp));
@@ -124,7 +146,7 @@ export function ScheduleEditor({ arg }: { arg?: string }) {
                     />
                     <Select
                       label={`Move the week ${w + 1} game`} hideLabel value={w}
-                      options={Array.from({ length: SCHED_WEEKS }, (_, k) => ({ value: k, label: k === w ? `Week ${k + 1}` : `Move to week ${k + 1}` }))}
+                      options={Array.from({ length: weeksOf(sched) }, (_, k) => k).filter((k) => k === w || rows[k]).map((k) => ({ value: k, label: k === w ? `Week ${k + 1}` : `Move to week ${k + 1}` }))}
                       onChange={(x) => pickWeek(w, Number(x))}
                     />
                   </div>

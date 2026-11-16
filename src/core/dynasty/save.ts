@@ -1,10 +1,14 @@
-// Reads a battery save of the 138-team 2026 Season Edition (Elevated v2.0.0 on). Pure functions, no DOM.
+// Reads a battery save of the 138-team 2026 Season Edition (Elevated v2.0.0 on) or the 107-team 1994 Season Edition
+// (v2.0.1-test14 on; same engine, fixed offsets, 107 teams used; edition.ts). Pure functions, no DOM.
 //
 // The game keeps its save in the odd bytes of the cartridge window at 0x200000. Genesis Plus GX (RetroArch)
 // writes the window as it is (file offset k = address 0x200000 + k, data on odd offsets); other tools may
 // write only the data bytes. Layout (claude.ai project notes: bw95-dynasty-spec.md, section 3):
-//   $200001 signature 0x6F, $200003 0 once a season exists, $200E01 season block (0x1330 data bytes),
-//   $203951 team season stats (138 × 0xB8 data bytes).
+//   $200001 signature (0x6F 2026, 0x94 1994), $200003 0 once a season exists, $200E01 season block (0x1330 data
+//   bytes; the per-team tables at their 138-team offsets, 107 entries used in 1994), $203951 team season stats
+//   (one 0xB8-byte record per team).
+
+import { editionOfSig, EDITIONS } from './edition';
 
 export const SAVE_SIG = 0x6f;
 const SB_ADDR = 0xe01; // address − 0x200000
@@ -19,16 +23,18 @@ type Peek = (offset: number) => number;
 export type SaveFormat = 'window' | 'packed';
 
 /** Detects the layout and returns a reader of data bytes, or why it isn't a save of this game. */
-export function openSave(file: Uint8Array): { format: SaveFormat; peek: Peek } {
+export function openSave(file: Uint8Array): { format: SaveFormat; peek: Peek; teams: number } {
   // Genesis Plus GX: the whole window, data on odd offsets (32-64 KB).
-  if (file.length >= 2 * (ST_ADDR >> 1) + 2 * 138 * ST_LEN && file[1] === SAVE_SIG) {
-    return { format: 'window', peek: (o) => file[o] ?? 0xff };
+  const w = editionOfSig(file[1]);
+  if (w && file.length >= 2 * (ST_ADDR >> 1) + 2 * w.teams * ST_LEN) {
+    return { format: 'window', peek: (o) => file[o] ?? 0xff, teams: w.teams };
   }
   // Only the data bytes: offset k holds window offset 2k + 1.
-  if (file.length >= (ST_ADDR >> 1) + 138 * ST_LEN && file[0] === SAVE_SIG) {
-    return { format: 'packed', peek: (o) => file[o >> 1] ?? 0xff };
+  const p = editionOfSig(file[0]);
+  if (p && file.length >= (ST_ADDR >> 1) + p.teams * ST_LEN) {
+    return { format: 'packed', peek: (o) => file[o >> 1] ?? 0xff, teams: p.teams };
   }
-  throw new Error("This isn't a battery save of Bill Walsh '95 Elevated's 138-team 2026 Season Edition (no save signature found).");
+  throw new Error(`This isn't a battery save of Bill Walsh '95 Elevated's ${EDITIONS['2026'].name} or ${EDITIONS['1994'].name} (no save signature found).`);
 }
 
 function bytes(peek: Peek, addr: number, n: number): Uint8Array {
@@ -105,6 +111,8 @@ export const STAT_SLOTS = {
 
 export interface DynastySave {
   format: SaveFormat;
+  /** Teams of the save's edition (138 or 107). */
+  teams: number;
   /** False before the first New Season (or after the save was cleared). */
   hasSeason: boolean;
   season: SaveSeason | null;
@@ -113,11 +121,9 @@ export interface DynastySave {
   stamp: Uint8Array | null;
 }
 
-export const TEAMS = 138;
-
 /** Parses a save. Throws with a reason when it isn't one. */
 export function readDynastySave(file: Uint8Array): DynastySave {
-  const { format, peek } = openSave(file);
+  const { format, peek, teams: TEAMS } = openSave(file);
   const sb = bytes(peek, SB_ADDR, SB_LEN + 16);
   const hasSeason = peek(3) === 0 && sb[0] === SB_SIG;
   let season: SaveSeason | null = null;
@@ -167,6 +173,7 @@ export function readDynastySave(file: Uint8Array): DynastySave {
   const stats = Array.from({ length: TEAMS }, (_, t) => teamStats(bytes(peek, ST_ADDR + 2 * ST_LEN * t, ST_LEN)));
   return {
     format,
+    teams: TEAMS,
     hasSeason,
     season,
     stats,

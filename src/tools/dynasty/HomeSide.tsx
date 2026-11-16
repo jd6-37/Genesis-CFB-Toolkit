@@ -1,10 +1,10 @@
 // The front page's extras (user, 2026-11-12). In the season: next week's big games and a Heisman watch in
-// the side column, the playoff picture, the national leaders and your conference in a band across the page
+// the side column, the playoff picture (1994: the bowl games), the national leaders and your conference in a band across the page
 // below; in the offseason, your commitments and the class rankings in the side column.
 
 import { SubHead, Table } from '../../ui';
 import { useMemo } from 'react';
-import { INDEPENDENT, leaders, playerLines, playerName, standings, statValue, weekName, type PlayerLine, type StatCategory } from '../../core/dynasty/derive';
+import { bowlOf, bowlWeek, INDEPENDENT, leaders, playerLines, playerName, standings, statValue, weekName, type PlayerLine, type StatCategory } from '../../core/dynasty/derive';
 import { bigGames, heismanWatch, playoffPicture } from '../../core/dynasty/outlook';
 import { classRankings, STAR_POINTS } from '../../core/dynasty/offseason';
 import { TeamLink, href, playerOf, recordText, useDyn } from './ui';
@@ -27,6 +27,7 @@ export function SeasonMore() {
   return (
     <div className="dy-front-more">
       <Playoff />
+      <Bowls />
       <NationalLeaders />
       <YourConferences />
     </div>
@@ -54,7 +55,7 @@ function PreseasonClasses() {
 function PlayerLink({ id }: { id: number | null }) {
   const { d } = useDyn();
   const p = playerOf(d, id);
-  return p ? <a href={href(`player/${p.id}`)}>#{p.jersey} {playerName(p)}</a> : <span className="dy-dim">Unknown player</span>;
+  return p ? <a href={href(`player/${p.id}`)}>{p.jersey >= 0 && (p.first || p.last) && `#${p.jersey} `}{playerName(p)}</a> : <span className="dy-dim">Unknown player</span>;
 }
 
 function BigGames() {
@@ -72,6 +73,29 @@ function BigGames() {
             {g.visitor !== null ? <TeamLink team={g.visitor} /> : 'To be decided'}
             <span className="dy-dim"> at </span>
             {g.home !== null ? <TeamLink team={g.home} /> : 'To be decided'}
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** 1994: the bowl games once the game has set them (after the last regular-season week), with their results. */
+function Bowls() {
+  const { v } = useDyn();
+  if (!v.bowls) return null;
+  const games = v.games.filter((g) => g.week === bowlWeek(v) && g.visitor !== null && g.home !== null);
+  if (!games.length) return null;
+  return (
+    <section>
+      <SubHead level={2}>Bowl games</SubHead>
+      <ul className="dy-side-list dy-side-games">
+        {games.map((g) => (
+          <li key={g.index}>
+            <span className="dy-small dy-dim dy-bowl-name">{bowlOf(v, g)}</span>
+            <span className="dy-bowl-team"><TeamLink team={g.visitor!} />{g.vs !== null && <span className="dy-num">{g.vs}</span>}</span>
+            <span className="dy-dim">vs.</span>
+            <span className="dy-bowl-team"><TeamLink team={g.home!} />{g.hs !== null && <span className="dy-num">{g.hs}</span>}</span>
           </li>
         ))}
       </ul>

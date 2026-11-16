@@ -3,6 +3,8 @@
 
 import { ranksFromPower, type DynastySave, type SaveGame, type TeamSaveStats } from './save';
 import { latestSave, type DPlayer, type DSeason, type Dynasty } from './model';
+import { editionOf } from './edition';
+import { weeksOf } from './schedule';
 
 export const INDEPENDENT = 10;
 
@@ -20,6 +22,8 @@ export interface SeasonView {
   records: TeamRecord[];
   champion: number | null;
   done: boolean;
+  /** The 1994 Season Edition: bowls after the regular season, the No. 1 team in the final poll is the champion. */
+  bowls: boolean;
 }
 
 export interface TeamRecord {
@@ -39,7 +43,8 @@ export function seasonView(d: Dynasty, season: DSeason): SeasonView {
   const s = save?.season ?? null;
   // Before the first import of a season with a dynasty schedule, its games (unplayed).
   const games: SaveGame[] = s?.games ?? (season.schedule?.games ?? []).map((g, index) => ({ index, week: g.week, visitor: g.visitor, home: g.home, vs: null, hs: null, hold: false }));
-  const weeks = s?.weeks ?? (season.schedule ? 12 : 0);
+  const weeks = s?.weeks ?? (season.schedule ? weeksOf(season.schedule) : 0);
+  const bowls = editionOf(d).postseason === 'bowls';
   const n = d.teams.length;
   const { order, rank } = s ? ranksFromPower(s.power) : { order: d.teams.map((t) => t.index), rank: d.teams.map(() => 0) };
   let currentWeek = weeks;
@@ -59,12 +64,16 @@ export function seasonView(d: Dynasty, season: DSeason): SeasonView {
     if (regular && c !== INDEPENDENT && c === season.conf[loss.team]) { win.cw++; loss.cl++; }
   }
   const final = s?.postseason ? games.filter((g) => g.week === weeks - 1) : [];
-  const champion = final.length === 1 && final[0].vs !== null && final[0].hs !== null
-    ? (final[0].vs > final[0].hs ? final[0].visitor : final[0].home)
-    : null;
+  const done = !!s && games.length > 0 && games.every((g) => g.vs !== null);
+  // 1994: the final poll names the champion (there was no title game); 2026: the last game's winner.
+  const champion = bowls
+    ? (done ? order[0] ?? null : null)
+    : final.length === 1 && final[0].vs !== null && final[0].hs !== null
+      ? (final[0].vs > final[0].hs ? final[0].visitor : final[0].home)
+      : null;
   return {
-    season, save, games, weeks, lastRegularWeek: s?.lastRegularWeek ?? (season.schedule ? 11 : 0), currentWeek, rank, order, records, champion,
-    done: !!s && games.length > 0 && games.every((g) => g.vs !== null),
+    season, save, games, weeks, lastRegularWeek: s?.lastRegularWeek ?? (season.schedule ? weeksOf(season.schedule) - 1 : 0), currentWeek, rank, order, records, champion,
+    done, bowls,
   };
 }
 
@@ -73,6 +82,8 @@ export function weekName(v: SeasonView, week: number): string {
   const s = v.save?.season;
   if (!s) return `Week ${week + 1}`;
   if (week <= s.lastRegularWeek) return `Week ${s.realSchedule ? week : week + 1}`;
+  // 1994: the bowl week last; before it, from test31, the SEC Championship Game (1994's only title game).
+  if (v.bowls) return week === s.lastRegularWeek + 1 && week < v.weeks - 1 ? 'SEC Championship' : 'Bowl Games';
   const rounds = v.weeks - 1 - s.lastRegularWeek; // title games + playoff rounds
   const k = week - s.lastRegularWeek; // 1 = title games
   if (k === 1 && rounds >= 1) return 'Conference Championships';
@@ -84,6 +95,26 @@ export function weekName(v: SeasonView, week: number): string {
 }
 
 export const isPostseason = (v: SeasonView, week: number) => week > v.lastRegularWeek;
+
+/**
+ * The 19 bowls of the 1994 season in the order the 1994 ROM lists the bowl week's games (its Week Schedule
+ * rows; claude.ai project notes: bw95-1994-107-teams-rom-plan.md, bowls94.py).
+ */
+export const BOWLS_1994 = [
+  'Rose Bowl', 'Orange Bowl', 'Sugar Bowl', 'Cotton Bowl', 'Fiesta Bowl', 'Florida Citrus Bowl', 'Holiday Bowl', 'Gator Bowl', 'Peach Bowl',
+  'Sun Bowl', 'Hall of Fame Bowl', 'Freedom Bowl', 'Alamo Bowl', 'Copper Bowl', 'Aloha Bowl', 'Carquest Bowl', 'Liberty Bowl', 'Independence Bowl',
+  'Las Vegas Bowl',
+];
+
+/** The 1994 bowl week (the season's last week, after the regular season), or -1. */
+export const bowlWeek = (v: SeasonView) => (v.bowls && v.save?.season?.postseason && v.weeks - 1 > v.lastRegularWeek ? v.weeks - 1 : -1);
+
+/** A 1994 bowl game's name (null for any other game, the SEC Championship Game included). */
+export function bowlOf(v: SeasonView, g: SaveGame): string | null {
+  if (g.week !== bowlWeek(v)) return null;
+  const k = v.games.filter((x) => x.week === g.week).indexOf(g);
+  return BOWLS_1994[k] ?? null;
+}
 
 /** Teams of a conference ordered as the game's standings: conference record, then record, then rank. */
 export function standings(v: SeasonView, conf: number): TeamRecord[] {
@@ -123,7 +154,15 @@ export function leaders(lines: PlayerLine[], cat: StatCategory, key: string, n =
 
 export const statValue = (l: PlayerLine, key: string) => (l.s as unknown as Record<string, number>)[key] ?? 0;
 
-export const playerName = (p: DPlayer | undefined) => (p ? `${p.first} ${p.last}` : 'Unknown player');
+/**
+ * A player's name. A 1994 player the ROM has no name for (user, 2026-11-15: "keep names blank") goes by his
+ * position and number until the user names him (Edit player).
+ */
+export const playerName = (p: Pick<DPlayer, 'first' | 'last' | 'pos' | 'jersey'> | undefined) =>
+  (!p ? 'Unknown player' : p.first || p.last ? `${p.first} ${p.last}`.trim() : p.jersey >= 0 ? `${p.pos} #${p.jersey}` : `Unnamed ${p.pos}`);
+/** "#23 HB Name", or "#23 HB" for a player without a name. */
+export const playerLabel = (p: Pick<DPlayer, 'first' | 'last' | 'pos' | 'jersey'>) =>
+  `${p.jersey >= 0 ? `#${p.jersey} ` : ''}${p.pos}${p.first || p.last ? ` ${p.first} ${p.last}`.trimEnd() : ''}`;
 
 // ---- across seasons
 

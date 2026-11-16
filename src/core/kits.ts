@@ -1,9 +1,10 @@
-// Alternate uniforms of the 138-team 2026 Season Edition (Elevated v2.0.1-test14 on): the picker on the
+// Alternate uniforms of the 138-team 2026 Season Edition (Elevated v2.0.1-test14 on; the 107-team 1994 Season
+// Edition has the same table for its teams, `uni94.py`): the picker on the
 // controller select screen reads a per-team table, KTAB, that the apps may edit (project handoff H-004,
 // claude/handoffs/H-004-uniform-presets-editor.md; the ROM side is the patch's uniforms.py).
 //
 // KTAB at 0x2B6000, at most 4 KB (0x2B6000-0x2B6FFF), big-endian:
-//   +0 "KIT1"   +4 team count (word, 138)   +6 a long per team: its record's offset from 0x2B6000, 0 = none
+//   +0 "KIT1"   +4 team count (word, 138 or 107)   +6 a long per team: its record's offset from 0x2B6000, 0 = none
 //   record (even address): NH, NJH, NJA, NP (extra helmets, dark jerseys, white jerseys, pants), FLAGS
 //   (bit 0 = wears white at home), 0; then NH × 3 words, NJH × 4, NJA × 4, NP × 4.
 // Colors are Genesis CRAM words in the uniform palette's places:
@@ -15,8 +16,9 @@ import { fromLevels, toLevels } from './colors';
 export const KTAB = 0x2b6000;
 export const KTAB_SIZE = 0x1000;
 const TAG = [0x4b, 0x49, 0x54, 0x31]; // KIT1
-const TEAMS = 138;
-const HEAD = 6 + 4 * TEAMS;
+/** Team counts of the editions with the table (2026: 138, 1994: 107). */
+const COUNTS = [138, 107];
+const headOf = (teams: number) => 6 + 4 * teams;
 
 export interface TeamKit {
   /** Extra helmets: [shell, shadow, stripe]. */
@@ -38,16 +40,17 @@ const u16 = (d: Uint8Array, a: number) => (d[a] << 8) | d[a + 1];
 const u32 = (d: Uint8Array, a: number) => ((d[a] << 24) >>> 0) + (d[a + 1] << 16) + (d[a + 2] << 8) + d[a + 3];
 
 /** Whether the ROM has the uniform picker's table. */
-export const hasKits = (d: Uint8Array) => d.length >= KTAB + KTAB_SIZE && TAG.every((b, k) => d[KTAB + k] === b) && u16(d, KTAB + 4) === TEAMS;
+export const hasKits = (d: Uint8Array) => d.length >= KTAB + KTAB_SIZE && TAG.every((b, k) => d[KTAB + k] === b) && COUNTS.includes(u16(d, KTAB + 4));
 
 /** Every team's extras and flag. */
 export function readKits(d: Uint8Array): TeamKit[] {
   if (!hasKits(d)) throw new Error("This ROM has no alternate uniforms (they came with Bill Walsh '95 Elevated 2026 v2.0.1-test14).");
   const out: TeamKit[] = [];
-  for (let t = 0; t < TEAMS; t++) {
+  const teams = u16(d, KTAB + 4);
+  for (let t = 0; t < teams; t++) {
     const off = u32(d, KTAB + 6 + 4 * t);
     const k = emptyKit();
-    if (off >= HEAD && off + 6 <= KTAB_SIZE && off % 2 === 0) {
+    if (off >= headOf(teams) && off + 6 <= KTAB_SIZE && off % 2 === 0) {
       let a = KTAB + off;
       const [nh, njh, nja, np, flags] = [d[a], d[a + 1], d[a + 2], d[a + 3], d[a + 4]];
       a += 6;
@@ -69,8 +72,8 @@ const CRAM = 0x0eee;
 /** Why these kits can't be written (empty when they can). */
 export function kitIssues(kits: TeamKit[], names?: string[]): string[] {
   const out: string[] = [];
-  if (kits.length !== TEAMS) return [`Expected ${TEAMS} teams, got ${kits.length}.`];
-  let size = HEAD;
+  if (!COUNTS.includes(kits.length)) return [`Expected ${COUNTS.join(' or ')} teams, got ${kits.length}.`];
+  let size = headOf(kits.length);
   kits.forEach((k, t) => {
     const who = names?.[t] ?? `Team ${t}`;
     if (k.helmets.length > KIT_LIMITS.helmets) out.push(`${who}: at most ${KIT_LIMITS.helmets} extra helmets.`);
@@ -90,9 +93,13 @@ export function writeKits(d: Uint8Array, kits: TeamKit[]): void {
   if (!hasKits(d)) throw new Error('This ROM has no alternate uniforms table.');
   const issues = kitIssues(kits);
   if (issues.length) throw new Error(issues[0]);
+  if (kits.length !== u16(d, KTAB + 4)) throw new Error(`This ROM's uniforms table is for ${u16(d, KTAB + 4)} teams, not ${kits.length}.`);
+  // Unchanged uniforms keep the table's bytes as they are (another tool may have laid out its records in another
+  // order, as the 1994 edition's LSU / Georgia Tech records: H-012).
+  if (JSON.stringify(readKits(d)) === JSON.stringify(kits)) return;
   const t8 = new Uint8Array(KTAB_SIZE).fill(0xff);
-  t8.set(TAG, 0); t8[4] = TEAMS >> 8; t8[5] = TEAMS & 255;
-  let at = HEAD;
+  t8.set(TAG, 0); t8[4] = kits.length >> 8; t8[5] = kits.length & 255;
+  let at = headOf(kits.length);
   kits.forEach((k, t) => {
     const o = 6 + 4 * t;
     if (isEmpty(k)) { t8.set([0, 0, 0, 0], o); return; }

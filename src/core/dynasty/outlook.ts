@@ -7,7 +7,7 @@ import { INDEPENDENT, playerLines, standings, type PlayerLine, type SeasonView }
 /** The season's postseason format (save flags, season block +3): teams in the field, or 0 for none. */
 export function playoffSize(v: SeasonView): number {
   const s = v.save?.season;
-  if (!s || !s.postseason) return 0;
+  if (!s || !s.postseason || v.bowls) return 0; // the 1994 Season Edition has bowls, no playoff
   if (s.flags & 0x10) return 2; // BCS 2
   if (s.flags & 0x08) return 4; // CFP 4
   if (s.flags & 0x04) return 24; // CFP 24

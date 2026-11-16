@@ -6,6 +6,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { openRom } from '../../core/romfile';
 import { fetchCfb27Latest, CFB27_LATEST } from '../../core/cfb27Latest';
 import { createDynasty, DYNASTY_FILE, importSave, OLD_DYNASTY, type Dynasty } from '../../core/dynasty/model';
+import { createDynasty1994 } from '../../core/dynasty/create1994';
+import { EDITIONS, editionOf, editionOfRom } from '../../core/dynasty/edition';
+import { fetchRosters1994 } from '../../core/dynasty/rosters1994';
 import { applyEdits, editLock, playersCsv, readPlayersCsv, type CsvImport } from '../../core/dynasty/edit';
 import { seasonView, weekName } from '../../core/dynasty/derive';
 import { teamArt } from '../../core/dynasty/art';
@@ -167,9 +170,11 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
   const actions: ManageActions = {
     create: (name, romFile) => run('Creating the dynasty…', async () => {
       const rom = (await openRom(romFile.name, await readFile(romFile))).data;
-      const csv = new TextDecoder().decode(await fetchCfb27Latest());
       let renumbered: { player: number; from: number; to: number }[] = [];
-      const dyn = createDynasty(rom, csv, { name, onNumbers: (list) => { renumbered = list; } });
+      // The 1994 Season Edition: rosters from the ROM, backups from the built-in 1994 lists; 2026: the built-in CFB 27 file.
+      const dyn = editionOfRom(rom)?.id === '1994'
+        ? createDynasty1994(rom, await fetchRosters1994(), { name })
+        : createDynasty(rom, new TextDecoder().decode(await fetchCfb27Latest()), { name, onNumbers: (list) => { renumbered = list; } });
       const pics = teamArt(rom);
       await saveDynasty(dyn);
       await saveArt(dyn.id, pics);
@@ -273,7 +278,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       if (season.lineupEdited || !season.romDownloaded) await commit({ ...d, seasons: d.seasons.map((x) => (x === season ? { ...x, lineupEdited: false, romDownloaded: true } : x)) });
       setNote({
         kind: 'ok',
-        text: `Downloaded the ${year} ROM. Start a New Season with it in the game: Season mode plays the dynasty's rosters, Exhibition keeps the real 2026 ones.`,
+        text: `Downloaded the ${year} ROM. Start a New Season with it in the game: Season mode plays the dynasty's rosters, Exhibition keeps the ROM's own.`,
       });
     }),
   };
@@ -362,14 +367,14 @@ interface ManageActions {
   randomBench: () => void;
 }
 
-function BenchChoice({ onRandom, busy }: { onRandom: () => void; busy: boolean }) {
+function BenchChoice({ onRandom, busy, source }: { onRandom: () => void; busy: boolean; /** Where the backups came from. */ source: string }) {
   const [sure, setSure] = useState(false);
   return (
     <>
       <h3>Backups</h3>
       <p>
-        Every team has a backup for each of the 32 players on its Active Roster, who moves up when a spot opens. The backups start as the
-        next-best real players (CFB 27). In the first season you can replace them with generated players instead; the Active Rosters stay the same.
+        Every team has a backup for each of the 32 players on its Active Roster, who moves up when a spot opens. The backups start as{' '}
+        {source}. In the first season you can replace them with generated players instead; the Active Rosters stay the same.
       </p>
       <div className="dy-row">
         {sure ? (
@@ -465,7 +470,7 @@ function Manage({ d, art, list, busy, note, actions }: {
               <>
                 <h3>Season ROM</h3>
                 <p>
-                  The {year} rosters and team OVRs in your ROM's dynasty area: Season mode plays them, Exhibition keeps the real 2026
+                  The {year} rosters and team OVRs in your ROM's dynasty area: Season mode plays them, Exhibition keeps the ROM's own
                   rosters, and New Season marks the save with the dynasty and season, so the app knows it. Start the {year} season in the
                   game with this ROM; saves of seasons started with another ROM can't be imported. (The first season needs no download:
                   play it on your ROM as it is.)
@@ -475,7 +480,13 @@ function Manage({ d, art, list, busy, note, actions }: {
             );
           })()}
 
-          {canReplaceBench(d) && <BenchChoice onRandom={actions.randomBench} busy={!!busy} />}
+          {canReplaceBench(d) && (
+            <BenchChoice
+              onRandom={actions.randomBench}
+              busy={!!busy}
+              source={editionOf(d).id === '1994' ? 'real players from the 1994 rosters (their ratings are generated)' : 'the next-best real players (CFB 27)'}
+            />
+          )}
 
           <PlayersCsv d={d} actions={actions} />
 
@@ -540,8 +551,9 @@ function Manage({ d, art, list, busy, note, actions }: {
       <section className="dy-panel">
         <h2>Start a new dynasty</h2>
         <p>
-          A dynasty needs the 138-team 2026 Season Edition of Bill Walsh '95 Elevated with dynasty support (v2.0.1-test9 or later). The players start from the
-          built-in {CFB27_LATEST.label.replace('College Football 27', 'CFB 27')} rosters; redshirted players start one class up.
+          A dynasty needs Bill Walsh '95 Elevated's {EDITIONS['2026'].name} (v2.0.1-test9 or later) or {EDITIONS['1994'].name} (v2.0.1-test29 or later).
+          In the {EDITIONS['2026'].name}, the players start from the built-in {CFB27_LATEST.label.replace('College Football 27', 'CFB 27')} rosters; redshirted
+          players start one class up. In the {EDITIONS['1994'].name}, they start from the ROM's rosters, and each team's backups are real 1994 players.
         </p>
         <form className="dy-row" onSubmit={(e) => e.preventDefault()}>
           <Field label="Dynasty name" hideLabel placeholder="Dynasty name" value={name} onChange={setName} maxLength={40} />

@@ -16,7 +16,7 @@ Everything runs in your browser. Your ROMs are opened on your own computer and a
 - **[Season](#season):** rename the four conferences, choose which teams play in each, and lock in schedules in Bill Walsh '95.
 - **[Teams](#teams):** for each Bill Walsh '95 team, choose the offense and defense the computer runs, the team's OFF and DEF ratings and the weather in its home games, and write its Walsh Report.
 - **[Rosters](#rosters):** edit the players of Bill Walsh '95, CF96 or CF97, team by team or from a spreadsheet (CSV or Excel), or bring in real College Football 27 rosters (built in: 2026 season, Week 9).
-- **[Dynasty](#dynasty):** a sports news site for your season of the 138-team 2026 Season Edition: import your battery save and read the scores, standings, Top 25, stats and stories, season after season. Open it with **Dynasty** at the top of the page, or at `/dynasty`.
+- **[Dynasty](#dynasty):** a sports news site for your season of the 138-team 2026 Season Edition or the 107-team 1994 Season Edition: import your battery save and read the scores, standings, Top 25, stats and stories, season after season. Open it with **Dynasty** at the top of the page, or at `/dynasty`.
 
 Each tool has its own tab. The Toolkit (`/toolkit`) opens on Patch; `#swap`, `#season`, `#teams` or `#rosters` at the end of the address opens that tab directly (`/toolkit#rosters`; `#styles`, the Teams tab's old address, still works). Addresses from before the site (`/#rosters`, `/#dynasty/…`) still lead to the same place. Moving between the Toolkit and Dynasty with the links at the top keeps the page loaded, so ROMs open in the Toolkit are still there when you come back.
 
@@ -218,14 +218,14 @@ Before a game, Bill Walsh reads a scouting report on each team: a paragraph on i
 
 ### Alternate uniforms
 
-On the 138-team 2026 Season Edition with the uniform picker (Elevated v2.0.1-test14 and later), a team can pick other helmets, jerseys and pants on the controller screen (Y on a 6-button pad). **Alternate uniforms** in the Teams tab edits what the picker offers, team by team:
+On the 138-team 2026 Season Edition and the 107-team 1994 Season Edition with the uniform picker (Elevated v2.0.1-test14 and later of either edition), a team can pick other helmets, jerseys and pants on the controller screen (Y on a 6-button pad). **Alternate uniforms** in the Teams tab edits what the picker offers, team by team:
 
 - **Home jersey:** Dark at home (the default) or White at home. The visitor then gets the other one.
 - **Extra helmets, dark jerseys, white jerseys and pants.** A team's own home and away uniforms are always its first choices and aren't listed. **Add** starts a new piece as a copy of the team's own; pick its colors with the Genesis color picker. Picking a helmet's shell or a jersey's or the pants' main color also sets the lighter and darker shades, which you can change afterwards.
 - At most 7 extra helmets, 7 extra pants and 7 extra jerseys (dark and white together) per team: the picker's menu shows single digits.
 - **Undo** puts a team's, or every team's, uniforms back as the ROM was loaded.
 
-The extras are in a 4 KB table at `0x2B6000`-`0x2B6FFF` ("KIT1"); the app rewrites only that table, and only when the ROM has it. `npm run test:kits -- ELEVATED_2026_138` checks reading, writing and the limits.
+The extras are in a 4 KB table at `0x2B6000`-`0x2B6FFF` ("KIT1"); the app rewrites only that table, and only when the ROM has it. The table's team count (138 or 107) comes from the ROM. `npm run test:kits -- ELEVATED_2026_138` (or the 1994 ROM) checks reading, writing and the limits; writing unchanged uniforms leaves the table's bytes as they are.
 
 ### College Football 27 reference
 
@@ -350,10 +350,10 @@ The import follows the rules of CFB-Walsh.exe ("Genesis College Football Editor 
 
 ## Dynasty
 
-A companion site for playing seasons of the 138-team 2026 Season Edition with dynasty support (Bill Walsh '95 Elevated v2.0.1-test9 or later; older ROMs and saves aren't supported before the dynasty's first public release). The app owns the players; the game plays the games. Every team is 64 players: its Active Roster (the 32 in the game) and a backup for each of them. It keeps every season's record, runs the offseason (graduation, progression, the transfer portal, random signing classes, cuts) and writes the next season's rosters into your ROM.
+A companion site for playing seasons of the 138-team 2026 Season Edition with dynasty support (Bill Walsh '95 Elevated v2.0.1-test9 or later) or the 107-team 1994 Season Edition (v2.0.1-test29 or later); older ROMs and saves aren't supported before the dynasty's first public release. The app tells the editions apart by the ROM's team count and the save's signature. The app owns the players; the game plays the games. Every team is 64 players: its Active Roster (the 32 in the game) and a backup for each of them. It keeps every season's record, runs the offseason (graduation, progression, the transfer portal, random signing classes, cuts) and writes the next season's rosters into your ROM.
 
-1. **Start a dynasty** on the Manage page: name it and choose your ROM. Each team's Active Roster is the ROM's converted players (built-in CFB 27 ratings, 2026 season, Week 9; the only use of CFB 27 data); its backups are the next-best real player for each spot, or, if you prefer, generated backups (Manage, first season only). A redshirted player starts one class up (RS FR is a SO, RS SR a SR+). The team logos are read from your ROM and stay in your browser.
-2. **Play** the season in the game (New Season, any schedule). The first season needs no download: play it on your ROM as it is (the app's rosters for 2026 are the ROM's own). From the second season on, the app gives you each season's ROM at the end of the offseason (a window asks until you download it; Manage has it too): its dynasty area holds the dynasty's rosters and team OVRs (Season mode plays them, Exhibition keeps the real 2026 rosters), and New Season marks the save with the dynasty and season. From the second season the app only imports saves with that mark, of the dynasty's current season.
+1. **Start a dynasty** on the Manage page: name it and choose your ROM. Each team's Active Roster is the ROM's converted players (built-in CFB 27 ratings, 2026 season, Week 9; the only use of CFB 27 data); its backups are the next-best real player for each spot, or, if you prefer, generated backups (Manage, first season only). A redshirted player starts one class up (RS FR is a SO, RS SR a SR+). In the **1994 Season Edition** there is no CFB 27 data: the Active Rosters are the ROM's own players (its ratings, fine ratings, numbers, names and classes), players the ROM has no name for stay unnamed (shown by position and number, for example "HB #23") and get a class so each team has a typical mix, and each backup is a real player of the school from the built-in 1994 rosters (`public/data/rosters-1994.csv`, magazine previews and StatMuse), with his name, number, class, height and weight and generated ratings. The team logos are read from your ROM and stay in your browser.
+2. **Play** the season in the game (New Season, any schedule). The first season needs no download: play it on your ROM as it is (the app's rosters for 2026 are the ROM's own). From the second season on, the app gives you each season's ROM at the end of the offseason (a window asks until you download it; Manage has it too): its dynasty area holds the dynasty's rosters and team OVRs (Season mode plays them, Exhibition keeps the ROM's own rosters), and New Season marks the save with the dynasty and season. From the second season the app only imports saves with that mark, of the dynasty's current season.
 3. **Import your save** after you play: the `.srm` battery save from RetroArch's Genesis Plus GX core. The app reads every result, the game's Top 25, the playoff field and each team's season stats, and marks the teams you play as. Import again as often as you like; a save with fewer results than the last import is refused (it's older, or another season), unless you tick the box.
 4. **Run the offseason** on the Offseason page, download the new season's ROM, and start a New Season with it. Repeat.
 
@@ -397,6 +397,8 @@ The save's season block and stats tables, the dynasty file and the plan for the 
 ### Testing
 
 `npm run test:dynasty -- ELEVATED_2026_138_DYNASTY SAVE.srm` (a ROM with the dynasty support, v2.0.1-test9 or later; the save of any season of the 138-team edition, which the test marks for its dynasty) reads a real save in both layouts (the emulator's and the data bytes alone), checks that the stats add up and the ranks follow the game's order, creates a dynasty (twice, the same), imports the save (the same save replaces its import; an older one and one without a season are refused), checks records, standings, leaders and stories, round-trips the dynasty file and reads the art. The pages were checked in a browser with a save after Week 2 (Texas State, 100 games played).
+
+`npm run test:dynasty94 -- ELEVATED_1994 SAVE.srm` (the 1994 Season Edition, v2.0.1-test29 or later; a save of any of its seasons, which the test marks for its dynasty) creates a 1994 dynasty and checks its ratings against the ROM's steps and fine offsets, its names and classes, its real backups, the season ROM (format `0x0001006B`, 107 teams), the save (bowls, the champion of the final poll, bowl stories), 11-week schedules with a bye each week and the 1994 rivalries, and an offseason into 1995.
 
 ## Development
 

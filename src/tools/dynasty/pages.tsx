@@ -364,7 +364,7 @@ const STAT_TABLES: { cat: StatCategory; title: string; sort: string; cols: [stri
 function PlayerCell({ line }: { line: PlayerLine }) {
   const { d } = useDyn();
   const p = playerOf(d, line.player);
-  return p ? <a href={href(`player/${p.id}`)}>#{p.jersey} {playerName(p)}</a> : <span className="dy-dim">Unknown player</span>;
+  return p ? <a href={href(`player/${p.id}`)}>{p.jersey >= 0 && (p.first || p.last) && `#${p.jersey} `}{playerName(p)}</a> : <span className="dy-dim">Unknown player</span>;
 }
 
 function StatTables({ lines }: { lines: PlayerLine[] }) {

@@ -1,8 +1,43 @@
 # Dynasty
 
-The Dynasty section (`/dynasty`) keeps a multi-season record of the 138-team 2026 Season Edition: the app owns the players, the game plays the games, and the battery save carries each season's results back to the app.
+The Dynasty section (`/dynasty`) keeps a multi-season record of the 138-team 2026 Season Edition or the 107-team 1994 Season Edition (see "The 1994 Season Edition" below): the app owns the players, the game plays the games, and the battery save carries each season's results back to the app.
 
-Code: `src/core/dynasty/` (no DOM) and `src/tools/dynasty/` (the pages). Tests: `npm run test:dynasty -- ELEVATED_2026_138_DYNASTY SAVE.srm` (v2.0.1-test9 or later; the test marks the save for its dynasty).
+Code: `src/core/dynasty/` (no DOM) and `src/tools/dynasty/` (the pages). Tests: `npm run test:dynasty -- ELEVATED_2026_138_DYNASTY SAVE.srm` (v2.0.1-test9 or later; the test marks the save for its dynasty) and `npm run test:dynasty94 -- ELEVATED_1994 SAVE.srm` (the 1994 Season Edition, v2.0.1-test29 or later).
+
+## The 1994 Season Edition
+
+User, 2026-11-15: "Make it compatible with our latest 1994 rom (Bill Walsh College Football 95 (USA) [Elevated 1994 Season v2.0.1-test29])". The 1994 edition is on the 2026 edition's season engine and dynasty support, so most of this page holds for both; `edition.ts` keeps what differs and `Dynasty.edition` says which a dynasty is (absent = 2026, the dynasties made before).
+
+| | 2026 Season Edition | 1994 Season Edition |
+|---|---|---|
+| Teams | 138 | 107 (the 36 original teams, then CF97's order, Pacific last) |
+| Save signature ($200001) | 0x6F | 0x94 |
+| Season block | per-team tables at +$50 (power), +$164 (last week's ranks), +$1EE (user teams) | the same offsets, 107 entries used (checked in the emulator) |
+| Dynasty header +0x10 | 0x0001008A | 0x0001006B (the sets 107 teams long; same addresses) |
+| Regular season | 12 weeks | 11 weeks; 107 teams, so one team a week has a bye (53 games a week) |
+| Postseason | title games, then the CFP (or BCS 2, none) | the 19 bowls of 1994 in one week (Bowls or None); no playoff picture |
+| Champion | the last game's winner | the No. 1 team in the final poll once the season is over (bowls or not) |
+| First season's rosters | the built-in CFB 27 file (`rosters.ts`) | the ROM's own (`create1994.ts`) |
+
+**Creating a 1994 dynasty** (`create1994.ts`, `createDynasty1994`):
+- **The 32 per team** are the ROM's: the roster records' steps, the fine-ratings table at 0x2E0000 (offsets; the 1994 ROM has them for all 107 teams since test23) and the names table at 0x2C0000 (`readNamesTable`: class and name per slot). The app's numbers equal what Team Rosters shows.
+- **Names:** a player the ROM has no name for keeps none (user: "keep names blank but do assign a class"; the Rosters lane finishes the names for the release). The pages call him by position and number (`playerName`: "HB #23"), and the season ROM's names set gives him his class and an empty name, as the ROM itself does. New players signed in the dynasty get names as in 2026, from the named players.
+- **Classes:** the ROM's, unless it has none (class 5 or no record), or the slot is one of the 36 original teams' unnamed players, whose JR is a placeholder. A named original player whose JR the 1994 lists contradict takes the lists' class. The rest are given so each team's 32 move toward 2 FR, 6 SO, 12 JR and 12 SR (the ROM's named players' mix, `CLASS_MIX_1994`; user: "assign randomly to achieve a good balance of each class on each team"), the class each team is shortest of first.
+- **Backups** (user: "We actually have full IRL rosters for most of the 94 teams. Let's use that for creating the backups"): for each slot, a real player of the school from the built-in 1994 rosters who isn't one of the ROM's named 32, of the slot's position (or a close one: HB/FB, DE/DL/OLB, CB/DB/S …), upperclassmen first. He brings his name, number (when his position may wear it and no teammate on his side has it; else the nearest allowed one), class, height, weight and hometown; his ratings are generated like the random bench's (`bench.ts`, stars by prestige, developed for his years). Where a school's list runs out (the lists of a few schools have 22-27 players), a generated player. Real backups are marked `srcId` 200000 + their row in the file; the ROM's 32 have 100000 + 32 × team + slot (both count as starting players for names, towns and letters).
+- **Heights and hometowns:** for the ROM's named players, from the lists where the name is found; otherwise a height from the lists' players of the position, and a hometown from the school's own players in the lists, or mostly (60%) from towns in the school's state.
+- **The related ratings** a lineup move needs (a lineman's Quickness for LB, a linebacker's Power for DE) aren't in the ROM: near his Speed or his Tackling, a little lower (Claude's pick).
+- **Prestige:** the 1994 preseason AP poll (Top 25 and the others receiving votes) in its order, then the teams' OVRs (`startingPrestige1994`); CFB 27's prestige is 2026's.
+
+**The built-in 1994 rosters** (`public/data/rosters-1994.csv`, `rosters1994.ts`): made by `npx tsx cli/rosters1994data.ts DIR` from the Rosters lane's lists (the owner's Mac folder `rosters-1994/rost94/*_rosters.csv`: Athlon, Lindy's and team guides (R*), StatMuse (T*, U1, U2)). 9,850 rows, 8,634 players after merging the same name at the same school (number, class, height and weight StatMuse first, position and hometown magazine first), all 107 schools; hometowns cleaned to the town and a two-letter state ("Non-US" abroad).
+
+**Schedules:** 11 weeks (`DSchedule.weeks`; `weeksOf`), the ROM's conference weeks, and the 1994 protected rivalries (`PROTECTED_1994`, Claude's pick: the finales of that era in week 11, such as Nebraska-Oklahoma, Kansas-Missouri, North Carolina-Duke, Tennessee-Kentucky, BYU-Utah, and the other annual games of 1994). The schedule editor offers an opponent in a team's bye week (the bye then goes to whoever is left over) and doesn't move a game into a bye week.
+
+**School data:** the tables keyed by school name (states, colors, academics, rivalries) also answer to the 1994 ROM's names (`SCHOOL_ALIASES`: California, Miami (Ohio), N. Illinois, NE Louisiana, SW Louisiana) and have Pacific (CA; orange and black; academics B, Claude's pick).
+
+**Bowls in the app** (`derive.ts`): the bowl week (the season's last week, `bowlWeek`) is "Bowl Games"; from 1994 test31 the week before it is the SEC Championship Game ("SEC Championship"; its winner gets a conference title story; like the game, the app doesn't count it as a conference game). The first season can also be played with Game Setup's Real 1994 schedule (test30 on: Weeks 0-13, then the SEC game and the bowls); from the second season the game plays the dynasty's 11-week schedule. its games are the bowls in the ROM's order (`BOWLS_1994`, the order of its Week Schedule rows: Rose, Orange, Sugar, Cotton, Fiesta, Florida Citrus, Holiday, Gator, Peach, Sun, Hall of Fame, Freedom, Alamo, Copper, Aloha, Carquest, Liberty, Independence, Las Vegas). The front page shows them in place of the playoff picture; the stories have the bowl lineup, each bowl's result and the national champion of the final poll.
+
+**Checked in the emulator** (Genesis Plus GX through a small libretro host, 2026-11-15, on test29 and again on test31): a 1994 dynasty's first-season ROM played to the end (11 weeks, on test31 the SEC Championship Game, the 19 bowls), the save imported (champion, bowls and stories as above), the offseason simulated and the 1995 ROM's New Season: it plays the dynasty's 11-week schedule (the import has no schedule warning) and the save carries the season-2 stamp; on test31 the whole 1995 season played (the SEC Championship Game and the bowls follow the dynasty's 11 weeks) and imported. A season with the Real 1994 schedule imports too (`test:dynasty94` on such a save). **Found:** the 1994 ROM sets the real 1994 preseason AP poll at every New Season, so a dynasty's 1995 season starts with 1994's poll; a ROM change (handoff H-010 in the claude.ai project).
+
 
 ## The battery save
 
@@ -57,7 +92,7 @@ Week names follow the game: with the Real 2026 schedule the first week is Week 0
   - The game plays with a fine value per rating, 16 × step + offset. The step (0-15) is in the roster record; the offset (−8..+7) is in a table. Team Rosters shows ⌊fine × 100 / 240⌋, at most 99.
   - The app's number × 2.4 is the fine value (`fineOf`, 100 = 240). The record gets the nearest step and the table the rest (`splitFine`; before the mod a number counted as the step it had reached). Weight: pounds − 140 is the fine value.
   - The app shows the number the game shows (`shownOf`, `shownFine`): 0-99.
-  - **First season:** the Active Roster's offsets are read from the ROM's 2026 table at 0x2E0000 when the record has the conversion's steps (all 4,416 slots on test14), so the app shows what Team Rosters shows. Backups aren't in the ROM: theirs are drawn evenly (a step's average stays the step). The app's numbers stop at 100, so the few offsets above step 15 are dropped (the game shows 99 either way), and an offset below step 0 counts as 0, as in the game. On a ROM without the mod, all offsets are drawn.
+  - **First season:** the Active Roster's offsets are read from the ROM's 2026 table at 0x2E0000 when the record has the conversion's steps (all 4,416 slots on test14), so the app shows what Team Rosters shows. Backups aren't in the ROM: theirs are drawn evenly (a step's average stays the step). The app's numbers stop at 100, so the few offsets above step 15 are dropped (the game shows 99 either way), and an offset below step 0 counts as 0, as in the game. On a ROM without the mod, all offsets are drawn. (`hasFineRatings` finds the mod by the snap's jump at 0x06FAF4; since v2.0.1-test20 that jump goes to the impact players' hook first, which goes on into the fine-ratings code. Until 2026-11-15 the check missed that, so dynasties made on test20 and later drew all their first-season offsets.)
   - **Later seasons:** every slot's step and offset come from the player's number (`bwSlotOf`); `BwSlot.offs` holds the offsets. The season ROM gets them as a set in the dynasty area (see "The season ROM"). The game doesn't read that set yet (up to test14 the snap and Team Rosters use no offsets for a dynasty roster, so dynasty seasons play and show whole steps); handoff `claude/bw95-dynasty-fine-handoff.md`.
   - 30 CPU-only seasons with the fine model: the league stays at the 2026 level (median team best-22 OVR 79.4-80.8 every year, starters 76-78).
 - **OVR** (`ovrOf`, `ovrAt`, `playerOvr`): the OVR formulas below on the shown numbers (from the fine values), at his position's role, or a slot's role for the depth chart.

@@ -18,6 +18,7 @@ import type { LookEdit } from './headshot';
 import { POSITIONS } from './offseason';
 import { recordYear } from './career';
 import { NO_NUMBER, numberAllowed, replacementNumber, sideOf } from './numbers';
+import { playerName } from './derive';
 
 const DEFS_SLOTS = 32;
 const logit = (p: number) => Math.log(p / (1 - p));
@@ -44,7 +45,7 @@ export interface PlayerEdit {
 /** Problems with an edit (empty when it can be used). */
 export function editProblems(d: Dynasty, p: DPlayer | null, e: PlayerEdit): string[] {
   const out: string[] = [];
-  const name = p ? `${p.first} ${p.last}` : `${e.first ?? ''} ${e.last ?? ''}`.trim() || 'New player';
+  const name = p ? playerName(p) : `${e.first ?? ''} ${e.last ?? ''}`.trim() || 'New player';
   if (e.first !== undefined && !e.first.trim()) out.push(`${name}: a first name is needed.`);
   if (e.last !== undefined && !e.last.trim()) out.push(`${name}: a last name is needed.`);
   if (e.pos !== undefined && !POSITIONS.includes(e.pos)) out.push(`${name}: "${e.pos}" isn't a position (${POSITIONS.join(', ')}).`);
@@ -221,7 +222,7 @@ export function readPlayersCsv(d: Dynasty, text: string): CsvImport {
           fields.push(key === 'team' ? (v === null ? 'released' : `to ${d.teams[v as number].school}`) : `${key} ${String((p as unknown as Record<string, unknown>)[key])} → ${String(v)}`);
         }
       }
-      if (fields.length) { out.edits.set(p.id, diff); out.changes.push(`${p.first} ${p.last} (${p.team !== null ? d.teams[p.team].school : 'no team'}): ${fields.join(', ')}`); }
+      if (fields.length) { out.edits.set(p.id, diff); out.changes.push(`${playerName(p)} (${p.team !== null ? d.teams[p.team].school : 'no team'}): ${fields.join(', ')}`); }
     } else if (id !== undefined) {
       out.problems.push(`Row ${k + 2}: no player with ID ${id} (leave the ID empty to add a player).`);
     } else {

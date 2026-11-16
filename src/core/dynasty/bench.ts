@@ -1,6 +1,7 @@
 // A random bench for the first season (user, 2026-11-12): instead of the next-best real CFB 27
 // players, one generated backup for each of a team's 32 slots, made like signing-class recruits
-// (stars by the program's prestige, a mix of classes).
+// (stars by the program's prestige, a mix of classes). A 1994 dynasty's bench is made the same way, with
+// real 1994 players' names, numbers, classes and sizes where the lists have one for the slot (create1994.ts).
 
 import { rng, type ClassYear, type DPlayer, type Dynasty } from './model';
 import { develop, drawStars, makeRecruit, prestige, recruitTemplates } from './offseason';
@@ -15,8 +16,16 @@ const DEFS = rosterLayout('bw95', false, true, true);
 /** Whether the bench can still be replaced: the first season, before the offseason. */
 export const canReplaceBench = (d: Dynasty) => d.seasons.length === 1 && !d.offseason;
 
-/** The dynasty with a generated bench in place of the first season's (the 32 in the game stay as they are). */
-export function randomBench(d: Dynasty, seed = Date.now() >>> 0): Dynasty {
+/** A real player to put on the bench in a slot (his ratings are still generated). */
+export interface BenchIdentity {
+  first: string; last: string; jersey: number; heightIn: number; weight: number; cls?: ClassYear; hometown: string; state: string; srcId: number;
+}
+
+/**
+ * The dynasty with a generated bench in place of the first season's (the 32 in the game stay as they are).
+ * `ident` may give a slot's backup a real player's identity (called in slot order, team by team).
+ */
+export function randomBench(d: Dynasty, seed = Date.now() >>> 0, ident?: (team: number, slot: number, pos: string, r: () => number) => BenchIdentity | null): Dynasty {
   if (!canReplaceBench(d)) throw new Error('The bench can only be replaced in the first season.');
   const r = rng(seed);
   const s = d.seasons[0];
@@ -35,11 +44,18 @@ export function randomBench(d: Dynasty, seed = Date.now() >>> 0): Dynasty {
     for (let slot = 0; slot < SLOTS; slot++) {
       const label = s.bw?.[t.index]?.[slot]?.label;
       if (!label) continue;
+      const who = ident?.(t.index, slot, slotPosition(label), r) ?? null;
       let x = r(), cls: ClassYear = 'FR';
       for (const [c, w] of classes) if ((x -= w) <= 0) { cls = c; break; }
-      const years = ['FR', 'SO', 'JR', 'SR'].indexOf(cls);
+      if (who?.cls) cls = who.cls;
+      const years = Math.min(3, ['FR', 'SO', 'JR', 'SR', 'SR+'].indexOf(cls));
       let p = makeRecruit(base, tpl, r, players.length + bench.length + 1, t.index, slotPosition(label), drawStars(r, pres * 0.7), s.year - years);
       for (let k = 0; k < years; k++) p = develop(p, Math.max(0, ((p.pot ?? p.ovr) - p.ovr) * 0.4), r);
+      if (who) {
+        const w = who.weight || p.weight;
+        p = { ...p, first: who.first, last: who.last, jersey: who.jersey, heightIn: who.heightIn || p.heightIn, weight: w, weight0: w,
+          hometown: who.hometown || p.hometown, state: who.state || p.state, srcId: who.srcId, ratings: { ...p.ratings, Weight: who.weight || p.ratings.Weight } };
+      }
       bench.push({ ...p, cls, recruit: undefined });
     }
   }

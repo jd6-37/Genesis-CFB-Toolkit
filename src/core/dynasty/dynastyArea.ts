@@ -1,4 +1,5 @@
-// The dynasty area of the 138-team 2026 Season Edition (Elevated v2.0.1-test9 on; claude.ai project notes:
+// The dynasty area of the 138-team 2026 Season Edition (Elevated v2.0.1-test9 on) and the 107-team 1994 Season
+// Edition (v2.0.1-test14 on; same layout, team count 107: format 0x0001006B; edition.ts) (claude.ai project notes:
 // bw95-dynasty-spec.md, sections 4-5; the ROM side is the Elevated patch's dynasty.py).
 //
 // 0x3E0000-0x3FFFFF (all 0xFF until the app writes it), big-endian:
@@ -17,11 +18,13 @@
 //   +0x28 season schedule (long; 0xFFFFFFFF = none, the first season): "SCH1", weeks (byte), then per week a
 //         game count (byte) and visitor/home team bytes, like the real 2026 table (REALTAB). Needs ROM support:
 //         New Season plays it instead of making a Random one or copying the real 2026 schedule.
-// Season mode reads the sets when +0 is "DYN1" and the long at +0x10 is 0x0001008A; Exhibition keeps
-// the 2026 data. New Season copies the ID block into the save (the season block's +0x1330), so an
+// Season mode reads the sets when +0 is "DYN1" and the long at +0x10 is 0x0001008A (1994: 0x0001006B);
+// Exhibition keeps the ROM's own data. New Season copies the ID block into the save (the season block's +0x1330), so an
 // imported save says which dynasty and season it belongs to.
 
 import { simFromOvr } from '../teamRatings';
+import { teamsOf } from '../wide';
+import { dynastyFormat, EDITIONS } from './edition';
 
 export const DYN_AREA = 0x3e0000;
 export const DYN_END = 0x400000;
@@ -29,10 +32,10 @@ export const DYN_END = 0x400000;
 export const DYN_MARK = 0x2b0000;
 const MARK = [0x42, 0x57, 0x39, 0x35, 0x44, 0x59, 0x4e]; // BW95DYN
 const MAGIC = [0x44, 0x59, 0x4e, 0x31]; // DYN1
-const FORMAT = 0x0001008a; // format 1, 138 teams
+/** The most teams an edition has (the sets' places are laid out for it). */
 export const DYN_TEAMS = 138;
 /** What a dynasty needs (no older ROMs or saves until the first public release, user 2026-11-12). */
-export const DYNASTY_EDITION = "the 138-team 2026 Season Edition with dynasty support (Bill Walsh '95 Elevated v2.0.1-test9 or later)";
+export const DYNASTY_EDITION = `Bill Walsh '95 Elevated with dynasty support: the ${EDITIONS['2026'].teams}-team ${EDITIONS['2026'].name} (v2.0.1-test9 or later) or the ${EDITIONS['1994'].teams}-team ${EDITIONS['1994'].name} (v2.0.1-test29 or later)`;
 
 /** The sets' places (the patch's suggestion). */
 const ROSTERS = DYN_AREA + 0x100;
@@ -71,7 +74,7 @@ export function scheduleAddress(d: Uint8Array): number | null {
 }
 
 /** Whether the area holds a header the game accepts. */
-export const dynastyHeaderValid = (d: Uint8Array) => MAGIC.every((b, k) => d[DYN_AREA + k] === b) && u32(d, DYN_AREA + 0x10) === FORMAT;
+export const dynastyHeaderValid = (d: Uint8Array) => MAGIC.every((b, k) => d[DYN_AREA + k] === b) && u32(d, DYN_AREA + 0x10) === dynastyFormat(teamsOf(d));
 
 /** Why the dynasty area can't be written, or null: it must be free (all 0xFF) or hold a dynasty header. */
 export function dynastyAreaProblem(d: Uint8Array): string | null {
@@ -135,7 +138,7 @@ export interface DynastyAreaData {
   /** Per team, the 32 roster records (4 bytes each, slot order). */
   records: Uint8Array[];
   ovr: { off: number; def: number }[];
-  /** The season's fine-ratings offsets (fine.ts: 138 × 32 × 3 bytes). */
+  /** The season's fine-ratings offsets (fine.ts: teams × 32 × 3 bytes). */
   fine?: Uint8Array;
   /** The season's schedule set (schedule.ts `scheduleSet`), from the second season. */
   schedule?: Uint8Array;
@@ -148,11 +151,14 @@ export function writeDynastyArea(d: Uint8Array, data: DynastyAreaData): void {
   const names = namesSet(data.names, NAMES);
   if (NAMES + names.length > FINE) throw new Error('The names don\'t fit in the dynasty area.');
   if (data.schedule && data.schedule.length > DYN_END - SCHEDULE) throw new Error('The schedule doesn\'t fit in the dynasty area.');
+  // One entry per team of the ROM's edition (138 or 107; the header's team count must be the ROM's).
+  const teams = teamsOf(d);
+  if (data.records.length !== teams || data.ovr.length !== teams || data.names.length !== teams) throw new Error(`The season's data isn't for this ROM's ${teams} teams.`);
   d.fill(0xff, DYN_AREA, DYN_END);
   d.set(names, NAMES);
-  for (let t = 0; t < DYN_TEAMS; t++) d.set(data.records[t].subarray(0, 128), ROSTERS + 128 * t);
+  for (let t = 0; t < teams; t++) d.set(data.records[t].subarray(0, 128), ROSTERS + 128 * t);
   d.set([0x4f, 0x56, 0x52, 0x31], OVRS); // OVR1
-  for (let t = 0; t < DYN_TEAMS; t++) {
+  for (let t = 0; t < teams; t++) {
     const off = Math.max(0, Math.min(99, Math.round(data.ovr[t].off)));
     const def = Math.max(0, Math.min(99, Math.round(data.ovr[t].def)));
     d[OVRS + 4 + 2 * t] = off;
@@ -160,13 +166,13 @@ export function writeDynastyArea(d: Uint8Array, data: DynastyAreaData): void {
     put16(d, SIMS + 4 * t, simFromOvr(off));
     put16(d, SIMS + 4 * t + 2, simFromOvr(def));
   }
-  put32(d, DYN_AREA + 0x10, FORMAT);
+  put32(d, DYN_AREA + 0x10, dynastyFormat(teams));
   put32(d, DYN_AREA + 0x14, ROSTERS);
   put32(d, DYN_AREA + 0x18, OVRS);
   put32(d, DYN_AREA + 0x1c, SIMS);
   put32(d, DYN_AREA + 0x20, NAMES);
   if (data.fine) {
-    if (data.fine.length !== DYN_TEAMS * 96) throw new Error('The fine-ratings offsets have the wrong size.');
+    if (data.fine.length !== teams * 96) throw new Error('The fine-ratings offsets have the wrong size.');
     d.set([0x46, 0x52, 0x43, 0x31], FINE);
     d.set(data.fine, FINE + 4);
     put32(d, DYN_AREA + 0x24, FINE);
@@ -182,4 +188,23 @@ export function writeDynastyArea(d: Uint8Array, data: DynastyAreaData): void {
   put16(d, DYN_AREA + 10, s.rosterVersion);
   put32(d, DYN_AREA + 12, s.time);
   d.set(MAGIC, DYN_AREA);
+}
+
+/** The ROM's own names table at 0x2C0000 (or a names set at `at`): per team and slot, class and name; null = no record. */
+export function readNamesTable(d: Uint8Array, teams: number, at = 0x2c0000): (DynastyName | null)[][] {
+  if (![0x4e, 0x41, 0x4d, 0x31].every((b, k) => d[at + k] === b)) throw new Error('This ROM has no names table.');
+  const count = Math.min(teams, u16(d, at + 4));
+  const text = (a: number) => { let s = ''; while (d[a] !== 0 && a < d.length) s += String.fromCharCode(d[a++]); return s; };
+  return Array.from({ length: teams }, (_, t) => {
+    const row: (DynastyName | null)[] = new Array(32).fill(null);
+    if (t >= count) return row;
+    let a = u32(d, at + 8 + 4 * t);
+    for (let slot = 0; slot < 32; slot++) {
+      const cls = d[a++];
+      const first = text(a); a += first.length + 1;
+      const last = text(a); a += last.length + 1;
+      row[slot] = cls === 0xff && !first && !last ? null : { cls, first, last };
+    }
+    return row;
+  });
 }

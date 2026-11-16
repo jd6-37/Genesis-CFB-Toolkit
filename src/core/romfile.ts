@@ -2,6 +2,7 @@
 // modded BW95 ROMs (Elevated betas, earlier edits, …) by their header.
 
 import { rl, rw, sha1Hex } from './bytes';
+import { teamsOf } from './wide';
 
 export type RomKind = 'bw95' | 'cf97';
 
@@ -59,7 +60,9 @@ export function identifyRom(data: Uint8Array, sha1: string): KnownRom | undefine
   const known = KNOWN[sha1];
   if (known) return known;
   if (isWideBw95(data)) {
-    return { kind: 'bw95', label: "Bill Walsh College Football '95: 2026 Season Edition (138 teams)", modded: true, wide: true };
+    // The 107-team 1994 Season Edition is on the same engine and layout (H-011, H-012).
+    const label = teamsOf(data) === 107 ? "Bill Walsh College Football '95: 1994 Season Edition (107 teams)" : "Bill Walsh College Football '95: 2026 Season Edition (138 teams)";
+    return { kind: 'bw95', label, modded: true, wide: true };
   }
   if (data.length === 0x200000 && headerTitle(data) === BW95_TITLE) {
     return { kind: 'bw95', label: "Bill Walsh College Football '95 (modded)", modded: true };
