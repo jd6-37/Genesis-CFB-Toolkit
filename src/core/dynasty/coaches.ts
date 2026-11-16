@@ -68,6 +68,10 @@ export interface DCoach {
   retiredYear?: number;
   /** Made by the user in this dynasty. */
   created?: boolean;
+  /** Changes the user made to his generated headshot (coachLook.ts). */
+  look?: import('./coachLook').CoachLookEdit;
+  /** A dynasty player who became a coach (spec, former players): his player id, and whether he was drafted. */
+  formerPlayer?: { player: number; drafted: boolean };
 }
 
 /** The weights of the OVR: Development and Recruiting count a little more (they help every position). */

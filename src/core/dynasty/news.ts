@@ -512,6 +512,37 @@ export function offseasonStories(d: Dynasty, events: OffseasonEvent[], year: num
     headline: `${name(e.team)} ${e.to > e.from ? 'rises' : 'drops'} to ${e.to}-star prestige`,
     dek: `${name(e.team)} finished No. ${e.finalRank} in ${year}${e.to > e.from ? ', and recruits will notice' : ''}.`,
   });
+  // Coaches (carousel.ts): firings, hirings, retirements, and former players back as coaches.
+  const coach = (id: number) => d.coaches?.[id];
+  const fired = events.filter((e): e is Extract<OffseasonEvent, { kind: 'coachFired' }> => e.kind === 'coachFired');
+  fired.forEach((e, i) => { const c = coach(e.coach); if (c) out.push({
+    id: `${year}-fired-${e.coach}`, kind: d.userTeams.includes(e.team) ? 'yours' : 'upset', week: 0, weight: (d.userTeams.includes(e.team) ? 84 : 68) - i * 2, teams: [e.team],
+    headline: pick(`${year}-fired-${e.coach}`, [`${name(e.team)} fires ${c.name}`, `${c.name} is out at ${name(e.team)}`]),
+    dek: `The hot seat reached ${e.heat}. ${name(e.team)} looks for a new head coach in the coaching carousel.`,
+  }); });
+  const hired = events.filter((e): e is Extract<OffseasonEvent, { kind: 'coachHired' }> => e.kind === 'coachHired');
+  hired.forEach((e, i) => { const c = coach(e.coach); if (c) out.push({
+    id: `${year}-hired-${e.coach}-${e.team}`, kind: d.userTeams.includes(e.team) || (e.from !== null && d.userTeams.includes(e.from)) ? 'yours' : 'topgame', week: 0,
+    weight: (d.userTeams.includes(e.team) || (e.from !== null && d.userTeams.includes(e.from)) ? 82 : 60) - Math.min(10, i), teams: e.from !== null ? [e.team, e.from] : [e.team],
+    headline: e.from !== null ? `${name(e.team)} hires ${c.name} away from ${name(e.from)}` : pick(`${year}-hired-${e.coach}`, [`${name(e.team)} hires ${c.name}`, `${c.name} takes over at ${name(e.team)}`]),
+    dek: `${c.formerPlayer ? `The ${c.formerPlayer.drafted ? 'former NFL player' : 'former player'} gets his first head coaching job. ` : ''}${c.prestige}-star coach, ${Math.round((c.ratings.passing + c.ratings.running + c.ratings.defense + 1.25 * c.ratings.recruiting + 1.25 * c.ratings.development) / 5.5)} OVR.`,
+  }); });
+  const retired = events.filter((e): e is Extract<OffseasonEvent, { kind: 'coachRetired' }> => e.kind === 'coachRetired');
+  retired.forEach((e, i) => { const c = coach(e.coach); if (c) out.push({
+    id: `${year}-retired-${e.coach}`, kind: d.userTeams.includes(e.team) ? 'yours' : 'record', week: 0, weight: (d.userTeams.includes(e.team) ? 80 : 58) - i * 2, teams: [e.team],
+    headline: `${c.name} retires from ${name(e.team)}`,
+    dek: `He steps down at ${year + 1 - c.born}. ${name(e.team)} hires his successor in the coaching carousel.`,
+  }); });
+  for (const e of events.filter((x): x is Extract<OffseasonEvent, { kind: 'coachFormer' }> => x.kind === 'coachFormer')) {
+    const c = coach(e.coach), p = pl(e.player);
+    if (!c || !p) continue;
+    const school = p.years?.at(-1)?.team;
+    out.push({
+      id: `${year}-former-${e.coach}`, kind: 'leader', week: 0, weight: 52, teams: school !== undefined ? [school] : [],
+      headline: `Former ${school !== undefined ? `${name(school)} ` : ''}${p.pos} ${c.name} starts a coaching career`,
+      dek: e.drafted ? 'After his years in the NFL he joins the pool of coaches.' : 'He joins the pool of coaches right out of school.',
+    });
+  }
   for (const u of d.userTeams) {
     const c = classes.find((x) => x.team === u);
     const left = events.filter((e) => (e.kind === 'graduated' || e.kind === 'pro') && e.team === u).length;

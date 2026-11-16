@@ -56,6 +56,12 @@ const WHITE: RGB = [255, 255, 255];
 export interface HeadshotLook {
   skin: number; build: keyof typeof BUILD; hair: (typeof HAIR_STYLES)[number]; hairColor: RGB;
   beard: (typeof BEARDS)[number]; mouth: (typeof MOUTHS)[number]; eyeBlack: boolean;
+  /** Coaches only (coachLook.ts): headwear in the team's colors, glasses, an older face's lines, thinning hair. */
+  hat?: 'none' | 'visor' | 'cap';
+  hatColors?: [string, string];
+  glasses?: 'none' | 'square' | 'round';
+  lines?: boolean;
+  thinning?: boolean;
 }
 
 /** A player's look: skin and build from the player, the rest from his ID (the same every time). */
@@ -229,7 +235,12 @@ export function drawHeadshot(look: HeadshotLook, jersey: string, trim: string): 
       }
     }
   };
-  switch (look.hair) {
+  switch (look.thinning ? 'thinning' : look.hair) {
+    case 'thinning':
+      // Hair only on the sides and a little at the back of the crown (the top of the head shows).
+      for (let y = 9; y < 17; y++) { put(headL, y, hair); put(headL + 1, y, y % 2 ? hair : hhi); put(headR, y, hdark); put(headR - 1, y, hair); }
+      for (const [x, y] of [[headL + 2, 8], [headR - 2, 8], [headL + 1, 7], [headR - 1, 7]]) put(x, y, hair);
+      break;
     case 'short':
       cap(4, 11, 0.6);
       for (const y of [11, 12]) { put(headL, y, hair); put(headR, y, hdark); }
@@ -283,6 +294,51 @@ export function drawHeadshot(look: HeadshotLook, jersey: string, trim: string): 
       break;
     case 'bald':
       break;
+  }
+
+  // Coaches: an older face's lines, glasses, then headwear over the hair.
+  if (look.lines) {
+    for (const x of [16, 17, 18, 21, 22, 23]) put(x, 11, mix(base, deep, 0.45));
+    for (const x of [17, 18, 21, 22]) put(x, 12, mix(base, deep, 0.35));
+    for (const [x, y] of [[14, 20], [14, 21], [25, 20], [25, 21], [15, 22], [24, 22]]) put(x, y, mix(base, deep, 0.4));
+  }
+  if (look.glasses && look.glasses !== 'none') {
+    // Two lenses of 4 × 3 over the eyes (x 14-17 and 22-25), a frame around each, a bridge and the arms.
+    const frame: RGB = [28, 26, 30];
+    const tint = (x: number, y: number) => { const c = get(x, y); if (c) put(x, y, mix(c, [200, 220, 235], 0.22)); };
+    for (const lx of [14, 22]) {
+      for (let x = lx; x < lx + 4; x++) for (let y = EY - 1; y <= EY + 1; y++) tint(x, y);
+      const round = look.glasses === 'round';
+      for (let x = lx + (round ? 1 : 0); x < lx + (round ? 3 : 4); x++) { put(x, EY - 2, frame); put(x, EY + 2, frame); }
+      for (let y = EY - (round ? 1 : 2); y <= EY + (round ? 1 : 2); y++) { put(lx - 1, y, frame); put(lx + 4, y, frame); }
+    }
+    put(19, EY - 1, frame); put(20, EY - 1, frame);
+    put(headL, EY - 1, frame); put(headR, EY - 1, frame);
+  }
+  if (look.hat && look.hat !== 'none') {
+    const hc = hex(look.hatColors?.[0] ?? '#3a3d44'), ht = hex(look.hatColors?.[1] ?? '#ffffff');
+    if (look.hat === 'cap') {
+      // The crown over the top of the head, a button, the logo patch, then the bill in front.
+      for (let y = 1; y < 11; y++) {
+        const w = y < 6 ? Math.max(2, hw + 0.4 - (6 - y) * (6 - y) * 0.32) : hw + 0.4;
+        for (let x = 0; x < S; x++) {
+          const d = Math.abs(x + 0.5 - cx);
+          if (d > w) continue;
+          put(x, y, x + 0.5 > cx + w - 2 ? sh(hc, 0.78) : y === 3 && x + 0.5 < cx - 1 ? mix(hc, WHITE, 0.2) : hc);
+        }
+      }
+      for (let y = 5; y < 9; y++) for (let x = 18; x < 22; x++) put(x, y, ht);
+    } else {
+      // A visor: an open band (the hair shows above it) and a stripe in the trim color.
+      for (let y = 9; y < 11; y++) for (let x = 0; x < S; x++) { const d = Math.abs(x + 0.5 - cx); if (d <= hw) put(x, y, y === 9 ? ht : x + 0.5 > cx + hw - 2 ? sh(hc, 0.78) : hc); }
+    }
+    // The bill, seen from the front: a short curved strip below the band, its underside in shade.
+    for (let x = 0; x < S; x++) {
+      const d = Math.abs(x + 0.5 - cx);
+      if (d > hw - 0.5) continue;
+      put(x, 11, hc);
+      if (d <= hw - 2.5) put(x, 12, sh(hc, 0.6));
+    }
   }
 
   // Background: a darker gray, a touch lighter at the top.

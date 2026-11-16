@@ -21,6 +21,7 @@ import { rng, type DPlayer, type Dynasty, type OffseasonEvent } from './model';
 import { rulesOf, type OffseasonRules } from './rules';
 import { academicsOf } from './academics';
 import { seasonView } from './derive';
+import { headCoach, recruitingDiscount } from './coachEffects';
 import { POSITIONS, POS_TARGET, ROSTER_LIMIT, STAR_POINTS, chooseTransfers, drawStars, fillMinimums, makeRecruit, prestige, prestigeStars, suggestCuts, type RecruitTemplates } from './offseason';
 import { SCHOOL_STATE, closeness, stateCode } from './schoolStates';
 
@@ -220,8 +221,9 @@ export function pipelineStates(d: Dynasty, team: number): { state: string; n: nu
 export function pointCost(d: Dynasty, ctx: Pick<WeekContext, 'pipelines'>, pr: Prospect, team: number): number {
   const R = rulesOf(d);
   const s = stateCode(pr.player.state);
-  if (s && SCHOOL_STATE[d.teams[team].school] === s) return R.inStateCost;
-  return s && ctx.pipelines.get(team)?.has(s) ? R.pipelineCost : 1;
+  const base = s && SCHOOL_STATE[d.teams[team].school] === s ? R.inStateCost : s && ctx.pipelines.get(team)?.has(s) ? R.pipelineCost : 1;
+  // The head coach's Recruiting makes every point go a little further (coachEffects.ts).
+  return base * (1 - recruitingDiscount(headCoach(d, team)));
 }
 
 /** What `points` on a prospect take out of the week's budget (whole points). */

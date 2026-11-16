@@ -646,3 +646,7 @@
 .dy-carousel-edit select { max-width: 100%; }
 .dy-carousel-edit .ui-field { grid-template-columns: minmax(0, 1fr); flex: 1 1 220px; }
 .dy-carousel-edit .ui-field select { width: 100%; }
+.dy-teamcoach .dy-headshot { vertical-align: middle; margin-right: var(--sp-2); }
+.dy-coachlook { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-2); margin: var(--sp-3) 0; }
+.dy-coachlook .dy-row { grid-column: 1 / -1; }
+@media (min-width: 760px) { .dy-coachlook { grid-template-columns: repeat(3, minmax(0, 1fr)); } }

@@ -7,7 +7,7 @@
 // carousel's decisions are kept (OffseasonState.carousel, then the coaches themselves).
 import { COACH_RATINGS, coachAge, coachOvr, type CoachRating, type CoachRatings, type DCoach } from './coaches';
 import { INDEPENDENT, seasonView, standings, type SeasonView } from './derive';
-import { rng, type Dynasty, type OffseasonEvent } from './model';
+import { rng, type DPlayer, type Dynasty, type OffseasonEvent } from './model';
 import { protectedPairs, rivalriesOf } from './schedule';
 import { seasonPrestige, MAX_PRESTIGE } from './prestige';
 import { editionOf } from './edition';
@@ -94,7 +94,9 @@ export function goalResults(d: Dynasty, seasonIndex: number, team: number, v = s
       const games = v.games.filter((x) => x.vs !== null && x.hs !== null && ((x.home === team && x.visitor === g.rival) || (x.visitor === team && x.home === g.rival)));
       const won = games.some((x) => (x.home === team ? x.hs! > x.vs! : x.vs! > x.hs!));
       const lost = games.some((x) => (x.home === team ? x.hs! < x.vs! : x.vs! < x.hs!));
-      return { ...g, met: won ? true : lost || v.done ? false : null, result: won ? 'Won' : lost ? 'Lost' : games.length || v.done ? (games.length ? '' : 'Not played') : '' };
+      // Not on the schedule: it doesn't count either way.
+      const scheduled = v.games.some((x) => (x.home === team && x.visitor === g.rival) || (x.visitor === team && x.home === g.rival));
+      return { ...g, met: won ? true : lost ? false : null, result: won ? 'Won' : lost ? 'Lost' : scheduled ? '' : 'Not on the schedule' };
     }
     if (g.kind === 'conf') {
       const c = conferenceChampion(v, v.season.conf[team]);
@@ -273,6 +275,10 @@ export interface CarouselState {
   moves: CoachMove[];
   /** The coaches as they were when the offseason started (to start it over). */
   before: DCoach[];
+  /** The queue of drafted players coming back as coaches, as it was (to start it over). */
+  queueBefore?: { player: number; year: number }[];
+  /** Former players who joined the pool this offseason (coach ids). */
+  former?: number[];
 }
 
 /** Teams without a head coach now. */
@@ -296,13 +302,13 @@ export function nextCoachPrestige(c: DCoach, title: boolean, fired: boolean) {
  * retirements, firings, and the job offers to the coaches the user manages. The coaches change in the dynasty;
  * the rest waits in the carousel state for the user (offers, changes) and `finishCarousel` (the hiring).
  */
-export function startCarousel(d: Dynasty, seed: number): { coaches: DCoach[]; carousel: CarouselState; events: OffseasonEvent[] } {
+export function startCarousel(d: Dynasty, seed: number): { coaches: DCoach[]; carousel: CarouselState; events: OffseasonEvent[]; coachQueue: { player: number; year: number }[] } {
   const r = rng((seed ^ 0xc0ac4) >>> 0);
   const si = d.seasons.length - 1;
   const v = seasonView(d, d.seasons[si]);
   const year = d.seasons[si].year;
   const before = d.coaches!;
-  const st: CarouselState = { xp: {}, retired: [], fired: [], offers: {}, moves: [], before };
+  const st: CarouselState = { xp: {}, retired: [], fired: [], offers: {}, moves: [], before, queueBefore: d.coachQueue };
   const events: OffseasonEvent[] = [];
   let coaches = before.map((c) => ({ ...c }));
   // XP, aging and prestige for the season's head coaches.
@@ -344,9 +350,49 @@ export function startCarousel(d: Dynasty, seed: number): { coaches: DCoach[]; ca
       c.team = null; c.status = 'pool';
     }
   }
+  // Former players (spec): this offseason's departures get a small chance, higher Awareness (INTEL) first;
+  // undrafted ones join the pool now, drafted ones after a pro career of 2-10 years. The queue's due players join.
+  const queue = (d.coachQueue ?? []).slice();
+  const joining: { p: DPlayer; drafted: boolean }[] = [];
+  for (const p of d.players) {
+    if (p.leftYear !== year || (p.status !== 'graduated' && p.status !== 'pro')) continue;
+    const aw = p.ratings.Awareness ?? 50;
+    const posF = p.pos === 'QB' ? 2 : p.pos === 'MLB' || p.pos === 'LOLB' || p.pos === 'ROLB' ? 1.5 : 1;
+    if (r() >= clamp(0.0025 * posF * Math.pow(aw / 80, 6), 0, 0.05)) continue;
+    if (p.status === 'pro') queue.push({ player: p.id, year: year + 2 + Math.floor(r() * 9) });
+    else joining.push({ p, drafted: false });
+  }
+  const due = queue.filter((q) => q.year <= year);
+  for (const q of due) joining.push({ p: d.players[q.player - 1], drafted: true });
+  for (const { p, drafted } of joining) {
+    const c = coachFromPlayer(p, coaches.length, year, drafted, r);
+    coaches.push(c);
+    events.push({ kind: 'coachFormer', coach: c.id, player: p.id, drafted });
+  }
+  st.former = joining.map((j, i) => coaches.length - joining.length + i);
   const next: Dynasty = { ...d, coaches };
   st.offers = jobOffers(next, r);
-  return { coaches, carousel: st, events };
+  return { coaches, carousel: st, events, coachQueue: queue.filter((q) => q.year > year) };
+}
+
+/** A former player as a young coach: ratings from his position and his Awareness, below an established coach's. */
+export function coachFromPlayer(p: DPlayer, id: number, year: number, drafted: boolean, r: Rand): DCoach {
+  const aw = p.ratings.Awareness ?? 50;
+  const base = clamp(44 + (aw - 50) * 0.35 + (drafted ? 4 : 0), 40, 66);
+  const lean: Record<CoachRating, number> = { passing: 0, running: 0, defense: 0, recruiting: 0, development: 0 };
+  if (['QB', 'WR', 'TE'].includes(p.pos)) lean.passing += 8;
+  else if (['HB', 'FB', 'LT', 'LG', 'C', 'RG', 'RT'].includes(p.pos)) lean.running += 8;
+  else if (!['K', 'P'].includes(p.pos)) lean.defense += 8;
+  if (drafted) lean.recruiting += 4; // the name
+  const ratings = Object.fromEntries(COACH_RATINGS.map((k) => [k, clamp(Math.round(base + lean[k] + (r() - 0.5) * 8), 30, 99)])) as CoachRatings;
+  // His age: about 22 when he leaves school; a drafted player returns after his pro years.
+  const left = p.leftYear ?? year;
+  const born = left - 22 - Math.floor(r() * 2);
+  return {
+    id, name: `${p.first} ${p.last}`.trim() || `${p.pos} #${p.jersey}`, born, hometown: p.hometown && p.state ? `${p.hometown}, ${p.state}` : p.hometown || undefined,
+    team: null, status: 'pool', poolNote: drafted ? 'Former NFL player' : 'Former player',
+    ratings, prestige: drafted ? 2 : 1, irl: [], formerPlayer: { player: p.id, drafted },
+  };
 }
 
 /** Offers to each coach the user manages (spec: every year): schools that are open, roughly his level, at most three. */
@@ -471,3 +517,10 @@ export function finishCarousel(d: Dynasty, picks: Record<number, number> = {}, t
 
 export const MAX_COACH_STARS = 5;
 export { MAX_PRESTIGE };
+
+/** The user's change to a coach's headshot (any time; only the app's portrait). */
+export function setCoachLook(d: Dynasty, coachId: number, look: import('./coachLook').CoachLookEdit): Dynasty {
+  const c = d.coaches?.[coachId];
+  if (!c) throw new Error('No such coach.');
+  return setCoach(d, { ...c, look: { ...(c.look ?? {}), ...look } });
+}
