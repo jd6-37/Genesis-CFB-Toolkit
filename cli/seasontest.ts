@@ -2,6 +2,7 @@
 //   npx tsx cli/seasontest.ts BW95 CF97 [more BW95 ROMs, e.g. Elevated builds]
 // A 138-team 2026 Season Edition among the extra ROMs gets the 138-team test instead (its own season settings).
 // The emulator checks (the game's own deal and schedule) are described in docs/season.md.
+import { STATS_DEFAULTS, STAT_RANGES, hasSimStats, readSimStats, writeSimStats, type SimStats } from '../src/core/simStats';
 import { SIM_DEFAULTS, SIM_RANGES, SIM_STOCK, hasHomeEdge, hasSimSettings, readSimSettings, simForRom, fitRoll, writeSimSettings, type SimSettings } from '../src/core/simSettings';
 import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
@@ -374,6 +375,28 @@ for (const path of paths) {
   assert.deepEqual(fitRoll({ ...SIM_DEFAULTS, chances: 9 }), { ...SIM_DEFAULTS, chances: 9, roll: 1300 });
   if (hasHomeEdge(rom)) { const h = rom.slice(); writeSimSettings(h, { ...SIM_DEFAULTS, home: 0 }); assert.deepEqual([...h.subarray(0x2d601e, 0x2d6020)], [0, 0]); }
   ok(`${basename(path)}: season sim settings read (defaults${hasHomeEdge(rom) ? ', home edge 16' : ''}), written in their bytes, bad values refused`);
+}
+
+// The sim stat multipliers (H-021; 2026 test39 / 1994 test42 on): read, written only in their 12 bytes, bad values refused.
+for (const path of paths) {
+  const rom = await read(path);
+  const st = readSimStats(rom);
+  if (!st) {
+    assert.equal(hasSimStats(rom), false);
+    assert.throws(() => writeSimStats(rom.slice(), STATS_DEFAULTS), /stat multipliers/);
+    continue;
+  }
+  assert.deepEqual(st, STATS_DEFAULTS, `${basename(path)}: ships with x1, touchdowns matching`);
+  const S = { passing: 150, rushing: 50, interceptions: 300, sacks: 80, tackles: 200, tdMatch: false };
+  const w = rom.slice();
+  writeSimStats(w, S);
+  assert.deepEqual(readSimStats(w), S);
+  assert.ok([...w.keys()].filter((i) => w[i] !== rom[i]).every((i) => STAT_RANGES.some(([a, b]) => i >= a && i < b)), 'only the multipliers change');
+  assert.deepEqual([...w.subarray(0x2d6404, 0x2d6410)], [0, 150, 0, 50, 1, 44, 0, 80, 0, 200, 0, 0]);
+  for (const bad of [{ passing: 40 }, { rushing: 310 }, { sacks: 155 }, { tackles: 1.5 }]) {
+    assert.throws(() => writeSimStats(rom.slice(), { ...STATS_DEFAULTS, ...bad } as SimStats), /must be/);
+  }
+  ok(`${basename(path)}: sim stat multipliers read (x1, TDs match), written in their bytes, bad values refused`);
 }
 
 console.log(`\n${passed} passed`);

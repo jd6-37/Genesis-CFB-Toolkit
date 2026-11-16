@@ -15,7 +15,7 @@
 // Pure functions: each returns a new dynasty. Randomness is seeded, so the same choices give the
 // same offseason. The players before the offseason are kept so it can be started over.
 
-import { writeDynastySim } from './seasonSim';
+import { writeDynastySim, writeDynastyStats } from './seasonSim';
 import { pollSet, preseasonPoll } from './poll';
 import { seasonReports } from './walshStore';
 import { writeReports } from '../walshReports';
@@ -875,6 +875,7 @@ export function seasonRom(d: Dynasty, season: DSeason, rom: Uint8Array, now = Da
   applyWhiteHome(out.data, d);
   writeConferences(out.data, d, season);
   writeDynastySim(out.data, d);
+  writeDynastyStats(out.data, d);
   // The season's Walsh Reports (walshStore.ts), every team, from the second season on.
   const reports = seasonReports(d, season);
   if (reports) writeReports(out.data, new Map(reports.map((x, t) => [t, x.report])));

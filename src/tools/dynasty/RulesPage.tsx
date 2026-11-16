@@ -8,9 +8,11 @@ import {
 } from '../../core/dynasty/rules';
 import { href, useDyn } from './ui';
 import type { OffseasonActions } from './OffseasonPage';
-import { simOf, setSim } from '../../core/dynasty/seasonSim';
+import { simOf, setSim, statsOf, setStats } from '../../core/dynasty/seasonSim';
 import { SIM_DEFAULTS } from '../../core/simSettings';
 import { SimSettingsBox } from '../season/SimSettingsBox';
+import { StatSettingsBox } from '../season/StatSettingsBox';
+import { STATS_DEFAULTS } from '../../core/simStats';
 import '../season/season.css';
 
 const SEEN_KEY = 'dy-rules-spoilers-ok';
@@ -107,6 +109,14 @@ export function Rules({ actions, busy }: { actions: OffseasonActions; busy: stri
         onChange={(s) => void actions.run('Saving the season sim…', async () => {
           await actions.commit(setSim(d, s));
           setMsg({ kind: 'ok', text: 'The season sim settings are saved. Download the season ROM again to use them.' });
+        })}
+      />
+      <StatSettingsBox
+        value={statsOf(d)} loaded={STATS_DEFAULTS} disabled={!!busy}
+        intro="Scales the players' stats in the games you don't play (CPU vs CPU); 100% is the game's own numbers. Saved at once; it goes into every season ROM you download from now on (2026 test39 / 1994 test42 or later). Longer Game Length settings already give simulated games more plays, so if you play long games you may want to raise them all. Touchdowns are never scaled."
+        onChange={(s) => void actions.run('Saving the sim stats…', async () => {
+          await actions.commit(setStats(d, s));
+          setMsg({ kind: 'ok', text: 'The sim stats are saved. Download the season ROM again to use them.' });
         })}
       />
 
