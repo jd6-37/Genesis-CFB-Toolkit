@@ -185,7 +185,7 @@ const FEATURES: { title: string; body: ReactNode; controls?: [GlyphKey[], string
   },
   {
     title: 'Full seasons with bowls or a playoff',
-    body: '1994 edition: an 11-week season in the 1994 conferences or the real 1994 schedule, starting from the real 1994 preseason AP poll, then the SEC Championship Game and the 19 bowl games of that year. Simulated games score and end like real 1990s games. 2026 edition: a random schedule or the real 2026 schedule, conference title games, then a 12-team playoff. You can also pick a 24- or 4-team playoff, a BCS title game, or no postseason.',
+    body: '1994 edition: an 11-week season in the 1994 conferences or the real 1994 schedule, starting from the real 1994 preseason AP poll, then the SEC Championship Game and the 19 bowl games of that year. 2026 edition: a random schedule or the real 2026 schedule, conference title games, then a 12-team playoff. You can also pick a 24- or 4-team playoff, a BCS title game, or no postseason. In both editions, simulated games score and end close to real seasons, and home teams win more often.',
     media: { src: M('cfp-bracket.png'), alt: 'The CFP bracket screen: 12 teams, seeds 1 to 4 with a bye' },
   },
 ];
