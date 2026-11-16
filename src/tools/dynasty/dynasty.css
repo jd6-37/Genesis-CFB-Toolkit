@@ -603,3 +603,10 @@
 @media (min-width: 760px) {
   .dy-walsh-pick { flex-direction: row; align-items: end; }
 }
+
+/* Coaches (CoachPages.tsx) */
+.dy-coach-tools { display: flex; flex-direction: column; gap: var(--sp-3); margin: var(--sp-3) 0; }
+.dy-teamcoach p { margin: 0 0 var(--sp-3); display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-1); }
+.dy-teamcoach-name { font-weight: 700; margin-right: var(--sp-2); }
+@media (min-width: 760px) { .dy-coach-tools { flex-direction: row; align-items: flex-end; justify-content: space-between; } }
+.dy-coach-career td.ui-num { white-space: nowrap; }

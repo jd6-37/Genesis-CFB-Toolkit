@@ -22,6 +22,9 @@ import { Records } from './RecordsPage';
 import { ScheduleEditor } from './SchedulePage';
 import { History, Home, Leaders, Player, Rankings, Scores, Standings, Team, Teams } from './pages';
 import { Offseason, type OffseasonActions } from './OffseasonPage';
+import { Coach, Coaches } from './CoachPages';
+import { fetchCoachData } from '../../core/dynasty/coachData';
+import { withCoaches } from '../../core/dynasty/coaches';
 import { seasonRom } from '../../core/dynasty/offseason';
 import { canReplaceBench, randomBench } from '../../core/dynasty/bench';
 import { Button, Check, Field, FileButton, Masthead, Modal, NavBar, Note, Select, Table, ThemeToggle } from '../../ui';
@@ -36,6 +39,7 @@ const PAGES = [
   { id: 'standings', label: 'Standings' },
   { id: 'rankings', label: 'Top 25' },
   { id: 'teams', label: 'Teams' },
+  { id: 'coaches', label: 'Coaches' },
   { id: 'stats', label: 'Stats' },
   { id: 'history', label: 'History' },
   { id: 'offseason', label: 'Offseason' },
@@ -89,6 +93,12 @@ function chooseFile(accept: string): Promise<File | null> {
 
 type Note = { kind: 'error' | 'ok'; text: string } | null;
 
+/** The dynasty with its coaches: the real coaches of its edition, added once (a new dynasty, or one made before coaches). */
+async function addCoaches(dyn: Dynasty): Promise<Dynasty> {
+  if (dyn.coaches) return dyn;
+  return withCoaches(dyn, await fetchCoachData(editionOf(dyn).id));
+}
+
 export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
   const [route, setRoute] = useState(parseHash);
   const [romLater, setRomLater] = useState<number | null>(null);
@@ -120,6 +130,14 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
     setD(dyn);
     setArt(await loadArt(id));
     setCurrent(id);
+    // A dynasty made before coaches gets them now (the coaches file is fetched once; if it can't be, next time).
+    if (!dyn.coaches) {
+      try {
+        const next = await addCoaches(dyn);
+        await saveDynasty(next);
+        setD((cur) => (cur?.id === next.id ? next : cur));
+      } catch { /* offline: the Coaches page says they're on their way */ }
+    }
     return true;
   }, []);
 
@@ -176,10 +194,11 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
         ? createDynasty1994(rom, await fetchRosters1994(), { name })
         : createDynasty(rom, new TextDecoder().decode(await fetchCfb27Latest()), { name, onNumbers: (list) => { renumbered = list; } });
       const pics = teamArt(rom);
-      await saveDynasty(dyn);
+      const withC = await addCoaches(dyn).catch(() => dyn);
+      await saveDynasty(withC);
       await saveArt(dyn.id, pics);
       await saveRom(dyn.id, rom);
-      setD(dyn);
+      setD(withC);
       setArt(pics);
       setCurrent(dyn.id);
       await refresh();
@@ -293,6 +312,8 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       case 'standings': return <Standings />;
       case 'rankings': return <Rankings />;
       case 'teams': return <Teams />;
+      case 'coaches': return <Coaches />;
+      case 'coach': return num !== undefined ? <Coach id={num} /> : <Coaches />;
       case 'team': return num !== undefined ? <Team team={num} /> : <Teams />;
       case 'player': return num !== undefined ? <Player id={num} /> : <Home />;
       case 'stats': return <Leaders />;

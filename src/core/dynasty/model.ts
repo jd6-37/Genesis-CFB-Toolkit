@@ -124,6 +124,8 @@ export interface DSeason {
   titleGames?: number[];
   /** From the second season: the dynasty's schedule (schedule.ts), written into the season ROM. */
   schedule?: DSchedule;
+  /** Each team's head coach this season (coaches.ts: a coach's id; null = none). Absent before the dynasty had coaches. */
+  coach?: (number | null)[];
   /** Walsh Reports (walshStore.ts): the wording picked per team ("Write it again") and the user's own edits. */
   walsh?: { variants?: Record<number, number>; edited?: Record<number, import('../walsh').Report> };
 }
@@ -174,6 +176,8 @@ export interface Dynasty {
   training?: Record<number, import('./training').Training>;
   /** Per team: wears its white jersey at home (kit.ts; the ROM's alternate-uniforms table). Absent on a ROM without it. */
   whiteHome?: boolean[];
+  /** Every coach (coaches.ts; index = id): the real coaches of the edition's year, then any made in the dynasty. Absent until the app adds them. */
+  coaches?: import('./coaches').DCoach[];
   /** The season sim's settings for this dynasty's season ROMs (seasonSim.ts); absent = the ROM's own. */
   sim?: import('../simSettings').SimSettings;
 }

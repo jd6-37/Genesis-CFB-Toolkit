@@ -75,6 +75,7 @@ const rawSrm = new Uint8Array(readFileSync(savePath));
 const srm = stampSave(rawSrm, dynastyRomId('test'), 1, 1);
 const csv = readFileSync(new URL(`../public/${CFB27_LATEST.file}`, import.meta.url), 'utf8');
 let passed = 0;
+import { coachChecks } from './coachchecks';
 const ok = (name: string) => {
   passed++;
   console.log('ok -', name);
@@ -440,6 +441,7 @@ for (const t of o4.teams) {
   for (const g of Off.GROUP_MIN) assert.ok(roster.filter((p) => g.positions.includes(p.pos)).length >= g.min, `${t.school} ${g.name}`);
 }
 const o5 = Off.finishOffseason(o4);
+coachChecks(d1, ok, { seasonRom: (x) => Off.seasonRom(x, x.seasons[0], rom, 1_800_000_000_000), offseason: { at: o4, finish: Off.finishOffseason } });
 // Career records: a record per season on a team, ratings as set up for the season.
 const y26 = d1.seasons[0].year, y27 = o5.seasons[1].year;
 assert.ok(d1.players.filter((p) => p.status === 'active' && p.team !== null).every((p) => p.years?.length === 1 && p.years[0].year === y26 && p.years[0].ovr === p.ovr), 'every starting player has his first season');

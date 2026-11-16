@@ -16,6 +16,7 @@ import { OffseasonSide, PreseasonTop25, SeasonMore, SeasonSide } from './HomeSid
 import { AddPlayer, EditLook, EditPlayer } from './EditPlayer';
 import { prestigeStars } from '../../core/dynasty/offseason';
 import { MAX_PRESTIGE } from '../../core/dynasty/prestige';
+import { SeasonCoach, TeamCoach } from './CoachPages';
 import type { SaveGame } from '../../core/dynasty/save';
 import type { DPlayer } from '../../core/dynasty/model';
 import { GROUP_COLUMNS, type Attr } from '../../core/rosterLayouts';
@@ -516,6 +517,7 @@ export function Team({ team }: { team: number }) {
               {whiteHomeLock(d, team) && <p className="dy-small dy-dim">{whiteHomeLock(d, team)}</p>}
             </div>
           )}
+          <TeamCoach team={team} />
           <SubHead>Schedule</SubHead>
           {mine && v.season.schedule && !scheduleLock(v.season) && <p className="dy-small"><a href={href(`schedule/${team}`)}>Change the schedule</a></p>}
           {games.length ? (
@@ -539,11 +541,12 @@ export function Team({ team }: { team: number }) {
 
           <SubHead>History</SubHead>
           <Table figures>
-            <thead><tr><th className="ui-left">Season</th><th>Record</th><th>Final rank</th><th></th></tr></thead>
+            <thead><tr><th className="ui-left">Season</th><th className="ui-left">Coach</th><th>Record</th><th>Final rank</th><th></th></tr></thead>
             <tbody>
-              {hist.map((h) => (
+              {hist.map((h, i) => (
                 <tr key={h.year}>
                   <td className="ui-left">{h.year}</td>
+                  <td className="ui-left"><SeasonCoach team={team} seasonIndex={i} /></td>
                   <td>{h.imported ? recordText(h.record) : ''}</td>
                   <td>{h.imported && h.rank <= 25 ? h.rank : ''}</td>
                   <td className="ui-text">{h.champion ? 'National champions' : ''}</td>
