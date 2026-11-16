@@ -154,6 +154,8 @@ export interface Dynasty {
   version: number;
   /** The edition it's played in (edition.ts; absent = 2026, the dynasties made before the 1994 edition). */
   edition?: import('./edition').EditionId;
+  /** Protected rivalries the user set (schedule.ts setRivalries); absent = the edition's built-in list. */
+  rivalries?: import('./rivalries').Rivalry[];
   id: string;
   name: string;
   created: string;

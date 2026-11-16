@@ -22,6 +22,7 @@ import { playoffSize } from '../src/core/dynasty/outlook';
 import { checkSchedule, makeSchedule, protectedPairs, setOpponent, teamSchedule, scheduleSet, weeksOf } from '../src/core/dynasty/schedule';
 import { readTitleGames, readWideSeason, TG_ON } from '../src/core/seasonWide';
 import * as Conf from '../src/core/dynasty/conferences';
+import { rivalriesOf, setRivalries } from '../src/core/dynasty/schedule';
 import { numberAllowed, NO_NUMBER } from '../src/core/dynasty/numbers';
 import { hasKits } from '../src/core/kits';
 import { SCHOOL_STATE } from '../src/core/dynasty/schoolStates';
@@ -211,7 +212,7 @@ for (let seed = 1; seed <= 20; seed++) {
   assert.deepEqual(chk.broken, [], 'one game a week, one bye a week (107 teams)');
   assert.deepEqual(chk.missing, [], 'every protected rivalry');
   assert.equal(sc.games.length, 11 * 53);
-  for (const p of pairs.filter((x) => x.last)) {
+  for (const p of pairs.filter((x) => x.week === 10)) {
     finales++;
     if (sc.games.some((g) => g.week === 10 && ((g.visitor === p.a && g.home === p.b) || (g.visitor === p.b && g.home === p.a)))) finalesIn++;
   }
@@ -242,6 +243,21 @@ const sa = scheduleAddress(out2)!;
 assert.equal(out2[sa + 4], 11);
 assert.equal(readStamp(out2.subarray(DYN_AREA, DYN_AREA + 16))!.season, 2);
 ok(`offseason: ${d2.players.filter((p) => p.status === 'active').length} players in 1995, an 11-week schedule in the 1995 ROM`);
+
+// ---- user-defined rivalries in 1995 (user, 2026-11-16)
+{
+  const mine = [...rivalriesOf(d2).filter((r) => r.a !== 'Nebraska' && r.b !== 'Nebraska'), { a: 'Nebraska', b: 'Oklahoma', week: 2 }, { a: 'Pacific', b: 'Hawaii', week: 5 }];
+  const r1 = setRivalries(d2, mine);
+  const sc = r1.seasons[1].schedule!;
+  const at = (n: string) => schoolList.indexOf(n);
+  const inWeek = (a: string, b: string, w: number) => sc.games.some((x) => x.week === w && [x.visitor, x.home].sort().join() === [at(a), at(b)].sort().join());
+  assert.ok(inWeek('Nebraska', 'Oklahoma', 2) && inWeek('Pacific', 'Hawaii', 5));
+  const ck = checkSchedule(sc, schoolList, r1.seasons[1].conf, '1994', rivalriesOf(r1));
+  assert.deepEqual(ck.broken, []);
+  assert.deepEqual(ck.missing, []);
+  assert.equal(weeksOf(sc), 11);
+  ok(`rivalries: Nebraska-Oklahoma in week 3, Pacific-Hawaii in week 6 (${ck.offWeek.length} out of their week)`);
+}
 
 // ---- conferences in the 1995 offseason (user, 2026-11-16)
 {

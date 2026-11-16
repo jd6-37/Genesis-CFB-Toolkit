@@ -573,3 +573,13 @@
 .dy-confedit .hint { max-width: 70ch; }
 .dy-confedit .sea-conf li { border-top-color: var(--rule); }
 .dy-confedit .sea-team-name.on { color: var(--text); font-weight: 700; text-decoration: underline; }
+
+/* The offseason Schedule step's protected rivalries (RivalriesEditor). */
+.dy-rivals { margin-bottom: var(--sp-5); }
+.dy-rivals-list { list-style: none; margin: 0 0 var(--sp-3); padding: 0; }
+.dy-rivals-list li { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); padding: var(--sp-2) 0; border-top: 1px solid var(--rule); }
+.dy-rivals-list li > label { flex: 1 1 140px; min-width: 0; }
+.dy-rivals-list li > span { flex: none; }
+@media (min-width: 900px) {
+  .dy-rivals-list li > label { flex: 0 1 220px; }
+}

@@ -18,6 +18,7 @@ import { playerName } from '../../core/dynasty/derive';
 import { Headshot, TeamLink, hometownText, href, mainColor, onColor, useDyn } from './ui';
 import { ScheduleEditor } from './SchedulePage';
 import { ConferencesStep } from './ConferencesStep';
+import { RivalriesEditor } from './RivalriesEditor';
 import { EditLook, EditPlayer } from './EditPlayer';
 import { applyEdits, editLock } from '../../core/dynasty/edit';
 import { sideOf } from '../../core/dynasty/numbers';
@@ -622,6 +623,7 @@ function SeasonSteps({ actions, step, busy }: { actions: OffseasonActions; step:
     return (
       <>
         {steps}
+        <RivalriesEditor commit={actions.commit} busy={busy} />
         <ScheduleEditor arg={team !== undefined ? String(team) : undefined} />
         <div className="dy-row dy-next"><Button href={href('offseason/rom')}>Next: download the ROM</Button></div>
       </>

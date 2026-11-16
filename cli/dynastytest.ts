@@ -32,6 +32,8 @@ import { SCHOOL_STATE, stateCode } from '../src/core/dynasty/schoolStates';
 import { experienceOf, recordRatings, trainingResults, trainingYears } from '../src/core/dynasty/career';
 import { randomBench } from '../src/core/dynasty/bench';
 import * as Conf from '../src/core/dynasty/conferences';
+import { rivalriesOf, rivalryIssues, setRivalries } from '../src/core/dynasty/schedule';
+import type { Rivalry } from '../src/core/dynasty/rivalries';
 import { readTitleGames, readWideSeason } from '../src/core/seasonWide';
 import { gameText, dynastyAreaProblem, dynastyHeaderValid, dynastyRomId, DYN_AREA, DYN_END, fineAddress, hasDynastyHooks, readStamp, scheduleAddress } from '../src/core/dynasty/dynastyArea';
 import { simFromOvr } from '../src/core/teamRatings';
@@ -827,6 +829,32 @@ ok(`sim: a recruiting week, the rest, the cuts, the whole offseason (${act(g4).f
   ok(`conferences: a move makes a new schedule, a name keeps it, the season ROM carries them; title game switches${readTitleGames(rom) ? '' : ' (refused by this older ROM)'}, locks`);
 }
 
+// User-defined protected rivalries with a preferred week (user, 2026-11-16).
+{
+  const schools = g4.teams.map((t) => t.school);
+  const base = rivalriesOf(g4);
+  assert.ok(base.some((r) => r.a === 'Alabama' && r.b === 'Auburn' && r.week === SCHED_WEEKS - 1), 'built-in finales in the last week');
+  const mine: Rivalry[] = [...base.filter((r) => r.a !== 'Alabama' && r.b !== 'Alabama'), { a: 'Alabama', b: 'Auburn', week: 3 }, { a: 'Oregon', b: 'Hawaii', week: 0 }];
+  assert.ok(rivalryIssues(g4, [...mine, { a: 'Auburn', b: 'Georgia', week: 3 }]).some((x) => /two rivalries in week 4/.test(x)));
+  assert.ok(rivalryIssues(g4, [...mine, { a: 'Hawaii', b: 'Oregon' }]).some((x) => /twice/.test(x)));
+  assert.ok(rivalryIssues(g4, [{ a: 'Alabama', b: '' }]).length > 0);
+  const r1 = setRivalries(g4, mine);
+  const sc = r1.seasons[1].schedule!;
+  const at = (n: string) => schools.indexOf(n);
+  const inWeek = (a: string, b: string, w: number) => sc.games.some((x) => x.week === w && [x.visitor, x.home].sort().join() === [at(a), at(b)].sort().join());
+  assert.ok(inWeek('Alabama', 'Auburn', 3), 'Alabama-Auburn in week 4');
+  assert.ok(inWeek('Oregon', 'Hawaii', 0), 'a new rivalry in week 1');
+  const ck = checkSchedule(sc, schools, r1.seasons[1].conf, undefined, rivalriesOf(r1));
+  assert.deepEqual(ck.broken, []);
+  assert.deepEqual(ck.missing, []);
+  assert.ok(ck.offWeek.length <= 2, `rivalries out of their week (${ck.offWeek.length})`);
+  const r2 = setRivalries(r1, null);
+  assert.equal(r2.rivalries, undefined, 'back to the built-in list');
+  const started = { ...r1, seasons: [r1.seasons[0], { ...r1.seasons[1], imports: [g4.seasons[0].imports[0] ?? ({} as never)] }] };
+  assert.equal(setRivalries(started, base).seasons[1].schedule, started.seasons[1].schedule, 'a started season keeps its schedule');
+  ok(`rivalries: the user's list with weeks (Alabama-Auburn week 4, Oregon-Hawaii week 1), checks, back to built-in, a started season kept`);
+}
+
 // A second offseason: players signed in the first can transfer now; this year's class can't.
 const y1 = Off.runPortal(Off.confirmDepth(Off.startOffseason(o5, { seed: 4, force: true })));
 const y1moves = y1.offseason!.events.filter((e) => e.kind === 'transfer');
@@ -892,7 +920,7 @@ ok('season rosters written to the dynasty area and read back');
   const pairs = protectedPairs(schools);
   assert.ok(pairs.length >= 40, `protected pairs (${pairs.length})`);
   const inLast = (a: number, b: number) => sc.games.some((g) => g.week === SCHED_WEEKS - 1 && ((g.visitor === a && g.home === b) || (g.visitor === b && g.home === a)));
-  const finales = pairs.filter((p) => p.last);
+  const finales = pairs.filter((p) => p.week === SCHED_WEEKS - 1);
   assert.ok(finales.every((p) => inLast(p.a, p.b)), 'the finales in the last week');
   const cw = next.confWeeks!;
   const short = schools.filter((_, t) => next.conf[t] !== INDEPENDENT && ck.confGames[t] < cw.games[next.conf[t]] - 1);

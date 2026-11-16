@@ -59,11 +59,11 @@ export function ConferencesStep({ commit, busy }: { commit: (d: Dynasty, done?: 
       <SeasonWide
         teams={d.teams.map((t) => t.school)} season={draft} loaded={loaded} onChange={(s) => { setDraft(s as ConfSetup); setError(null); }}
         rules={ed.confRules} tag={tag} hint={hint} disabled={!!lock || busy}
-        footer={<>Conference games and weeks are how the app makes the schedule: each conference's games start in that week. Moving a team or changing a conference's games makes a new schedule when you save; changes you made to the schedule are lost. A new name keeps the schedule. Earlier seasons keep their conferences.</>}
+        footer={<>Conference games and weeks are how the app makes the schedule: each conference's games start in that week. Every season gets a new schedule; last season's never carries over. Moving a team or changing a conference's games makes the {season.year} schedule again when you save, so changes you made to it on the Schedule step are lost. A new name or title game keeps it. Earlier seasons keep their conferences.</>}
       />
       </div>
       {error && <Note kind="error">{error}</Note>}
-      {changed && !lock && <Note>{remake ? 'Saving makes a new schedule.' : 'Your changes are not saved yet.'}</Note>}
+      {changed && !lock && <Note>{remake ? `Saving makes the ${season.year} schedule again.` : 'Your changes are not saved yet.'}</Note>}
       <div className="dy-row dy-next">
         <Button onClick={save} disabled={!ok || busy}>Save the conferences</Button>
         <Button variant="quiet" onClick={() => { setDraft(saved); setError(null); }} disabled={!changed || busy}>Undo changes</Button>

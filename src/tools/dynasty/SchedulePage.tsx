@@ -7,7 +7,7 @@ import { INDEPENDENT } from '../../core/dynasty/derive';
 import { rivalryOf } from '../../core/dynasty/rivalries';
 import { editionOf } from '../../core/dynasty/edition';
 import {
-  checkSchedule, editSchedule, flipHome, moveGame, protectedPairs, remakeSchedule, scheduleLock, setOpponent, teamSchedule, weeksOf,
+  checkSchedule, editSchedule, flipHome, moveGame, protectedPairs, remakeSchedule, rivalriesOf, scheduleLock, setOpponent, teamSchedule, weeksOf,
   type DSchedule,
 } from '../../core/dynasty/schedule';
 import { Empty, TeamLink, href, useDyn } from './ui';
@@ -21,7 +21,7 @@ export function ScheduleEditor({ arg }: { arg?: string }) {
   const [note, setNote] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const [confirmNew, setConfirmNew] = useState(false);
   const schools = useMemo(() => d.teams.map((t) => t.school), [d]);
-  const check = useMemo(() => (sched ? checkSchedule(sched, schools, season.conf, editionOf(d).id) : null), [sched, schools, season.conf, d]);
+  const check = useMemo(() => (sched ? checkSchedule(sched, schools, season.conf, editionOf(d).id, rivalriesOf(d)) : null), [sched, schools, season.conf, d]);
   if (!sched || !check) return <Empty><p>From the second season on, the app makes each season's schedule and you can change your teams' games. The first season plays the schedule the game makes at New Season.</p></Empty>;
   if (team === undefined) return <Empty><p>Pick your teams first (Manage): you can change their schedules.</p></Empty>;
 
@@ -35,7 +35,8 @@ export function ScheduleEditor({ arg }: { arg?: string }) {
   const restTeams = others.filter((t) => !sameConf(team, t.index));
   const myMissing = check.missing.filter(([a, b]) => a === team || b === team);
   const myRepeats = check.repeats.filter(([a, b]) => a === team || b === team);
-  const isProtected = new Set(protectedPairs(schools, editionOf(d).id).map((p) => `${Math.min(p.a, p.b)}-${Math.max(p.a, p.b)}`));
+  const myOffWeek = check.offWeek.filter(([a, b]) => a === team || b === team);
+  const isProtected = new Set(protectedPairs(schools, editionOf(d).id, rivalriesOf(d)).map((p) => `${Math.min(p.a, p.b)}-${Math.max(p.a, p.b)}`));
   const confTarget = conf[team] === INDEPENDENT ? 0 : season.confWeeks?.games[conf[team]];
 
   const change = async (fn: (s: DSchedule) => DSchedule, done: (s: DSchedule) => string) => {
@@ -98,6 +99,7 @@ export function ScheduleEditor({ arg }: { arg?: string }) {
         <span>{check.homeGames[team]} at home</span>
       </p>
       {myMissing.length > 0 && <Note>Not on the schedule: {myMissing.map(([a, b]) => rivalryOf(name(a), name(b)) ?? `${name(a)} vs. ${name(b)}`).join(', ')}.</Note>}
+      {myOffWeek.length > 0 && <Note>Not in its week: {myOffWeek.map(([a, b, w]) => `${rivalryOf(name(a), name(b)) ?? `${name(a)} vs. ${name(b)}`} (week ${w + 1})`).join(', ')}.</Note>}
       {myRepeats.length > 0 && <Note>Plays twice: {myRepeats.map(([a, b]) => name(a === team ? b : a)).join(', ')}.</Note>}
 
       <ol className="dy-sched-list">

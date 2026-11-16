@@ -11,7 +11,7 @@
 
 import { INDEPENDENT, seasonView } from './derive';
 import type { EditionId } from './edition';
-import { canonicalSchool, PROTECTED, PROTECTED_1994 } from './rivalries';
+import { canonicalSchool, defaultRivalries, type Rivalry } from './rivalries';
 
 /** Weeks of a 2026 schedule (and of every schedule made before the 1994 edition). */
 export const SCHED_WEEKS = 12;
@@ -46,6 +46,8 @@ export interface ScheduleInput {
   weeks?: number;
   /** Whose protected rivalries (default the 2026 list). */
   edition?: EditionId;
+  /** The dynasty's own rivalries (default: the edition's built-in list). */
+  rivalries?: Rivalry[];
 }
 
 const key = (a: number, b: number) => (a < b ? a * 1000 + b : b * 1000 + a);
@@ -66,12 +68,23 @@ function shuffle<T>(a: T[], r: () => number): T[] {
   return a;
 }
 
-/** The protected rivalries as team pairs (pairs whose schools aren't in the league are left out). */
-export function protectedPairs(schools: string[], edition?: EditionId): { a: number; b: number; last: boolean }[] {
+/** Regular-season weeks of an edition's dynasty schedules (12; 1994: 11). */
+const weeksFor = (edition?: EditionId) => (edition === '1994' ? 11 : SCHED_WEEKS);
+
+/** A dynasty's protected rivalries: its own list (user-defined), else the edition's built-in one. */
+export function rivalriesOf(d: Dynasty): Rivalry[] {
+  return d.rivalries ?? defaultRivalries(d.edition === '1994' ? '1994' : 'default', weeksFor(d.edition));
+}
+
+/**
+ * The protected rivalries as team pairs (pairs whose schools aren't in the league are left out), each with the
+ * week it should be in (null: any week). `list` is the dynasty's own; without it, the edition's built-in list.
+ */
+export function protectedPairs(schools: string[], edition?: EditionId, list?: Rivalry[]): { a: number; b: number; week: number | null }[] {
   const at = new Map(schools.flatMap((s, i) => [[s, i], [canonicalSchool(s), i]] as [string, number][]));
-  return (edition === '1994' ? PROTECTED_1994 : PROTECTED).flatMap((p) => {
+  return (list ?? defaultRivalries(edition === '1994' ? '1994' : 'default', weeksFor(edition))).flatMap((p) => {
     const a = at.get(p.a), b = at.get(p.b);
-    return a === undefined || b === undefined ? [] : [{ a, b, last: !!p.last }];
+    return a === undefined || b === undefined || a === b ? [] : [{ a, b, week: p.week ?? null }];
   });
 }
 
@@ -116,7 +129,8 @@ export function makeSchedule(inp: ScheduleInput): DSchedule {
   const WEEKS = inp.weeks ?? SCHED_WEEKS;
   const g = new Grid(n, WEEKS);
   const last = WEEKS - 1;
-  const prot = protectedPairs(inp.schools, inp.edition);
+  const prot = protectedPairs(inp.schools, inp.edition, inp.rivalries).map((p) => ({ ...p, week: p.week !== null && p.week < WEEKS ? p.week : null }));
+  const isLast = (p: { week: number | null }) => p.week === last;
   const sameConf = (a: number, b: number) => inp.conf[a] === inp.conf[b] && inp.conf[a] !== INDEPENDENT;
 
   // 1. Conference games: rounds that hold the conference's protected games, the finale's round last.
@@ -137,9 +151,9 @@ export function makeSchedule(inp: ScheduleInput): DSchedule {
       const others = shuffle(rs.map((_, i) => i).filter((i) => !need.includes(i)), r).slice(0, games - need.length);
       const pick = shuffle([...need, ...others], r);
       // The finale's round goes last (the one with the most finales).
-      const finales = (i: number) => mine.filter((p) => p.last && roundOf(p) === i).length;
+      const finales = (i: number) => mine.filter((p) => isLast(p) && roundOf(p) === i).length;
       if (start + games - 1 === last) pick.sort((x, y) => finales(x) - finales(y));
-      const score = start + games - 1 === last ? mine.filter((p) => p.last).length - finales(pick[pick.length - 1]) : 0;
+      const score = start + games - 1 === last ? mine.filter(isLast).length - finales(pick[pick.length - 1]) : 0;
       if (!best || score < best.score) best = { order: pick.map((i) => rs[i]), score };
     }
     if (!best) {
@@ -149,18 +163,20 @@ export function makeSchedule(inp: ScheduleInput): DSchedule {
     best.order.forEach((rd, i) => rd.forEach(([a, b]) => g.add(start + i, a, b)));
   }
 
-  // 2. The finales into the last week: when one isn't there, the two teams leave their games that week
-  //    (those games move to a week where both teams are free).
+  // 2. Rivalries with a week (the finales, and any week the user picked) into that week: when one isn't there,
+  //    the two teams leave their games that week (those games move to a week where both teams are free).
+  //    A team in two rivalries for the same week keeps the later one; the other is placed below.
   const moved: [number, number][] = [];
-  for (const p of prot.filter((x) => x.last)) {
-    if (g.opp[last][p.a] === p.b) continue;
+  for (const p of prot.filter((x) => x.week !== null)) {
+    const w = p.week!;
+    if (g.opp[w][p.a] === p.b) continue;
     const before = g.weekOf(p.a, p.b);
     if (before >= 0) g.remove(before, p.a);
     for (const t of [p.a, p.b]) {
-      const o = g.remove(last, t);
+      const o = g.remove(w, t);
       if (o >= 0) moved.push([t, o]);
     }
-    g.add(last, p.a, p.b);
+    g.add(w, p.a, p.b);
   }
   const placeAnywhere = (a: number, b: number, prefer: 'late' | 'any') => {
     const weeks = Array.from({ length: WEEKS }, (_, w) => w).filter((w) => g.free(w, a) && g.free(w, b));
@@ -307,12 +323,14 @@ export interface ScheduleCheck {
   repeats: [number, number][];
   /** Protected rivalries not on the schedule. */
   missing: [number, number][];
+  /** Protected rivalries on the schedule but not in their week: [team, team, wanted week (0-based)]. */
+  offWeek: [number, number, number][];
   /** Per team: conference games and home games. */
   confGames: number[];
   homeGames: number[];
 }
 
-export function checkSchedule(s: DSchedule, schools: string[], conf: number[], edition?: EditionId): ScheduleCheck {
+export function checkSchedule(s: DSchedule, schools: string[], conf: number[], edition?: EditionId, rivalries?: Rivalry[]): ScheduleCheck {
   const n = schools.length;
   const count = Array.from({ length: weeksOf(s) }, () => new Int16Array(n));
   const met = new Map<number, number>();
@@ -334,8 +352,12 @@ export function checkSchedule(s: DSchedule, schools: string[], conf: number[], e
     if (free.length > n % 2) for (const t of free) broken.push(`${schools[t]} has no game in week ${w + 1}`);
   }
   const repeats = [...met].filter(([, c]) => c > 1).map(([k]) => [Math.floor(k / 1000), k % 1000] as [number, number]);
-  const missing = protectedPairs(schools, edition).filter((p) => !met.has(key(p.a, p.b))).map((p) => [p.a, p.b] as [number, number]);
-  return { broken, repeats, missing, confGames, homeGames };
+  const prot = protectedPairs(schools, edition, rivalries);
+  const missing = prot.filter((p) => !met.has(key(p.a, p.b))).map((p) => [p.a, p.b] as [number, number]);
+  const offWeek = prot
+    .filter((p) => p.week !== null && p.week < weeksOf(s) && met.has(key(p.a, p.b)) && !s.games.some((x) => x.week === p.week && key(x.visitor, x.home) === key(p.a, p.b)))
+    .map((p) => [p.a, p.b, p.week!] as [number, number, number]);
+  return { broken, repeats, missing, offWeek, confGames, homeGames };
 }
 
 // ---- the ROM's copy
@@ -390,6 +412,7 @@ export function lastGames(d: Dynasty, season: DSeason): { visitor: number; home:
 
 /** A new schedule for the newest season (everyone's games change; the user's edits are gone). */
 export function remakeSchedule(d: Dynasty, seed: number): Dynasty {
+  const rivalries = rivalriesOf(d);
   const s = d.seasons[d.seasons.length - 1];
   const prev = d.seasons[d.seasons.length - 2];
   return editSchedule(d, () => makeSchedule({
@@ -400,5 +423,55 @@ export function remakeSchedule(d: Dynasty, seed: number): Dynasty {
     seed,
     weeks: editionOf(d).regWeeks,
     edition: editionOf(d).id,
+    rivalries,
   }));
 }
+
+/** Why this rivalry list can't be used; empty if it can. */
+export function rivalryIssues(d: Dynasty, list: Rivalry[]): string[] {
+  const schools = new Set(d.teams.map((t) => t.school));
+  const weeks = editionOf(d).regWeeks;
+  const out: string[] = [];
+  const seen = new Set<string>();
+  const inWeek = new Map<string, string>();
+  list.forEach((r, i) => {
+    const row = `Rivalry ${i + 1}`;
+    if (!schools.has(r.a) || !schools.has(r.b)) { out.push(`${row}: pick two teams.`); return; }
+    if (r.a === r.b) { out.push(`${row}: pick two different teams.`); return; }
+    const k = [r.a, r.b].sort().join('|');
+    if (seen.has(k)) out.push(`${r.a} and ${r.b} are listed twice.`);
+    seen.add(k);
+    if (r.week !== undefined) {
+      if (!Number.isInteger(r.week) || r.week < 0 || r.week >= weeks) out.push(`${row}: the week must be 1 to ${weeks}.`);
+      for (const t of [r.a, r.b]) {
+        const other = inWeek.get(`${t}|${r.week}`);
+        if (other) out.push(`${t} has two rivalries in week ${r.week + 1} (${other} and this one).`);
+        inWeek.set(`${t}|${r.week}`, `${r.a}-${r.b}`);
+      }
+    }
+  });
+  return out;
+}
+
+/**
+ * Sets the dynasty's protected rivalries (user, 2026-11-16). The newest season's schedule is made again with them
+ * when it can still change (an offseason's new season before its first import); otherwise they apply from the next
+ * season's schedule on. `null` goes back to the edition's built-in list.
+ */
+export function setRivalries(d: Dynasty, list: Rivalry[] | null): Dynasty {
+  if (list) {
+    const issues = rivalryIssues(d, list);
+    if (issues.length) throw new Error(issues[0]);
+  }
+  const next: Dynasty = { ...d };
+  if (list) next.rivalries = list.map((r) => ({ a: r.a, b: r.b, ...(r.week !== undefined ? { week: r.week } : {}) }));
+  else delete next.rivalries;
+  const s = d.seasons[d.seasons.length - 1];
+  return rivalriesCanRemake(d) ? remakeSchedule(next, s.schedule!.seed) : next;
+}
+
+/** Whether saving rivalries makes the newest season's schedule again (else they apply from the next one). */
+export const rivalriesCanRemake = (d: Dynasty) => {
+  const s = d.seasons[d.seasons.length - 1];
+  return s.index > 0 && !!s.schedule && !scheduleLock(s);
+};

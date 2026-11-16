@@ -11,7 +11,7 @@ import { readWideSeason, wideSeasonIssues, wideSeasonProblems, writeWideSeason, 
 export { SEC_EAST_1994 } from '../seasonWide';
 import { editionOf } from './edition';
 import type { DSeason, Dynasty } from './model';
-import { lastGames, makeSchedule, RELEASE_CONF_WEEKS } from './schedule';
+import { lastGames, makeSchedule, RELEASE_CONF_WEEKS, rivalriesOf } from './schedule';
 
 /**
  * A season's conferences: names (11, the last the Independents), each team's conference, the conference weeks and
@@ -89,6 +89,7 @@ export function setConferences(d: Dynasty, next: ConfSetup): Dynasty {
       seed: s.schedule.seed,
       weeks: editionOf(d).regWeeks,
       edition: editionOf(d).id,
+      rivalries: rivalriesOf(d),
     });
   }
   return { ...d, seasons: [...d.seasons.slice(0, -1), season] };

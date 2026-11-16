@@ -17,7 +17,7 @@
 
 import { fineSetBytes, putFineOffsets } from './fine';
 import { applyWhiteHome } from './kit';
-import { lastGames, makeSchedule, RELEASE_CONF_WEEKS, scheduleSet } from './schedule';
+import { lastGames, makeSchedule, RELEASE_CONF_WEEKS, rivalriesOf, scheduleSet } from './schedule';
 import { writeConferences } from './conferences';
 import { editionOf, editionOfRom } from './edition';
 import { CLASSES, rng, type ClassYear, type DPlayer, type DSeason, type Dynasty, type OffseasonEvent } from './model';
@@ -803,6 +803,7 @@ export function finishOffseason(d: Dynasty): Dynasty {
       seed: Math.floor(r() * 0x7fffffff),
       weeks: editionOf(d).regWeeks,
       edition: editionOf(d).id,
+      rivalries: rivalriesOf(d),
     }),
     ...depthChart(withNumbers),
     prestige: st.prestige ?? seasonPrestige(d, prev),

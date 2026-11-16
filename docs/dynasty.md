@@ -328,6 +328,15 @@ User, 2026-11-16: "We can edit conferences/conf alignment in dynasty offseason l
 - **Checked in the emulator** (2026-11-16): switches: 2026 test31 with the Power 4's title games only (four title games played, then the CFP); 1994 test33 with the SEC (no divisions) and the Big Ten on (both title games played, the Big Ten winner Michigan in the Rose Bowl; the week named "Conference Championships"). Conferences: 2026 test30, a 2027 ROM with Ohio State in the SEC and Alabama, Georgia and Notre Dame in the second conference (renamed "Big Sixteen"): played to the end, the title games were Texas at Florida (SEC) and Alabama at Georgia (Big Sixteen), every title game between two teams of one conference. 1994 test32, a 1995 ROM with Penn State and Florida State in the SEC, Notre Dame in the Big Ten and the Southwest renamed "Lone Star": the SEC title game was Tennessee (East) against Florida State (West), the Cotton Bowl took the Lone Star champion, the Rose Bowl the Big Ten and Pac-10 leaders. Both imported without a warning.
 - Tests: `test:dynasty` and `test:dynasty94` (a move remakes the schedule, a name keeps it, the ROM carries them, the title-game rules, the locks); `test:season` for the shared editor's core.
 
+## Protected rivalries (user-defined)
+
+User, 2026-11-16, after asking whether a season's schedule carries over (it never does: every season gets a new one): "Yes [let users add or remove protected rivalries]. Also let the user define a preferred week". The offseason's Schedule step starts with a **Protected rivalries** list (`RivalriesEditor.tsx`): two teams and a week ("Any week" or Week 1 to the last) per row; Add, Remove, Save, Undo, and "Use the built-in list".
+
+- A dynasty without its own list uses the edition's built-in one (`PROTECTED` / `PROTECTED_1994`; finales = the last week). Saving stores `Dynasty.rivalries` (`setRivalries`; `rivalryIssues`: two different teams, no pair twice, no team in two rivalries of the same week, week in range); "Use the built-in list" removes it.
+- Saving makes the newest season's schedule again with the same seed when it can still change (`rivalriesCanRemake`: an offseason's new season before its first import); otherwise the list applies from the next schedule on. After a ROM download the ROM must be written again.
+- The schedule maker (`makeSchedule`) puts every rivalry with a week into that week (as it did the finales: the two teams' other games that week move); the rest go anywhere. Without a user list its output is byte-identical to before (checked for 2026 and 1994 with three seeds). `checkSchedule` reports rivalries off their week (`offWeek`); the schedule page shows them ("Not in its week").
+- Tests: `test:dynasty` and `test:dynasty94` (preferred weeks kept, checks, the built-in list back, a started season untouched).
+
 ## Next phases
 
 1. ~~ROM interface~~ Done: see "The season ROM" above (Elevated v2.0.1-test9 on).
