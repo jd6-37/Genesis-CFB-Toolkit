@@ -218,14 +218,14 @@ Before a game, Bill Walsh reads a scouting report on each team: a paragraph on i
 
 ### Alternate uniforms
 
-On the 138-team 2026 Season Edition with the uniform picker (Elevated v2.0.1-test14 and later), a team can pick other helmets, jerseys and pants on the controller screen (Y on a 6-button pad). **Alternate uniforms** in the Teams tab edits what the picker offers, team by team:
+On the 138-team 2026 Season Edition and the 107-team 1994 Season Edition with the uniform picker (Elevated v2.0.1-test14 and later of either edition), a team can pick other helmets, jerseys and pants on the controller screen (Y on a 6-button pad). **Alternate uniforms** in the Teams tab edits what the picker offers, team by team:
 
 - **Home jersey:** Dark at home (the default) or White at home. The visitor then gets the other one.
 - **Extra helmets, dark jerseys, white jerseys and pants.** A team's own home and away uniforms are always its first choices and aren't listed. **Add** starts a new piece as a copy of the team's own; pick its colors with the Genesis color picker. Picking a helmet's shell or a jersey's or the pants' main color also sets the lighter and darker shades, which you can change afterwards.
 - At most 7 extra helmets, 7 extra pants and 7 extra jerseys (dark and white together) per team: the picker's menu shows single digits.
 - **Undo** puts a team's, or every team's, uniforms back as the ROM was loaded.
 
-The extras are in a 4 KB table at `0x2B6000`-`0x2B6FFF` ("KIT1"); the app rewrites only that table, and only when the ROM has it. `npm run test:kits -- ELEVATED_2026_138` checks reading, writing and the limits.
+The extras are in a 4 KB table at `0x2B6000`-`0x2B6FFF` ("KIT1"); the app rewrites only that table, and only when the ROM has it. The table's team count (138 or 107) comes from the ROM. `npm run test:kits -- ELEVATED_2026_138` (or the 1994 ROM) checks reading, writing and the limits; writing unchanged uniforms leaves the table's bytes as they are.
 
 ### College Football 27 reference
 

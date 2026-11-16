@@ -94,6 +94,9 @@ export function writeKits(d: Uint8Array, kits: TeamKit[]): void {
   const issues = kitIssues(kits);
   if (issues.length) throw new Error(issues[0]);
   if (kits.length !== u16(d, KTAB + 4)) throw new Error(`This ROM's uniforms table is for ${u16(d, KTAB + 4)} teams, not ${kits.length}.`);
+  // Unchanged uniforms keep the table's bytes as they are (another tool may have laid out its records in another
+  // order, as the 1994 edition's LSU / Georgia Tech records: H-012).
+  if (JSON.stringify(readKits(d)) === JSON.stringify(kits)) return;
   const t8 = new Uint8Array(KTAB_SIZE).fill(0xff);
   t8.set(TAG, 0); t8[4] = kits.length >> 8; t8[5] = kits.length & 255;
   let at = headOf(kits.length);
