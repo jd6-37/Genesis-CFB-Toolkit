@@ -1,4 +1,4 @@
-// Teams tab, 2026 Season Edition only: each team's alternate uniforms for the picker on the controller screen
+// Teams tab, 2026 and 1994 Season Editions (H-012): each team's alternate uniforms for the picker on the controller screen
 // (src/core/kits.ts; project handoff H-004). A team's own home and away uniforms are always its first choices;
 // this edits the extras and whether the team wears white at home.
 import { useEffect, useMemo, useState } from 'react';

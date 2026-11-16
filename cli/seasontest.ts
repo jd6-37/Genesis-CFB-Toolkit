@@ -8,6 +8,7 @@ import { basename } from 'node:path';
 import { strict as assert } from 'node:assert';
 import { isWideBw95, openRom } from '../src/core/romfile';
 import { teamsOf } from '../src/core/wide';
+import { EDITIONS } from '../src/core/dynasty/edition';
 import {
   confSizes, playedGames, readWideSeason, restoreWideSeason, wideSeasonIssues, wideSeasonProblems, wideSeasonRanges,
   wideSeasonTables, writeWideSeason,
@@ -34,8 +35,9 @@ const bw = await read(paths[0]);
 const cf = await read(paths[1]);
 const all = await Promise.all(paths.slice(2).map(read));
 const extra = all.filter((d) => !isWideBw95(d));
-// The 107-team 1994 Season Edition isn't a Season tab ROM yet; it only gets the sim settings check at the end.
+// The 107-team 1994 Season Edition (H-011 item 2): the same tables with 11 weeks and its own rules (below).
 const wides = all.filter((d) => isWideBw95(d) && teamsOf(d) === 138);
+const wides94 = all.filter((d) => isWideBw95(d) && teamsOf(d) === 107);
 let passed = 0;
 const ok = (name: string) => {
   passed++;
@@ -344,6 +346,43 @@ for (const wide of wides) {
     assert.deepEqual(wideSeasonIssues(x), [], 'a conference without a title game may have one team');
   }
   ok(`138-team 2026 Season Edition: conference names, members and weeks${readWideSeason(wide).titleGames ? ', title game switches' : ''} read, written in place, tracked, carried, undone; bad settings refused`);
+}
+
+for (const wide of wides94) {
+  const R = EDITIONS['1994'].confRules;
+  assert.deepEqual(wideSeasonProblems(wide), []);
+  const s = readWideSeason(wide);
+  const tn = openRosterRom(wide).teams.map((t) => t.school);
+  const W = (n: string) => tn.indexOf(n);
+  assert.equal(tn.length, 107);
+  assert.deepEqual(s.names, ['SEC', 'Big Ten', 'ACC', 'Big Eight', 'Southwest', 'Pac-10', 'Big East', 'WAC', 'MAC', 'Big West', 'Independents']);
+  assert.deepEqual(wideSeasonIssues(s, R), [], 'the ROM as released is playable');
+  if (s.titleGames) assert.deepEqual(s.titleGames, EDITIONS['1994'].titleGames, 'the SEC plays its title game on the 1994 divisions');
+  const same = wide.slice();
+  writeWideSeason(same, s, R);
+  assert.ok(same.every((b, i) => b === wide[i]), 'unchanged settings write back the same bytes');
+  const d = wide.slice();
+  const e = readWideSeason(d);
+  e.names[3] = 'Big 8';
+  e.conf[W('Penn State')] = 0;
+  e.start[0] = 2;
+  if (e.titleGames) e.titleGames[1] = 1;
+  writeWideSeason(d, e, R);
+  assert.deepEqual(readWideSeason(d), e);
+  const ranges = wideSeasonRanges(wide);
+  for (let k = 0; k < d.length; k++) if (d[k] !== wide[k]) assert.ok(ranges.some(([a, z]) => k >= a && k < z), `byte 0x${k.toString(16)}`);
+  assert.deepEqual(editsSince(wide, d, 'bw95'), { season: true, teams: false, rosters: false, any: true });
+  const to = wide.slice();
+  assert.equal(carryEdits(d, to, wide).season, true);
+  assert.ok(to.every((b, i) => b === d[i]), 'carried to a fresh copy = the same bytes');
+  restoreWideSeason(d, wide);
+  assert.ok(d.every((b, i) => b === wide[i]), 'undo puts every byte back');
+  // 11 weeks: conference games that run into week 12 are refused.
+  const x = readWideSeason(wide);
+  x.start[0] = 4; x.games[0] = 8;
+  assert.match(wideSeasonIssues(x, R).join(' '), /run past week 11/);
+  assert.throws(() => writeWideSeason(wide.slice(), x, R));
+  ok('107-team 1994 Season Edition: conferences, members, weeks (11) and title game switches read, written in place, tracked, carried, undone; a season past week 11 refused');
 }
 
 // The season sim settings (H-016; 2026 test33 / 1994 test36 on): read, written in their 6 bytes, refused when out of range.

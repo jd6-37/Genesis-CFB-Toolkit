@@ -8,8 +8,9 @@ import {
   type EditResult, type Opponent, type Season,
 } from '../../core/season';
 import { openRosterRom } from '../../core/rosterRom';
-import { isWideBw95 } from '../../core/romfile';
-import { readWideSeason, wideSeasonIssues, writeWideSeason, type WideSeason } from '../../core/seasonWide';
+import { is1994Edition, isWideBw95 } from '../../core/romfile';
+import { EDITIONS } from '../../core/dynasty/edition';
+import { RULES_2026, readWideSeason, wideSeasonIssues, writeWideSeason, type WideSeason } from '../../core/seasonWide';
 import { readSimSettings, sameSim, writeSimSettings, type SimSettings } from '../../core/simSettings';
 import { SimSettingsBox } from './SimSettingsBox';
 import { SeasonWide } from './SeasonWide';
@@ -108,17 +109,21 @@ export function SeasonTool({
     }
   };
 
+  // The 1994 Season Edition (107 teams) is on the same layout, with 11 weeks and the bowls (H-011 item 2).
+  const ed94 = !!work && is1994Edition(work.data);
+  const rules = ed94 ? EDITIONS['1994'].confRules : RULES_2026;
+
   const changeWide = (s: WideSeason) => {
     if (!wide || !work) return;
     setWide({ ...wide, now: s });
     setNote(null);
-    const issues = wideSeasonIssues(s);
+    const issues = wideSeasonIssues(s, rules);
     if (issues.length) {
       api.setBlocker(issues[0]);
       return;
     }
     try {
-      writeWideSeason(work.data, s);
+      writeWideSeason(work.data, s, rules);
       api.setBlocker(null);
       api.edited();
     } catch (e) {
@@ -185,9 +190,9 @@ export function SeasonTool({
       <PageHead title="Season">
         {wide ? (
           <>
-            Rename the 2026 Season Edition's conferences, choose which of the 138 teams play in each, set when each
-            conference plays its conference games in random seasons, and set how the season sim decides the games you
-            don't play.
+            Rename the {ed94 ? '1994' : '2026'} Season Edition's conferences, choose which of the {ed94 ? 107 : 138} teams
+            play in each, set when each conference plays its conference games in random seasons, and set how the season sim
+            decides the games you don't play.
           </>
         ) : (
           <>
@@ -205,7 +210,7 @@ export function SeasonTool({
 
       {work && wide ? (
         <>
-          <SeasonWide key={work.id} teams={teams} season={wide.now} loaded={wide.loaded} onChange={changeWide} />
+          <SeasonWide key={work.id} teams={teams} season={wide.now} loaded={wide.loaded} onChange={changeWide} edition={ed94 ? '1994' : '2026'} />
           {sim && <SimSettingsBox value={sim.now} loaded={sim.loaded} onChange={changeSim} />}
         </>
       ) : work && season ? (
@@ -237,7 +242,7 @@ export function SeasonTool({
             )}
             <Button
               onClick={() => setNote(api.save())}
-              disabled={(!api.edits.any && !work.checkOff) || wideSeasonIssues(wide.now).length > 0}
+              disabled={(!api.edits.any && !work.checkOff) || wideSeasonIssues(wide.now, rules).length > 0}
             >
               Download ROM
             </Button>

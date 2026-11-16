@@ -42,17 +42,22 @@ export function headerTitle(d: Uint8Array): string {
   return d.length < 0x180 ? '' : String.fromCharCode(...d.subarray(0x150, 0x180)).replace(/\s+/g, ' ').trim();
 }
 
-/** True for a BW95 ROM over 2 MB: the 138-team 2026 Season Edition (see `KnownRom.wide`). */
+/** True for a BW95 ROM over 2 MB: the 138-team 2026 Season Edition or the 107-team 1994 Season Edition (see `KnownRom.wide`). */
 export const isWideBw95 = (d: Uint8Array) => d.length > 0x200000 && headerTitle(d) === BW95_TITLE;
 
+/** True for the 107-team 1994 Season Edition (a wide ROM on the 2026 edition's layout; H-011 item 2). */
+export const is1994Edition = (d: Uint8Array) => isWideBw95(d) && teamsOf(d) === 107;
+
 /** Why Team Swap doesn't take a wide ROM. */
-export const WIDE_ROM_TEXT =
-  'This is the 2026 Season Edition with all 138 FBS teams, so Team Swap (College Football USA 97 teams into the 36 ' +
-  "original slots) doesn't take it. To swap in CF97 teams, start from the original game or the Elevated edition with the original 36 teams.";
+export const wideRomText = (d: Uint8Array) =>
+  (is1994Edition(d) ? 'This is the 1994 Season Edition with 107 teams' : 'This is the 2026 Season Edition with all 138 FBS teams') +
+  ", so Team Swap (College Football USA 97 teams into the 36 original slots) doesn't take it. To swap in CF97 teams, start " +
+  'from the original game or the Elevated edition with the original 36 teams.';
 /** What the other tabs do with a wide ROM so far. */
-export const WIDE_TABS_TEXT =
-  "Season, Teams and Rosters edit it: conferences and their schedule weeks; every team's styles, OFF and DEF, home " +
-  "weather and Walsh Report; and all 138 rosters, with the built-in CFB 27 rosters too.";
+export const wideTabsText = (d: Uint8Array) =>
+  "Season, Teams and Rosters edit it: conferences, their schedule weeks and title games, and the season sim; every team's " +
+  'styles, OFF and DEF, home weather, Walsh Report and alternate uniforms; and ' +
+  (is1994Edition(d) ? 'all 107 rosters.' : 'all 138 rosters, with the built-in CFB 27 rosters too.');
 
 /** A known file by SHA-1, else any 2 MB ROM with BW95's header counts as a modded BW95 ROM, and a
  *  bigger one as the 138-team edition. */

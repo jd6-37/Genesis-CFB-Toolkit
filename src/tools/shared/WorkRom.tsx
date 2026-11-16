@@ -42,7 +42,7 @@ function makeWork(inc: Incoming): WorkRom {
   const game = detectGame(inc.data);
   if (!game) throw new Error("Not a Bill Walsh College Football '95, College Football USA '96 or '97 ROM.");
   if (isWideBw95(inc.data) && wideLayoutProblems(inc.data).length) {
-    throw new Error(`This 4 MB Bill Walsh '95 ROM isn't laid out like the 138-team 2026 Season Edition: ${wideLayoutProblems(inc.data).join('; ')}.`);
+    throw new Error(`This 4 MB Bill Walsh '95 ROM isn't laid out like the 2026 or 1994 Season Edition: ${wideLayoutProblems(inc.data).join('; ')}.`);
   }
   const c = findEaChecksum(inc.data, game);
   return {

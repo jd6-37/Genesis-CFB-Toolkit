@@ -1,9 +1,10 @@
 // Team ratings and home weather tests (Teams tab, Team Swap, CFB 27 conversion), against real ROMs
 // (bring your own; .md/.bin/.gen or .zip): the original BW95, CF97, and the two Elevated v1.1.0
 // editions (the original game with the Elevated and the Elevated 2026 Season Edition patches):
-//   npx tsx cli/teamstest.ts BW95 CF97 ELEVATED ELEVATED_2026 [ELEVATED_2026_138]
+//   npx tsx cli/teamstest.ts BW95 CF97 ELEVATED ELEVATED_2026 [ELEVATED_2026_138] [ELEVATED_1994]
 // (ELEVATED: the Elevated edition, v1.1.0 or later; ELEVATED_2026: the 2026 Season Edition v1.1.0, the 36-team one;
-// ELEVATED_2026_138, optional: the 138-team 2026 Season Edition of v2.0.0 on, for the whole Teams tab on it)
+// ELEVATED_2026_138, optional: the 138-team 2026 Season Edition of v2.0.0 on, for the whole Teams tab on it;
+// ELEVATED_1994, optional: the 107-team 1994 Season Edition (v2.0.1-test33 on), the same on it)
 // The CFB 27 data is the built-in file, public/data/ea-cfb27-ratings-2026-week9.csv.
 import { hasSimSettings } from '../src/core/simSettings';
 import { readFileSync } from 'node:fs';
@@ -25,12 +26,12 @@ import {
 import { rw } from '../src/core/bytes';
 import { readStyle, readStyles, restoreStyle, styleProblems, styleRanges, writeStyle } from '../src/core/styles';
 import { findCfb27 } from '../src/core/cfb27Styles';
-import { editedReports, readReports, reportLength, restoreReport, writeReports } from '../src/core/walshReports';
+import { editedReports, readReports, reportLength, restoreAllReports, restoreReport, writeReports } from '../src/core/walshReports';
 import { readWideWalsh, wideWalshRanges, writeWideWalsh } from '../src/core/walshWide';
 
-const [bwPath, cfPath, e94Path, e26Path, widePath] = process.argv.slice(2);
+const [bwPath, cfPath, e94Path, e26Path, widePath, ed94Path] = process.argv.slice(2);
 if (!e26Path) {
-  console.error('usage: tsx cli/teamstest.ts BW95 CF97 ELEVATED ELEVATED_2026 [ELEVATED_2026_138]');
+  console.error('usage: tsx cli/teamstest.ts BW95 CF97 ELEVATED ELEVATED_2026 [ELEVATED_2026_138] [ELEVATED_1994]');
   process.exit(2);
 }
 const read = async (p: string) => (await openRom(basename(p), new Uint8Array(readFileSync(p)))).data;
@@ -282,6 +283,54 @@ if (widePath) {
     assert.equal(ovrFromStarters(87, 'v2'), 94);
     ok(`2026 test33 on: all 138 OVRs = the built-in starters on the ${ovrScaleOf(wide)} scale`);
   } else ok('138-team edition before test33: no season sim settings, OVRs on the v1 scale (not checked here)');
+}
+
+// 10. The 107-team 1994 Season Edition (H-011 item 2): the same tables as the 2026 edition's, 107 entries.
+if (ed94Path) {
+  const wide = await read(ed94Path);
+  const names = openRosterRom(wide).teams.map((t) => t.school);
+  assert.ok(isWideBw95(wide) && names.length === 107, 'the 6th path must be the 107-team 1994 Season Edition');
+  assert.deepEqual([...styleProblems(wide), ...ratingProblems(wide)], []);
+  assert.equal(readStyles(wide).length, 107);
+  const rt = wide.slice();
+  writeWideWalsh(rt, readWideWalsh(rt));
+  assert.ok(rt.every((b, i) => b === wide[i]), 'Walsh text round trip');
+  const d = wide.slice();
+  const last = 106;
+  const ps = names.indexOf('Penn State');
+  writeStyle(d, last, { offense: 0, defense: 2 });
+  writeRating(d, ps, { off: 70, def: 95 });
+  writeWeather(d, ps, [1, 2, 3, 4]);
+  const report = { offense: 'The offense runs the ball.', defense: 'The defense plays a lot of zone.' };
+  // Its 36 original teams keep the original game's long reports: the first edit trims them to the limit, as on the original game.
+  const longOnes = readReports(wide).flatMap((r, t) => (reportLength(r) > 650 ? [t] : []));
+  assert.deepEqual(writeReports(d, new Map([[last, report]])), longOnes);
+  assert.deepEqual(readStyle(d, last), { offense: 0, defense: 2 });
+  assert.deepEqual(readRating(d, ps), { off: 70, def: 95 });
+  assert.deepEqual(readWeather(d, ps), [1, 2, 3, 4]);
+  assert.deepEqual(readReports(d)[last], report);
+  assert.ok(readReports(d).every((r, t) => t === last || longOnes.includes(t) || JSON.stringify(r) === JSON.stringify(readReports(wide)[t])), 'other reports kept');
+  assert.deepEqual(editedReports(wide, d), [last], 'the trims don\'t count as edits');
+  const allowed: [number, number][] = [...styleRanges(wide), ...ratingRanges(wide), ...wideWalshRanges(wide)];
+  for (let k = 0; k < d.length; k++) {
+    if (d[k] !== wide[k]) assert.ok(allowed.some(([a, e]) => k >= a && k < e), `byte 0x${k.toString(16)} changed`);
+  }
+  assert.deepEqual(editsSince(wide, d, 'bw95'), { season: false, teams: true, rosters: false, any: true });
+  const to = wide.slice();
+  assert.equal(carryEdits(d, to, wide).teams, 2);
+  assert.ok(to.every((b, i) => b === d[i]), 'carried to a fresh copy = the same bytes');
+  for (const t of [last, ps]) {
+    restoreStyle(d, wide, t);
+    restoreTeam(d, wide, t);
+    restoreReport(d, wide, t);
+  }
+  restoreAllReports(d, wide); // with no report edited any more, the trims go too (as the Teams tab does)
+  assert.ok(d.every((b, i) => b === wide[i]), 'undo puts every byte back');
+  const big = wide.slice();
+  const long = { offense: 'word '.repeat(64).trim() + '.', defense: 'more '.repeat(64).trim() + '.' };
+  writeReports(big, new Map(names.map((_, t) => [t, long] as [number, typeof long])));
+  assert.deepEqual(readReports(big)[last], long);
+  ok('107-team 1994 Season Edition: styles, OFF/DEF, weather and Walsh Reports edited in its own tables, tracked, carried and undone; every report fits at the limit');
 }
 
 console.log(`${passed} passed`);

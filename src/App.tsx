@@ -6,7 +6,7 @@ import { CfTeam, parseCf97 } from './core/cf97';
 import { buildRom, defaultSlot, isSwapFile, SlotConfig, swapFile, swappedSlots, swapProblemText, validateSlot } from './core/build';
 import { MAX_LEN } from './core/defaults';
 import { renderSprites } from './core/render';
-import { describeUnknown, OpenedRom, openRom, WIDE_ROM_TEXT } from './core/romfile';
+import { describeUnknown, OpenedRom, openRom, wideRomText } from './core/romfile';
 import { CelebBlob, defaultCelebration, genericCelebration, PREVIEW_FRAME } from './core/celebration';
 import { SpriteCanvas, Swatch, UniformEditor } from './components';
 import { RosterTool } from './tools/rosters/RosterTool';
@@ -108,7 +108,7 @@ export default function App() {
     setRomNote(null);
     if (startRom.known?.wide) {
       setBw(null);
-      setRomNote({ kind: 'error', text: `${startRom.name}: ${WIDE_ROM_TEXT}` });
+      setRomNote({ kind: 'error', text: `${startRom.name}: ${wideRomText(startRom.data)}` });
       return;
     }
     const problem = swapProblemText(startRom.data);
