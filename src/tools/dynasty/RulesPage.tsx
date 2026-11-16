@@ -7,6 +7,7 @@ import {
   type OffseasonRules, type RuleField,
 } from '../../core/dynasty/rules';
 import { href, useDyn } from './ui';
+import { hasTransfers } from '../../core/dynasty/edition';
 import type { OffseasonActions } from './OffseasonPage';
 import { simOf, setSim } from '../../core/dynasty/seasonSim';
 import { SIM_DEFAULTS } from '../../core/simSettings';
@@ -32,6 +33,8 @@ const showDefault = (f: RuleField, v: number | number[]) =>
 
 export function Rules({ actions, busy }: { actions: OffseasonActions; busy: string | null }) {
   const { d } = useDyn();
+  // The 1994 edition has no transfer portal: its numbers aren't shown (they stay in the rules file).
+  const portal = hasTransfers(d);
   const [ok, setOk] = useState(() => { try { return sessionStorage.getItem(SEEN_KEY) === '1'; } catch { return false; } });
   const [draft, setDraft] = useState<OffseasonRules>(() => rulesOf(d));
   const [msg, setMsg] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
@@ -120,13 +123,13 @@ export function Rules({ actions, busy }: { actions: OffseasonActions; busy: stri
         </div>
       )}
 
-      {RULE_SECTIONS.map((sec) => {
+      {RULE_SECTIONS.filter((sec) => portal || !sec.portal).map((sec) => {
         const secChanged = sec.fields.some((f) => JSON.stringify(draft[f.key]) !== JSON.stringify(DEFAULT_RULES[f.key]));
         return (
           <section key={sec.title} className="dy-rule-sec">
             <SubHead>{sec.title}</SubHead>
             <p className="dy-small dy-dim">{sec.intro}</p>
-            {sec.fields.map((f) => {
+            {sec.fields.filter((f) => portal || !f.portal).map((f) => {
               const v = draft[f.key] as number | number[];
               const def = DEFAULT_RULES[f.key] as number | number[];
               const changed = JSON.stringify(v) !== JSON.stringify(def);

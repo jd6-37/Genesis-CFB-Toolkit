@@ -36,6 +36,7 @@ import { SCHOOL_COLORS } from '../src/core/dynasty/schoolColors';
 import { CFB27_ACADEMICS } from '../src/core/dynasty/academics';
 import { rivalryOf } from '../src/core/dynasty/rivalries';
 import * as Off from '../src/core/dynasty/offseason';
+import * as Rec from '../src/core/dynasty/recruiting';
 import * as Sim from '../src/core/dynasty/sim';
 
 const [romPath, savePath] = process.argv.slice(2);
@@ -261,6 +262,17 @@ assert.equal(readStamp(out2.subarray(DYN_AREA, DYN_AREA + 16))!.season, 2);
   assert.equal(poll.length, 107);
   assert.deepEqual(readPollSet(out2), pollSet(poll));
   ok(`1995 Walsh Reports for all 107 teams and the preseason poll (No. 1 ${d2.teams[poll[0].team].school}) in the season ROM`);
+}
+// No transfer portal in the 1994 edition (user, H-011): nobody enters it, moves or is offered from it.
+{
+  assert.equal(EDITIONS['1994'].transfers, false);
+  assert.equal(EDITIONS['2026'].transfers, true);
+  assert.deepEqual(Off.chooseTransfers(o, 21), []);
+  assert.ok(o.players.every((p) => Off.transferChance(o, p) === 0));
+  assert.ok(d2.players.every((p) => !(p.transfers ?? []).some((x) => x.year === 1994)), 'nobody transferred');
+  const full = Rec.openRecruiting({ ...o, offseason: { ...o.offseason!, step: 'portal', portal: [1, 2, 3] } }, Off.recruitTemplates(o));
+  assert.ok(full.offseason!.recruiting!.prospects.every((x) => x.id < 0 && x.from === null), 'no portal players in recruiting, even with an older portal list');
+  ok('no transfer portal: no entries, no moves, no portal prospects');
 }
 ok(`offseason: ${d2.players.filter((p) => p.status === 'active').length} players in 1995, an 11-week schedule in the 1995 ROM`);
 

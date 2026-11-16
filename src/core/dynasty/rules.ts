@@ -145,8 +145,10 @@ export interface RuleField {
   max: number;
   /** For lists: a label per item. */
   items?: string[];
+  /** Only used with the transfer portal (hidden in the 1994 edition). */
+  portal?: boolean;
 }
-export interface RuleSection { title: string; intro: string; fields: RuleField[] }
+export interface RuleSection { title: string; intro: string; fields: RuleField[]; portal?: boolean }
 
 const STARS = ['Walk-on', '1★', '2★', '3★', '4★', '5★'];
 
@@ -194,6 +196,7 @@ export const RULE_SECTIONS: RuleSection[] = [
   },
   {
     title: 'Transfers',
+    portal: true,
     intro: 'Who enters the transfer portal, by his role last season. Playing time makes players content.',
     fields: [
       { key: 'transferStarter', label: 'Starters', help: 'Base chance.', kind: 'pct', min: 0, max: 1 },
@@ -222,7 +225,7 @@ export const RULE_SECTIONS: RuleSection[] = [
       { key: 'noOffer', label: 'Interest without an offer (×)', help: '', kind: 'num', min: 0, max: 5 },
       { key: 'commitThreshold', label: 'Interest needed to commit', help: 'By stars.', kind: 'int', min: 1, max: 5000, items: STARS },
       { key: 'firstWeek', label: 'First week he may commit', help: 'By stars.', kind: 'int', min: 1, max: 12, items: STARS },
-      { key: 'portalThreshold', label: 'Portal players need (× the threshold)', help: 'They also decide a week sooner.', kind: 'pct', min: 0.05, max: 2 },
+      { key: 'portalThreshold', label: 'Portal players need (× the threshold)', help: 'They also decide a week sooner.', kind: 'pct', min: 0.05, max: 2, portal: true },
       { key: 'commitLead', label: 'Lead needed to commit (× the second school)', help: '', kind: 'num', min: 1, max: 5 },
       { key: 'flipMargin', label: 'A flip needs (× his school\'s interest)', help: 'Only from a school two prestige stars higher.', kind: 'num', min: 1, max: 10 },
       { key: 'flipChance', label: 'Chance a flip happens that week', help: '', kind: 'pct', min: 0, max: 1 },
@@ -242,7 +245,7 @@ export const RULE_SECTIONS: RuleSection[] = [
       { key: 'pitchPrestige', label: 'Program prestige', help: '', kind: 'num', min: 0, max: 5, items: STARS },
       { key: 'pitchAcademics', label: 'Academics', help: 'College Football 27\'s academic grades.', kind: 'num', min: 0, max: 5, items: STARS },
       { key: 'pitchContender', label: 'Championship contender', help: '', kind: 'num', min: 0, max: 5, items: STARS },
-      { key: 'portalPlayingTime', label: 'Portal players: playing time at least', help: 'Before scaling.', kind: 'num', min: 0, max: 5 },
+      { key: 'portalPlayingTime', label: 'Portal players: playing time at least', help: 'Before scaling.', kind: 'num', min: 0, max: 5, portal: true },
       { key: 'contenderLastSeason', label: 'Contender: weight of last season\'s final poll', help: 'The rest is the roster as it stands, commitments included.', kind: 'pct', min: 0, max: 1 },
       { key: 'pitchInterests', label: 'His interests: his top … pitches', help: 'Pitching one of these gets a reaction (+, ~ or −).', kind: 'int', min: 1, max: 5 },
       { key: 'pitchStrongAt', label: 'Your school is strong at a pitch from', help: 'School scores are 0-1 (an A+ academic school is 1, F 0.1).', kind: 'pct', min: 0, max: 1 },

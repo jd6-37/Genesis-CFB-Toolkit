@@ -25,7 +25,7 @@ import { fineSetBytes, putFineOffsets } from './fine';
 import { applyWhiteHome } from './kit';
 import { lastGames, makeSchedule, RELEASE_CONF_WEEKS, rivalriesOf, scheduleSet } from './schedule';
 import { writeConferences } from './conferences';
-import { editionOf, editionOfRom } from './edition';
+import { editionOf, editionOfRom, hasTransfers } from './edition';
 import { CLASSES, rng, type ClassYear, type DPlayer, type DSeason, type Dynasty, type OffseasonEvent } from './model';
 import { playerLines, seasonView } from './derive';
 import { NO_NUMBER, assignNumbers } from './numbers';
@@ -360,7 +360,7 @@ export function benchSeasons(d: Dynasty): Map<number, number> {
  * Linemen and backups have no stats, so they keep the full chance. Players signed this offseason never.
  */
 export function transferChance(d: Dynasty, p: DPlayer, ctx: PortalContext = portalContext(d)): number {
-  if (p.status !== 'active' || p.team === null || p.recruit?.year === lastSeason(d).year + 1) return 0;
+  if (!hasTransfers(d) || p.status !== 'active' || p.team === null || p.recruit?.year === lastSeason(d).year + 1) return 0;
   const R = rulesOf(d);
   const role = ctx.role.get(p.id) ?? 'backup';
   let c = role === 'starter' ? R.transferStarter : role === 'depth' ? R.transferDepth : R.transferBackup;
@@ -456,7 +456,7 @@ export function runPortal(d: Dynasty): Dynasty {
   const ctx = portalContext(d);
 
   // Who enters: decided with the departures (st.portal).
-  const entries = (st.portal ?? chooseTransfers(d, st.seed)).map((id) => players[id - 1]).filter((p) => p.status === 'active' && p.team !== null);
+  const entries = (hasTransfers(d) ? st.portal ?? chooseTransfers(d, st.seed) : []).map((id) => players[id - 1]).filter((p) => p.status === 'active' && p.team !== null);
   entries.sort((a, b) => b.ovr - a.ovr || a.id - b.id);
 
   // Where they go: only where they'd start (user, 2026-11-12: "find a starting job elsewhere, if

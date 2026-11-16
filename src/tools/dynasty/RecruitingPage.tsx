@@ -11,6 +11,7 @@ import { closeness } from '../../core/dynasty/schoolStates';
 import { playerName } from '../../core/dynasty/derive';
 import { GROUP_COLUMNS, type Attr } from '../../core/rosterLayouts';
 import { rulesOf } from '../../core/dynasty/rules';
+import { hasTransfers } from '../../core/dynasty/edition';
 import { academicGrade, academicsOf, gradeOf } from '../../core/dynasty/academics';
 import { costOf, interestRank, newOffers, offerCap, offersOut, pipelineStates, planCost, pointCost, withdrawOffer } from '../../core/dynasty/recruiting';
 import { SCHOOL_STATE, stateCode } from '../../core/dynasty/schoolStates';
@@ -219,7 +220,7 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
       )}
       {err && <Note kind="error">{err}</Note>}
       <Tabs label="Recruiting sections" value={tab} onChange={setTab} tabs={[
-        { value: 'board', label: 'Board', count: open ? board.length : undefined }, { value: 'prospects', label: 'Prospects' }, { value: 'portal', label: 'Transfer portal' },
+        { value: 'board', label: 'Board', count: open ? board.length : undefined }, { value: 'prospects', label: 'Prospects' }, ...(hasTransfers(d) ? [{ value: 'portal' as const, label: 'Transfer portal' }] : []),
         { value: 'school', label: 'My school' }, { value: 'classes', label: 'Top classes' },
       ]} />
       {tab === 'board' && <BoardTab hub={hub} board={board} commits={commits} toProspects={() => setTab('prospects')} />}

@@ -28,11 +28,13 @@ export interface Edition {
   confRules: ConfRules;
   /** The ROM's default title game switches (seasonWide.ts, CTG1): what older ROMs and older dynasties play. */
   titleGames: number[];
+  /** Players can transfer in the offseason (user, H-011: "transfer portal disabled for 94 rom"). */
+  transfers: boolean;
 }
 
 export const EDITIONS: Record<EditionId, Edition> = {
-  '2026': { id: '2026', name: '2026 Season Edition', teams: 138, startYear: 2026, saveSig: 0x6f, regWeeks: 12, postseason: 'cfp', confRules: RULES_2026, titleGames: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0] },
-  '1994': { id: '1994', name: '1994 Season Edition', teams: 107, startYear: 1994, saveSig: 0x94, regWeeks: 11, postseason: 'bowls', confRules: { weeks: 11, titleGames: [0] }, titleGames: [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
+  '2026': { id: '2026', name: '2026 Season Edition', teams: 138, startYear: 2026, saveSig: 0x6f, regWeeks: 12, postseason: 'cfp', confRules: RULES_2026, titleGames: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0], transfers: true },
+  '1994': { id: '1994', name: '1994 Season Edition', teams: 107, startYear: 1994, saveSig: 0x94, regWeeks: 11, postseason: 'bowls', confRules: { weeks: 11, titleGames: [0] }, titleGames: [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], transfers: false },
 };
 
 /** The edition of a ROM by its team count, or null (not a dynasty edition). */
@@ -46,6 +48,9 @@ export const editionOfSig = (sig: number): Edition | null => Object.values(EDITI
 
 /** A dynasty's edition (dynasties made before the 1994 edition are 2026 ones). */
 export const editionOf = (d: { edition?: EditionId }): Edition => EDITIONS[d.edition ?? '2026'];
+
+/** A dynasty has the transfer portal (not in the 1994 edition). */
+export const hasTransfers = (d: { edition?: EditionId }): boolean => editionOf(d).transfers;
 
 /** The dynasty header's format word and team count (+0x10). */
 export const dynastyFormat = (teams: number) => (0x10000 | teams) >>> 0;

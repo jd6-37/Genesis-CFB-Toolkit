@@ -7,6 +7,7 @@ import {
   seasonDone, startOffseason, suggestCuts, groupMins, ROSTER_LIMIT, type RecruitTemplates,
 } from '../../core/dynasty/offseason';
 import { openRecruiting } from '../../core/dynasty/recruiting';
+import { hasTransfers } from '../../core/dynasty/edition';
 import { rulesOf } from '../../core/dynasty/rules';
 import { EVEN_TRAINING, TRAINING_AREAS, TRAINING_POINTS, trainingProblems, type Training } from '../../core/dynasty/training';
 import { simCuts, simOffseason } from '../../core/dynasty/sim';
@@ -49,8 +50,9 @@ const STEP_OF = { carousel: 0, depth: 1, portal: 2, recruiting: 3, signing: 3, c
 const FIRST_SEASON_STEP = 7;
 const SEASON_STEPS = ['players', 'depth', 'conferences', 'schedule', 'walsh', 'rom'] as const;
 type SeasonStep = typeof SEASON_STEPS[number];
-const stepList = (full: boolean, links: boolean) => STEPS.map((label, i) => ({
-  label: i === 3 && full ? 'Recruiting' : label,
+// Without transfers (the 1994 edition) step 4 is recruiting either way.
+const stepList = (full: boolean, links: boolean, portal = true) => STEPS.map((label, i) => ({
+  label: i === 3 && (full || !portal) ? 'Recruiting' : label,
   href: links && i >= FIRST_SEASON_STEP ? href(`offseason/${SEASON_STEPS[i - FIRST_SEASON_STEP]}`) : undefined,
 }));
 
@@ -169,7 +171,7 @@ export function Offseason({ actions, busy, arg }: { actions: OffseasonActions; b
           <>
             <p>
               {done
-                ? `The ${season.year} season is over. The offseason takes your dynasty to ${season.year + 1}: coaches retire, are fired and are hired, seniors leave, the transfer portal opens, every team signs a class and cuts to ${ROSTER_LIMIT}, and the returning players develop in offseason training.`
+                ? `The ${season.year} season is over. The offseason takes your dynasty to ${season.year + 1}: coaches retire, are fired and are hired, seniors leave, ${hasTransfers(d) ? 'the transfer portal opens, ' : ''}every team signs a class and cuts to ${ROSTER_LIMIT}, and the returning players develop in offseason training.`
                 : `The offseason starts once the ${season.year} season is over: import the save after the last game. ${v.save ? `So far ${v.games.filter((g) => g.vs !== null).length} of ${v.games.length} games are played.` : ''}`}
             </p>
             {users.length > 0 && <TrainingFocus actions={actions} busy={busy} />}
@@ -189,7 +191,7 @@ export function Offseason({ actions, busy, arg }: { actions: OffseasonActions; b
   return (
     <section className={['recruiting', 'portal'].includes(st.step) || (st.step === 'cuts' && !st.cutsPicked) ? 'dy-off dy-off-wide' : 'dy-off'}>
       <PageHead title={`Offseason ${st.year}`} />
-      <Steps label="Offseason steps" steps={stepList(st.mode === 'full', false)} current={step} />
+      <Steps label="Offseason steps" steps={stepList(st.mode === 'full', false, hasTransfers(d))} current={step} />
 
       {st.step === 'carousel' && <CarouselStep actions={actions} busy={busy} />}
       {st.step !== 'carousel' && <CarouselSummary />}
@@ -201,6 +203,7 @@ export function Offseason({ actions, busy, arg }: { actions: OffseasonActions; b
 
       {st.step === 'signing' && (
         <>
+          {hasTransfers(d) && <>
           <SubHead>Transfer portal</SubHead>
           {users.map((u) => (
             <div key={u} className="dy-off-team">
@@ -214,6 +217,8 @@ export function Offseason({ actions, busy, arg }: { actions: OffseasonActions; b
           <p>{of('transfer').length} players entered the portal; {of('transfer').filter((e) => e.to !== null).length} found a new team.</p>
           <h4>Biggest moves</h4>
           <PlayerList rows={of('transfer').filter((e) => e.to !== null).sort((a, b) => b.ovr - a.ovr).slice(0, 10).map((e) => ({ p: pl(e.player), extra: `${d.teams[e.from].school} to ${d.teams[e.to!].school}` }))} />
+          </>}
+          {!hasTransfers(d) && <p>Every team signs a class next.</p>}
           <Next busy={busy} label="Signing day" onClick={() => actions.run('Signing the classes…', async () => actions.commit(runSigningDay(d, await getTemplates(d))))} />
           <div className="dy-row"><SimOffseason actions={actions} busy={busy} /></div>
         </>
@@ -286,10 +291,12 @@ function Leaving({ actions, busy }: { actions: OffseasonActions; busy: string | 
   const of = (k: 'graduated' | 'pro' | 'returns') => st.events.filter((e): e is Extract<OffseasonEvent, { kind: 'graduated' | 'pro' | 'returns' }> => e.kind === k);
   const season = d.seasons[d.seasons.length - 1];
   const R = rulesOf(d);
+  const portal = hasTransfers(d);
+  const country = `Across the country ${of('graduated').length.toLocaleString('en-US')} players graduate, ${of('pro').length} go pro, ${portal ? `${(st.portal ?? []).length} enter the transfer portal ` : ''}and ${of('returns').length} seniors come back as SR+.`;
   if (team === undefined) {
     return (
       <>
-        <p>Across the country {of('graduated').length.toLocaleString('en-US')} players graduate, {of('pro').length} go pro, {(st.portal ?? []).length} enter the transfer portal and {of('returns').length} seniors come back as SR+.</p>
+        <p>{country}</p>
         <LeavingNext actions={actions} busy={busy} />
       </>
     );
@@ -300,7 +307,7 @@ function Leaving({ actions, busy }: { actions: OffseasonActions; busy: string | 
   const rows = [
     ...of('pro').filter((e) => e.team === team).map((e) => ({ p: pl(e.player), why: 'Going pro', portal: false })),
     ...of('graduated').filter((e) => e.team === team).map((e) => ({ p: pl(e.player), why: 'Graduating', portal: false })),
-    ...(st.portal ?? []).map(pl).filter((p) => p.team === team).map((p) => ({ p, why: 'Entering the transfer portal', portal: true })),
+    ...(portal ? st.portal ?? [] : []).map(pl).filter((p) => p.team === team).map((p) => ({ p, why: 'Entering the transfer portal', portal: true })),
   ].sort((a, b) => Number(starter(b.p.id)) - Number(starter(a.p.id)) || b.p.ovr - a.p.ovr);
   const gone = new Set(rows.map((r) => r.p.id));
   const back = of('returns').filter((e) => e.team === team).map((e) => pl(e.player));
@@ -321,7 +328,7 @@ function Leaving({ actions, busy }: { actions: OffseasonActions; busy: string | 
         <dl className="dy-hub-stats">
           <div><dt>Graduating</dt><dd>{n('Graduating')}</dd></div>
           <div><dt>Going pro</dt><dd>{n('Going pro')}</dd></div>
-          <div><dt>Into the portal</dt><dd>{n('Entering')}</dd></div>
+          {portal && <div><dt>Into the portal</dt><dd>{n('Entering')}</dd></div>}
           <div><dt>Starters lost</dt><dd>{holes.length}</dd></div>
         </dl>
         <Button disabled={!!busy} onClick={() => actions.run('Opening recruiting…', async () => actions.commit(openRecruiting(d, await getTemplates(d))))}>Recruit for {R.weeks} weeks</Button>
@@ -330,7 +337,8 @@ function Leaving({ actions, busy }: { actions: OffseasonActions; busy: string | 
       <div className="dy-school">
         <div>
           <Tabs label="Which players" value={show} onChange={(x) => { setShow(x); setAll(false); }} tabs={[
-            { value: 'all', label: 'All', count: rows.length }, { value: 'starters', label: 'Starters', count: rows.filter((r) => starter(r.p.id)).length }, { value: 'portal', label: 'Transfer portal', count: rows.filter((r) => r.portal).length },
+            { value: 'all', label: 'All', count: rows.length }, { value: 'starters', label: 'Starters', count: rows.filter((r) => starter(r.p.id)).length },
+            ...(portal ? [{ value: 'portal' as const, label: 'Transfer portal', count: rows.filter((r) => r.portal).length }] : []),
           ]} />
           {list.length === 0 ? <p className="dy-dim">Nobody.</p> : (
             <Table>
@@ -354,7 +362,7 @@ function Leaving({ actions, busy }: { actions: OffseasonActions; busy: string | 
               <PlayerList rows={back.map((p) => ({ p, extra: 'SR+' }))} />
             </>
           )}
-          <p className="dy-small dy-dim">Across the country {of('graduated').length.toLocaleString('en-US')} players graduate, {of('pro').length} go pro, {(st.portal ?? []).length} enter the transfer portal and {of('returns').length} seniors come back as SR+. Where the transfers go is decided in recruiting.</p>
+          <p className="dy-small dy-dim">{country}{portal ? ' Where the transfers go is decided in recruiting.' : ''}</p>
         </div>
         <aside>
           <section className="dy-card">
@@ -389,10 +397,10 @@ function LeavingNext({ actions, busy, second }: { actions: OffseasonActions; bus
   return (
     <>
       <SubHead>Next</SubHead>
-      <p>Recruit yourself for {weeks} weeks (high-school players and the transfer portal), or let every team sign a quick random class.</p>
+      <p>Recruit yourself for {weeks} weeks ({hasTransfers(d) ? 'high-school players and the transfer portal' : 'high-school players'}), or let every team sign a quick random class.</p>
       <div className="dy-row dy-next">
         <Button variant={second ? 'quiet' : 'primary'} disabled={!!busy} onClick={() => actions.run('Opening recruiting…', async () => actions.commit(openRecruiting(d, await getTemplates(d))))}>Recruit for {weeks} weeks</Button>
-        <Button variant="quiet" disabled={!!busy} onClick={() => actions.run('Running the transfer portal…', () => actions.commit(runPortal(d)))}>Random classes</Button>
+        <Button variant="quiet" disabled={!!busy} onClick={() => actions.run(hasTransfers(d) ? 'Running the transfer portal…' : 'Moving on…', () => actions.commit(runPortal(d)))}>Random classes</Button>
         <SimOffseason actions={actions} busy={busy} />
       </div>
     </>
@@ -592,7 +600,7 @@ function SeasonSteps({ actions, step, busy }: { actions: OffseasonActions; step:
   const season = d.seasons[d.seasons.length - 1];
   const [team, setTeam] = useState(firstTeam(d, focus));
   const pl = (id: number) => d.players[id - 1];
-  const steps = <Steps label="Offseason steps" steps={stepList(true, true)} current={FIRST_SEASON_STEP + SEASON_STEPS.indexOf(step)} />;
+  const steps = <Steps label="Offseason steps" steps={stepList(true, true, hasTransfers(d))} current={FIRST_SEASON_STEP + SEASON_STEPS.indexOf(step)} />;
   if (step === 'players') return <>{steps}<EditPlayersStep team={team} onPick={setTeam} /></>;
   if (step === 'depth') {
     const slots = team !== undefined ? season.slots[team] ?? [] : [];
