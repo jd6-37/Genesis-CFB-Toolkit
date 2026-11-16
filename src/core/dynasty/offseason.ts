@@ -811,6 +811,8 @@ export function finishOffseason(d: Dynasty): Dynasty {
     }),
     ...depthChart(withNumbers),
     prestige: st.prestige ?? seasonPrestige(d, prev),
+    // Each team's head coach this season (coaches.ts); the coaching carousel will change them before this point.
+    ...(d.coaches ? { coach: d.teams.map((t) => d.coaches!.find((c) => c.team === t.index)?.id ?? null) } : {}),
     imports: [],
     events: st.events,
   };

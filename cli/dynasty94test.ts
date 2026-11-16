@@ -46,6 +46,7 @@ if (!romPath || !savePath) {
 const rom = (await openRom(basename(romPath), new Uint8Array(readFileSync(romPath)))).data;
 const csv = readFileSync(new URL(`../public/${ROSTERS_1994.file}`, import.meta.url), 'utf8');
 let passed = 0;
+import { coachChecks } from './coachchecks';
 const ok = (name: string) => { passed++; console.log('ok -', name); };
 
 // ---- the ROM and the edition
@@ -239,6 +240,7 @@ ok(`schedules: 11 weeks with a bye a week, the 1994 rivalries, ${finalesIn} of $
 // ---- the offseason and the 1995 season
 const o = Off.startOffseason(d1, { seed: 21, force: true });
 const d2 = Sim.simOffseason(o, Off.recruitTemplates(o));
+coachChecks(d1, ok, { seasonRom: (x) => Off.seasonRom(x, x.seasons[0], rom, 1_800_000_000_000), offseason: { at: o, finish: (x) => Sim.simOffseason(x, Off.recruitTemplates(x)) } });
 const s2 = d2.seasons[1];
 assert.equal(s2.year, 1995);
 assert.equal(weeksOf(s2.schedule), 11);
