@@ -718,6 +718,15 @@ if (user !== undefined) {
   assert.equal(q.skin, 3);
   assert.deepEqual([lookOf(q).hair, lookOf(q).beard, lookOf(q).eyeBlack], ['afro', 'beard', true]);
   assert.equal(lookOf(q).mouth, gen.mouth, 'the rest stays generated');
+  {
+    // Locs come long or short; adding the short style moved no other generated look.
+    const styles = new Map<string, number>();
+    for (const pl of d0.players) styles.set(lookOf(pl).hair, (styles.get(lookOf(pl).hair) ?? 0) + 1);
+    const long = styles.get('locs') ?? 0, short = styles.get('locsShort') ?? 0;
+    assert.ok(long > 0 && short > 0 && Math.abs(long - short) < (long + short) * 0.15, `locs ${long} long, ${short} short`);
+    assert.equal(styles.size, 11);
+    for (const st of ['short', 'afro', 'flow']) assert.ok(Math.abs((styles.get(st) ?? 0) - (long + short)) < (long + short) * 0.15, st);
+  }
   assert.deepEqual(e1.seasons, d1.seasons, 'nothing about the season changes');
   const back = editLook(e1, p0.id, { look: null }).players[p0.id - 1];
   assert.deepEqual(lookChoices(back), lookChoices({ ...p0, skin: 3 }), 'back to the generated look');
