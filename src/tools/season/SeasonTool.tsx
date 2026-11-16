@@ -12,6 +12,8 @@ import { isWideBw95 } from '../../core/romfile';
 import { readWideSeason, wideSeasonIssues, writeWideSeason, type WideSeason } from '../../core/seasonWide';
 import { readSimSettings, sameSim, writeSimSettings, type SimSettings } from '../../core/simSettings';
 import { SimSettingsBox } from './SimSettingsBox';
+import { StatSettingsBox } from './StatSettingsBox';
+import { readSimStats, sameStats, writeSimStats, type SimStats } from '../../core/simStats';
 import { SeasonWide } from './SeasonWide';
 import { WorkRomCard, type TeamSwapSource, type WorkApi } from '../shared/WorkRom';
 import './season.css';
@@ -56,6 +58,7 @@ export function SeasonTool({
   const [note, setNote] = useState<Msg>(null);
   // The season sim's settings (2026 test33 / 1994 test36 on): as loaded, and now.
   const [sim, setSim] = useState<{ loaded: SimSettings; now: SimSettings } | null>(null);
+  const [stats, setStats] = useState<{ loaded: SimStats; now: SimStats } | null>(null);
 
   // A new working ROM: read its season (Bill Walsh '95 only).
   useEffect(() => {
@@ -64,6 +67,7 @@ export function SeasonTool({
     setRomProblem(null);
     setWide(null);
     setSim(null);
+    setStats(null);
     if (!work) return;
     if (work.game !== 'bw95') {
       setRomProblem("The Season tab works on Bill Walsh College Football '95 ROMs; this one is for the Rosters tab only.");
@@ -76,6 +80,9 @@ export function SeasonTool({
         const loaded = readSimSettings(work.base);
         const now = readSimSettings(work.data);
         if (loaded && now) setSim({ loaded, now });
+        const sl = readSimStats(work.base);
+        const sn = readSimStats(work.data);
+        if (sl && sn) setStats({ loaded: sl, now: sn });
       } catch (e) {
         setRomProblem((e as Error).message);
       }
@@ -137,10 +144,23 @@ export function SeasonTool({
     }
   };
   const simChanged = !!sim && !sameSim(sim.loaded, sim.now);
+  const changeStats = (s: SimStats) => {
+    if (!stats || !work) return;
+    setStats({ ...stats, now: s });
+    setNote(null);
+    try {
+      writeSimStats(work.data, s);
+      api.edited();
+    } catch (e) {
+      setNote({ kind: 'error', text: (e as Error).message });
+    }
+  };
+  const statsChanged = !!stats && !sameStats(stats.loaded, stats.now);
   const undoWide = () => {
     if (!wide || !work) return;
     changeWide(wide.loaded);
     if (sim && simChanged) changeSim(sim.loaded);
+    if (stats && statsChanged) changeStats(stats.loaded);
   };
 
   const loadSeasonFile = async (f: File) => {
@@ -207,6 +227,7 @@ export function SeasonTool({
         <>
           <SeasonWide key={work.id} teams={teams} season={wide.now} loaded={wide.loaded} onChange={changeWide} />
           {sim && <SimSettingsBox value={sim.now} loaded={sim.loaded} onChange={changeSim} />}
+          {stats && <StatSettingsBox value={stats.now} loaded={stats.loaded} onChange={changeStats} />}
         </>
       ) : work && season ? (
         <SeasonEditor key={work.id} teams={teams} season={season} onChange={change} />
@@ -219,8 +240,9 @@ export function SeasonTool({
       {work && wide && (
         <footer className="dock">
           <p className="dock-count" aria-live="polite">
-            {wideChanges(wide) ? `${wideChanges(wide)} conference${wideChanges(wide) === 1 ? '' : 's'} changed` : simChanged ? 'Season sim changed' : 'No season changes yet'}
+            {wideChanges(wide) ? `${wideChanges(wide)} conference${wideChanges(wide) === 1 ? '' : 's'} changed` : simChanged ? 'Season sim changed' : statsChanged ? 'Sim stats changed' : 'No season changes yet'}
             {wideChanges(wide) > 0 && simChanged && <small className="dock-also">+ season sim</small>}
+            {(wideChanges(wide) > 0 || simChanged) && statsChanged && <small className="dock-also">+ sim stats</small>}
             {api.edits.teams && <small className="dock-also">+ team changes</small>}
             {api.edits.rosters && <small className="dock-also">+ roster changes</small>}
           </p>
@@ -230,7 +252,7 @@ export function SeasonTool({
             </Note>
           )}
           <div className="dock-actions">
-            {(wideChanges(wide) > 0 || simChanged) && (
+            {(wideChanges(wide) > 0 || simChanged || statsChanged) && (
               <Button variant="quiet" onClick={undoWide}>
                 Undo season changes
               </Button>

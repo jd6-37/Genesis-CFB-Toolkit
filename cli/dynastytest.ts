@@ -7,7 +7,8 @@ import { rewriteWalshReport, seasonReports, setWalshReport, teamReport, walshLoc
 import { readReports, reportProblems } from '../src/core/walshReports';
 import { walshReports } from '../src/core/dynasty/walshGen';
 import { AP_2026_PRESEASON, VOTERS, pollSet, preseasonPoll } from '../src/core/dynasty/poll';
-import { setSim, simOf } from '../src/core/dynasty/seasonSim';
+import { setSim, simOf, setStats } from '../src/core/dynasty/seasonSim';
+import { STATS_DEFAULTS, readSimStats } from '../src/core/simStats';
 import { SIM_DEFAULTS, readSimSettings, simForRom, type SimSettings } from '../src/core/simSettings';
 import { careerRecords, teamRecords } from '../src/core/dynasty/records';
 import { checkSchedule, editSchedule, flipHome, moveGame, protectedPairs, remakeSchedule, SCHED_WEEKS, setOpponent, teamSchedule, type SchedGame } from '../src/core/dynasty/schedule';
@@ -1417,6 +1418,26 @@ if (hasKits(rom)) {
   } else {
     assert.deepEqual(withSim.subarray(0x06f100, 0x06f130), plain.subarray(0x06f100, 0x06f130));
     ok('season sim: this ROM has no sim settings (before test33); a dynasty\'s settings are left out');
+  }
+}
+
+// The sim stat multipliers (H-021): kept with the dynasty and written into its season ROMs; the defaults leave the ROM's own.
+{
+  const S = { passing: 150, rushing: 150, interceptions: 100, sacks: 80, tackles: 150 };
+  const plain = Off.seasonRom(d0, d0.seasons[0], rom);
+  const withStats = Off.seasonRom(setStats(d0, S), d0.seasons[0], rom);
+  if (readSimStats(rom)) {
+    assert.deepEqual(readSimStats(plain), readSimStats(rom));
+    assert.deepEqual(readSimStats(withStats), S);
+    assert.equal(setStats(setStats(d0, S), STATS_DEFAULTS).simStats, undefined, 'the defaults clear them');
+    assert.throws(() => setStats(d0, { ...S, sacks: 20 }), /must be/);
+    const older = { ...d0, simStats: { ...S, tdMatch: false } as typeof S }; // saved before test40 / test43
+    const w = Off.seasonRom(older, d0.seasons[0], rom);
+    assert.deepEqual([...w.subarray(0x2d640e, 0x2d6410)], [...rom.subarray(0x2d640e, 0x2d6410)], 'an older tdMatch is never written');
+    ok('sim stats: the dynasty\'s multipliers go into its season ROMs; the defaults leave the ROM\'s own');
+  } else {
+    assert.deepEqual(withStats.subarray(0x2d6400, 0x2d6410), plain.subarray(0x2d6400, 0x2d6410));
+    ok('sim stats: this ROM has no multipliers (before test39); a dynasty\'s are left out');
   }
 }
 
