@@ -587,3 +587,19 @@
 /* The season sim settings on the Offseason rules page (SimSettingsBox, the Toolkit's box on the Dynasty tokens). */
 .dy-rules .sim-box-intro { color: var(--text-muted); }
 .dy-rules .sim-box-bad { color: var(--bad); }
+
+/* The offseason's Walsh Reports step (WalshStep) and the Toolkit's Walsh Report editor on the Dynasty tokens. */
+.dy-walsh-pick { display: flex; flex-direction: column; gap: var(--sp-2); margin: var(--sp-3) 0; }
+.dy-walsh-pick .ui-field select { max-width: 100%; }
+.dy-walsh-report { max-width: 70ch; margin: 0 0 var(--sp-3); padding: var(--sp-3) var(--sp-4); background: var(--surface-raised); border: 2px solid var(--rule-strong); }
+.dy-walsh-report h3 { margin: 0 0 var(--sp-2); font-family: var(--display); font-size: var(--fs-5); }
+.dy-walsh-report p { margin: 0 0 var(--sp-2); }
+.dy-walsh-tag { margin-left: var(--sp-2); padding: 0 var(--sp-1); border: 1px solid var(--rule-strong); font-family: var(--body); font-size: var(--fs-2); font-weight: 700; vertical-align: middle; }
+.dy-walsh .wr { background: var(--surface-raised); color: var(--text); border: 2px solid var(--rule-strong); border-radius: 0; }
+.dy-walsh .wr-head h2 span { color: var(--text); text-decoration: underline; }
+.dy-walsh .wr .hint, .dy-walsh .wr-field, .dy-walsh .wr-count, .dy-walsh .wr-preview figcaption { color: var(--text-muted); }
+.dy-walsh .wr-field textarea { background: var(--surface); color: var(--text); border: 1px solid var(--rule-strong); border-radius: 0; }
+.dy-walsh .wr-problems, .dy-walsh .wr-count.wr-over { color: var(--bad); }
+@media (min-width: 760px) {
+  .dy-walsh-pick { flex-direction: row; align-items: end; }
+}

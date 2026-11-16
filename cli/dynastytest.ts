@@ -3,6 +3,9 @@
 // The ROM is the 138-team 2026 Season Edition with the dynasty support (Elevated v2.0.1-test9 or later). The
 // save is a Genesis Plus GX (RetroArch) .srm of the 138-team edition with a season started and at least one week
 // played; the test puts its dynasty's mark (the ID block New Season copies) into it.
+import { rewriteWalshReport, seasonReports, setWalshReport, teamReport, walshLock } from '../src/core/dynasty/walshStore';
+import { readReports, reportProblems } from '../src/core/walshReports';
+import { walshReports } from '../src/core/dynasty/walshGen';
 import { AP_2026_PRESEASON, VOTERS, pollSet, preseasonPoll } from '../src/core/dynasty/poll';
 import { setSim } from '../src/core/dynasty/seasonSim';
 import { SIM_DEFAULTS, readSimSettings, simForRom } from '../src/core/simSettings';
@@ -934,7 +937,46 @@ ok('season rosters written to the dynasty area and read back');
   assert.deepEqual(readPollSet(rom2), pollSet(poll));
   assert.equal(u32at(rom2, DYN_AREA + POLL_AT), DYN_AREA + 0x4c00);
   if (process.env.POLL) console.log(poll.slice(0, 30).map((p) => `${p.rank}. ${o5.teams[p.team].school} ${p.points} (${p.firstVotes}) ovr ${p.ovr.toFixed(1)} last ${p.lastRank} ret ${p.returning} pres ${p.prestige}`).join('\n'));
+  if (process.env.WALSH) {
+    const rs = walshReports(o5, next)!;
+    const pick = process.env.WALSH.split(',').map((x) => o5.teams.findIndex((t) => t.school === x));
+    for (const t of pick) console.log(`\n== ${o5.teams[t].school} (${rs[t].offense.length + rs[t].defense.length})\nOFF: ${rs[t].offense}\nDEF: ${rs[t].defense}`);
+  }
   ok(`preseason poll: 138 teams by 62 ballots (No. 1 ${o5.teams[poll[0].team].school}, ${poll[0].firstVotes} first-place votes), in the season ROM`);
+
+// Walsh Reports (user, 2026-11-16): every team's, from the second season; they fit the game, name players with their
+// numbers, stay the same for the same inputs, change with "Write it again", and the user's own win; all in the ROM.
+{
+  assert.equal(seasonReports(d0, first), null);
+  const all = seasonReports(o5, next)!;
+  assert.equal(all.length, 138);
+  for (const [t, x] of all.entries()) {
+    assert.deepEqual(reportProblems(x.report), [], o5.teams[t].school);
+    if (process.env.SHORT && x.report.offense.length + x.report.defense.length < 420) console.log(o5.teams[t].school, x.report);
+    assert.ok(x.report.offense.length > 100 && x.report.defense.length > 80, `${o5.teams[t].school} has a full report`);
+    assert.ok(x.report.offense.includes(o5.teams[t].school) || x.report.offense.includes(o5.teams[t].nickname), 'names the team');
+  }
+  assert.ok(all.filter((x) => /#\d+ [A-Z]/.test(x.report.offense)).length > 120, 'players named with their numbers');
+  assert.deepEqual(seasonReports(o5, next)!.map((x) => x.report), all.map((x) => x.report), 'the same every time');
+  const openings = new Set(all.map((x) => x.report.offense.split('. ')[0].replace(new RegExp(o5.teams.map((t) => t.school.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'g'), 'X')));
+  assert.ok(openings.size > 40, `${openings.size} different openings`);
+  const T = 5;
+  const again = rewriteWalshReport(o5, T);
+  assert.notDeepEqual(teamReport(again, again.seasons[1], T)!.report, all[T].report, 'written again');
+  const mine = { offense: `${o5.teams[T].school} runs the ball.`, defense: 'The defense is fast.' };
+  const ed = setWalshReport(again, T, mine);
+  assert.deepEqual(teamReport(ed, ed.seasons[1], T)!.report, mine);
+  assert.equal(teamReport(ed, ed.seasons[1], T)!.edited, true);
+  assert.throws(() => setWalshReport(ed, T, { offense: 'x'.repeat(700), defense: 'y' }), /characters/);
+  const back0 = setWalshReport(ed, T, null);
+  assert.equal(teamReport(back0, back0.seasons[1], T)!.edited, false);
+  const romW = Off.seasonRom(ed, ed.seasons[1], rom);
+  const back = readReports(romW);
+  assert.deepEqual(back[T], mine);
+  assert.deepEqual(back[0], all[0].report);
+  assert.match(walshLock(d1) ?? '', /first season/);
+  ok(`Walsh Reports: 138 written (${Math.min(...all.map((x) => x.report.offense.length + x.report.defense.length))}-${Math.max(...all.map((x) => x.report.offense.length + x.report.defense.length))} characters, ${openings.size} openings), edited, written again, in the season ROM`);
+}
 }
 
 // Schedules from the second season (user, 2026-11-12: "Generate each year, and then the user can edit";

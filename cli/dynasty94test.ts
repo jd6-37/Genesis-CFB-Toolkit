@@ -3,7 +3,9 @@
 // The ROM is the 107-team 1994 Season Edition (Elevated v2.0.1-test29 or later). The save is a Genesis Plus GX
 // (RetroArch) .srm of it with a season started and at least one week played (a whole season, bowls included,
 // also tests the champion and the bowl stories); the test puts its dynasty's mark into it.
-import { preseasonPoll } from '../src/core/dynasty/poll';
+import { seasonReports } from '../src/core/dynasty/walshStore';
+import { readReports, reportProblems } from '../src/core/walshReports';
+import { pollSet, preseasonPoll } from '../src/core/dynasty/poll';
 import { AP_1994_PRESEASON } from '../src/core/dynasty/prestige';
 import { teamOvrs1994 } from '../src/core/dynasty/teamOvr94';
 import { hasSimSettings } from '../src/core/simSettings';
@@ -18,7 +20,7 @@ import { createDynasty, importSave, CLASSES } from '../src/core/dynasty/model';
 import { createDynasty1994, CLASS_MIX_1994 } from '../src/core/dynasty/create1994';
 import { EDITIONS, editionOf, editionOfRom, dynastyFormat } from '../src/core/dynasty/edition';
 import { parseRosters1994, nameKey, ROSTERS_1994 } from '../src/core/dynasty/rosters1994';
-import { DYN_AREA, dynastyHeaderValid, dynastyRomId, readNamesTable, readStamp, scheduleAddress, fineAddress } from '../src/core/dynasty/dynastyArea';
+import { readPollSet, DYN_AREA, dynastyHeaderValid, dynastyRomId, readNamesTable, readStamp, scheduleAddress, fineAddress } from '../src/core/dynasty/dynastyArea';
 import { hasFineRatings, readFineOffsets } from '../src/core/dynasty/fine';
 import { seasonView, weekName, bowlOf, bowlWeek, BOWLS_1994, champions, playerName } from '../src/core/dynasty/derive';
 import { stories } from '../src/core/dynasty/news';
@@ -246,6 +248,18 @@ const out2 = Off.seasonRom(d2, s2, rom, 1_800_000_100_000);
 const sa = scheduleAddress(out2)!;
 assert.equal(out2[sa + 4], 11);
 assert.equal(readStamp(out2.subarray(DYN_AREA, DYN_AREA + 16))!.season, 2);
+// Walsh Reports and the preseason poll for 1995 (the 1994 edition's bowls, its 107 teams), in the season ROM.
+{
+  const reps = seasonReports(d2, s2)!;
+  assert.equal(reps.length, 107);
+  for (const [t, x] of reps.entries()) assert.deepEqual(reportProblems(x.report), [], d2.teams[t].school);
+  const back = readReports(out2);
+  assert.ok(back.every((r, t) => r.offense === reps[t].report.offense && r.defense === reps[t].report.defense));
+  const poll = preseasonPoll(d2, s2)!;
+  assert.equal(poll.length, 107);
+  assert.deepEqual(readPollSet(out2), pollSet(poll));
+  ok(`1995 Walsh Reports for all 107 teams and the preseason poll (No. 1 ${d2.teams[poll[0].team].school}) in the season ROM`);
+}
 ok(`offseason: ${d2.players.filter((p) => p.status === 'active').length} players in 1995, an 11-week schedule in the 1995 ROM`);
 
 // ---- user-defined rivalries in 1995 (user, 2026-11-16)

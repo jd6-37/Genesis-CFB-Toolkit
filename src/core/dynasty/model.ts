@@ -124,6 +124,8 @@ export interface DSeason {
   titleGames?: number[];
   /** From the second season: the dynasty's schedule (schedule.ts), written into the season ROM. */
   schedule?: DSchedule;
+  /** Walsh Reports (walshStore.ts): the wording picked per team ("Write it again") and the user's own edits. */
+  walsh?: { variants?: Record<number, number>; edited?: Record<number, import('../walsh').Report> };
 }
 
 export type OffseasonEvent =
