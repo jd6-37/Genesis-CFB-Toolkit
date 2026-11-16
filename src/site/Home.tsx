@@ -261,7 +261,7 @@ function Apps() {
           <Screen wide src={M('app-dynasty.png')} alt="The Dynasty app" />
           <h3 className="home-h3">Dynasty</h3>
           <p>
-            Runs a dynasty over many seasons: recruiting, player progression, schedules, awards and records. After each season it writes the next
+            Runs a dynasty over many seasons: recruiting, player progression, real head coaches and a coaching carousel, schedules, awards and records. After each season it writes the next
             season into your ROM. Both editions.
           </p>
           <Button variant="quiet" href="/dynasty">Open Dynasty</Button>

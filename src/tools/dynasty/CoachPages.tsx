@@ -11,6 +11,7 @@ import {
 import { Button, Check, DataTable, Empty, Field, Note, PageHead, Select, SubHead, Table, Tabs, Tag } from '../../ui';
 import { createCoach, goalResults, heatLabel, hotSeat, setCoachLook, setManageXp, spendXp, tenure, xpCost } from '../../core/dynasty/carousel';
 import type { CoachRating, CoachRatings } from '../../core/dynasty/coaches';
+import { simNudges } from '../../core/dynasty/coachEffects';
 import { href, inkColor, mainColor, onColor, TeamLink, TeamMark, teamCss, useDyn } from './ui';
 
 const ordinal = (n: number) => {
@@ -253,6 +254,12 @@ export function Coach({ id }: { id: number }) {
 
       <SubHead>Ratings</SubHead>
       <CoachRatingsBox c={c} color={ink} />
+      {d.coachSim && team !== null && (() => {
+        const season = d.seasons[d.seasons.length - 1];
+        const n = simNudges(d, season.coach)[team] ?? { off: 0, def: 0 };
+        const sign = (x: number) => (x > 0 ? `+${x}` : x < 0 ? `−${-x}` : '0');
+        return <p className="dy-small dy-dim">In the sim (Offseason rules: Coaches affect the sim): {d.teams[team].school}'s OFF {sign(n.off)}, DEF {sign(n.def)} in the {season.year} season ROM.</p>;
+      })()}
 
       {team !== null && <GoalsBox team={team} />}
       <ManageXp c={c} />

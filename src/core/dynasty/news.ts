@@ -5,6 +5,7 @@ import { bowlOf, bowlWeek, INDEPENDENT, leaders, playerLabel, playerLines, playe
 import { rivalryOf } from './rivalries';
 import { fromBase64, type Dynasty, type OffseasonEvent } from './model';
 import { readDynastySave, type DynastySave, type SaveGame } from './save';
+import { goalsFor, hotSeat, regularRecord, tenure } from './carousel';
 
 export interface Story {
   id: string;
@@ -438,7 +439,42 @@ export function stories(d: Dynasty, v: SeasonView = seasonView(d, d.seasons[d.se
     });
   }
 
+  out.push(...hotSeatStories(d, v, week, wk));
+
   return out.sort((a, b) => b.weight - a.weight || b.week - a.week);
+}
+
+/**
+ * Coaches on the hot seat during the regular season: a coach who can be fired after this season (his third
+ * season or later at the school), whose seat was warm or worse last season, and who is two wins or more behind his
+ * win goal's pace. At most three a week, the user's teams first.
+ */
+export function hotSeatStories(d: Dynasty, v: SeasonView, week: number, wk: string): Story[] {
+  const si = d.seasons.indexOf(v.season);
+  if (si < 1 || !d.coaches || !v.season.coach || week > v.lastRegularWeek || week < 3) return [];
+  const R = v.lastRegularWeek + 1;
+  const found: { team: number; behind: number; heat: number; story: Story }[] = [];
+  v.season.coach.forEach((cid, team) => {
+    const c = cid === null ? undefined : d.coaches![cid];
+    if (!c || tenure(d, c, si) < 3) return;
+    const heat = hotSeat(d, c, si - 1);
+    if (heat === null || heat < 40) return;
+    const goal = goalsFor(d, si, team).find((g) => g.kind === 'wins')?.n ?? 0;
+    const rec = regularRecord(v, team);
+    const played = rec.w + rec.l;
+    if (played < 3) return;
+    const behind = Math.round(goal * played / R - rec.w);
+    if (behind < 2) return;
+    const name = d.teams[team].school;
+    const id = `${v.season.year}-${week}-hotseat-${cid}`;
+    const mine = d.userTeams.includes(team);
+    found.push({ team, behind, heat, story: {
+      id, kind: mine ? 'yours' : 'race', week, weight: (mine ? 66 : 40) + Math.min(10, behind * 2) + (heat - 40) / 5, teams: [team],
+      headline: pick(id, [`${c.name}'s seat gets hotter at ${name}`, `Pressure mounts on ${c.name} at ${name}`, `Is ${c.name}'s time at ${name} running out?`]),
+      dek: `${name} is ${rec.w}-${rec.l} after ${wk}, behind the ${goal} wins ${name} expects this season.`,
+    } });
+  });
+  return found.sort((a, b) => Number(d.userTeams.includes(b.team)) - Number(d.userTeams.includes(a.team)) || b.behind - a.behind || b.heat - a.heat).slice(0, 3).map((x) => x.story);
 }
 
 // ---- offseason stories (departures, transfers, signing day)
@@ -514,6 +550,21 @@ export function offseasonStories(d: Dynasty, events: OffseasonEvent[], year: num
   });
   // Coaches (carousel.ts): firings, hirings, retirements, and former players back as coaches.
   const coach = (id: number) => d.coaches?.[id];
+  // Job offers to the coaches the user manages, while the carousel is open.
+  const car = d.offseason?.year === year ? d.offseason.carousel : undefined;
+  if (car && !car.done) {
+    for (const [cid, schools] of Object.entries(car.offers)) {
+      const c = coach(Number(cid));
+      if (!c || !schools.length) continue;
+      const list = schools.map(name);
+      const id = `${year}-offers-${cid}`;
+      out.push({
+        id, kind: 'yours', week: 0, weight: 86, teams: c.team !== null ? [schools[0], c.team] : [schools[0]],
+        headline: schools.length === 1 ? `${list[0]} wants ${c.name}` : pick(id, [`${c.name} draws interest from ${schools.length} schools`, `${schools.length} schools call ${c.name}`]),
+        dek: `${schools.length === 1 ? `${list[0]} has` : `${list.slice(0, -1).join(', ')} and ${list.at(-1)} have`} offered ${c.name} their head coaching job${schools.length === 1 ? '' : 's'}${c.team !== null ? `. He can stay at ${name(c.team)}` : ''}.`,
+      });
+    }
+  }
   const fired = events.filter((e): e is Extract<OffseasonEvent, { kind: 'coachFired' }> => e.kind === 'coachFired');
   fired.forEach((e, i) => { const c = coach(e.coach); if (c) out.push({
     id: `${year}-fired-${e.coach}`, kind: d.userTeams.includes(e.team) ? 'yours' : 'upset', week: 0, weight: (d.userTeams.includes(e.team) ? 84 : 68) - i * 2, teams: [e.team],

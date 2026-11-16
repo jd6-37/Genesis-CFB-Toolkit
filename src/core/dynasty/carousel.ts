@@ -6,7 +6,7 @@
 // Goals, results and the hot seat are read from the dynasty (the seasons, their coaches and results); only the
 // carousel's decisions are kept (OffseasonState.carousel, then the coaches themselves).
 import { COACH_RATINGS, coachAge, coachOvr, type CoachRating, type CoachRatings, type DCoach } from './coaches';
-import { INDEPENDENT, seasonView, standings, type SeasonView } from './derive';
+import { INDEPENDENT, leaders, playerLines, seasonView, standings, type SeasonView, type StatCategory } from './derive';
 import { rng, type DPlayer, type Dynasty, type OffseasonEvent } from './model';
 import { protectedPairs, rivalriesOf } from './schedule';
 import { seasonPrestige, MAX_PRESTIGE } from './prestige';
@@ -216,8 +216,28 @@ export function seasonXp(d: Dynasty, seasonIndex: number, team: number, v = seas
   if (met) parts.push({ label: `${met} ${met === 1 ? 'goal' : 'goals'} met`, xp: 100 * met });
   const cls = classRankAfter(d, seasonIndex, team) ?? classRankBefore(d, seasonIndex, team);
   if (cls !== null && cls <= 25) parts.push({ label: `No. ${cls} signing class`, xp: cls <= 10 ? 200 : 100 });
+  // Player milestones (stat thresholds): a player of his among the nation's leaders. Ranks, not fixed numbers, so
+  // they work with any sim stats settings and in both editions (simulated 1994 seasons have no 3,000-yard passers).
+  const lines = playerLines(v);
+  for (const m of STAT_MILESTONES) {
+    const top = leaders(lines, m.cat, m.key, 10);
+    const i = top.findIndex((l) => l.team === team);
+    if (i < 0) continue;
+    const n = top.filter((l) => l.team === team).length;
+    parts.push({ label: i === 0 ? `National leader in ${m.label}${n > 1 ? ` (${n} in the top 10)` : ''}` : `${n === 1 ? 'A player' : `${n} players`} in the top 10 in ${m.label}`, xp: (i === 0 ? 100 : 0) + 40 * n });
+  }
   return { total: parts.reduce((a, p) => a + p.xp, 0), parts };
 }
+
+/** Stats whose national top 10 earns the head coach XP: 40 per player in it, 100 more for the leader. */
+export const STAT_MILESTONES: { label: string; cat: StatCategory; key: string }[] = [
+  { label: 'passing yards', cat: 'passing', key: 'yds' },
+  { label: 'rushing yards', cat: 'rushing', key: 'yds' },
+  { label: 'receiving yards', cat: 'receiving', key: 'yds' },
+  { label: 'tackles', cat: 'defense', key: 'tkl' },
+  { label: 'sacks', cat: 'defense', key: 'sacks' },
+  { label: 'interceptions', cat: 'defense', key: 'int' },
+];
 
 /** Spends XP for a coach the user doesn't manage: mostly on his best ratings, some spread. */
 export function autoSpend(ratings: CoachRatings, xp: number, r: Rand): { ratings: CoachRatings; xp: number } {

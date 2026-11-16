@@ -25,6 +25,7 @@ import { preseasonPoll, returningStarters, type PollEntry } from './poll';
 import { editionOf } from './edition';
 import { protectedPairs, rivalriesOf } from './schedule';
 import { RIVALRIES } from './rivalries';
+import { hotSeat, tenure } from './carousel';
 import { REPORT_LIMIT, type Report } from '../walsh';
 
 /** The game's text limit for a report, both paragraphs (walsh.ts). */
@@ -214,7 +215,9 @@ interface Facts {
   ovr: { off: number; def: number };
   theme: Theme;
   /** A new head coach this season (coaches.ts): his name and where he coached before (a school, or null). */
-  newCoach: { name: string; from: string | null; former: boolean } | null;
+  newCoach: { name: string; from: string | null; former: boolean; fromRival: boolean } | null;
+  /** A returning head coach who can be fired after this season and whose seat was hot last season. */
+  seat: { name: string; heat: number } | null;
 }
 
 const STARTERS = new Set([...OFF_START, ...DEF_START]);
@@ -338,7 +341,7 @@ function factsOf(L: WalshLeague, T: number): Facts {
     confPlace, lastFinal, champion: L.imported && vPrev.champion === T, post, wonConf,
     offRet, defRet, gone, inTransfers, recruits, classRank: classEv?.rank ?? null,
     qb, qbNew, hb: P(season.slots[T][1]), wr: best(WR), te: P(season.slots[T][13]), defStar,
-    honors, statOf, traits, bigGames, ovr, theme: 'steady', newCoach: newCoachOf(d, season, prev, T),
+    honors, statOf, traits, bigGames, ovr, theme: 'steady', newCoach: newCoachOf(d, season, prev, T, L.rivals), seat: seatOf(d, season, prev, T),
   };
   f.theme = themeOf(f, L);
   return f;
@@ -708,22 +711,44 @@ function arrivalSay(side: 'off' | 'def'): Gen {
 }
 
 /** The head coach this season, when he's new (a coach who wasn't last season's). */
-function newCoachOf(d: Dynasty, season: DSeason, prev: DSeason, T: number): Facts['newCoach'] {
+function newCoachOf(d: Dynasty, season: DSeason, prev: DSeason, T: number, rivals: { a: number; b: number }[]): Facts['newCoach'] {
   const now = season.coach?.[T], was = prev.coach?.[T];
   if (now === null || now === undefined || was === undefined || now === was) return null;
   const c = d.coaches?.[now];
   if (!c) return null;
   const from = prev.coach?.indexOf(now) ?? -1;
-  return { name: walshText(c.name), from: from >= 0 ? walshText(d.teams[from].school) : null, former: !!c.formerPlayer };
+  const fromRival = from >= 0 && rivals.some((x) => (x.a === T && x.b === from) || (x.b === T && x.a === from));
+  return { name: walshText(c.name), from: from >= 0 ? walshText(d.teams[from].school) : null, former: !!c.formerPlayer, fromRival };
+}
+
+/** The head coach is back on a hot seat (55 or more after last season) and can be fired after this one. */
+function seatOf(d: Dynasty, season: DSeason, prev: DSeason, T: number): Facts['seat'] {
+  const id = season.coach?.[T];
+  if (id === null || id === undefined || prev.coach?.[T] !== id) return null;
+  const c = d.coaches?.[id];
+  const si = d.seasons.indexOf(season), pi = d.seasons.indexOf(prev);
+  if (!c || si < 0 || pi < 0 || tenure(d, c, si) < 3) return null;
+  const heat = hotSeat(d, c, pi);
+  return heat !== null && heat >= 55 ? { name: walshText(c.name), heat } : null;
 }
 
 const coachSay: Gen = (c) => {
   const { f, r } = c;
   const k = f.newCoach;
   if (!k) return null;
+  if (k.from && k.fromRival) return pick(r, [`${k.name} crosses the rivalry from ${k.from}, and fans on both sides will remember it.`, `${k.name} comes over from rival ${k.from}. That game just got bigger.`]);
   if (k.from) return pick(r, [`${k.name} comes over from ${k.from} for his first season.`, `In his first season, ${k.name} brings his program over from ${k.from}.`]);
   if (k.former) return pick(r, [`${k.name}, a former player, gets his first head coaching job.`, `In his first season, former player ${k.name} takes over.`]);
   return pick(r, [`In his first season, ${k.name} takes over the program.`, `${k.name} is the new head coach.`]);
+};
+
+const seatSay: Gen = (c) => {
+  const { f, r } = c;
+  const k = f.seat;
+  if (!k) return null;
+  return k.heat >= 75
+    ? pick(r, [`${k.name} needs a winning season to keep his job.`, `This may be ${k.name}'s last chance to turn things around.`])
+    : pick(r, [`${k.name}'s seat is warm going in, so a fast start matters.`, `The pressure is on ${k.name} to win now.`]);
 };
 
 const classSay: Gen = (c) => {
@@ -891,6 +916,7 @@ export function walshReport(L: WalshLeague, team: number, variant = 0): Report {
 
   const offItems: Item[] = [
     { side: 'off', weight: f.newCoach ? 12 : 0, say: coachSay, tag: 'coach' },
+    { side: 'off', weight: f.seat ? (f.seat.heat >= 75 ? 11 : 8) : 0, say: seatSay, tag: 'coach' },
     { side: 'off', weight: 9, say: qbSay, tag: 'qb' },
     { side: 'off', weight: f.honors.some((h) => h.heisman) ? 10 : 6, say: honorSay('off'), tag: 'honor' },
     { side: 'off', weight: 6, say: runnerSay, tag: 'hb' },
@@ -924,6 +950,16 @@ export function walshReport(L: WalshLeague, team: number, variant = 0): Report {
   const defBudget = WALSH_LIMIT - offense.length;
   const close = S(closing(c));
   let defense = build(c, [S(defOpenSay(c))], defItems, defBudget - 2, close);
+  // A defense with nothing that stands out (no star numbers, no strong traits) still gets its best player named.
+  if (defense.length < 110) {
+    const p = f.defStar;
+    if (p && !n.isSeen(p)) {
+      const line = pick(r, [`${cap(noun(p))} ${n.ref(p)} leads the defense.`, `The defense counts on ${noun(p)} ${n.ref(p)}.`]);
+      const at = close && defense.endsWith(close) ? defense.length - close.length : defense.length;
+      const next = `${defense.slice(0, at).trimEnd()} ${line} ${defense.slice(at)}`.replace(/\s+/g, ' ').trim();
+      if (offense.length + next.length <= WALSH_LIMIT) defense = next;
+    }
+  }
   // Never over the game's limit (a long name can push a sentence past it).
   while (offense.length + defense.length > WALSH_LIMIT && defense.includes('. ')) defense = defense.slice(0, defense.lastIndexOf('. ') + 1);
   return { offense: walshText(offense), defense: walshText(defense) };

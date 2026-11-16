@@ -1,7 +1,8 @@
 // What a head coach does to his team (spec "Effects", all subtle): his players develop a little faster or slower,
 // his school's recruiting points go a little further, his players are a little less likely to transfer, and when
 // he leaves, his players are likelier to transfer and to follow him (2026 only: the 1994 edition has no transfers
-// in the spec's sense). The sim effect (OFF / DEF words) is not built (spec: later, after careful testing).
+// in the spec's sense). The sim effect (`simNudge`): a dynasty setting, off by default (spec: "subtle and carefully
+// implemented and tested"; cli/coachsimstudy.ts).
 import type { DCoach } from './coaches';
 import { coachOvr } from './coaches';
 import type { Dynasty } from './model';
@@ -58,4 +59,28 @@ export function transferFactor(d: Dynasty, team: number): { times: number; plus:
   // The coach left: where he is now (another school's head coach), if anywhere.
   const gone = d.coaches![was];
   return { times, plus: 0.1, followTo: gone?.status === 'coach' && gone.team !== null && gone.team !== team ? gone.team : null };
+}
+
+/** A coach's two sim ratings: offense (mean of Passing and Running) and Defense. */
+const simSides = (c: DCoach) => ({ off: (c.ratings.passing + c.ratings.running) / 2, def: c.ratings.defense });
+
+/** One side's nudge: ±1 for a coach 6 or more above or below the season's median head coach on that side, else 0. */
+export const sideNudge = (r: number, median: number) => clamp(Math.round((r - median) / 12), -1, 1);
+
+const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); return s.length ? (s[(s.length - 1) >> 1] + s[s.length >> 1]) / 2 : 70; };
+
+/**
+ * What the season ROM's team OVRs get from the season's head coaches when the dynasty's "Coaches affect the sim" is on:
+ * offense from his Passing and Running, defense from his Defense, each ±1 OVR at most, measured against the season's
+ * median head coach so the league as a whole doesn't move (cli/coachsimstudy.ts: ±1 on both sides is about ±6% of
+ * games against an equal team). Applied in the season ROM only; the app's own OVRs, poll and pages keep the roster values.
+ */
+export function simNudges(d: Dynasty, coachIds: (number | null)[] | undefined): { off: number; def: number }[] {
+  const n = coachIds?.length ?? 0;
+  const zero = Array.from({ length: n }, () => ({ off: 0, def: 0 }));
+  if (!d.coachSim || !d.coaches || !coachIds) return zero;
+  const sides = coachIds.map((id) => (id === null ? undefined : d.coaches![id])).map((c) => (c ? simSides(c) : undefined));
+  const known = sides.filter((x): x is { off: number; def: number } => !!x);
+  const mo = median(known.map((x) => x.off)), md = median(known.map((x) => x.def));
+  return sides.map((x) => (x ? { off: sideNudge(x.off, mo), def: sideNudge(x.def, md) } : { off: 0, def: 0 }));
 }

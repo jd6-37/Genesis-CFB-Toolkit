@@ -130,6 +130,10 @@ export function Rules({ actions, busy }: { actions: OffseasonActions; busy: stri
             Your teams' coaches can be fired
           </Check>
           <p className="dy-small dy-dim">Off: in the coaching carousel only the other schools fire their coaches. Coaches are never fired in their first two seasons, and in the third only after a disaster.</p>
+          <Check checked={!!d.coachSim} onChange={(on) => void actions.run('Saving…', async () => { await actions.commit({ ...d, coachSim: on ? true : undefined }); })}>
+            Coaches affect the sim
+          </Check>
+          <p className="dy-small dy-dim">On: in each season ROM downloaded after this, a team whose head coach is clearly better than the typical head coach gets +1 OFF (from his Passing and Running) and +1 DEF (from his Defense); a clearly weaker one gets −1. With +1 on both sides a team wins about 56% of its games against an equal team instead of 50%. The app's own OVRs and poll don't change.</p>
         </div>
       )}
 
