@@ -32,7 +32,7 @@ import { SCHOOL_STATE, stateCode } from '../src/core/dynasty/schoolStates';
 import { experienceOf, recordRatings, trainingResults, trainingYears } from '../src/core/dynasty/career';
 import { randomBench } from '../src/core/dynasty/bench';
 import * as Conf from '../src/core/dynasty/conferences';
-import { readWideSeason } from '../src/core/seasonWide';
+import { readTitleGames, readWideSeason } from '../src/core/seasonWide';
 import { gameText, dynastyAreaProblem, dynastyHeaderValid, dynastyRomId, DYN_AREA, DYN_END, fineAddress, hasDynastyHooks, readStamp, scheduleAddress } from '../src/core/dynasty/dynastyArea';
 import { simFromOvr } from '../src/core/teamRatings';
 import { parseCsv } from '../src/core/rosterSheet';
@@ -783,7 +783,8 @@ ok(`sim: a recruiting week, the rest, the cuts, the whole offseason (${act(g4).f
   assert.match(Conf.confLock(d1) ?? '', /first season/);
   assert.equal(Conf.confLock(g4), null);
   const s = g4.seasons[1];
-  const c0 = Conf.confSetupOf(s);
+  const c0 = Conf.confSetupOf(g4, s);
+  assert.deepEqual(c0.titleGames, readTitleGames(rom) ?? [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0], 'every conference plays a title game');
   const at = (n: string) => g4.teams.findIndex((t) => t.school === n);
   const nd = at('Notre Dame');
   assert.equal(c0.conf[nd], INDEPENDENT, 'Notre Dame starts independent');
@@ -815,7 +816,15 @@ ok(`sim: a recruiting week, the rest, the cuts, the whole offseason (${act(g4).f
   assert.equal(Conf.setConferences(dl, c1).seasons[1].lineupEdited, true);
   const started = { ...g4, seasons: [g4.seasons[0], { ...s, imports: [g4.seasons[0].imports[0] ?? ({} as never)] }] };
   assert.match(Conf.confLock(started) ?? '', /has started/);
-  ok('conferences: a move makes a new schedule, a name keeps it, the season ROM carries them; title-game rule, locks');
+  // Title game switches (H-011): the Power 4 only; no new schedule; written on a ROM with the table, refused on one without.
+  const c3 = { ...c2, titleGames: c2.titleGames.map((f, k) => (k < 4 ? f : 0)) };
+  const lone2 = { ...c3, conf: c3.conf.map((c, t) => (c === 9 && t !== c3.conf.indexOf(9) ? INDEPENDENT : c)) };
+  assert.deepEqual(Conf.confIssues(g6, lone2), [], 'no title game, no 2-team rule');
+  const g7 = Conf.setConferences(g6, c3);
+  assert.equal(g7.seasons[1].schedule, s5.schedule);
+  if (readTitleGames(rom)) assert.deepEqual(readTitleGames(Off.seasonRom(g7, g7.seasons[1], rom, 1_800_000_000_000)), c3.titleGames);
+  else assert.throws(() => Off.seasonRom(g7, g7.seasons[1], rom), /title games/);
+  ok(`conferences: a move makes a new schedule, a name keeps it, the season ROM carries them; title game switches${readTitleGames(rom) ? '' : ' (refused by this older ROM)'}, locks`);
 }
 
 // A second offseason: players signed in the first can transfer now; this year's class can't.

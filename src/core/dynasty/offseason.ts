@@ -793,6 +793,7 @@ export function finishOffseason(d: Dynasty): Dynasty {
     conf: prev.conf.slice(),
     confNames: prev.confNames.slice(),
     confWeeks,
+    ...(prev.titleGames ? { titleGames: prev.titleGames.slice() } : {}),
     // The next season's schedule (user, 2026-11-12: "Generate each year, and then the user can edit").
     schedule: makeSchedule({
       schools: d.teams.map((t) => t.school),

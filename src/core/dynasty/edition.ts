@@ -26,11 +26,13 @@ export interface Edition {
   postseason: 'cfp' | 'bowls';
   /** What the season engine needs of the conferences (seasonWide.ts): the weeks, and which conferences play a title game. */
   confRules: ConfRules;
+  /** The ROM's default title game switches (seasonWide.ts, CTG1): what older ROMs and older dynasties play. */
+  titleGames: number[];
 }
 
 export const EDITIONS: Record<EditionId, Edition> = {
-  '2026': { id: '2026', name: '2026 Season Edition', teams: 138, startYear: 2026, saveSig: 0x6f, regWeeks: 12, postseason: 'cfp', confRules: RULES_2026 },
-  '1994': { id: '1994', name: '1994 Season Edition', teams: 107, startYear: 1994, saveSig: 0x94, regWeeks: 11, postseason: 'bowls', confRules: { weeks: 11, titleGames: [0] } },
+  '2026': { id: '2026', name: '2026 Season Edition', teams: 138, startYear: 2026, saveSig: 0x6f, regWeeks: 12, postseason: 'cfp', confRules: RULES_2026, titleGames: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0] },
+  '1994': { id: '1994', name: '1994 Season Edition', teams: 107, startYear: 1994, saveSig: 0x94, regWeeks: 11, postseason: 'bowls', confRules: { weeks: 11, titleGames: [0] }, titleGames: [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] },
 };
 
 /** The edition of a ROM by its team count, or null (not a dynasty edition). */

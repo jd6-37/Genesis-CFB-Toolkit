@@ -20,7 +20,7 @@ import { seasonView, weekName, bowlOf, bowlWeek, BOWLS_1994, champions, playerNa
 import { stories } from '../src/core/dynasty/news';
 import { playoffSize } from '../src/core/dynasty/outlook';
 import { checkSchedule, makeSchedule, protectedPairs, setOpponent, teamSchedule, scheduleSet, weeksOf } from '../src/core/dynasty/schedule';
-import { readWideSeason } from '../src/core/seasonWide';
+import { readTitleGames, readWideSeason, TG_ON } from '../src/core/seasonWide';
 import * as Conf from '../src/core/dynasty/conferences';
 import { numberAllowed, NO_NUMBER } from '../src/core/dynasty/numbers';
 import { hasKits } from '../src/core/kits';
@@ -247,7 +247,8 @@ ok(`offseason: ${d2.players.filter((p) => p.status === 'active').length} players
 {
   assert.match(Conf.confLock(d1) ?? '', /first season/);
   assert.equal(Conf.confLock(d2), null);
-  const c0 = Conf.confSetupOf(s2);
+  const c0 = Conf.confSetupOf(d2, s2);
+  assert.deepEqual(c0.titleGames, readTitleGames(rom) ?? EDITIONS['1994'].titleGames, 'the SEC title game with its divisions');
   assert.deepEqual(c0.conf, readWideSeason(rom).conf, 'the first alignment is the ROM\'s');
   const at = (n: string) => schoolList.indexOf(n);
   const c1 = { ...c0, conf: c0.conf.slice(), names: c0.names.slice() };
@@ -270,7 +271,20 @@ ok(`offseason: ${d2.players.filter((p) => p.status === 'active').length} players
   const out3 = Off.seasonRom(d3, s3, rom, 1_800_000_100_000);
   assert.deepEqual(readWideSeason(out3).conf, c1.conf);
   assert.equal(out3[scheduleAddress(out3)! + 4], 11);
-  ok(`conferences: Penn State to the SEC (${psSec} SEC games), Notre Dame to the Big Ten, into the 1995 ROM; only the SEC needs 2 teams`);
+  // Title game switches (H-011): a Big Ten title game, the SEC's without divisions; no new schedule for them.
+  const c2 = { ...c1, titleGames: c1.titleGames.slice() };
+  c2.titleGames[1] = TG_ON; c2.titleGames[0] = TG_ON;
+  const oneBig = { ...c2, conf: c2.conf.map((c, t) => (c === 1 && t !== c2.conf.indexOf(1) ? 10 : c)) };
+  assert.ok(Conf.confIssues(d3, oneBig).some((x) => /title game/.test(x)), 'a conference with a title game needs 2 teams');
+  const d4 = Conf.setConferences(d3, c2);
+  assert.equal(d4.seasons[1].schedule, s3.schedule, 'title games keep the schedule');
+  if (readTitleGames(rom)) {
+    assert.deepEqual(readTitleGames(Off.seasonRom(d4, d4.seasons[1], rom, 1_800_000_100_000)), c2.titleGames);
+  } else {
+    assert.throws(() => Off.seasonRom(d4, d4.seasons[1], rom), /title games/, 'a ROM without the switches refuses changed ones');
+    assert.ok(Off.seasonRom(d3, s3, rom), 'and takes the default ones');
+  }
+  ok(`conferences: Penn State to the SEC (${psSec} SEC games), Notre Dame to the Big Ten, into the 1995 ROM; title game switches${readTitleGames(rom) ? ' written' : ' refused by this older ROM'}`);
 }
 
 console.log(`\n${passed} passed (${EDITIONS['1994'].name})`);
