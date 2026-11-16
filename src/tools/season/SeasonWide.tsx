@@ -1,32 +1,65 @@
-// Season tab for the 138-team 2026 Season Edition: conference names and members, when each conference plays its
-// conference games in a random season, and (2026 test31 on) its title game switches (src/core/seasonWide.ts). The Dynasty app's
-// Conferences step uses it too, for both editions (rules, tags, hint and footer from the dynasty's edition).
+// Season tab for the 138-team 2026 Season Edition and the 107-team 1994 Season Edition: conference names and members, when
+// each conference plays its conference games in a random season, and (2026 test31 / 1994 test33 on) its title game switches
+// (src/core/seasonWide.ts). The Dynasty app's Conferences step uses it too, for both editions (rules, tags, hint and footer
+// from the dynasty's edition).
 import { Check, Field, Note, Select, SubHead } from '../../ui';
 import { useMemo, useState, type ReactNode } from 'react';
 import {
   CONFS, INDEPENDENT, MAX_CONF_TEAMS, NAME_CHARS, NAME_LEN, POWER4, RULES_2026, SEC_EAST_1994, TG_ON, TG_SEC94, confSizes, playedGames,
   roundRobin, wideSeasonIssues, type ConfRules, type WideSeason,
 } from '../../core/seasonWide';
+import { EDITIONS } from '../../core/dynasty/edition';
+import { BOWL_TIES_1994 } from '../../core/dynasty/conferences';
 import './season.css';
 
 /** The 2026 edition's tag of each conference card. */
 const TAG_2026 = (c: number) => (c < POWER4 ? 'Power 4' : c < INDEPENDENT ? 'Group of 6' : 'Independents');
+
+/** The 1994 edition's: the bowl its champion goes to. */
+export const TAG_1994 = (c: number) => (c < INDEPENDENT ? `Champion: ${BOWL_TIES_1994[c]}` : 'Independents');
+
+/** The 1994 edition's hint: the bowls follow the list's order. */
+export const HINT_1994 = (
+  <>
+    The bowls take each conference's champion by its place in this list, whatever its name: the first goes to the Sugar
+    Bowl, the second and sixth to the Rose Bowl, and so on (under each name). Independents play no conference games.
+  </>
+);
+
+/** The defaults of each edition (the Toolkit's Season tab; the Dynasty step passes its own). */
+const EDITION_PROPS = {
+  '2026': { rules: RULES_2026, tag: TAG_2026, hint: undefined, footer: undefined },
+  '1994': {
+    rules: EDITIONS['1994'].confRules,
+    tag: TAG_1994,
+    hint: HINT_1994,
+    footer: (
+      <>
+        Conference games and weeks apply to Random schedules (Game Setup, New Season). The Real 1994 schedule keeps its
+        games; there the conferences decide the standings, the title games and the bowls. Changes take effect in a new season.
+      </>
+    ),
+  },
+} as const;
 
 export function SeasonWide({
   teams,
   season,
   loaded,
   onChange,
-  rules = RULES_2026,
-  tag = TAG_2026,
-  hint,
-  footer,
+  edition = '2026',
+  rules = EDITION_PROPS[edition].rules,
+  tag = EDITION_PROPS[edition].tag,
+  hint = EDITION_PROPS[edition].hint,
+  footer = EDITION_PROPS[edition].footer,
   disabled = false,
 }: {
   teams: string[];
   season: WideSeason;
   loaded: WideSeason;
   onChange: (s: WideSeason) => void;
+  /** Which edition's rules, tags, hint and footer are the defaults. */
+  edition?: '2026' | '1994';
   /** The engine's weeks and title games (default: the 2026 edition's). */
   rules?: ConfRules;
   /** The tag under conference c's name. */

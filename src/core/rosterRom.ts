@@ -86,7 +86,7 @@ export function openRosterRom(input: Uint8Array, inPlace = false): RosterRom {
   const wide = game === 'bw95' && isWideBw95(data);
   if (wide) {
     const p = wideLayoutProblems(data);
-    if (p.length) throw new Error(`This 4 MB Bill Walsh '95 ROM isn't laid out like the 138-team 2026 Season Edition: ${p.join('; ')}.`);
+    if (p.length) throw new Error(`This 4 MB Bill Walsh '95 ROM isn't laid out like the 2026 or 1994 Season Edition: ${p.join('; ')}.`);
   }
   const count = wide ? wideTeamCount(data) : info.teamCount;
   for (let i = 0; i < count; i++) {

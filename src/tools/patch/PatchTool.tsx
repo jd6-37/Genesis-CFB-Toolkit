@@ -19,7 +19,7 @@ import {
   type Patch,
   type PatchList,
 } from '../../core/patches';
-import { describeUnknown, identifyRom, KNOWN, openRom, WIDE_ROM_TEXT, WIDE_TABS_TEXT, type OpenedRom } from '../../core/romfile';
+import { describeUnknown, identifyRom, KNOWN, openRom, is1994Edition, wideRomText, wideTabsText, type OpenedRom } from '../../core/romfile';
 import './patch.css';
 
 type Msg = { kind: 'error' | 'ok'; text: string } | null;
@@ -293,7 +293,7 @@ export function PatchTool({
               </p>
               <p className="hint">
                 {rom.known?.wide
-                  ? `It already has all 138 FBS teams with 2026 rosters and Walsh Reports. ${WIDE_TABS_TEXT}`
+                  ? `${is1994Edition(rom.data) ? 'It already has 107 teams with 1994 rosters' : 'It already has all 138 FBS teams with 2026 rosters and Walsh Reports'}. ${wideTabsText(rom.data)}`
                   : inWork
                   ? 'The other tabs now use this patched ROM, so you can go straight to any of them.'
                   : 'Team Swap now uses this patched ROM. Season, Teams and Rosters have changes in another ROM, so they ask before opening it.'}
@@ -383,10 +383,10 @@ function NextSteps({
             <Button variant="quiet" onClick={onEdit}>
               Edit season, teams and rosters
             </Button>
-            <p className="hint">{WIDE_TABS_TEXT}</p>
+            <p className="hint">{wideTabsText(rom.data)}</p>
           </li>
           <li className="pat-step">
-            <p className="hint">{WIDE_ROM_TEXT}</p>
+            <p className="hint">{wideRomText(rom.data)}</p>
           </li>
         </ul>
       </section>

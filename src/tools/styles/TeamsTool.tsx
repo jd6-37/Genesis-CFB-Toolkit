@@ -17,6 +17,7 @@ import {
 } from '../../core/teamRatings';
 import { Cfb27Reference } from './Cfb27Reference';
 import { isWide } from '../../core/wide';
+import { is1994Edition } from '../../core/romfile';
 import { findCfb27 } from '../../core/cfb27Styles';
 import {
   REPORT_LIMIT, editedReports, longReports, readReports, reportLength, restoreAllReports, restoreReport, showReport, trimReport,
@@ -84,7 +85,8 @@ export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapS
     [ok],
   );
 
-  // College Football 27 matches for the ROM's teams, by school name.
+  // College Football 27 matches for the ROM's teams, by school name (not for the 1994 Season Edition: 2026 schemes).
+  const ed94 = !!work && is1994Edition(work.data);
   const matches = useMemo(() => (ok ? ok.names.map(findCfb27) : []), [ok]);
   const onRom = useMemo(() => (ok ? new Set(matches.flatMap((m) => (m ? [m.school] : []))) : null), [ok, matches]);
   const applyRecommended = () => {
@@ -151,20 +153,21 @@ export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapS
   return (
     <>
       <PageHead title="Teams">
-          Set up each of Bill Walsh '95's teams (36, or 138 in the 2026 Season Edition): the offense and defense the
-          computer runs, the team's OFF and DEF ratings, the weather in its home games and its Walsh Report.
+          Set up each of Bill Walsh '95's teams (36; 138 in the 2026 Season Edition, 107 in the 1994 Season Edition): the
+          offense and defense the computer runs, the team's OFF and DEF ratings, the weather in its home games and its Walsh
+          Report.
         </PageHead>
 
       <WorkRomCard
         api={api}
         teamSwap={teamSwap}
-        hint="Bill Walsh College Football '95: original, Elevated (also the 138-team 2026 Season Edition), a Team Swap result or an earlier edit. .md, .bin, .gen or .zip."
+        hint="Bill Walsh College Football '95: original, Elevated (also the 2026 and 1994 Season Editions), a Team Swap result or an earlier edit. .md, .bin, .gen or .zip."
       />
 
       {work && ok ? (
         <div className="sty-layout">
           <section aria-label="Team settings">
-            <div className="sty-apply">
+            {!ed94 && <div className="sty-apply">
               <Button variant="quiet" onClick={applyRecommended} disabled={!onRom?.size}>
                 Apply recommended styles
               </Button>
@@ -172,7 +175,7 @@ export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapS
                 Sets each team's styles from its College Football 27 playbooks ({onRom?.size ?? 0} of {TEAMS} teams on this
                 ROM have one; see the table below). Undo puts back the styles the ROM was loaded with.
               </p>
-            </div>
+            </div>}
             <Table edit className="sty-table">
               <thead>
                 <tr>
@@ -252,7 +255,7 @@ export function TeamsTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwapS
         </section>
       )}
 
-      <Cfb27Reference onRom={work && ok ? onRom : null} />
+      {!ed94 && <Cfb27Reference onRom={work && ok ? onRom : null} />}
 
       {work && ok && editing !== null && (
         <WalshEditor

@@ -22,9 +22,10 @@ import { writeRating, readRating } from '../src/core/teamRatings';
 import { canCarry, carryEdits, editsSince } from '../src/core/workRom';
 
 const paths = process.argv.slice(2);
-const widePath = paths.length === 4 ? paths.pop()! : undefined; // optional: the 138-team 2026 Season Edition (v2.0.0)
+// Optional after the three: the 138-team 2026 Season Edition (v2.0.0 on) and/or the 107-team 1994 Season Edition.
+const widePaths = paths.splice(3);
 if (paths.length !== 3) {
-  console.error('usage: tsx cli/rostertest.ts BW95 CF96 CF97 [ELEVATED_2026_v2]');
+  console.error('usage: tsx cli/rostertest.ts BW95 CF96 CF97 [ELEVATED_2026_v2] [ELEVATED_1994]');
   process.exit(2);
 }
 const raw: Record<string, Uint8Array> = {};
@@ -458,9 +459,36 @@ const FULL = ['QB', 'QB', 'HB', 'HB', 'HB', 'FB', 'WR', 'WR', 'WR', 'WR', 'WR', 
 
 // The 138-team 2026 Season Edition (Elevated v2.0.0): all 138 teams open, the built-in CFB 27 rosters
 // rebuild its rosters and OVRs byte for byte, edits are tracked and carried, and the 36-team ROMs don't mix.
-if (widePath) {
+for (const widePath of widePaths) {
   const wide = (await openRom(basename(widePath), new Uint8Array(readFileSync(widePath)))).data;
   const rom = openRosterRom(wide);
+  if (rom.teams.length === 107) {
+    // The 1994 Season Edition (H-011 item 2): all 107 teams open and export; an edit is tracked, carried and checksummed.
+    assert.equal(rom.wide, true);
+    assert.deepEqual(['Air Force', 'Penn State', 'Pacific'].map((n) => rom.teams.some((t) => t.school === n)), [true, true, true]);
+    const csv = exportRostersCsv(rom);
+    const back = openRosterRom(wide.slice());
+    const rep = importSheet(back, await readSheet('all.csv', new TextEncoder().encode(csv)));
+    assert.equal(rep.teams.length, 107);
+    assert.ok(back.data.every((b, i) => b === wide[i]), 'its own export changes nothing');
+    const ed = openRosterRom(wide.slice());
+    const last = ed.teams.length - 1;
+    const p = readPlayer(ed, last, 0);
+    writePlayer(ed, last, 0, { ...p, numberByte: jerseyByte(77) });
+    fixChecksums(ed.data, 'bw95');
+    const diff = [...ed.data.keys()].filter((i) => ed.data[i] !== wide[i]);
+    assert.ok(diff.every((i) => (i >= ed.teams[last].rosterOffset && i < ed.teams[last].rosterOffset + 128) || i === 0x18e || i === 0x18f));
+    assert.deepEqual(editsSince(wide, ed.data, 'bw95'), { season: false, teams: false, rosters: true, any: true });
+    const carried = wide.slice();
+    carryEdits(ed.data, carried, wide);
+    assert.equal(readPlayer(openRosterRom(carried), last, 0).numberByte, jerseyByte(77));
+    assert.equal(canCarry(wide, load('bw95')), false);
+    const rr = wide.slice();
+    writeRating(rr, 106, { off: 70, def: 71 });
+    assert.deepEqual(readRating(rr, 106), { off: 70, def: 71 });
+    ok('107-team 1994 Season Edition: 107 teams, its own export imports unchanged, edits tracked and carried, OVRs in its table');
+    continue;
+  }
   assert.equal(rom.wide, true);
   assert.equal(rom.teams.length, 138);
   assert.equal(rom.elevated, true);

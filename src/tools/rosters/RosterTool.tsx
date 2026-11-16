@@ -14,6 +14,7 @@ import { detectImport, importSheet, type ImportReport } from '../../core/rosterI
 import { applyCfb27, convertCfb27, type Cfb27Plan } from '../../core/rosterCfb27';
 import { hasOlPatch, installOlPatch, olPatchState, restoreOlPatch, shownWeightOffset } from '../../core/rosterOlPatch';
 import { exportRostersCsv } from '../../core/rosterExport';
+import { is1994Edition } from '../../core/romfile';
 import { readSheet, type Sheet } from '../../core/rosterSheet';
 import { readStyle, styleInfo, styleProblems, writeStyle } from '../../core/styles';
 import { WorkRomCard, type TeamSwapSource, type WorkApi } from '../shared/WorkRom';
@@ -88,7 +89,7 @@ export function RosterTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwap
       <WorkRomCard
         api={api}
         teamSwap={teamSwap}
-        hint="Bill Walsh College Football '95, College Football USA 96 or 97. Original or modified (Elevated, formerly Rebalanced; Team Swap; an earlier edit). .md, .bin, .gen or .zip."
+        hint="Bill Walsh College Football '95, College Football USA 96 or 97. Original or modified (Elevated, formerly Rebalanced, and its 2026 and 1994 Season Editions; Team Swap; an earlier edit). .md, .bin, .gen or .zip."
       />
 
       {loaded ? (
@@ -298,7 +299,8 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
           </span>
         )}
         <div className="ros-actions">
-          {rom.game === 'bw95' && (
+          {/* The built-in rosters are 2026's: not offered for the 1994 Season Edition (H-011 item 2). */}
+          {rom.game === 'bw95' && !is1994Edition(rom.data) && (
             <Button variant="quiet" onClick={() => void loadBuiltIn()} disabled={fetching} title={CFB27_LATEST.label}>
               {fetching ? 'Loading CFB 27 rosters…' : `CFB 27 rosters (${CFB27_LATEST.season}, Week ${CFB27_LATEST.week})`}
             </Button>
