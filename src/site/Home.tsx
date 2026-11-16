@@ -87,7 +87,6 @@ const EDITIONS: { id: Edition; name: string; title: string; rows: [string, strin
       ['Schedule', 'Random, or the real 2026 schedule'],
       ['Postseason', 'Conference title games, then a 12-team playoff. Or a 24- or 4-team playoff, a BCS title game, or none'],
       ['Rosters', '2026 rosters with player names, rated from College Football 27'],
-      ['2026 only', 'The Dynasty app and alternate uniforms'],
     ],
   },
 ];
@@ -225,7 +224,7 @@ const MORE: [string, string][] = [
   ['Onside kicks', 'The kicking team recovers them less often.'],
   ['Faster kickoff setup', 'About 5 seconds from a score to the kickoff instead of 13.'],
   ['Rosters on Game Setup', "Press Z on Game Setup to see any team's roster, with player names."],
-  ['Alternate uniforms', 'Press Y on the controller screen to pick a helmet, jersey and pants. 2026 edition.'],
+  ['Alternate uniforms', 'Press Y on the controller screen to pick a helmet, jersey and pants. Both editions.'],
   ['Menu music off', 'Press X on a menu to turn the music off. The game remembers the setting.'],
 ];
 
@@ -262,7 +261,7 @@ function Apps() {
           <h3 className="home-h3">Dynasty</h3>
           <p>
             Runs a dynasty over many seasons: recruiting, player progression, schedules, awards and records. After each season it writes the next
-            season into your ROM. 2026 edition only.
+            season into your ROM. Both editions.
           </p>
           <Button variant="quiet" href="/dynasty">Open Dynasty</Button>
         </article>
