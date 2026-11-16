@@ -24,6 +24,7 @@ import { seasonView } from './derive';
 import { headCoach, recruitingDiscount } from './coachEffects';
 import { POSITIONS, POS_TARGET, ROSTER_LIMIT, STAR_POINTS, chooseTransfers, drawStars, fillMinimums, makeRecruit, prestige, prestigeStars, suggestCuts, type RecruitTemplates } from './offseason';
 import { SCHOOL_STATE, closeness, stateCode } from './schoolStates';
+import { hasTransfers } from './edition';
 
 // The numbers below come from the dynasty's offseason rules (rules.ts): weeks, points, board, scouting,
 // thresholds, pitches. Defaults: 5 weeks, 1,000 points a week, 60 a prospect, a board of 35.
@@ -111,6 +112,7 @@ const roster = (d: Dynasty, team: number) => d.players.filter((p) => p.status ==
 
 /** Who enters the portal (full recruiting): the players chosen with the departures (transferChance). */
 export function portalEntries(d: Dynasty, seed: number): DPlayer[] {
+  if (!hasTransfers(d)) return [];
   return (d.offseason?.portal ?? chooseTransfers(d, seed)).map((id) => d.players[id - 1]).filter((p) => p.status === 'active' && p.team !== null);
 }
 
