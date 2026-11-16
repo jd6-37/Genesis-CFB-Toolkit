@@ -9,11 +9,16 @@ import { editionOf } from '../src/core/dynasty/edition';
 import { autoSpend, finishCarousel, fireCoach, goalResults, goalsFor, hotSeat, openings, placeCoach, setManageXp, spendXp, tenure, xpCost } from '../src/core/dynasty/carousel';
 import { rng } from '../src/core/dynasty/model';
 import { cancelOffseason, startOffseason } from '../src/core/dynasty/offseason';
-import { coachTransfers, developmentBoost, recruitingDiscount, transferFactor } from '../src/core/dynasty/coachEffects';
+import { coachTransfers, developmentBoost, recruitingDiscount, simNudges, transferFactor } from '../src/core/dynasty/coachEffects';
+import { DYN_AREA } from '../src/core/dynasty/dynastyArea';
+/** A season ROM's team OVRs (the dynasty area's OVR1 table, header +0x18). */
+const areaOvr = (r: Uint8Array, t: number) => { const at = ((r[DYN_AREA + 0x18] << 24) | (r[DYN_AREA + 0x19] << 16) | (r[DYN_AREA + 0x1a] << 8) | r[DYN_AREA + 0x1b]) >>> 0; return { off: r[at + 4 + 2 * t], def: r[at + 5 + 2 * t] }; };
 import { coachFromPlayer } from '../src/core/dynasty/carousel';
 import { coachLook, coachLookChoices } from '../src/core/dynasty/coachLook';
 import { drawHeadshot, HEAD_SIZE } from '../src/core/dynasty/headshot';
-import { offseasonStories } from '../src/core/dynasty/news';
+import { hotSeatStories, offseasonStories } from '../src/core/dynasty/news';
+import { seasonXp, STAT_MILESTONES } from '../src/core/dynasty/carousel';
+import { leaders, playerLines, seasonView } from '../src/core/dynasty/derive';
 
 export function coachChecks(d: Dynasty, ok: (name: string) => void, opts: { seasonRom?: (d: Dynasty) => Uint8Array; offseason?: { at: Dynasty; finish: (d: Dynasty) => Dynasty } } = {}) {
   const data = JSON.parse(readFileSync(`public/data/coaches-${editionOf(d).id}.json`, 'utf8')) as CoachData;
@@ -41,6 +46,24 @@ export function coachChecks(d: Dynasty, ok: (name: string) => void, opts: { seas
   assert.ok(r.w >= dynastySeasons(c, best.id).reduce((a, s) => a + s.w, 0));
   assert.equal(withCoaches(c, data), c, 'added once');
   if (opts.seasonRom) assert.deepEqual(opts.seasonRom(c), opts.seasonRom(d), 'the coaches don\'t change the season ROM');
+  if (opts.seasonRom) {
+    // "Coaches affect the sim" (off by default): ±1 OVR per side at most, from the season's head coach, against the median.
+    const on = { ...c, coachSim: true };
+    const nudges = simNudges(on, on.seasons.at(-1)!.coach);
+    assert.ok(nudges.every((x) => Math.abs(x.off) <= 1 && Math.abs(x.def) <= 1));
+    assert.deepEqual(simNudges(c, c.seasons.at(-1)!.coach).filter((x) => x.off || x.def), [], 'off by default');
+    const a = opts.seasonRom(c), b = opts.seasonRom(on);
+    let moved = 0;
+    for (let t = 0; t < n; t++) {
+      const ra = areaOvr(a, t), rb = areaOvr(b, t);
+      if (ra.off !== rb.off || ra.def !== rb.def) moved++;
+      assert.ok(Math.abs(rb.off - ra.off - nudges[t].off) <= 0 || ra.off + nudges[t].off > 99 || ra.off + nudges[t].off < 0, `${c.teams[t].school} OFF`);
+      assert.ok(Math.abs(rb.def - ra.def - nudges[t].def) <= 0 || ra.def + nudges[t].def > 99 || ra.def + nudges[t].def < 0, `${c.teams[t].school} DEF`);
+    }
+    const up = nudges.filter((x) => x.off + x.def > 0).length, down = nudges.filter((x) => x.off + x.def < 0).length;
+    assert.ok(moved > 0 && Math.abs(up - down) <= n / 4, `about as many up as down (${up} / ${down})`);
+    ok(`coaches in the sim (setting on): ${moved} of ${n} teams' OFF / DEF moved by 1 in the season ROM (${up} up, ${down} down); off by default`);
+  }
   if (opts.offseason) {
     // An offseason in progress gets its coaches, then the next season starts: it has every team's head coach.
     const nx = opts.offseason.finish(withCoaches(opts.offseason.at, data));
@@ -102,6 +125,7 @@ function carouselChecks(c: Dynasty, ok: (name: string) => void) {
   assert.deepEqual(back.coaches, managed.coaches, 'starting the offseason over restores the coaches');
   const st = o.offseason!.carousel!;
   effectChecks(c, done, ok);
+  moreChecks(c, o, ok);
   ok(`coaching carousel: ${st.retired.length} retired, ${st.fired.length} fired, ${done.offseason!.carousel!.moves.length} hired; offers to the managed coach: ${(st.offers[managed.coaches!.find((y) => y.team === user)!.id] ?? []).length}; goals, hot seat, XP`);
 }
 
@@ -139,4 +163,31 @@ function effectChecks(c: Dynasty, done: Dynasty, ok: (name: string) => void) {
   const coachy = stories.filter((x) => /fires|hires|retires|takes over|is out at|coaching career/.test(x.headline));
   assert.ok(coachy.length >= done.offseason!.carousel!.moves.filter((m) => m.kind !== 'yours').length, 'a story for each hire');
   ok(`coach effects: development ±${Math.round(developmentBoost(top, 'QB') * 100)}%, recruiting ${Math.round(recruitingDiscount(top) * 100)}% cheaper at the top; ${coachy.length} coach stories; headshots`);
+}
+
+/** Part 4: stat milestones in the XP, job offer and hot seat stories. */
+function moreChecks(c: Dynasty, o: Dynasty, ok: (name: string) => void) {
+  const si = c.seasons.length - 1;
+  const v = seasonView(c, c.seasons[si]);
+  const lines = playerLines(v);
+  let milestones = 0;
+  for (const m of STAT_MILESTONES) {
+    const top = leaders(lines, m.cat, m.key, 10);
+    if (!top.length) continue;
+    const parts = seasonXp(c, si, top[0].team, v).parts;
+    assert.ok(parts.some((p) => p.label.startsWith(`National leader in ${m.label}`) && p.xp >= 140), `the leader in ${m.label} earns XP`);
+    milestones++;
+  }
+  // Job offers to a managed coach make the news while the carousel is open.
+  const offers = Object.entries(o.offseason!.carousel!.offers).filter(([, s]) => s.length);
+  const os = offseasonStories(o, o.offseason!.events, o.offseason!.year).filter((x) => x.id.includes('-offers-'));
+  assert.equal(os.length, offers.length, 'a story for each managed coach with offers');
+  // Hot seat stories: a second season like the first; coaches far behind their goal after a warm seat.
+  const s2 = { ...c.seasons[si], year: c.seasons[si].year + 1 };
+  const d2 = { ...c, seasons: [...c.seasons, s2] };
+  const v2 = seasonView(d2, s2);
+  const hs = hotSeatStories(d2, v2, Math.min(5, v2.lastRegularWeek), 'Week 6');
+  assert.ok(hs.length <= 3);
+  for (const x of hs) assert.ok(/seat|Pressure|running out/.test(x.headline) && /behind the \d+ wins/.test(x.dek), x.headline);
+  ok(`coaches part 4: XP for ${milestones} national stat leaders; ${os.length} job offer ${os.length === 1 ? 'story' : 'stories'}; ${hs.length} hot seat ${hs.length === 1 ? 'story' : 'stories'}${hs[0] ? ` ("${hs[0].headline}")` : ''}`);
 }

@@ -186,6 +186,8 @@ export interface Dynasty {
   coachQueue?: { player: number; year: number }[];
   /** The user's teams' coaches can be fired too (spec: a setting; absent = yes). */
   yourCoachFired?: boolean;
+  /** Head coaches nudge their team's OFF and DEF in the season ROM, ±2 at most (coachEffects.ts `simNudge`). Absent = off. */
+  coachSim?: boolean;
   /** The season sim's settings for this dynasty's season ROMs (seasonSim.ts); absent = the ROM's own. */
   sim?: import('../simSettings').SimSettings;
   /** Sim stat multipliers for its season ROMs (seasonSim.ts, H-021); absent = the ROM's own (×1). */

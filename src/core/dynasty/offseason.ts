@@ -17,7 +17,7 @@
 
 import { writeDynastySim, writeDynastyStats } from './seasonSim';
 import { startCarousel } from './carousel';
-import { developmentBoost, headCoach, recruitingLift, transferFactor } from './coachEffects';
+import { developmentBoost, headCoach, recruitingLift, simNudges, transferFactor } from './coachEffects';
 import { pollSet, preseasonPoll } from './poll';
 import { seasonReports } from './walshStore';
 import { writeReports } from '../walshReports';
@@ -855,6 +855,7 @@ export function seasonRom(d: Dynasty, season: DSeason, rom: Uint8Array, now = Da
   if (editionOfRom(out.data)?.id !== editionOf(d).id) throw new Error(`This dynasty is played in the ${editionOf(d).name}: use that ROM.`);
   const records: Uint8Array[] = [];
   const ovr: { off: number; def: number }[] = [];
+  const nudges = simNudges(d, season.coach);
   const names: (DynastyName | null)[][] = [];
   const fine = new Uint8Array(fineSetBytes(d.teams.length)); // every slot's fine-ratings offsets (fine.ts)
   for (let t = 0; t < d.teams.length; t++) {
@@ -879,7 +880,9 @@ export function seasonRom(d: Dynasty, season: DSeason, rom: Uint8Array, now = Da
     }
     records.push(rec);
     names.push(teamNames);
-    ovr.push(season.teamOvr?.[t] ?? readRating(out.data, t));
+    const base = season.teamOvr?.[t] ?? readRating(out.data, t);
+    const nudge = nudges[t] ?? { off: 0, def: 0 };
+    ovr.push(nudge.off || nudge.def ? { ...base, off: Math.max(0, Math.min(99, base.off + nudge.off)), def: Math.max(0, Math.min(99, base.def + nudge.def)) } : base);
   }
   writeDynastyArea(out.data, {
     stamp: { dynasty: dynastyRomId(d.id), season: season.index + 1, rosterVersion: season.rosterVersion ?? 1, time: Math.floor(now / 1000) },
