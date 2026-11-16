@@ -2,14 +2,14 @@
 // app's offseason rules use it, under the season sim settings.
 
 import { useEffect, useState } from 'react';
-import { Button, Check, Field, SubHead } from '../../ui';
+import { Button, Field, SubHead } from '../../ui';
 import { STATS_DEFAULTS, STAT_KEYS, STAT_LABELS, STAT_LIMITS, STAT_SCALES, STAT_STEP, sameStats, statsProblems, type SimStats, type StatKey } from '../../core/simStats';
 
 export function StatSettingsBox({ value, loaded, onChange, disabled, intro }: {
   value: SimStats;
   /** What the ROM or dynasty had (the "changed" marks). */
   loaded: SimStats;
-  /** Called with valid settings only: a number when its field is left, the checkbox at once. */
+  /** Called with valid settings only: a number when its field is left. */
   onChange: (s: SimStats) => void;
   disabled?: boolean;
   intro?: string;
@@ -41,9 +41,6 @@ export function StatSettingsBox({ value, loaded, onChange, disabled, intro }: {
           />
         ))}
       </div>
-      <Check checked={value.tdMatch} disabled={disabled} onChange={(on) => take({ ...asStats, ...(bad.length ? value : {}), tdMatch: on })}>
-        Box-score touchdowns match the score (each team's passing and rushing touchdowns add up to the touchdowns it scored)
-      </Check>
       {bad.length > 0 && <p className="sim-box-bad" role="alert">{bad[0]}</p>}
       {!sameStats(value, STATS_DEFAULTS) && (
         <Button variant="link" disabled={disabled} onClick={() => onChange(STATS_DEFAULTS)}>Reset to the defaults</Button>

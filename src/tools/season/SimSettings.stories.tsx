@@ -24,7 +24,7 @@ function LiveStats({ start }: { start: SimStats }) {
   const [v, setV] = useState(start);
   return <StatSettingsBox value={v} loaded={start} onChange={setV} />;
 }
-/** The sim stat multipliers as a ROM ships them (×1, touchdowns match the score). */
+/** The sim stat multipliers as a ROM ships them (×1). */
 export const StatsDefaults: Story = { render: () => <LiveStats start={STATS_DEFAULTS} /> };
 /** Raised for long games, sacks back down. */
-export const StatsChanged: Story = { render: () => <LiveStats start={{ passing: 150, rushing: 150, interceptions: 150, sacks: 80, tackles: 150, tdMatch: true }} /> };
+export const StatsChanged: Story = { render: () => <LiveStats start={{ passing: 150, rushing: 150, interceptions: 150, sacks: 80, tackles: 150 }} /> };

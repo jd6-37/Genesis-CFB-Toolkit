@@ -377,7 +377,7 @@ for (const path of paths) {
   ok(`${basename(path)}: season sim settings read (defaults${hasHomeEdge(rom) ? ', home edge 16' : ''}), written in their bytes, bad values refused`);
 }
 
-// The sim stat multipliers (H-021; 2026 test39 / 1994 test42 on): read, written only in their 12 bytes, bad values refused.
+// The sim stat multipliers (H-021; 2026 test39 / 1994 test42 on): read, written only in their 10 bytes (0x2D640E reserved), bad values refused.
 for (const path of paths) {
   const rom = await read(path);
   const st = readSimStats(rom);
@@ -386,17 +386,17 @@ for (const path of paths) {
     assert.throws(() => writeSimStats(rom.slice(), STATS_DEFAULTS), /stat multipliers/);
     continue;
   }
-  assert.deepEqual(st, STATS_DEFAULTS, `${basename(path)}: ships with x1, touchdowns matching`);
-  const S = { passing: 150, rushing: 50, interceptions: 300, sacks: 80, tackles: 200, tdMatch: false };
+  assert.deepEqual(st, STATS_DEFAULTS, `${basename(path)}: ships with x1`);
+  const S = { passing: 150, rushing: 50, interceptions: 300, sacks: 80, tackles: 200 };
   const w = rom.slice();
   writeSimStats(w, S);
   assert.deepEqual(readSimStats(w), S);
   assert.ok([...w.keys()].filter((i) => w[i] !== rom[i]).every((i) => STAT_RANGES.some(([a, b]) => i >= a && i < b)), 'only the multipliers change');
-  assert.deepEqual([...w.subarray(0x2d6404, 0x2d6410)], [0, 150, 0, 50, 1, 44, 0, 80, 0, 200, 0, 0]);
+  assert.deepEqual([...w.subarray(0x2d6404, 0x2d6410)], [0, 150, 0, 50, 1, 44, 0, 80, 0, 200, rom[0x2d640e], rom[0x2d640f]], 'the reserved word 0x2D640E is left alone');
   for (const bad of [{ passing: 40 }, { rushing: 310 }, { sacks: 155 }, { tackles: 1.5 }]) {
     assert.throws(() => writeSimStats(rom.slice(), { ...STATS_DEFAULTS, ...bad } as SimStats), /must be/);
   }
-  ok(`${basename(path)}: sim stat multipliers read (x1, TDs match), written in their bytes, bad values refused`);
+  ok(`${basename(path)}: sim stat multipliers read (x1), written in their 10 bytes, bad values refused`);
 }
 
 console.log(`\n${passed} passed`);

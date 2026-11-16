@@ -28,7 +28,9 @@ export function writeDynastySim(rom: Uint8Array, d: Dynasty): void {
 // The sim stat multipliers (H-021, src/core/simStats.ts): kept with the dynasty like the sim settings.
 import { STATS_DEFAULTS, readSimStats, sameStats, statsProblems, writeSimStats, type SimStats } from '../simStats';
 
-export const statsOf = (d: Dynasty): SimStats => d.simStats ?? STATS_DEFAULTS;
+/** A dynasty's multipliers (a tdMatch saved before 2026 test40 / 1994 test43 is dropped). */
+export const statsOf = (d: Dynasty): SimStats => (d.simStats ? onlyStats(d.simStats) : STATS_DEFAULTS);
+const onlyStats = (s: SimStats): SimStats => ({ passing: s.passing, rushing: s.rushing, interceptions: s.interceptions, sacks: s.sacks, tackles: s.tackles });
 
 /** The dynasty with new multipliers (null or the defaults = back to the ROM's own). */
 export function setStats(d: Dynasty, s: SimStats | null): Dynasty {
@@ -38,12 +40,12 @@ export function setStats(d: Dynasty, s: SimStats | null): Dynasty {
   }
   const next = { ...d };
   if (!s || sameStats(s, STATS_DEFAULTS)) delete next.simStats;
-  else next.simStats = { ...s };
+  else next.simStats = onlyStats(s);
   return next;
 }
 
 /** Writes the dynasty's multipliers into a season ROM that has them (2026 test39 / 1994 test42 on); older ROMs stay. */
 export function writeDynastyStats(rom: Uint8Array, d: Dynasty): void {
   if (!d.simStats || !readSimStats(rom)) return;
-  writeSimStats(rom, d.simStats);
+  writeSimStats(rom, onlyStats(d.simStats));
 }
