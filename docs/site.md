@@ -21,6 +21,10 @@ The Bill Walsh '95 Elevated website: the homepage (`/`), the manual (`/manual`) 
 
 Old addresses keep working: `/#rosters` and the other tab hashes go to `/toolkit#…`, `/#dynasty/…` to `/dynasty#…` (the script in `index.html`, and `legacyAppUrl` in `src/appNav.ts` for `app.html`).
 
+## Keeping it up to date
+
+The site describes the mod's latest features: the homepage, the manual and any Insights post they touch. After the launch, update it when a public GitHub release comes out. Until the site is announced, it follows the latest mainline test ROMs (owner, 2026-11-16). The unreleased changelog in the project notes lists what each test added.
+
 ## Writing the copy
 
 All of the site's text is direct and literal (owner, 2026-11-14). A heading names the feature or screen ("Swap in your backup halfback or middle linebacker", not "Fresh legs in the backfield"); a sentence says what happens and who does it. No slogans, wordplay, puns or figures of speech, and no vague words where a button or number can be named. Say what a control does in the game's own terms (the button, the screen, the label on it).

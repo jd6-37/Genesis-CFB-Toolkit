@@ -73,8 +73,9 @@ const EDITIONS: { id: Edition; name: string; title: string; rows: [string, strin
     rows: [
       ['Teams', '107: every Division I-A team of 1994'],
       ['Conferences', 'The 11 conferences of 1994'],
-      ['Season', '11 weeks, then a bowl week'],
-      ['Postseason', 'The 19 bowl games of the 1994 season'],
+      ['Schedule', 'Random, or the real 1994 schedule'],
+      ['Season', '11 weeks (the real schedule: Weeks 0 to 13), the SEC Championship Game, then a bowl week'],
+      ['Postseason', 'The SEC Championship Game, then the 19 bowl games of the 1994 season'],
       ['Poll', 'Starts from the real 1994 preseason AP poll'],
       ['Rosters', 'Real 1994 names for 2,962 of 3,424 players. Every player has a number and ratings'],
     ],
@@ -175,8 +176,8 @@ const FEATURES: { title: string; body: ReactNode; controls?: [GlyphKey[], string
       <>
         The original game has 36 teams and no player names. The 1994 edition has all 107 Division I-A teams of 1994, and 2,962 of its 3,424
         players have their real 1994 names, matched by team, jersey number and position. The names come from 9,872 rows of 1994 rosters, and
-        the ratings start from a ranked list of 2,857 of 1994's best players built from 10,731 facts. Each new team's OFF and DEF ratings come
-        from its 1994 record and its conference, and its players' 20,544 ratings follow them.{' '}
+        the ratings start from a ranked list of 2,857 of 1994's best players built from 10,731 facts. Each new team's players were rated to fit
+        its 1994 record and conference, and every team's OFF and DEF ratings come from its players' 20,544 ratings.{' '}
         <Button variant="link" href="/insights/1994-rosters">How we built the 1994 rosters</Button>
       </>
     ),
@@ -184,7 +185,7 @@ const FEATURES: { title: string; body: ReactNode; controls?: [GlyphKey[], string
   },
   {
     title: 'Full seasons with bowls or a playoff',
-    body: '1994 edition: an 11-week season in the 1994 conferences, starting from the real 1994 preseason AP poll, then the 19 bowl games of that year. 2026 edition: a random schedule or the real 2026 schedule, conference title games, then a 12-team playoff. You can also pick a 24- or 4-team playoff, a BCS title game, or no postseason.',
+    body: '1994 edition: an 11-week season in the 1994 conferences or the real 1994 schedule, starting from the real 1994 preseason AP poll, then the SEC Championship Game and the 19 bowl games of that year. Simulated games score and end like real 1990s games. 2026 edition: a random schedule or the real 2026 schedule, conference title games, then a 12-team playoff. You can also pick a 24- or 4-team playoff, a BCS title game, or no postseason.',
     media: { src: M('cfp-bracket.png'), alt: 'The CFP bracket screen: 12 teams, seeds 1 to 4 with a bye' },
   },
 ];
@@ -224,7 +225,7 @@ const MORE: [string, string][] = [
   ['Onside kicks', 'The kicking team recovers them less often.'],
   ['Faster kickoff setup', 'About 5 seconds from a score to the kickoff instead of 13.'],
   ['Rosters on Game Setup', "Press Z on Game Setup to see any team's roster, with player names."],
-  ['Alternate uniforms', 'Press Y on the controller screen to pick a helmet, jersey and pants. Both editions.'],
+  ['Alternate uniforms', 'Press Y on the controller screen to pick a helmet, jersey and pants. Most teams have real alternates. Both editions.'],
   ['Menu music off', 'Press X on a menu to turn the music off. The game remembers the setting.'],
 ];
 
