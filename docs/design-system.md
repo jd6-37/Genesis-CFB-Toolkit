@@ -21,6 +21,10 @@ Picked from three Figma mockups (file "CFB-Toolkit", page "Directions"): **"B's 
 - **Dark mode is for Dynasty only** ("the blue design of the toolkit is enough").
 - **Colors:** prefer Genesis palette values (each channel one of 0, 36, 73, 109, 146, 182, 219, 255) for solid UI colors. It's a guide that keeps the palette small and close to the game's art, not a hard rule.
 
+## The site (owner, 2026-11-14)
+
+The website (`src/site`, homepage, manual, Insights) uses the same tokens and components. Its pages are the **Mod Toolkit** brand (indigo, yellow; the hero's action is the `chrome` button); the **manual** and the text of an **Insights post** sit on the **Dynasty light** brand (`data-brand="dynasty" data-theme="light"`): white paper, black ink and bars, like the printed booklet in a 16-bit game box. Section headings are `SubHead` bars; screenshots and clips are `Screen`s; Insights cards and code blocks are the black screen of a Walsh Report. Tokens added for it: `--shadow-hard` (both brands), `--fs-display` (the site's big titles), and `--screen`, `--screen-edge`, `--on-screen` for Dynasty light. Figma: file "CFB-Toolkit", page "Website".
+
 ## Where things are
 
 | What | Where |
@@ -56,7 +60,7 @@ Run `npm run storybook` to browse the components (port 6006).
 
 | Component | Use it for |
 |---|---|
-| `Button` | An action, or a link that looks like one (`href`). `variant`: `primary` (one per view), `quiet`, `danger`, `link` (an action that reads as underlined text: undo, close, a name in a list or a table cell; `strong` makes it bold). |
+| `Button` | An action, or a link that looks like one (`href`). `variant`: `primary` (one per view), `quiet`, `danger`, `link` (an action that reads as underlined text: undo, close, a name in a list or a table cell; `strong` makes it bold), `chrome` (the game's selection bar: the site's one loud action, on its indigo pages only). |
 | `Row` | Buttons or controls side by side; wraps on phones. |
 | `Note` | A message about what happened or what to do next. `kind`: `info`, `ok`, `error`. |
 | `PageHead`, `SubHead` | A page's title with its line of text and controls; a section heading (a bar with reversed type). |
@@ -76,6 +80,10 @@ Run `npm run storybook` to browse the components (port 6006).
 | `Masthead` | An app's header: `title` (links to `href`), `sub` (one line under it), `left` and `right` for small controls and marks; its children sit under the title row (the `NavBar`). On a phone the title drops to its own row. |
 | `NavBar` | An app's main menu: `label` (for screen readers) and `items` (`label`, `href`, `current`, `off`). One mark per item: a bar under it. Scrolls sideways inside itself on phones. |
 | `ThemeToggle` | The light/dark switch in Dynasty's masthead. The app sets `data-theme` from it and keeps the choice in the browser. |
+| `Glyph` | A controller button in a sentence or a controls list, drawn as the game draws its hints: `k` is `A`, `B`, `C`, `X`, `Y`, `Z`, `START`, `MODE`, `dpad` or one direction (`up`, `down`, `left`, `right`). |
+| `Tag` | A small label: `accent` marks what the mod added (Elevated), `ink` a requirement (6-button), `plain` a topic. |
+| `Screen` | A screenshot or clip of the game in the screen's frame, scaled up with hard pixels. `video` plays muted in a loop once it's near the viewport (never for people who asked for less motion); `wide` for a picture that isn't 4:3; `caption`. |
+| `SetupList` | Labels and values in rows, like the game's Game Setup screen. |
 
 ## Status (2026-11-13)
 

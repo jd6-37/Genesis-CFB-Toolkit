@@ -1,0 +1,80 @@
+export const meta = { n: 2, slug: 'controls', title: 'Controls', summary: 'Every button on one page: menus, the play-call screen, before and after the snap, kicks and the pause menu.' }
+
+This page lists every control. The chapters after it explain each one. <New /> marks what the mod added, <Six /> what needs a 6-button pad.
+
+## Menus
+
+<Controls rows={[
+  [['dpad'], 'Move between rows and change the highlighted setting'],
+  [['START'], 'Go on to the next screen'],
+  [['X'], 'Menu music off or on (title screen, Game Setup, season screens)', 'new six'],
+  [['Z'], 'Game Setup: Team Rosters for the highlighted team', 'new six'],
+  [['Y'], 'Controller screen: pick the team’s uniform', 'new six'],
+]} />
+
+## Play-call screen
+
+<Controls rows={[
+  [['dpad'], 'Move the boxes over the formations or plays'],
+  [['A', 'B', 'C'], 'Choose the formation or play under that box'],
+  [['X'], 'Flip the play (the same as the FLIP PLAY tile)', 'new six'],
+  [['Y'], 'SET FORM: back to the formations', 'new six'],
+  [['Z'], 'SWAP HBS on offense, SWAP MLBS on defense', 'new six'],
+]} />
+
+## Before the snap, offense
+
+<Controls rows={[
+  [['C'], 'Snap the ball'],
+  [['A'], 'Open the audible menu, then A, B or C to call that audible'],
+  [['A', 'X'], 'Flip the play at the line', 'new six'],
+  [['up', 'down'], 'Pick a motion man (a marker shows under him)', 'new'],
+  [['left', 'right'], 'Send him in motion; the other way brings him back', 'new'],
+  [['Y'], 'Hold: the play’s diagram, and each receiver’s button and jersey number', 'new six'],
+  [['Z'], 'Hold: energy bars over every player', 'new six'],
+]} />
+
+## After the snap, offense
+
+<Controls rows={[
+  [['dpad'], 'Run with the ball carrier, or scramble with the quarterback'],
+  [['C'], 'Quarterback on a pass play: bring up the receiver icons'],
+  [['A', 'B', 'C'], 'Then throw to that receiver (tap for a lob, hold for a bullet)'],
+  [['X', 'Y'], 'Then throw to receiver 4 or 5', 'new six'],
+  [['C'], 'Option plays: pitch. Ball carrier: dive'],
+  [['B'], 'Ball carrier: tap to lower a shoulder, hold to spin'],
+  [['B'], 'RPO play: within about a second of the snap, pitch to the halfback', 'new'],
+]} />
+
+## Before the snap, defense
+
+<Controls rows={[
+  [['B'], 'Switch to another defender'],
+  [['A'], 'Open the audible menu, then A, B or C'],
+  [['A', 'X'], 'Flip your alignment; again to flip back', 'new six'],
+  [['X', 'Z', 'Y'], 'Pick a shift: the line, the linebackers or the safeties', 'new six'],
+  [['left', 'right'], 'Then shift that group a step (up to two)', 'new six'],
+  [['up', 'down'], 'Then pinch or spread the line and linebackers, or move the safeties up or back', 'new six'],
+  [['Y'], 'Hold: the play’s diagram and each defender’s assignment', 'new six'],
+  [['Z'], 'Hold: energy bars', 'new six'],
+]} />
+
+## After the snap, defense
+
+<Controls rows={[
+  [['B'], 'Switch to the defender nearest the ball'],
+  [['A'], 'Dive at the ball carrier'],
+  [['C'], 'Jump: knock down or pick off a pass, block a kick'],
+]} />
+
+## Kicks
+
+<Controls rows={[
+  [['C'], 'Start the kick meter'],
+  [['left', 'right'], 'Aim while the meter moves'],
+  [['C'], 'Kick: the higher the meter, the longer the kick'],
+]} />
+
+## Anytime
+
+<Controls rows={[[['START'], 'Pause menu: timeouts, replays, rosters, stats and settings']]} />

@@ -1,0 +1,87 @@
+export const meta = { slug: '1994-rosters', title: 'How we built the 1994 rosters for all 107 teams', dek: 'The original game has 36 teams and no player names. The 1994 Season Edition has all 107 Division I-A teams of 1994, and 2,962 of its 3,424 players have their real 1994 names. This post explains where the names, numbers and ratings came from.', date: '2026-11-16', tag: 'Rosters', minutes: 8 }
+
+Bill Walsh College Football ’95 has 36 teams. Each team has 32 roster slots, and each slot holds a jersey number and six ratings. The game has no player names. The 1994 Season Edition adds the other 71 Division I-A teams of 1994 and shows player names on Team Rosters and in the play recaps. That is 3,424 roster slots, and every one of them needs a number and ratings. Where we could find the player, it also needs his name and class.
+
+## The 36 original teams
+
+EA’s rosters are real 1994 rosters without names: the jersey numbers and positions match the 1994 teams. So we collected 1994 rosters for the 36 teams and matched each slot by team, jersey number and position.
+
+Each match gets a confidence score:
+
+| Match | Confidence |
+|---|---|
+| One player on the source roster wears the number, and his position fits the slot | 95% |
+| Several players wear the number, and one of them fits the position | 90% |
+| Only a magazine’s number list, without positions | 85% (92% when a second source agrees) |
+| Several players fit; the oldest class is picked | 65% |
+| The only player with the number plays a different position | 40% |
+
+1,101 of the 1,152 slots have a name, about 1,014 of them at 90% or better. 51 slots are still empty, 27 of them at Army.
+
+## Where the 1994 rosters came from
+
+We collected 9,872 roster rows for the 107 teams from these sources:
+
+- **Preseason magazines on archive.org:** Athlon’s 1994 ACC, Big Ten and Big Eight previews and Lindy’s 1994 Southwest preview print full rosters with numbers, height, weight and class. They also print depth charts.
+- **1994 media guides on archive.org:** the SEC guide (Arkansas, Ole Miss, Mississippi State), Kentucky and Bowling Green.
+- **StatMuse’s 1994 team rosters:** every one of the 107 teams. 80 lists have jersey numbers. The other 27 have only the players who recorded stats, with names and positions.
+
+archive.org’s scanned text mixes up the columns of a roster table: the names end up in one block and the numbers in another. So the magazine rosters were read from the page images instead, and a sample of rows was checked against the page.
+
+Summer magazine rosters are from before the season. A player can change his number or position by the fall. Where a magazine and StatMuse give one player different numbers, the game uses StatMuse’s number. 16 players have this conflict.
+
+## Who the best players were in 1994
+
+Ratings start with knowing who the stars were. We collected 10,731 facts about 2,857 players:
+
+- 1994 statistics, All-America and all-conference teams, and award voting.
+- 1994 preseason magazines: Street & Smith’s previews of all 107 teams and their preseason honors.
+- What happened next: the 1995 to 1998 NFL drafts, NFL combine numbers and NFL honors.
+
+Each player is ranked at his position and placed in a tier: National (All-Americans, award finalists, first- and second-round draft picks), Conference (all-conference players and later draft picks) or Team (his team’s top 3 to 5 players). Each also gets a style where the facts show one: a pocket passer or a scrambler, a speed back or a power back, a pass rusher or a run stopper.
+
+Final 1994 statistics count the most. Preseason hype counts too: a player who was a preseason All-American and got hurt in September was still a very good player.
+
+## The 71 new teams
+
+For the new teams, a player goes into a slot only with evidence from the 1994 season: 1994 statistics, 1994 honors, or a spot on a 1994 depth chart. Preseason mentions, 1993 facts and NFL careers alone don’t put a player in a slot.
+
+That gave 807 named players. The Sporting News’ 1994 College Football Yearbook added 1,054 more. For each team it lists the returning starters with position and class, the other key returnees and the top newcomers. We read its scanned text on archive.org, fixed the scanning errors (the scanned text reads “rn” as “m”, so “Turner” comes out as “Tumer”), and put each player into an empty slot at his position. 787 of them are also on a 1994 roster we had, so they get that roster’s spelling, number, size and class.
+
+Now 1,861 of the new teams’ 2,272 slots have a name. Every slot has a jersey number: 1,124 are the players’ real numbers. The rest are picked from the numbers the original game’s teams use at that position, never one already on the team.
+
+<Shot src="/media/rosters-1994.png" alt="Team Rosters, names view, for Kansas: each player's number, position, class and name" caption="Kansas, one of the 71 new teams, on Team Rosters with names shown." />
+
+## Team ratings for the new teams
+
+The original 36 teams were the top programs, so the new teams are rated lower on average. To set each new team’s level, we first set its team ratings, the OFF and DEF numbers on Game Setup that the season sim also uses:
+
+- **Strength** = the team’s 1994 SRS (its average margin, adjusted for its schedule) + 15 × (its win percentage − 0.5), so both margin and record count.
+- **Team rating** = the original teams’ average + a slope × (strength − the original teams’ average strength), plus a conference adjustment: how far that conference’s original teams sit above or below the line.
+- **OFF and DEF** are split by the team’s 1994 offense and defense, so Illinois, whose 1994 defense was far better than its offense, is 78 OFF / 92 DEF.
+- **No rating below 63.** The season sim turns a rating of 62 into 0, so lower values are squeezed into 63 to 67, and the order is kept.
+
+The new teams average 75 OFF / 76 DEF; the original teams average 82 / 85. They range from Akron at 65 / 66 to Illinois at 78 / 92.
+
+## Player ratings
+
+Each player’s ratings come from the original teams’ ratings at the same roster slot: their average and their spread for every rating. Then:
+
+- The team’s level moves the whole unit up or down. After the players are drawn, every rating in the offense gets the same shift so the offense matches the team’s OFF rating exactly; the same for the defense. Players keep their order inside the unit.
+- Known players get a boost by tier and by rank at their position. A National-tier halfback is better than most halfbacks in the game.
+- The style decides which ratings get the boost: a speed back gets more speed and quickness, a power back more power.
+- Weight comes from the player’s listed 1994 weight, matched to the weights the original teams use at that slot.
+
+## Fine ratings
+
+The original game stores each rating in 16 steps. Elevated stores 16 levels inside each step, so a rating can be 92 or 94 on Team Rosters, not only 90 or 96. The new teams’ ratings are set at that finer level.
+
+The original 36 teams keep EA’s ratings. Each rating keeps EA’s step and gets a value inside it: the 1994 stars lean toward the top of their steps, and each team’s averages stay where EA put them. Weights go inside EA’s step by the player’s listed 1994 weight. Ohio State’s four receivers all weighed 188 lb in the original game; now they weigh 191, 186, 190 and 188.
+
+## What is still missing
+
+- 411 slots on the new teams and 51 on the original teams have a number and ratings but no name.
+- Maryland, Houston, Akron, Arizona State and Pacific didn’t come out of the scanned yearbook text cleanly, so they have fewer names than the other new teams.
+- 23 new teams have no numbered 1994 roster we could find. Their known players have made-up numbers, and their names come from StatMuse lists and the yearbook.
+
+If you have a 1994 media guide or game program for one of these teams, the names and numbers in it would fill the gaps.

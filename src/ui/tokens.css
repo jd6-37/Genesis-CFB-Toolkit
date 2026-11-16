@@ -40,6 +40,8 @@
   --fs-8: 56px;
   /* The Mod Toolkit's title: it grows with the page. */
   --fs-hero: clamp(64px, 11vw, 120px);
+  /* The site's big titles (the homepage's, a post's): they grow with the page, up to a size that still fits two lines. */
+  --fs-display: clamp(44px, 6.4vw, 88px);
   /* Pixel numerals (--font-num): the font is wide and drawn on an 8 px grid, so it has its own steps. */
   --fs-num-1: 12px;
   --fs-num-2: 16px;
@@ -104,6 +106,8 @@
   --screen-edge: #c8c8c8;
   --on-screen: #ffffff;
   --shadow-deep: 0 12px 32px rgba(6, 4, 30, 0.6);
+  /* A hard offset shadow under a game screen or a raised card. */
+  --shadow-hard: 8px 8px 0 #06041e;
   color-scheme: dark;
 }
 
@@ -140,6 +144,11 @@
   --bad: #b62424;
   --bad-wash: #ffdbdb;
   --scrim: rgba(0, 0, 0, 0.5);
+  --shadow-hard: 6px 6px 0 #000000;
+  /* The game's own screen (a picture of it in the manual). */
+  --screen: #000000;
+  --screen-edge: #000000;
+  --on-screen: #ffffff;
   color-scheme: light;
 }
 

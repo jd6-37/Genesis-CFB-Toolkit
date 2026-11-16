@@ -1,4 +1,4 @@
-// The Dynasty section (#dynasty): a news site for the user's dynasty, kept in the browser, with its
+// The Dynasty section (/dynasty): a news site for the user's dynasty, kept in the browser, with its
 // own pages. Spec: docs/dynasty.md.
 import { TrainingResults } from './TrainingPage';
 import { Rules } from './RulesPage';
@@ -22,6 +22,7 @@ import { Offseason, type OffseasonActions } from './OffseasonPage';
 import { seasonRom } from '../../core/dynasty/offseason';
 import { canReplaceBench, randomBench } from '../../core/dynasty/bench';
 import { Button, Check, Field, FileButton, Masthead, Modal, NavBar, Note, Select, Table, ThemeToggle } from '../../ui';
+import { navClick } from '../../appNav';
 import './dynasty.css';
 
 const THEME_KEY = 'dynasty-theme';
@@ -39,8 +40,8 @@ const PAGES = [
 ] as const;
 
 const parseHash = () => {
-  const [, page = 'home', arg] = window.location.hash.replace(/^#/, '').split('/');
-  return { page, arg };
+  const [page, arg] = window.location.hash.replace(/^#/, '').split('/');
+  return { page: page || 'home', arg };
 };
 
 const CURRENT = 'dynasty.current';
@@ -308,7 +309,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       <Masthead
         title={d?.name ?? 'Dynasty'} href={href('home')}
         sub={d ? `${d.offseason ? d.offseason.year : d.seasons[d.seasons.length - 1].year}${week ? `, ${week}` : ''}` : undefined}
-        left={<><a href={toolkitHref}>Mod Toolkit</a><ThemeToggle dark={dark} onChange={setDark} /></>}
+        left={<><a href="/">BW95 Elevated</a><a href={toolkitHref} onClick={navClick(toolkitHref)}>Mod Toolkit</a><ThemeToggle dark={dark} onChange={setDark} /></>}
         right={ctx && d!.userTeams.map((t) => (
           <Ctx.Provider key={t} value={ctx}><a href={href(`team/${t}`)} aria-label={d!.teams[t].school}><TeamMark team={t} size={64} exact /></a></Ctx.Provider>
         ))}

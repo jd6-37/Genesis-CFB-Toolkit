@@ -4,5 +4,7 @@ const config: StorybookConfig = {
   stories: ['../src/**/*.stories.@(ts|tsx)'],
   framework: { name: '@storybook/react-vite', options: {} },
   core: { disableTelemetry: true },
+  // The site's screenshots and clips, for the Screen stories.
+  staticDirs: [{ from: '../public/media', to: '/media' }],
 };
 export default config;

@@ -2,14 +2,16 @@
 // Every component is themed by the tokens of the brand and theme around it (tokens.css): the same Button is
 // yellow on indigo in the toolkit and black on white in Dynasty. New UI is built from these; a new kind of
 // element becomes a component here, with a story (src/ui/*.stories.tsx), before a page uses it.
-import { Fragment, useEffect, useId, useRef, type ReactNode } from 'react';
+import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import './tokens.css';
 import './ui.css';
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
-/** `link`: an action that reads as underlined text (undo, close, a name in a list), in a sentence or a table cell. */
-export type ButtonVariant = 'primary' | 'quiet' | 'danger' | 'link';
+/** `link`: an action that reads as underlined text (undo, close, a name in a list), in a sentence or a table cell.
+    `chrome`: the game's selection bar (sky, white, orange) for the one action a page is about, on the site's
+    indigo pages only (the Mod Toolkit brand). */
+export type ButtonVariant = 'primary' | 'quiet' | 'danger' | 'link' | 'chrome';
 interface ButtonProps {
   children: ReactNode;
   variant?: ButtonVariant;
@@ -429,5 +431,74 @@ export function Modal({ title, children, actions, onClose, media, sub }: {
         <div className="ui-row ui-modal-actions">{actions}</div>
       </div>
     </div>
+  );
+}
+
+/** A controller button as the game draws it on its hints: a white circle with the letter, or START, or the
+    D-pad (`dpad`, or one direction: `up`, `down`, `left`, `right`). Put it in a sentence or a controls list. */
+export type GlyphKey = 'A' | 'B' | 'C' | 'X' | 'Y' | 'Z' | 'START' | 'MODE' | 'dpad' | 'up' | 'down' | 'left' | 'right';
+const PAD_LABEL: Record<string, string> = { dpad: 'D-pad', up: 'D-pad up', down: 'D-pad down', left: 'D-pad left', right: 'D-pad right' };
+const PAD_ARM: Record<string, string> = { up: 'M9 2h6v7H9z', down: 'M9 15h6v7H9z', left: 'M2 9h7v6H2z', right: 'M15 9h7v6h-7z' };
+export function Glyph({ k }: { k: GlyphKey }) {
+  if (k in PAD_LABEL) {
+    const arm = PAD_ARM[k];
+    return (
+      <span className="ui-glyph ui-glyph-pad" role="img" aria-label={PAD_LABEL[k]}>
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path className="ui-glyph-cross" d="M9 2h6v7h7v6h-7v7H9v-7H2V9h7z" />
+          {arm && <path className="ui-glyph-dir" d={arm} />}
+        </svg>
+      </span>
+    );
+  }
+  return <span className={cx('ui-glyph', k.length > 1 && 'ui-glyph-wide')} role="img" aria-label={`${k} button`}>{k}</span>;
+}
+
+/** A small label: `accent` marks what the mod adds (Elevated), `ink` a requirement (6-button), `plain` a topic. */
+export function Tag({ children, tone = 'plain' }: { children: ReactNode; tone?: 'accent' | 'ink' | 'plain' }) {
+  return <span className={cx('ui-tag', `ui-tag-${tone}`)}>{children}</span>;
+}
+
+/** A picture or clip of the game's screen, scaled up with hard pixels, in the screen's frame. A clip plays
+    muted in a loop; `poster` shows until it does (and for people who asked for less motion, instead of it). */
+export function Screen({ src, alt, video, poster, caption, wide }: {
+  /** The picture (also the clip's poster when `poster` isn't given). */
+  src: string;
+  alt: string;
+  /** An .mp4 clip to play over the picture. */
+  video?: string;
+  poster?: string;
+  caption?: ReactNode;
+  /** A picture that isn't 4:3 (a collage). */
+  wide?: boolean;
+}) {
+  // The clip loads only when the screen comes near the viewport, so a long page doesn't fetch every clip at once.
+  const ref = useRef<HTMLElement>(null);
+  const [near, setNear] = useState(false);
+  useEffect(() => {
+    if (!video || !ref.current || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { setNear(true); io.disconnect(); } }, { rootMargin: '300px' });
+    io.observe(ref.current);
+    return () => io.disconnect();
+  }, [video]);
+  return (
+    <figure ref={ref} className={cx('ui-screen', wide && 'ui-screen-wide')}>
+      <div className="ui-screen-glass">
+        <img src={poster ?? src} alt={alt} loading="lazy" decoding="async" />
+        {video && near && <video src={video} poster={poster ?? src} autoPlay muted loop playsInline aria-hidden="true" />}
+      </div>
+      {caption && <figcaption>{caption}</figcaption>}
+    </figure>
+  );
+}
+
+/** Labels and values in rows, like the game's Game Setup screen (TEAMS 138 …). */
+export function SetupList({ rows, label }: { rows: [ReactNode, ReactNode][]; label?: string }) {
+  return (
+    <dl className="ui-setup" aria-label={label}>
+      {rows.map(([k, v], i) => (
+        <div key={i} className="ui-setup-row"><dt>{k}</dt><dd>{v}</dd></div>
+      ))}
+    </dl>
   );
 }

@@ -1,0 +1,66 @@
+export const meta = { slug: 'season-sim', title: 'How the season sim decides games, and the bug that swapped offense and defense', dek: 'Every CPU-vs-CPU game in a season is decided by one short routine. The original code used each team’s offense rating as its defense and the reverse. Elevated fixes it by swapping two reads.', date: '2026-11-14', tag: 'Season sim', minutes: 7 }
+
+When you press Play Week, the games you don’t play are not played on the field. The game simulates them: it takes two teams’ ratings and produces a score. The routine that does this is short, and it has a bug that is also in College Football USA 96 and 97.
+
+## Two ratings per team
+
+Every team has a block of four words (16-bit numbers). One is the climate at its stadium (the odds of fair weather, wind, rain or snow), one is its conference, and two are used by the sim:
+
+| Word | What it holds | Range |
+|---|---|---|
+| +2 | Offense rating | 0 to 100 |
+| +4 | Defense rating | 0 to 100 |
+
+EA typed these numbers in by hand in 1994. They are not computed from the rosters, and they match the rosters only loosely. BYU, a passing team with a weak defense, has 55 and 0. Washington State, with its "Palouse Posse" defense, has 23 and 86. In Elevated, Game Setup shows them as OFF and DEF under each team’s logo.
+
+## How a game is simulated
+
+The sim plays each game as four quarters. In each quarter, each team gets a number of scoring chances; a longer Game Length setting gives more chances. For each chance, the game computes a strength:
+
+```
+strength = 150 - other team's DEFENSE + this team's OFFENSE
+```
+
+Then it draws a random number from 0 to 1,350 − 2 × strength. If the number is at or below the strength, the chance is a touchdown, followed by an extra point that is usually good. After the touchdown chances, a second loop gives out field goals. If the game is tied after four quarters, the home team usually gets 3 more points. In a game that can’t end in a tie, it always does.
+
+A higher strength helps in two ways: it raises the target number and it makes the random range smaller. A team with 100 offense against a team with 0 defense has a strength of 250, and about 3 in 10 of its chances score. With 0 offense against 100 defense, the strength is 50, and about 1 chance in 25 scores.
+
+## The bug
+
+The code that loads the two ratings reads them in the wrong order:
+
+```
+; 0x06F1A8, the original game
+move.w  $2(a1),d1    ; the OFFENSE word, used as the defense
+move.w  $4(a1),d2    ; the DEFENSE word, used as the offense
+```
+
+So each team scored with its own defense rating, against the other team’s offense rating. In a simulated season, a team with a great defense scored a lot, and a team with a great offense allowed few points. Unbalanced teams like BYU and Washington State were simulated almost exactly backwards. Balanced teams looked normal, which is probably why nobody noticed the bug. The same code is in College Football USA 96 and 97.
+
+## The fix
+
+The two reads swap places:
+
+```
+; Elevated
+move.w  $4(a1),d1
+move.w  $2(a1),d2
+```
+
+<Fixed>In both Elevated editions, and in the Fixed Fatigue + Fixes patch.</Fixed>
+
+## Where the ratings come from
+
+With the fix, the sim follows the ratings, so the ratings need to be right. In the 2026 Season Edition, each team’s OFF and DEF come from its 2026 roster: the average College Football 27 overall rating of its starters. Game Setup shows them on a scale from the 60s to the 90s; the sim gets them stretched back to EA’s 0-to-100 scale. The stretch is needed because of the formula "150 − defense + offense": if teams’ ratings were only a few points apart, every simulated game would be close to a coin flip. After the stretch, a difference of 18 on the screen is a difference of 50 in the sim, about the spread EA used.
+
+In the 1994 edition, EA’s hand-typed numbers had Florida State, Colorado and Florida far above every other team. Each team’s OFF and DEF now come from its own players’ ratings, for all 107 teams, with the same average and spread as EA’s numbers. The 71 new teams’ players were rated to fit their 1994 conference, record and strength of schedule.
+
+## More, smaller scoring chances and a home edge
+
+With the fix, simulated seasons still had too many upsets and too few points: top-5 teams lost to unranked teams about a third of the time, and teams averaged 14.5 points. Both editions now give each team 5 scoring chances a quarter, each less likely to score, and count the rating difference about twice as much. The home team also gets a little extra strength in regular-season games, so home teams win about 58% of the time. Measured over 43 simulated seasons of the real 1994 schedule (before the home edge), top-5 teams lose to unranked teams 7.8% of the time (6.8% in real seasons from 1990 to 2000) and teams average 24.4 points (25.0).
+
+In the 2026 Season Edition the team ratings were also narrowed to suit the new sim: most teams' OFF and DEF sit between the mid-60s and the low 90s, and only the best units reach the high 90s.
+
+## What the fix doesn’t affect
+
+The preseason poll also reads the two ratings, but it adds them together, so the bug didn’t affect it. Games you play yourself don’t use the sim at all; on the field, the players’ ratings decide the game. That is covered in [What each player rating does in the game](/insights/player-ratings).

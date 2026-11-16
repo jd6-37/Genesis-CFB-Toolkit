@@ -48,11 +48,13 @@ button, input, select { font: inherit; color: inherit; }
 
 /* Masthead: set like the game's title, stacked and slanted. */
 .masthead { margin-bottom: 40px; position: relative; }
-.mast-dynasty {
-  position: absolute; top: 0; right: 0; padding: 6px 18px; border: 2px solid var(--menu); border-radius: var(--radius);
+.mast-links { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-4); }
+@media (min-width: 640px) { .mast-links { position: absolute; top: 0; right: 0; margin: 0; } }
+.mast-link {
+  padding: 6px 18px; border: 2px solid var(--menu); border-radius: var(--radius);
   color: var(--menu); font-family: var(--display); font-style: italic; font-weight: 800; font-size: var(--fs-5); text-decoration: none;
 }
-.mast-dynasty:hover { background: var(--highlight); }
+.mast-link:hover { background: var(--highlight); }
 .masthead h1 {
   margin: 0;
   font-family: var(--display);

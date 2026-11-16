@@ -1,0 +1,42 @@
+export const meta = { n: 7, slug: 'defense', title: 'Defense', summary: 'Defensive calls, switching players, audibles, shifts and flips at the line, and tackling.' }
+
+On defense you call the formation and the play the same way as on offense (chapter 6). The defensive formations are **4-4, 4-3, 3-4, Nickel** (five defensive backs), **Dime** (six), **Goal Line** and the special teams.
+
+**SWAP MLBS** <New /> on the top row puts your second middle linebacker (MLB2) in for your starter, or back, the same way SWAP HBS works on offense. <Btn k="Z" /> <Six /> does it too.
+
+## Before the snap
+
+<Controls rows={[
+  [['B'], 'Switch to another defender'],
+  [['A'], 'Audible: open the menu, then A, B or C'],
+  [['A', 'X'], 'Flip your alignment and assignments; again to flip back', 'new six'],
+  [['X'], 'Shift the line', 'new six'],
+  [['Z'], 'Shift the linebackers', 'new six'],
+  [['Y'], 'Shift the safeties', 'new six'],
+  [['Y'], 'Hold: the play’s diagram and each defender’s assignment', 'new six'],
+  [['Z'], 'Hold: energy bars', 'new six'],
+]} />
+
+**Shifts** <New /> <Six />: tap <Btn k="X" />, <Btn k="Z" /> or <Btn k="Y" /> to pick the line, the linebackers or the safeties. The group's name (Shift Line, Shift LBs or Shift Safeties) shows at the top right. Then press left or right to move the group one step that way (up to two steps). Press down or up to pinch or spread the line and linebackers, or to move the safeties up or back. Press the same button again to return the group to where the call lines them up. The players sidestep into place, facing the line.
+
+<Shot src="/media/defense-shifts.png" video="/media/defense-shifts.mp4" alt="The defensive line shifting before the snap" />
+
+When you hold <Btn k="Y" />, each defender gets a marker: **R** rush, **Z** zone, **M** man, **S** spy.
+
+<Shot src="/media/manual/presnap-defense.png" alt="Y held on defense: the play's diagram and the R, Z, M and S markers" />
+
+After a defensive audible, your players walk to their new spots twice as fast as in the original game <New />, so they are less likely to be out of place at the snap.
+
+## After the snap
+
+<Controls rows={[
+  [['B'], 'Switch to the defender nearest the ball'],
+  [['A'], 'Dive at the ball carrier'],
+  [['C'], 'Jump: knock down or pick off a pass, block a kick'],
+]} />
+
+Every time a defender touches the ball carrier, the game makes a random tackle check: the defender's TACKLE against the carrier's POWER. If the check fails, the tackle is broken and the carrier keeps running until the next defender touches him. More in chapter 11, and in the Insights post [What each player rating does in the game](/insights/player-ratings).
+
+## What the CPU does
+
+From the Smart difficulty up, the CPU offense calls audibles against your formation (against Nickel or Dime, usually to a run play) and goes for it on 4th and short. The CPU also calls more plays to stop what has worked for you. When you flip a play, the CPU defense flips its alignment and assignments 9 times out of 10 <New />. CPU teams also swap their halfbacks and their middle linebackers when the starter gets tired <New />.

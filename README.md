@@ -1,8 +1,13 @@
 # Genesis CFB Toolkit
 
+This repo is the website of the Bill Walsh '95 Elevated mod and its two apps, at https://genesis-cfb-toolkit.vercel.app:
+
+- **The site** (`/`): the mod's homepage, the [manual](#the-site) (`/manual`) and **Insights** (`/insights`), long reads on the mod and the game's code.
+- **The Mod Toolkit** (`/toolkit`) and **Dynasty** (`/dynasty`), described below.
+
 Browser-based modding tools for EA's college football games on the Sega Genesis: Bill Walsh College Football '95, College Football USA 96 and College Football USA 97.
 
-Everything runs in your browser. Your ROMs are opened on your own computer and are never uploaded anywhere. The app contains no ROM data or artwork; you bring your own ROMs. It does come with two tables for the College Football 27 roster conversion: how many players the original games have at each rating step, and EA's College Football 27 player ratings (2026 season, Week 9) for the built-in rosters. It also has the Elevated mod's 2026 Walsh Reports for every FBS team, which go with those rosters.
+Everything runs in your browser. Your ROMs are opened on your own computer and are never uploaded anywhere. The apps contain no ROM data or artwork (the site's screenshots and clips of the mod aside); you bring your own ROMs. It does come with two tables for the College Football 27 roster conversion: how many players the original games have at each rating step, and EA's College Football 27 player ratings (2026 season, Week 9) for the built-in rosters. It also has the Elevated mod's 2026 Walsh Reports for every FBS team, which go with those rosters.
 
 ## Tools
 
@@ -11,9 +16,9 @@ Everything runs in your browser. Your ROMs are opened on your own computer and a
 - **[Season](#season):** rename the four conferences, choose which teams play in each, and lock in schedules in Bill Walsh '95.
 - **[Teams](#teams):** for each Bill Walsh '95 team, choose the offense and defense the computer runs, the team's OFF and DEF ratings and the weather in its home games, and write its Walsh Report.
 - **[Rosters](#rosters):** edit the players of Bill Walsh '95, CF96 or CF97, team by team or from a spreadsheet (CSV or Excel), or bring in real College Football 27 rosters (built in: 2026 season, Week 9).
-- **[Dynasty](#dynasty):** a sports news site for your season of the 138-team 2026 Season Edition: import your battery save and read the scores, standings, Top 25, stats and stories, season after season. Open it with **Dynasty** at the top of the page, or `#dynasty`.
+- **[Dynasty](#dynasty):** a sports news site for your season of the 138-team 2026 Season Edition: import your battery save and read the scores, standings, Top 25, stats and stories, season after season. Open it with **Dynasty** at the top of the page, or at `/dynasty`.
 
-Each tool has its own tab. The app opens on Patch; `#swap`, `#season`, `#teams` or `#rosters` at the end of the address opens that tab directly (`#styles`, the Teams tab's old address, still works).
+Each tool has its own tab. The Toolkit (`/toolkit`) opens on Patch; `#swap`, `#season`, `#teams` or `#rosters` at the end of the address opens that tab directly (`/toolkit#rosters`; `#styles`, the Teams tab's old address, still works). Addresses from before the site (`/#rosters`, `/#dynasty/…`) still lead to the same place. Moving between the Toolkit and Dynasty with the links at the top keeps the page loaded, so ROMs open in the Toolkit are still there when you come back.
 
 **Season, Teams and Rosters edit the same ROM.** They open the Patch tab's ROM on their own; you can also load a ROM in any of them, or take the Team Swap result, then switch between them as often as you like. **Download ROM** in any of the three saves everything, named after the ROM with `[Season]`, `[Teams]` and/or `[Rosters]` added. Team Swap builds on the Patch tab's ROM, not on the one these tabs edit; if you change the swap and take its result again while you have changes, the app asks: **Keep my edits** puts every team's roster, the conferences and schedules, and the styles, ratings and weather you changed into the new ROM, by slot (a swapped team gets the edits made for its slot), or **Start fresh**. The same question comes up when you open another ROM file of the same game.
 
@@ -469,3 +474,9 @@ npm run test:swap -- BW95.md CF97.md [Elevated-2026.md]
 ## Credits
 
 Created by JD637.
+
+## The site
+
+The homepage, the manual and Insights (`src/site/`). Pages are React; the manual's chapters and the Insights posts are MDX files (`src/site/manual/NN-slug.mdx`, `src/site/insights/slug.mdx`), each with a `meta` export. `npm run build` writes every address as its own HTML file with its title and share picture (`cli/prerender.ts`), and `vercel.json` serves `/toolkit` and `/dynasty` from `app.html`. How to add a page, and the rules for screenshots and clips: `docs/site.md`.
+
+The site's screenshots, GIFs and clips (`public/media/`) are the one exception to "no game art in the repo": they're captured from the mod's test ROMs to show the mod. No ROMs or ROM data are in the repo.

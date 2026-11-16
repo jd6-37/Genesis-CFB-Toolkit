@@ -1,0 +1,81 @@
+export const meta = { n: 6, slug: 'offense', title: 'Offense', summary: 'The play-call screen, the new formations, audibles, motion and flips at the line, running, and passing to five receivers.' }
+
+Every offensive play starts on the play-call screen: pick a formation, then a play. The play clock runs while you choose. If it runs out, you get a 5-yard delay of game penalty.
+
+## Calling a play
+
+<Shot src="/media/manual/swap-on.png" alt="A play page: the top row has SWAP HBS, SET FORM., FLIP PLAY and TEAM ROSTER; the plays are below" points={[
+  [27, 13, <>SWAP HBS: send in your second halfback <New /></>],
+  [47, 13, <>SET FORM.: back to the formations <New /></>],
+  [68, 13, <>FLIP PLAY: mirror the play <New /></>],
+  [55, 34, 'The plays of the formation you picked, with their diagrams'],
+]} />
+
+Move the three boxes (marked A, B and C) with the D-pad. Press the button of the box that is over the formation you want. The plays of that formation appear; pick one the same way. Scroll up to reach the top row of tiles.
+
+**Play Call mode** (pause menu): *3 Box* is the default, described above. *1 Box* has one box: <Btn k="C" /> picks, and <Btn k="B" /> makes a fake pick that sounds the same, so the other player can't tell which play you picked. Only the last real pick counts.
+
+**The top row** <New />:
+- **SWAP HBS** puts your second halfback (HB2) in for your starter, or back. He stays in until you swap back, and plays with his own ratings, energy, jersey number and stats. Halftime and the start of a game put the starters back. Kicks, punts and field goals always use the starters. On a 6-button pad, <Btn k="Z" /> does the same from anywhere on the play-call screen.
+- **SET FORM.** goes back to the formations. <Btn k="Y" /> <Six /> does it too.
+- **FLIP PLAY** mirrors the formation, every assignment and the play diagrams, and the tile turns yellow. Pick it again to flip back. <Btn k="X" /> <Six /> does it too.
+- **TEAM ROSTER** shows your roster and everyone's energy.
+
+Timeouts are on the pause menu (chapter 9).
+
+## The formations
+
+The first two rows are new in Elevated <New />: **Singleback, SB 3WR, SB 4WR, Pistol** and **4 WR, Empty, Trips, Shotgun 2RB**, with plays adapted from Madden NFL 97. The original formations follow: Shotgun, I-Form, Pro Form, Near, Far, Veer, Wishbone, and the special teams. Many of them have extra rows with 67 plays from College Football USA 97 <New />. The Shotgun also has two new plays <New />:
+
+- **RPO:** the quarterback keeps the ball and rolls out right to pass. If you press <Btn k="B" /> within about a second of the snap, he pitches to the halfback instead.
+- **HB SWING:** the halfback runs across in front of the quarterback, then up the sideline.
+
+## Before the snap
+
+<Controls rows={[
+  [['C'], 'Snap the ball'],
+  [['A'], 'Audible: open the menu, then A, B or C for one of your three audibles'],
+  [['A', 'X'], 'Flip the play at the line: everyone runs to his mirrored spot', 'new six'],
+  [['up', 'down'], 'Pick a back or receiver to send in motion; a marker shows under him', 'new'],
+  [['left', 'right'], 'Send him in motion; press the other way to bring him back', 'new'],
+  [['Y'], 'Hold: the play’s diagram, and each receiver’s button and jersey number', 'new six'],
+  [['Z'], 'Hold: energy bars over every player', 'new six'],
+]} />
+
+**Motion** <New />: press toward the middle of the field and he goes in motion across the formation. Press toward the sideline and he takes a short motion toward it. Defenders in man coverage follow him. The last player on the line (a tight end or split end) can also go in motion, if a receiver who is off the line on his side can step up to take his place.
+
+**Audibles:** each team has three. Set yours on the pause menu or in the pregame.
+
+<Shot src="/media/manual/presnap-offense.png" alt="Y held before the snap: the play art and the receiver icons with their numbers" caption="Hold Y before the snap: the play's diagram, and each receiver's button and jersey number." />
+
+## Running
+
+The ball carrier runs where you point the D-pad.
+
+<Controls rows={[
+  [['B'], 'Tap: lower a shoulder and drive forward'],
+  [['B'], 'Hold: spin'],
+  [['C'], 'Dive'],
+  [['C'], 'Quarterback on an option play: pitch to the back'],
+]} />
+
+A ball carrier keeps his full speed for about 1.5 seconds, then slows down. He slows down faster when he is tired. Elevated reduces the slowdown on long runs and on runs after a catch <New />, so long gains happen more often. The game now corrects a pitch's path in the air, so pitches to fast backs no longer land behind them <New />.
+
+## Passing
+
+<Shot src="/media/xy-passing.png" alt="A pass play with the A, B, C, X and Y receiver icons" />
+
+1. After the snap, press <Btn k="C" /> to bring up the receiver icons. Before that, you can move the quarterback with the D-pad to scramble or roll out.
+2. Press the button of the receiver you want: <Btn k="A" />, <Btn k="B" /> or <Btn k="C" /> for receivers 1 to 3, and on a 6-button pad <Btn k="X" /> and <Btn k="Y" /> for receivers 4 and 5 <New /> <Six />. Tap for a lob, hold for a bullet.
+
+A quarterback's RANGE rating sets how far he can throw (about 40 to 56 yards). On longer throws, a quarterback with lower INTEL is less accurate. In Elevated, long, high passes travel faster, so they spend less time in the air <New />.
+
+**Pass Catch** (pause menu): with *Auto*, the CPU controls the receiver. With *Manual*, you control the receiver once the ball is in the air. As a receiver, <Btn k="C" /> jumps for the ball, <Btn k="A" /> dives, and <Btn k="B" /> switches to the receiver nearest the ball.
+
+**Pass Window** (pause menu): Off is the default, as in the original game. On shows a small window for each receiver.
+
+## Fatigue
+
+Every player gets tired from what he does during a play: how far he runs, how long he is in a block, and the hits he takes <New />. At every snap, each player recovers a quarter of his fatigue. A timeout or halftime resets every player to full energy. A tired player has lower ratings in everything except weight. To check energy, hold <Btn k="Z" /> before the snap, or pick TEAM ROSTER.
+
+<Tip>Two long runs in a row make your starting halfback tired. Use SWAP HBS to rest him for a few plays, or call a timeout to reset everyone's energy.</Tip>

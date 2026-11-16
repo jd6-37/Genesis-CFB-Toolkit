@@ -1,3 +1,4 @@
+import { isDynastyPath, navClick, NAV_EVENT } from './appNav';
 import { Button, Field, FileButton, Note, PageHead, Select, SubHead } from './ui';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BwTeam, parseBw95 } from './core/bw95';
@@ -88,10 +89,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    // #dynasty… is the Dynasty section (main.tsx); the tab stays as it was.
-    const onHash = () => !window.location.hash.startsWith('#dynasty') && setTab(tabFromHash());
-    window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
+    // While Dynasty is open (/dynasty, main.tsx) the hash is Dynasty's; the tab stays as it was.
+    const onHash = () => !isDynastyPath() && setTab(tabFromHash());
+    for (const ev of ['hashchange', 'popstate', NAV_EVENT]) window.addEventListener(ev, onHash);
+    return () => {
+      for (const ev of ['hashchange', 'popstate', NAV_EVENT]) window.removeEventListener(ev, onHash);
+    };
   }, []);
   const pickTab = (t: Tab) => {
     setTab(t);
@@ -271,9 +274,14 @@ export default function App() {
       }}
     >
       <header className="masthead">
-        <a className="mast-dynasty" href="#dynasty">
-          Dynasty
-        </a>
+        <nav className="mast-links" aria-label="Other parts of the site">
+          <a className="mast-link" href="/">
+            BW95 Elevated
+          </a>
+          <a className="mast-link" href="/dynasty" onClick={navClick('/dynasty')}>
+            Dynasty
+          </a>
+        </nav>
         <h1>
           <span className="mast-2">
             Bill Walsh '95 <span className="mast-elev">ELEVATED</span>

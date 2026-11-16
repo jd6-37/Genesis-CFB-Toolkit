@@ -1,0 +1,8 @@
+{
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/toolkit", "destination": "/app.html" },
+    { "source": "/dynasty", "destination": "/app.html" }
+  ]
+}
