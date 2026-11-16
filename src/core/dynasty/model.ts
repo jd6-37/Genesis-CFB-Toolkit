@@ -185,6 +185,8 @@ export interface Dynasty {
   yourCoachFired?: boolean;
   /** The season sim's settings for this dynasty's season ROMs (seasonSim.ts); absent = the ROM's own. */
   sim?: import('../simSettings').SimSettings;
+  /** Sim stat multipliers for its season ROMs (seasonSim.ts, H-021); absent = the ROM's own (×1). */
+  simStats?: import('../simStats').SimStats;
 }
 
 // ---- small helpers
