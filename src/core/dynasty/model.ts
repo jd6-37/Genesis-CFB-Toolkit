@@ -120,6 +120,8 @@ export interface DSeason {
   romDownloaded?: boolean;
   /** The ROM's conference week settings (first conference week and conference games per conference). */
   confWeeks?: ConfWeeks;
+  /** Title game switches per conference (seasonWide.ts, CTG1); absent: the edition's defaults (conferences.ts). */
+  titleGames?: number[];
   /** From the second season: the dynasty's schedule (schedule.ts), written into the season ROM. */
   schedule?: DSchedule;
 }
@@ -152,6 +154,8 @@ export interface Dynasty {
   version: number;
   /** The edition it's played in (edition.ts; absent = 2026, the dynasties made before the 1994 edition). */
   edition?: import('./edition').EditionId;
+  /** Protected rivalries the user set (schedule.ts setRivalries); absent = the edition's built-in list. */
+  rivalries?: import('./rivalries').Rivalry[];
   id: string;
   name: string;
   created: string;
@@ -324,7 +328,7 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
     teams,
     whiteHome: whiteHomeOf(rom),
     players: recordYear(players, startYear),
-    seasons: [{ index: 0, year: startYear, conf: season.conf, confNames: season.names, confWeeks: { start: season.start, games: season.games }, slots, bw, bench, benchBw, teamOvr, prestige: startingPrestige(teams.map((t) => t.school), teamOvr), imports: [] }],
+    seasons: [{ index: 0, year: startYear, conf: season.conf, confNames: season.names, confWeeks: { start: season.start, games: season.games }, ...(season.titleGames ? { titleGames: season.titleGames } : {}), slots, bw, bench, benchBw, teamOvr, prestige: startingPrestige(teams.map((t) => t.school), teamOvr), imports: [] }],
   };
 }
 

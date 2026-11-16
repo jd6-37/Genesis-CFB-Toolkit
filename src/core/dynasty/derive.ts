@@ -82,8 +82,13 @@ export function weekName(v: SeasonView, week: number): string {
   const s = v.save?.season;
   if (!s) return `Week ${week + 1}`;
   if (week <= s.lastRegularWeek) return `Week ${s.realSchedule ? week : week + 1}`;
-  // 1994: the bowl week last; before it, from test31, the SEC Championship Game (1994's only title game).
-  if (v.bowls) return week === s.lastRegularWeek + 1 && week < v.weeks - 1 ? 'SEC Championship' : 'Bowl Games';
+  // 1994: the bowl week last; before it (test31 on) the title game week: the ROM's name for it is "SEC Championship"
+  // when the SEC's is the only title game (the default), else conference title games (test33's switches, H-011).
+  if (v.bowls) {
+    if (week !== s.lastRegularWeek + 1 || week >= v.weeks - 1) return 'Bowl Games';
+    const on = (v.season.titleGames ?? [3]).map((f, c) => (c < INDEPENDENT && f & 1 ? c : -1)).filter((c) => c >= 0);
+    return on.length === 1 && on[0] === 0 ? 'SEC Championship' : 'Conference Championships';
+  }
   const rounds = v.weeks - 1 - s.lastRegularWeek; // title games + playoff rounds
   const k = week - s.lastRegularWeek; // 1 = title games
   if (k === 1 && rounds >= 1) return 'Conference Championships';

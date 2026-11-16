@@ -20,7 +20,9 @@ import { seasonView, weekName, bowlOf, bowlWeek, BOWLS_1994, champions, playerNa
 import { stories } from '../src/core/dynasty/news';
 import { playoffSize } from '../src/core/dynasty/outlook';
 import { checkSchedule, makeSchedule, protectedPairs, setOpponent, teamSchedule, scheduleSet, weeksOf } from '../src/core/dynasty/schedule';
-import { readWideSeason } from '../src/core/seasonWide';
+import { readTitleGames, readWideSeason, TG_ON } from '../src/core/seasonWide';
+import * as Conf from '../src/core/dynasty/conferences';
+import { rivalriesOf, setRivalries } from '../src/core/dynasty/schedule';
 import { numberAllowed, NO_NUMBER } from '../src/core/dynasty/numbers';
 import { hasKits } from '../src/core/kits';
 import { SCHOOL_STATE } from '../src/core/dynasty/schoolStates';
@@ -210,7 +212,7 @@ for (let seed = 1; seed <= 20; seed++) {
   assert.deepEqual(chk.broken, [], 'one game a week, one bye a week (107 teams)');
   assert.deepEqual(chk.missing, [], 'every protected rivalry');
   assert.equal(sc.games.length, 11 * 53);
-  for (const p of pairs.filter((x) => x.last)) {
+  for (const p of pairs.filter((x) => x.week === 10)) {
     finales++;
     if (sc.games.some((g) => g.week === 10 && ((g.visitor === p.a && g.home === p.b) || (g.visitor === p.b && g.home === p.a)))) finalesIn++;
   }
@@ -241,5 +243,64 @@ const sa = scheduleAddress(out2)!;
 assert.equal(out2[sa + 4], 11);
 assert.equal(readStamp(out2.subarray(DYN_AREA, DYN_AREA + 16))!.season, 2);
 ok(`offseason: ${d2.players.filter((p) => p.status === 'active').length} players in 1995, an 11-week schedule in the 1995 ROM`);
+
+// ---- user-defined rivalries in 1995 (user, 2026-11-16)
+{
+  const mine = [...rivalriesOf(d2).filter((r) => r.a !== 'Nebraska' && r.b !== 'Nebraska'), { a: 'Nebraska', b: 'Oklahoma', week: 2 }, { a: 'Pacific', b: 'Hawaii', week: 5 }];
+  const r1 = setRivalries(d2, mine);
+  const sc = r1.seasons[1].schedule!;
+  const at = (n: string) => schoolList.indexOf(n);
+  const inWeek = (a: string, b: string, w: number) => sc.games.some((x) => x.week === w && [x.visitor, x.home].sort().join() === [at(a), at(b)].sort().join());
+  assert.ok(inWeek('Nebraska', 'Oklahoma', 2) && inWeek('Pacific', 'Hawaii', 5));
+  const ck = checkSchedule(sc, schoolList, r1.seasons[1].conf, '1994', rivalriesOf(r1));
+  assert.deepEqual(ck.broken, []);
+  assert.deepEqual(ck.missing, []);
+  assert.equal(weeksOf(sc), 11);
+  ok(`rivalries: Nebraska-Oklahoma in week 3, Pacific-Hawaii in week 6 (${ck.offWeek.length} out of their week)`);
+}
+
+// ---- conferences in the 1995 offseason (user, 2026-11-16)
+{
+  assert.match(Conf.confLock(d1) ?? '', /first season/);
+  assert.equal(Conf.confLock(d2), null);
+  const c0 = Conf.confSetupOf(d2, s2);
+  assert.deepEqual(c0.titleGames, readTitleGames(rom) ?? EDITIONS['1994'].titleGames, 'the SEC title game with its divisions');
+  assert.deepEqual(c0.conf, readWideSeason(rom).conf, 'the first alignment is the ROM\'s');
+  const at = (n: string) => schoolList.indexOf(n);
+  const c1 = { ...c0, conf: c0.conf.slice(), names: c0.names.slice() };
+  c1.conf[at('Penn State')] = 0; // to the SEC (it plays in the West of the title game)
+  c1.conf[at('Notre Dame')] = 1;
+  // 1994: only the first conference (the SEC title game) needs 2 teams.
+  const oneBigEast = { ...c1, conf: c1.conf.map((c, t) => (c === 6 && t !== c1.conf.indexOf(6) ? 10 : c)) };
+  assert.deepEqual(Conf.confIssues(d2, oneBigEast), []);
+  const oneSec = { ...c1, conf: c1.conf.map((c, t) => (c === 0 && t !== c1.conf.indexOf(0) ? 10 : c)) };
+  assert.ok(Conf.confIssues(d2, oneSec).some((x) => /title game/.test(x)));
+  const tooLate = { ...c1, start: c1.start.map((x, i) => (i === 0 ? 4 : x)) };
+  assert.ok(Conf.confIssues(d2, tooLate).some((x) => /run past week 11/.test(x)), '11 weeks');
+  const d3 = Conf.setConferences(d2, c1);
+  const s3 = d3.seasons[1];
+  assert.equal(weeksOf(s3.schedule), 11);
+  assert.deepEqual(checkSchedule(s3.schedule!, schoolList, s3.conf, '1994').broken, []);
+  const ps = at('Penn State');
+  const psSec = s3.schedule!.games.filter((x) => (x.visitor === ps || x.home === ps) && s3.conf[x.visitor === ps ? x.home : x.visitor] === 0).length;
+  assert.ok(psSec >= 7, `Penn State plays an SEC schedule (${psSec}; 13 teams: a bye in one of the 8 rounds)`);
+  const out3 = Off.seasonRom(d3, s3, rom, 1_800_000_100_000);
+  assert.deepEqual(readWideSeason(out3).conf, c1.conf);
+  assert.equal(out3[scheduleAddress(out3)! + 4], 11);
+  // Title game switches (H-011): a Big Ten title game, the SEC's without divisions; no new schedule for them.
+  const c2 = { ...c1, titleGames: c1.titleGames.slice() };
+  c2.titleGames[1] = TG_ON; c2.titleGames[0] = TG_ON;
+  const oneBig = { ...c2, conf: c2.conf.map((c, t) => (c === 1 && t !== c2.conf.indexOf(1) ? 10 : c)) };
+  assert.ok(Conf.confIssues(d3, oneBig).some((x) => /title game/.test(x)), 'a conference with a title game needs 2 teams');
+  const d4 = Conf.setConferences(d3, c2);
+  assert.equal(d4.seasons[1].schedule, s3.schedule, 'title games keep the schedule');
+  if (readTitleGames(rom)) {
+    assert.deepEqual(readTitleGames(Off.seasonRom(d4, d4.seasons[1], rom, 1_800_000_100_000)), c2.titleGames);
+  } else {
+    assert.throws(() => Off.seasonRom(d4, d4.seasons[1], rom), /title games/, 'a ROM without the switches refuses changed ones');
+    assert.ok(Off.seasonRom(d3, s3, rom), 'and takes the default ones');
+  }
+  ok(`conferences: Penn State to the SEC (${psSec} SEC games), Notre Dame to the Big Ten, into the 1995 ROM; title game switches${readTitleGames(rom) ? ' written' : ' refused by this older ROM'}`);
+}
 
 console.log(`\n${passed} passed (${EDITIONS['1994'].name})`);

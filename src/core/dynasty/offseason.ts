@@ -17,7 +17,8 @@
 
 import { fineSetBytes, putFineOffsets } from './fine';
 import { applyWhiteHome } from './kit';
-import { lastGames, makeSchedule, RELEASE_CONF_WEEKS, scheduleSet } from './schedule';
+import { lastGames, makeSchedule, RELEASE_CONF_WEEKS, rivalriesOf, scheduleSet } from './schedule';
+import { writeConferences } from './conferences';
 import { editionOf, editionOfRom } from './edition';
 import { CLASSES, rng, type ClassYear, type DPlayer, type DSeason, type Dynasty, type OffseasonEvent } from './model';
 import { playerLines, seasonView } from './derive';
@@ -792,6 +793,7 @@ export function finishOffseason(d: Dynasty): Dynasty {
     conf: prev.conf.slice(),
     confNames: prev.confNames.slice(),
     confWeeks,
+    ...(prev.titleGames ? { titleGames: prev.titleGames.slice() } : {}),
     // The next season's schedule (user, 2026-11-12: "Generate each year, and then the user can edit").
     schedule: makeSchedule({
       schools: d.teams.map((t) => t.school),
@@ -801,6 +803,7 @@ export function finishOffseason(d: Dynasty): Dynasty {
       seed: Math.floor(r() * 0x7fffffff),
       weeks: editionOf(d).regWeeks,
       edition: editionOf(d).id,
+      rivalries: rivalriesOf(d),
     }),
     ...depthChart(withNumbers),
     prestige: st.prestige ?? seasonPrestige(d, prev),
@@ -820,7 +823,8 @@ export function classRankings(events: OffseasonEvent[]) {
 /**
  * A copy of the user's ROM with a season's 32 per team (jersey numbers and game ratings, on each
  * slot's record) and team OVRs in the dynasty area, which Season mode reads, with the ID block
- * New Season stamps into the save; Exhibition keeps the ROM's own rosters. Checksums fixed.
+ * New Season stamps into the save; Exhibition keeps the ROM's own rosters. The season's conferences go into
+ * the ROM itself where they differ from its own (conferences.ts). Checksums fixed.
  */
 export function seasonRom(d: Dynasty, season: DSeason, rom: Uint8Array, now = Date.now()): Uint8Array {
   const out = openRosterRom(rom);
@@ -864,6 +868,7 @@ export function seasonRom(d: Dynasty, season: DSeason, rom: Uint8Array, now = Da
     schedule: season.schedule ? scheduleSet(season.schedule) : undefined,
   });
   applyWhiteHome(out.data, d);
+  writeConferences(out.data, d, season);
   fixChecksums(out.data, out.game);
   return out.data;
 }

@@ -30,6 +30,7 @@
 /* 138-team edition: conference weeks, team names (moved ones in menu yellow), changed cards. */
 .sea-cweeks { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0 0 8px; font-size: var(--fs-2); color: var(--chalk-dim); }
 .sea-cweeks small { flex-basis: 100%; }
+.sea-tgames { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0 0 6px; font-size: var(--fs-2); }
 .sea-team-name { flex: 1; min-width: 0; padding: 2px 0; font-size: var(--fs-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sea-team-name.on { color: var(--menu); font-weight: 600; }
 .sea-conf-changed { border-color: color-mix(in srgb, var(--accent) 60%, transparent); }

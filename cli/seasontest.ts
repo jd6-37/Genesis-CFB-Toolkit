@@ -303,6 +303,8 @@ for (const wide of wides) {
   e.conf[W('Notre Dame')] = 1;
   e.start[1] = 0;
   e.games[1] = 11;
+  // Title game switches (2026 test31 on, H-011): PAC 12 without one, the SEC on the 1994 divisions.
+  if (e.titleGames) { e.titleGames[9] = 0; e.titleGames[0] = 3; }
   writeWideSeason(d, e);
   const back = readWideSeason(d);
   assert.deepEqual(back, e);
@@ -331,7 +333,14 @@ for (const wide of wides) {
   bad((x) => (x.names[2] = 'A'.repeat(23)), /at most 22/);
   bad((x) => (x.names[2] = 'ACC!'), /can only show/);
   bad((x) => (x.names[2] = ' '), /needs a name/);
-  ok('138-team 2026 Season Edition: conference names, members and weeks read, written in place, tracked, carried, undone; bad settings refused');
+  if (readWideSeason(wide).titleGames) {
+    bad((x) => (x.titleGames![10] = 1), /switches are not valid/);
+    const x = readWideSeason(wide);
+    tn.forEach((_, k) => x.conf[k] === 9 && k !== tn.indexOf('Boise State') && (x.conf[k] = 4));
+    x.titleGames![9] = 0;
+    assert.deepEqual(wideSeasonIssues(x), [], 'a conference without a title game may have one team');
+  }
+  ok(`138-team 2026 Season Edition: conference names, members and weeks${readWideSeason(wide).titleGames ? ', title game switches' : ''} read, written in place, tracked, carried, undone; bad settings refused`);
 }
 
 console.log(`\n${passed} passed`);

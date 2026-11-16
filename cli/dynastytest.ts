@@ -31,6 +31,10 @@ import { academicsOf, CFB27_ACADEMICS } from '../src/core/dynasty/academics';
 import { SCHOOL_STATE, stateCode } from '../src/core/dynasty/schoolStates';
 import { experienceOf, recordRatings, trainingResults, trainingYears } from '../src/core/dynasty/career';
 import { randomBench } from '../src/core/dynasty/bench';
+import * as Conf from '../src/core/dynasty/conferences';
+import { rivalriesOf, rivalryIssues, setRivalries } from '../src/core/dynasty/schedule';
+import type { Rivalry } from '../src/core/dynasty/rivalries';
+import { readTitleGames, readWideSeason } from '../src/core/seasonWide';
 import { gameText, dynastyAreaProblem, dynastyHeaderValid, dynastyRomId, DYN_AREA, DYN_END, fineAddress, hasDynastyHooks, readStamp, scheduleAddress } from '../src/core/dynasty/dynastyArea';
 import { simFromOvr } from '../src/core/teamRatings';
 import { parseCsv } from '../src/core/rosterSheet';
@@ -775,6 +779,82 @@ assert.equal(g4.seasons[1].slots[user].filter((x) => x !== null).length, 32);
 assert.equal(Sim.simOffseason(f1, tpl).seasons.length, 2, 'from the middle of recruiting');
 ok(`sim: a recruiting week, the rest, the cuts, the whole offseason (${act(g4).filter((p) => p.team === user).length} players for ${g4.teams[user].school} in ${g4.seasons[1].year})`);
 
+// Conferences in the offseason (user, 2026-11-16: "We can edit conferences/conf alignment in dynasty offseason like
+// we can in toolkit, right? If not, build that (for 94 and 26)").
+{
+  assert.match(Conf.confLock(d1) ?? '', /first season/);
+  assert.equal(Conf.confLock(g4), null);
+  const s = g4.seasons[1];
+  const c0 = Conf.confSetupOf(g4, s);
+  assert.deepEqual(c0.titleGames, readTitleGames(rom) ?? [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0], 'every conference plays a title game');
+  const at = (n: string) => g4.teams.findIndex((t) => t.school === n);
+  const nd = at('Notre Dame');
+  assert.equal(c0.conf[nd], INDEPENDENT, 'Notre Dame starts independent');
+  const c1 = { ...c0, conf: c0.conf.slice(), names: c0.names.slice() };
+  c1.conf[nd] = 1; // to the second conference (the Big Ten as released)
+  const lone = { ...c1, conf: c1.conf.map((c, t) => (c === 9 && t !== c1.conf.indexOf(9) ? INDEPENDENT : c)) };
+  assert.ok(Conf.confIssues(g4, lone).some((x) => /title game/.test(x)), 'a 2026 conference needs 2 teams for its title game');
+  assert.throws(() => Conf.setConferences(g4, lone), /title game/);
+  const g5 = Conf.setConferences(g4, c1);
+  const s5 = g5.seasons[1];
+  assert.equal(s5.conf[nd], 1);
+  assert.notDeepEqual(s5.schedule, s.schedule, 'a move makes a new schedule');
+  assert.deepEqual(checkSchedule(s5.schedule!, g5.teams.map((t) => t.school), s5.conf).broken, []);
+  const ndConf = s5.schedule!.games.filter((x) => (x.visitor === nd || x.home === nd) && s5.conf[x.visitor === nd ? x.home : x.visitor] === 1).length;
+  assert.ok(ndConf >= s5.confWeeks!.games[1] - 1, `Notre Dame plays its new conference (${ndConf})`);
+  const c2 = { ...c1, names: c1.names.slice() };
+  c2.names[1] = '  Big Fourteen ';
+  const g6 = Conf.setConferences(g5, c2);
+  assert.equal(g6.seasons[1].confNames[1], 'Big Fourteen');
+  assert.equal(g6.seasons[1].schedule, s5.schedule, 'a new name keeps the schedule');
+  assert.equal(Conf.setConferences(g6, c2), g6, 'no change, same dynasty');
+  const out = Off.seasonRom(g6, g6.seasons[1], rom, 1_800_000_000_000);
+  const w = readWideSeason(out);
+  assert.deepEqual(w.conf, c1.conf);
+  assert.equal(w.names[1], 'Big Fourteen');
+  assert.deepEqual(readWideSeason(Off.seasonRom(g4, s, rom, 1_800_000_000_000)), readWideSeason(rom), 'unchanged conferences keep the ROM\'s');
+  // After a download the ROM must be written again; a started season is locked.
+  const dl = { ...g4, seasons: [g4.seasons[0], { ...s, romDownloaded: true }] };
+  assert.equal(Conf.setConferences(dl, c1).seasons[1].lineupEdited, true);
+  const started = { ...g4, seasons: [g4.seasons[0], { ...s, imports: [g4.seasons[0].imports[0] ?? ({} as never)] }] };
+  assert.match(Conf.confLock(started) ?? '', /has started/);
+  // Title game switches (H-011): the Power 4 only; no new schedule; written on a ROM with the table, refused on one without.
+  const c3 = { ...c2, titleGames: c2.titleGames.map((f, k) => (k < 4 ? f : 0)) };
+  const lone2 = { ...c3, conf: c3.conf.map((c, t) => (c === 9 && t !== c3.conf.indexOf(9) ? INDEPENDENT : c)) };
+  assert.deepEqual(Conf.confIssues(g6, lone2), [], 'no title game, no 2-team rule');
+  const g7 = Conf.setConferences(g6, c3);
+  assert.equal(g7.seasons[1].schedule, s5.schedule);
+  if (readTitleGames(rom)) assert.deepEqual(readTitleGames(Off.seasonRom(g7, g7.seasons[1], rom, 1_800_000_000_000)), c3.titleGames);
+  else assert.throws(() => Off.seasonRom(g7, g7.seasons[1], rom), /title games/);
+  ok(`conferences: a move makes a new schedule, a name keeps it, the season ROM carries them; title game switches${readTitleGames(rom) ? '' : ' (refused by this older ROM)'}, locks`);
+}
+
+// User-defined protected rivalries with a preferred week (user, 2026-11-16).
+{
+  const schools = g4.teams.map((t) => t.school);
+  const base = rivalriesOf(g4);
+  assert.ok(base.some((r) => r.a === 'Alabama' && r.b === 'Auburn' && r.week === SCHED_WEEKS - 1), 'built-in finales in the last week');
+  const mine: Rivalry[] = [...base.filter((r) => r.a !== 'Alabama' && r.b !== 'Alabama'), { a: 'Alabama', b: 'Auburn', week: 3 }, { a: 'Oregon', b: 'Hawaii', week: 0 }];
+  assert.ok(rivalryIssues(g4, [...mine, { a: 'Auburn', b: 'Georgia', week: 3 }]).some((x) => /two rivalries in week 4/.test(x)));
+  assert.ok(rivalryIssues(g4, [...mine, { a: 'Hawaii', b: 'Oregon' }]).some((x) => /twice/.test(x)));
+  assert.ok(rivalryIssues(g4, [{ a: 'Alabama', b: '' }]).length > 0);
+  const r1 = setRivalries(g4, mine);
+  const sc = r1.seasons[1].schedule!;
+  const at = (n: string) => schools.indexOf(n);
+  const inWeek = (a: string, b: string, w: number) => sc.games.some((x) => x.week === w && [x.visitor, x.home].sort().join() === [at(a), at(b)].sort().join());
+  assert.ok(inWeek('Alabama', 'Auburn', 3), 'Alabama-Auburn in week 4');
+  assert.ok(inWeek('Oregon', 'Hawaii', 0), 'a new rivalry in week 1');
+  const ck = checkSchedule(sc, schools, r1.seasons[1].conf, undefined, rivalriesOf(r1));
+  assert.deepEqual(ck.broken, []);
+  assert.deepEqual(ck.missing, []);
+  assert.ok(ck.offWeek.length <= 2, `rivalries out of their week (${ck.offWeek.length})`);
+  const r2 = setRivalries(r1, null);
+  assert.equal(r2.rivalries, undefined, 'back to the built-in list');
+  const started = { ...r1, seasons: [r1.seasons[0], { ...r1.seasons[1], imports: [g4.seasons[0].imports[0] ?? ({} as never)] }] };
+  assert.equal(setRivalries(started, base).seasons[1].schedule, started.seasons[1].schedule, 'a started season keeps its schedule');
+  ok(`rivalries: the user's list with weeks (Alabama-Auburn week 4, Oregon-Hawaii week 1), checks, back to built-in, a started season kept`);
+}
+
 // A second offseason: players signed in the first can transfer now; this year's class can't.
 const y1 = Off.runPortal(Off.confirmDepth(Off.startOffseason(o5, { seed: 4, force: true })));
 const y1moves = y1.offseason!.events.filter((e) => e.kind === 'transfer');
@@ -840,7 +920,7 @@ ok('season rosters written to the dynasty area and read back');
   const pairs = protectedPairs(schools);
   assert.ok(pairs.length >= 40, `protected pairs (${pairs.length})`);
   const inLast = (a: number, b: number) => sc.games.some((g) => g.week === SCHED_WEEKS - 1 && ((g.visitor === a && g.home === b) || (g.visitor === b && g.home === a)));
-  const finales = pairs.filter((p) => p.last);
+  const finales = pairs.filter((p) => p.week === SCHED_WEEKS - 1);
   assert.ok(finales.every((p) => inLast(p.a, p.b)), 'the finales in the last week');
   const cw = next.confWeeks!;
   const short = schools.filter((_, t) => next.conf[t] !== INDEPENDENT && ck.confGames[t] < cw.games[next.conf[t]] - 1);

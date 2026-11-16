@@ -260,6 +260,7 @@ function wideChanges(w: { loaded: WideSeason; now: WideSeason }): number {
   return now.names.filter((n, c) => {
     if (n !== loaded.names[c]) return true;
     if (now.conf.some((x, t) => (x === c) !== (loaded.conf[t] === c))) return true;
+    if (now.titleGames && now.titleGames[c] !== loaded.titleGames?.[c]) return true;
     return c < now.start.length && (now.start[c] !== loaded.start[c] || now.games[c] !== loaded.games[c]);
   }).length;
 }

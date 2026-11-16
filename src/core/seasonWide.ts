@@ -15,6 +15,12 @@
 // - title games (Postseason with title games): the top two of each of the ten conferences, so each needs
 //   2 teams; conferences 1-4 (SEC, Big Ten, ACC, Big 12 as released) are the Power 4 of the CFP's
 //   automatic bids, 5-10 the Group of 6. The engine keeps at most 24 teams a conference.
+// - title game switches (2026 test31 / 1994 test33 on; claude.ai project handoff H-011, `ctg.py`): table "CTG1"
+//   at 0x2D5200, count 11 at +4, one flag byte per conference at +5: bit 0 = the conference plays a title game
+//   (its top two the week after the regular season; at least 2 teams), bit 1 = with the 1994 SEC divisions
+//   (East = Florida, Georgia, Kentucky, South Carolina, Tennessee, Vanderbilt, by team; West = the rest of
+//   that conference). Index 10 (Independents) never plays one. Older ROMs have no table: every conference
+//   plays one (2026), the SEC only with its divisions (1994).
 
 import { rw, ww } from './bytes';
 import { groupAt } from './teamRatings';
@@ -26,6 +32,35 @@ export const MAX_CONF_TEAMS = 24;
 export const NAME_LEN = 22;
 export const REG_WEEKS = 12;
 export const POWER4 = 4;
+
+/**
+ * What an edition's engine needs of the conferences: the regular season's weeks, and the conferences that play a
+ * title game (each needs 2 teams). The 2026 edition: 12 weeks, a title game in each of the ten; the 1994 edition
+ * (the Dynasty app, src/core/dynasty/edition.ts): 11 weeks, only the first conference's (the SEC's).
+ */
+export interface ConfRules {
+  weeks: number;
+  titleGames: number[];
+}
+export const RULES_2026: ConfRules = { weeks: REG_WEEKS, titleGames: Array.from({ length: INDEPENDENT }, (_, c) => c) };
+
+export const CTG_AT = 0x2d5200;
+/** Title game switch bits (a conference's flag byte in CTG1). */
+export const TG_ON = 1;
+export const TG_SEC94 = 2;
+/** The 1994 SEC divisions' East, by team (ctg.py's list). */
+export const SEC_EAST_1994 = ['Florida', 'Georgia', 'Kentucky', 'South Carolina', 'Tennessee', 'Vanderbilt'];
+
+/** The ROM's title game switches (11 flag bytes), or null on a ROM without the table. */
+export function readTitleGames(d: Uint8Array): number[] | null {
+  if (d.length < CTG_AT + 16 || String.fromCharCode(...d.subarray(CTG_AT, CTG_AT + 4)) !== 'CTG1' || d[CTG_AT + 4] !== CONFS) return null;
+  const f = Array.from(d.subarray(CTG_AT + 5, CTG_AT + 5 + CONFS));
+  return f.some((x) => (x & ~(TG_ON | TG_SEC94)) !== 0) ? null : f;
+}
+
+/** The conferences that play a title game: the switches if there are any, else the edition's rule. */
+export const titleGameConfs = (s: WideSeason, rules: ConfRules = RULES_2026): number[] =>
+  s.titleGames ? s.titleGames.map((f, c) => (c < INDEPENDENT && f & TG_ON ? c : -1)).filter((c) => c >= 0) : rules.titleGames;
 
 const NAMES_LEA = 0x211d40;
 const CWS_LEA = 0x211576;
@@ -45,6 +80,8 @@ export interface WideSeason {
   start: number[];
   /** Conference games per conference 0-9 (the engine plays at most one round robin). */
   games: number[];
+  /** Title game switches per conference 0-10 (TG_ON, TG_SEC94), on ROMs that have them. */
+  titleGames?: number[];
 }
 
 /** Target of a `lea d16(pc),An` at `at`, or -1 if there's none. */
@@ -86,11 +123,13 @@ export function readWideSeason(d: Uint8Array): WideSeason {
   const p = wideSeasonProblems(d);
   if (p.length) throw new Error(`This ROM's season can't be read: ${p.join('; ')}.`);
   const t = tables(d);
+  const tg = readTitleGames(d);
   return {
     names: Array.from({ length: CONFS }, (_, c) => readName(d, t.names, c + 1)),
     conf: Array.from({ length: teamsOf(d) }, (_, team) => rw(d, groupAt(d, team) + 6)),
     start: Array.from({ length: INDEPENDENT }, (_, c) => d[t.cws + c]),
     games: Array.from({ length: INDEPENDENT }, (_, c) => d[t.cwn + c]),
+    ...(tg ? { titleGames: tg } : {}),
   };
 }
 
@@ -101,13 +140,14 @@ export const confSizes = (s: WideSeason) => Array.from({ length: CONFS }, (_, c)
 export const roundRobin = (n: number) => Math.max(0, n + (n % 2) - 1);
 
 /** The conference games each team of conference c gets in a random season (what the engine plays). */
-export function playedGames(s: WideSeason, c: number): number {
+export function playedGames(s: WideSeason, c: number, weeks = REG_WEEKS): number {
   if (c === INDEPENDENT) return 0;
-  return Math.max(0, Math.min(s.games[c], roundRobin(confSizes(s)[c]), REG_WEEKS - s.start[c]));
+  return Math.max(0, Math.min(s.games[c], roundRobin(confSizes(s)[c]), weeks - s.start[c]));
 }
 
 /** Why these settings can't go into the ROM; empty if they can. */
-export function wideSeasonIssues(s: WideSeason): string[] {
+export function wideSeasonIssues(s: WideSeason, rules: ConfRules = RULES_2026): string[] {
+  const REG_WEEKS = rules.weeks;
   const out: string[] = [];
   const sizes = confSizes(s);
   s.names.forEach((n, c) => {
@@ -116,9 +156,13 @@ export function wideSeasonIssues(s: WideSeason): string[] {
     if (n.length > NAME_LEN) out.push(`${label}: names can have at most ${NAME_LEN} characters.`);
     if (!ALLOWED.test(n)) out.push(`${label}: the game can only show ${NAME_CHARS}.`);
   });
+  const titled = titleGameConfs(s, rules);
+  if (s.titleGames && (s.titleGames.length !== CONFS || s.titleGames.some((f, c) => (f & ~(TG_ON | TG_SEC94)) !== 0 || (c === INDEPENDENT && f !== 0)))) {
+    out.push('The title game switches are not valid.');
+  }
   for (let c = 0; c < INDEPENDENT; c++) {
     const label = s.names[c].trim() || `Conference ${c + 1}`;
-    if (sizes[c] < 2) out.push(`${label} needs at least 2 teams for its title game.`);
+    if (titled.includes(c) && sizes[c] < 2) out.push(`${label} needs at least 2 teams for its title game.`);
     if (sizes[c] > MAX_CONF_TEAMS) out.push(`${label} has ${sizes[c]} teams; the game takes at most ${MAX_CONF_TEAMS}.`);
     if (!(s.start[c] >= 0 && s.start[c] < REG_WEEKS)) out.push(`${label}: the first conference week must be 1-${REG_WEEKS}.`);
     if (s.start[c] + s.games[c] > REG_WEEKS) {
@@ -129,10 +173,10 @@ export function wideSeasonIssues(s: WideSeason): string[] {
 }
 
 /** Writes the settings in place (checksums are fixed when the ROM is saved). */
-export function writeWideSeason(d: Uint8Array, s: WideSeason): void {
+export function writeWideSeason(d: Uint8Array, s: WideSeason, rules: ConfRules = RULES_2026): void {
   const p = wideSeasonProblems(d);
   if (p.length) throw new Error(`This ROM's season can't be changed: ${p.join('; ')}.`);
-  const issues = wideSeasonIssues(s);
+  const issues = wideSeasonIssues(s, rules);
   if (issues.length) throw new Error(issues[0]);
   if (s.conf.length !== teamsOf(d)) throw new Error('the team count differs from the ROM');
   const t = tables(d);
@@ -148,6 +192,10 @@ export function writeWideSeason(d: Uint8Array, s: WideSeason): void {
     d[t.cws + c] = s.start[c];
     d[t.cwn + c] = s.games[c];
   }
+  if (s.titleGames) {
+    if (!readTitleGames(d)) throw new Error("This ROM has no title game switches (they came with the 2026 Season Edition's test31 and the 1994 Season Edition's test33).");
+    d.set(s.titleGames, CTG_AT + 5);
+  }
 }
 
 /** The bytes a season edit can change, as [start, end) ranges. */
@@ -162,6 +210,7 @@ export function wideSeasonRanges(d: Uint8Array): [number, number][] {
     const g = groupAt(d, team) + 6;
     r.push([g, g + 2]);
   }
+  if (readTitleGames(d)) r.push([CTG_AT + 5, CTG_AT + 5 + CONFS]);
   return r;
 }
 

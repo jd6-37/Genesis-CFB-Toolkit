@@ -114,6 +114,21 @@ export function rivalryOf(a0: string, b0: string): string | null {
  * `last`: played in the last regular-season week when it can be (the traditional season finales). Claude's
  * pick of the pairs; each school has at most one finale.
  */
+/**
+ * A protected rivalry as the dynasty keeps it (user, 2026-11-16: user-defined rivalries, "Also let the user define a
+ * preferred week"): two schools, and the regular-season week (0-based) the game should be in, if any.
+ */
+export interface Rivalry {
+  a: string;
+  b: string;
+  week?: number;
+}
+
+/** An edition's built-in rivalries as a dynasty's list (the finales in the last of `weeks` weeks). */
+export function defaultRivalries(edition: 'default' | '1994', weeks: number): Rivalry[] {
+  return (edition === '1994' ? PROTECTED_1994 : PROTECTED).map((p) => ({ a: p.a, b: p.b, ...(p.last ? { week: weeks - 1 } : {}) }));
+}
+
 export const PROTECTED: { a: string; b: string; last?: boolean }[] = [
   // Finales
   { a: 'Alabama', b: 'Auburn', last: true },
