@@ -17,6 +17,8 @@
 
 import { writeDynastySim } from './seasonSim';
 import { pollSet, preseasonPoll } from './poll';
+import { seasonReports } from './walshStore';
+import { writeReports } from '../walshReports';
 import { fineSetBytes, putFineOffsets } from './fine';
 import { applyWhiteHome } from './kit';
 import { lastGames, makeSchedule, RELEASE_CONF_WEEKS, rivalriesOf, scheduleSet } from './schedule';
@@ -873,6 +875,9 @@ export function seasonRom(d: Dynasty, season: DSeason, rom: Uint8Array, now = Da
   applyWhiteHome(out.data, d);
   writeConferences(out.data, d, season);
   writeDynastySim(out.data, d);
+  // The season's Walsh Reports (walshStore.ts), every team, from the second season on.
+  const reports = seasonReports(d, season);
+  if (reports) writeReports(out.data, new Map(reports.map((x, t) => [t, x.report])));
   fixChecksums(out.data, out.game);
   return out.data;
 }

@@ -18,6 +18,7 @@ import { playerName } from '../../core/dynasty/derive';
 import { Headshot, TeamLink, hometownText, href, mainColor, onColor, useDyn } from './ui';
 import { ScheduleEditor } from './SchedulePage';
 import { ConferencesStep } from './ConferencesStep';
+import { WalshStep } from './WalshStep';
 import { RivalriesEditor } from './RivalriesEditor';
 import { EditLook, EditPlayer } from './EditPlayer';
 import { applyEdits, editLock } from '../../core/dynasty/edit';
@@ -39,13 +40,13 @@ export interface OffseasonActions {
  * The offseason's steps, the new season's last four included (user, 2026-11-13: "I think the schedule
  * should be a proper step in the offseason, not a secondary button at the end"; "this needs its own step in
  * offseason, at the end, after cuts, a proper edit players step"). The first six follow the offseason
- * state; the last five come once the new season is set up and can be visited in any order (Conferences: user,
+ * state; the last six come once the new season is set up and can be visited in any order (Conferences: user,
  * 2026-11-16, conferences.ts).
  */
-const STEPS = ['Projected depth chart', 'Players leaving', 'Transfer portal', 'Signing day and cuts', 'Training', 'Training results', 'Edit players', 'Depth chart', 'Conferences', 'Schedule', 'Download the ROM'] as const;
+const STEPS = ['Projected depth chart', 'Players leaving', 'Transfer portal', 'Signing day and cuts', 'Training', 'Training results', 'Edit players', 'Depth chart', 'Conferences', 'Schedule', 'Walsh Reports', 'Download the ROM'] as const;
 const STEP_OF = { depth: 0, portal: 1, recruiting: 2, signing: 2, cuts: 3, ready: 5 } as const;
 const FIRST_SEASON_STEP = 6;
-const SEASON_STEPS = ['players', 'depth', 'conferences', 'schedule', 'rom'] as const;
+const SEASON_STEPS = ['players', 'depth', 'conferences', 'schedule', 'walsh', 'rom'] as const;
 type SeasonStep = typeof SEASON_STEPS[number];
 const stepList = (full: boolean, links: boolean) => STEPS.map((label, i) => ({
   label: i === 2 && full ? 'Recruiting' : label,
@@ -625,10 +626,11 @@ function SeasonSteps({ actions, step, busy }: { actions: OffseasonActions; step:
         {steps}
         <RivalriesEditor commit={actions.commit} busy={busy} />
         <ScheduleEditor arg={team !== undefined ? String(team) : undefined} />
-        <div className="dy-row dy-next"><Button href={href('offseason/rom')}>Next: download the ROM</Button></div>
+        <div className="dy-row dy-next"><Button href={href('offseason/walsh')}>Next: the Walsh Reports</Button></div>
       </>
     );
   }
+  if (step === 'walsh') return <>{steps}<WalshStep commit={actions.commit} busy={busy} /></>;
   return (
     <>
       {steps}
