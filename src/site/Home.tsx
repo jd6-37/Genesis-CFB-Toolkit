@@ -76,7 +76,7 @@ const EDITIONS: { id: Edition; name: string; title: string; rows: [string, strin
       ['Season', '11 weeks, then a bowl week'],
       ['Postseason', 'The 19 bowl games of the 1994 season'],
       ['Poll', 'Starts from the real 1994 preseason AP poll'],
-      ['Rosters', 'Real 1994 player names where they are known'],
+      ['Rosters', 'Real 1994 names for 2,962 of 3,424 players. Every player has a number and ratings'],
     ],
   },
   {
@@ -169,6 +169,19 @@ const FEATURES: { title: string; body: ReactNode; controls?: [GlyphKey[], string
     title: 'Play recaps, milestones and impact players',
     body: 'After each play, a recap names the players involved, with their jersey numbers. Banners appear for game milestones, such as a catch of 75 yards or more. Ranked teams show their Top 25 rank in the score box. Each team has three impact players, marked on the field; when one gets into the zone, he plays above his ratings for a while.',
     media: { src: M('recap.png'), video: M('recap.mp4'), alt: 'A 75-yard touchdown pass, then the recap "Pass to #1 Derrick Mayes for 75 yards" and a "75+ Yard Catch" milestone banner' },
+  },
+  {
+    title: 'Real 1994 rosters for all 107 teams',
+    body: (
+      <>
+        The original game has 36 teams and no player names. The 1994 edition has all 107 Division I-A teams of 1994, and 2,962 of its 3,424
+        players have their real 1994 names, matched by team, jersey number and position. The names come from 9,872 rows of 1994 rosters, and
+        the ratings start from a ranked list of 2,857 of 1994's best players built from 10,731 facts. Each new team's OFF and DEF ratings come
+        from its 1994 record and its conference, and its players' 20,544 ratings follow them.{' '}
+        <Button variant="link" href="/insights/1994-rosters">How we built the 1994 rosters</Button>
+      </>
+    ),
+    media: { src: M('rosters-1994.png'), alt: 'Team Rosters, names view, for Kansas: each player\'s number, position, class and name' },
   },
   {
     title: 'Full seasons with bowls or a playoff',
