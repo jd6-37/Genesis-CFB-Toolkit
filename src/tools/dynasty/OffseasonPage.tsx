@@ -15,7 +15,7 @@ import { SLOT_DEF, slotPosition, teamDepth } from '../../core/dynasty/depth';
 import { rosterLayout } from '../../core/rosterLayouts';
 import { Recruiting } from './RecruitingPage';
 import { playerName } from '../../core/dynasty/derive';
-import { Headshot, TeamLink, hometownText, href, mainColor, onColor, useDyn } from './ui';
+import { Headshot, TeamLink, firstTeam, hometownText, href, mainColor, onColor, useDyn } from './ui';
 import { ScheduleEditor } from './SchedulePage';
 import { ConferencesStep } from './ConferencesStep';
 import { WalshStep } from './WalshStep';
@@ -24,6 +24,7 @@ import { EditLook, EditPlayer } from './EditPlayer';
 import { applyEdits, editLock } from '../../core/dynasty/edit';
 import { sideOf } from '../../core/dynasty/numbers';
 import { POSITIONS } from '../../core/dynasty/offseason';
+import { CarouselStep, CarouselSummary } from './CarouselStep';
 
 export interface OffseasonActions {
   /** Saves the new dynasty (and shows errors). */
@@ -43,13 +44,13 @@ export interface OffseasonActions {
  * state; the last six come once the new season is set up and can be visited in any order (Conferences: user,
  * 2026-11-16, conferences.ts).
  */
-const STEPS = ['Projected depth chart', 'Players leaving', 'Transfer portal', 'Signing day and cuts', 'Training', 'Training results', 'Edit players', 'Depth chart', 'Conferences', 'Schedule', 'Walsh Reports', 'Download the ROM'] as const;
-const STEP_OF = { depth: 0, portal: 1, recruiting: 2, signing: 2, cuts: 3, ready: 5 } as const;
-const FIRST_SEASON_STEP = 6;
+const STEPS = ['Coaching carousel', 'Projected depth chart', 'Players leaving', 'Transfer portal', 'Signing day and cuts', 'Training', 'Training results', 'Edit players', 'Depth chart', 'Conferences', 'Schedule', 'Walsh Reports', 'Download the ROM'] as const;
+const STEP_OF = { carousel: 0, depth: 1, portal: 2, recruiting: 3, signing: 3, cuts: 4, ready: 6 } as const;
+const FIRST_SEASON_STEP = 7;
 const SEASON_STEPS = ['players', 'depth', 'conferences', 'schedule', 'walsh', 'rom'] as const;
 type SeasonStep = typeof SEASON_STEPS[number];
 const stepList = (full: boolean, links: boolean) => STEPS.map((label, i) => ({
-  label: i === 2 && full ? 'Recruiting' : label,
+  label: i === 3 && full ? 'Recruiting' : label,
   href: links && i >= FIRST_SEASON_STEP ? href(`offseason/${SEASON_STEPS[i - FIRST_SEASON_STEP]}`) : undefined,
 }));
 
@@ -168,7 +169,7 @@ export function Offseason({ actions, busy, arg }: { actions: OffseasonActions; b
           <>
             <p>
               {done
-                ? `The ${season.year} season is over. The offseason takes your dynasty to ${season.year + 1}: seniors leave, the transfer portal opens, every team signs a class and cuts to ${ROSTER_LIMIT}, and the returning players develop in offseason training.`
+                ? `The ${season.year} season is over. The offseason takes your dynasty to ${season.year + 1}: coaches retire, are fired and are hired, seniors leave, the transfer portal opens, every team signs a class and cuts to ${ROSTER_LIMIT}, and the returning players develop in offseason training.`
                 : `The offseason starts once the ${season.year} season is over: import the save after the last game. ${v.save ? `So far ${v.games.filter((g) => g.vs !== null).length} of ${v.games.length} games are played.` : ''}`}
             </p>
             {users.length > 0 && <TrainingFocus actions={actions} busy={busy} />}
@@ -184,11 +185,14 @@ export function Offseason({ actions, busy, arg }: { actions: OffseasonActions; b
     );
   }
 
-  const step = st.step === 'cuts' && st.cutsPicked ? 4 : STEP_OF[st.step];
+  const step = st.step === 'cuts' && st.cutsPicked ? 5 : STEP_OF[st.step];
   return (
     <section className={['recruiting', 'portal'].includes(st.step) || (st.step === 'cuts' && !st.cutsPicked) ? 'dy-off dy-off-wide' : 'dy-off'}>
       <PageHead title={`Offseason ${st.year}`} />
       <Steps label="Offseason steps" steps={stepList(st.mode === 'full', false)} current={step} />
+
+      {st.step === 'carousel' && <CarouselStep actions={actions} busy={busy} />}
+      {st.step !== 'carousel' && <CarouselSummary />}
 
       {st.step === 'depth' && <ProjectedDepth actions={actions} busy={busy} />}
 
@@ -273,9 +277,9 @@ function TeamSwitch({ team, onPick }: { team: number; onPick: (t: number) => voi
  * Transfers only enter the portal here: where they go is known at signing day.
  */
 function Leaving({ actions, busy }: { actions: OffseasonActions; busy: string | null }) {
-  const { d } = useDyn();
+  const { d, focus } = useDyn();
   const st = d.offseason!;
-  const [team, setTeam] = useState(d.userTeams[0]);
+  const [team, setTeam] = useState(firstTeam(d, focus));
   const [show, setShow] = useState<'all' | 'starters' | 'portal'>('all');
   const [all, setAll] = useState(false);
   const pl = (id: number) => d.players[id - 1];
@@ -396,13 +400,13 @@ function LeavingNext({ actions, busy, second }: { actions: OffseasonActions; bus
 }
 
 function SigningAndCuts({ actions, busy }: { actions: OffseasonActions; busy: string | null }) {
-  const { d } = useDyn();
+  const { d, focus } = useDyn();
   const st = d.offseason!;
   const pl = (id: number) => d.players[id - 1];
   const ranks = classRankings(st.events);
   const signed = st.events.filter((e): e is Extract<OffseasonEvent, { kind: 'signed' }> => e.kind === 'signed');
   const moved = st.events.filter((e): e is Extract<OffseasonEvent, { kind: 'transfer' }> => e.kind === 'transfer');
-  const [team, setTeam] = useState(d.userTeams[0]);
+  const [team, setTeam] = useState(firstTeam(d, focus));
   const [cuts, setCuts] = useState<Record<number, number[]>>(() => ({ ...(st.suggestedCuts ?? {}) }));
   const [err, setErr] = useState<string | null>(null);
   const [allClass, setAllClass] = useState(false);
@@ -584,9 +588,9 @@ function TrainingStep({ actions, busy }: { actions: OffseasonActions; busy: stri
  * order; each has a button to the next.
  */
 function SeasonSteps({ actions, step, busy }: { actions: OffseasonActions; step: SeasonStep; busy: boolean }) {
-  const { d } = useDyn();
+  const { d, focus } = useDyn();
   const season = d.seasons[d.seasons.length - 1];
-  const [team, setTeam] = useState(d.userTeams[0]);
+  const [team, setTeam] = useState(firstTeam(d, focus));
   const pl = (id: number) => d.players[id - 1];
   const steps = <Steps label="Offseason steps" steps={stepList(true, true)} current={FIRST_SEASON_STEP + SEASON_STEPS.indexOf(step)} />;
   if (step === 'players') return <>{steps}<EditPlayersStep team={team} onPick={setTeam} /></>;

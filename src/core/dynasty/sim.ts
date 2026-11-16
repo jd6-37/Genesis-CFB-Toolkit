@@ -3,6 +3,7 @@
 // team: it recruits for them (full recruiting), takes the suggested cuts and sets the depth charts.
 
 import type { Dynasty } from './model';
+import { finishCarousel } from './carousel';
 import { applyCuts, confirmDepth, finishOffseason, runSigningDay, startOffseason, type RecruitTemplates } from './offseason';
 import { finishRecruiting, openRecruiting, simRecruiting } from './recruiting';
 
@@ -19,6 +20,7 @@ export function simOffseason(d: Dynasty, tpl: RecruitTemplates): Dynasty {
   for (let guard = 0; guard < 10; guard++) {
     const st = x.offseason!;
     switch (st.step) {
+      case 'carousel': x = finishCarousel(x); break;
       case 'depth': x = confirmDepth(x); break;
       case 'portal': x = openRecruiting(x, tpl); break;
       case 'recruiting': x = finishRecruiting(simRecruiting(x), tpl); break;

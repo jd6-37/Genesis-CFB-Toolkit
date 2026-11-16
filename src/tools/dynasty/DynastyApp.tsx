@@ -2,7 +2,7 @@
 // own pages. Spec: docs/dynasty.md.
 import { TrainingResults } from './TrainingPage';
 import { Rules } from './RulesPage';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { openRom } from '../../core/romfile';
 import { fetchCfb27Latest, CFB27_LATEST } from '../../core/cfb27Latest';
 import { createDynasty, DYNASTY_FILE, importSave, OLD_DYNASTY, type Dynasty } from '../../core/dynasty/model';
@@ -93,6 +93,51 @@ function chooseFile(accept: string): Promise<File | null> {
 
 type Note = { kind: 'error' | 'ok'; text: string } | null;
 
+/**
+ * Several of your teams: the masthead's logo is a menu to switch between them (user, 2026-11-16: "the logo at the
+ * top right becomes a dropdown to switch between their teams"). Picking one opens its page, and pages that show
+ * one of your teams (the offseason steps, the schedule, Walsh Reports) start on it.
+ */
+function TeamMenu({ focus, onPick }: { focus?: number; onPick: (t: number) => void }) {
+  const { d } = useContext(Ctx)!;
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); };
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('keydown', key);
+    return () => { document.removeEventListener('mousedown', close); document.removeEventListener('keydown', key); };
+  }, [open]);
+  const cur = focus !== undefined && d.userTeams.includes(focus) ? focus : d.userTeams[0];
+  return (
+    <div className="dy-teammenu" ref={ref}>
+      <button type="button" className="dy-teammenu-btn" aria-haspopup="true" aria-expanded={open} onClick={() => setOpen(!open)} aria-label={`Your teams: ${d.teams[cur].school}`}>
+        <TeamMark team={cur} size={48} exact />
+        <span className="dy-teammenu-name">{d.teams[cur].school}</span>
+        <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 5l5 5 5-5" stroke="currentColor" strokeWidth="2" fill="none" /></svg>
+      </button>
+      {open && (
+        <ul className="dy-teammenu-list" aria-label="Your teams">
+          {d.userTeams.map((t) => {
+            const coach = d.coaches?.find((c) => c.team === t);
+            return (
+              <li key={t}>
+                <a href={href(`team/${t}`)} aria-current={t === cur ? 'true' : undefined} onClick={() => { onPick(t); setOpen(false); }}>
+                  <TeamMark team={t} size={32} />
+                  <span>{d.teams[t].school}{coach && <><br /><span className="dy-small dy-dim">Coach: {coach.name}{coach.manageXp ? ' (you manage his XP)' : ''}</span></>}</span>
+                </a>
+              </li>
+            );
+          })}
+          <li><a href={href('manage')} onClick={() => setOpen(false)} className="dy-small">Change your teams in Manage</a></li>
+        </ul>
+      )}
+    </div>
+  );
+}
+
 /** The dynasty with its coaches: the real coaches of its edition, added once (a new dynasty, or one made before coaches). */
 async function addCoaches(dyn: Dynasty): Promise<Dynasty> {
   if (dyn.coaches) return dyn;
@@ -168,9 +213,16 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
   // Light or dark: the reader's choice, kept in this browser (it's a preference, not part of a dynasty).
   const [dark, setDarkState] = useState(() => { try { return localStorage.getItem(THEME_KEY) === 'dark'; } catch { return false; } });
   const setDark = (on: boolean) => { setDarkState(on); try { localStorage.setItem(THEME_KEY, on ? 'dark' : 'light'); } catch { /* private mode: the choice lasts for this visit */ } };
+  // The team picked in the masthead's team menu (with several of your teams), kept in this browser per dynasty.
+  const [focus, setFocusState] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    if (!d) return;
+    try { const x = localStorage.getItem(`dynasty.focus.${d.id}`); setFocusState(x === null ? undefined : Number(x)); } catch { setFocusState(undefined); }
+  }, [d?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  const setFocus = (t: number) => { setFocusState(t); try { if (d) localStorage.setItem(`dynasty.focus.${d.id}`, String(t)); } catch { /* private mode */ } };
   const ctx: DynCtx | null = useMemo(
-    () => (d && v ? { d, v, art, go: (p: string) => (window.location.hash = href(p)), commit, downloadRom: (y: number) => dlRef.current(y), dark } : null),
-    [d, v, art, commit, dark],
+    () => (d && v ? { d, v, art, go: (p: string) => (window.location.hash = href(p)), commit, downloadRom: (y: number) => dlRef.current(y), dark, focus } : null),
+    [d, v, art, commit, dark, focus],
   );
 
   const run = async (what: string, fn: () => Promise<void>) => {
@@ -336,9 +388,11 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
         title={d?.name ?? 'Dynasty'} href={href('home')}
         sub={d ? `${d.offseason ? d.offseason.year : d.seasons[d.seasons.length - 1].year}${week ? `, ${week}` : ''}` : undefined}
         left={<><a href="/">BW95 Elevated</a><a href={toolkitHref} onClick={navClick(toolkitHref)}>Mod Toolkit</a><ThemeToggle dark={dark} onChange={setDark} /></>}
-        right={ctx && d!.userTeams.map((t) => (
-          <Ctx.Provider key={t} value={ctx}><a href={href(`team/${t}`)} aria-label={d!.teams[t].school}><TeamMark team={t} size={64} exact /></a></Ctx.Provider>
-        ))}
+        right={ctx && (d!.userTeams.length > 1
+          ? <Ctx.Provider value={ctx}><TeamMenu focus={focus} onPick={setFocus} /></Ctx.Provider>
+          : d!.userTeams.map((t) => (
+            <Ctx.Provider key={t} value={ctx}><a href={href(`team/${t}`)} aria-label={d!.teams[t].school}><TeamMark team={t} size={64} exact /></a></Ctx.Provider>
+          )))}
       >
         <NavBar label="Dynasty" items={PAGES.map((p) => ({ label: p.label, href: href(p.id), current: navPage === p.id, off: !ctx && p.id !== 'manage' }))} />
       </Masthead>

@@ -62,6 +62,12 @@ export interface DCoach {
   irl: CoachSeasonIrl[];
   /** The user spends his XP (spec: off for every coach unless the user turns it on). */
   manageXp?: boolean;
+  /** XP not spent yet (a coach the user manages keeps it until the user spends it). */
+  xp?: number;
+  /** The season he retired after. */
+  retiredYear?: number;
+  /** Made by the user in this dynasty. */
+  created?: boolean;
 }
 
 /** The weights of the OVR: Development and Recruiting count a little more (they help every position). */

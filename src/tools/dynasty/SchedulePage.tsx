@@ -10,14 +10,14 @@ import {
   checkSchedule, editSchedule, flipHome, moveGame, protectedPairs, remakeSchedule, rivalriesOf, scheduleLock, setOpponent, teamSchedule, weeksOf,
   type DSchedule,
 } from '../../core/dynasty/schedule';
-import { Empty, TeamLink, href, useDyn } from './ui';
+import { Empty, TeamLink, firstTeam, href, useDyn } from './ui';
 
 export function ScheduleEditor({ arg }: { arg?: string }) {
-  const { d, commit, downloadRom } = useDyn();
+  const { d, commit, downloadRom, focus } = useDyn();
   const season = d.seasons[d.seasons.length - 1];
   const sched = season.schedule;
   const asked = Number(arg);
-  const team = Number.isInteger(asked) && d.userTeams.includes(asked) ? asked : d.userTeams[0];
+  const team = Number.isInteger(asked) && d.userTeams.includes(asked) ? asked : firstTeam(d, focus);
   const [note, setNote] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const [confirmNew, setConfirmNew] = useState(false);
   const schools = useMemo(() => d.teams.map((t) => t.school), [d]);

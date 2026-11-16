@@ -1,6 +1,6 @@
 // Offseason rules (user, 2026-11-12): every number the computer's offseason uses, behind a spoiler warning,
 // with each section's reset, a reset for everything, and rules files to move them between dynasties.
-import { Button, Modal, Note, PageHead, SubHead } from '../../ui';
+import { Button, Check, Modal, Note, PageHead, SubHead } from '../../ui';
 import { useRef, useState } from 'react';
 import {
   DEFAULT_RULES, RULE_SECTIONS, changedRules, readRulesFile, ruleProblems, rulesFileText, rulesOf, setRules,
@@ -109,6 +109,16 @@ export function Rules({ actions, busy }: { actions: OffseasonActions; busy: stri
           setMsg({ kind: 'ok', text: 'The season sim settings are saved. Download the season ROM again to use them.' });
         })}
       />
+
+      {d.coaches && (
+        <div className="dy-rules-coaches">
+          <SubHead>Coaches</SubHead>
+          <Check checked={d.yourCoachFired !== false} onChange={(on) => void actions.run('Saving…', async () => { await actions.commit({ ...d, yourCoachFired: on ? undefined : false }); })}>
+            Your teams' coaches can be fired
+          </Check>
+          <p className="dy-small dy-dim">Off: in the coaching carousel only the other schools fire their coaches. Coaches are never fired in their first two seasons, and in the third only after a disaster.</p>
+        </div>
+      )}
 
       {RULE_SECTIONS.map((sec) => {
         const secChanged = sec.fields.some((f) => JSON.stringify(draft[f.key]) !== JSON.stringify(DEFAULT_RULES[f.key]));

@@ -9,12 +9,12 @@ import { preseasonPoll } from '../../core/dynasty/poll';
 import { reportLength, REPORT_LIMIT } from '../../core/walshReports';
 import type { Dynasty } from '../../core/dynasty/model';
 import { WalshEditor } from '../walsh/WalshEditor';
-import { href, useDyn } from './ui';
+import { firstTeam, href, useDyn } from './ui';
 
 export function WalshStep({ commit, busy }: { commit: (d: Dynasty, done?: string) => Promise<void>; busy: boolean }) {
-  const { d } = useDyn();
+  const { d, focus } = useDyn();
   const season = d.seasons[d.seasons.length - 1];
-  const [team, setTeam] = useState<number>(d.userTeams[0] ?? 0);
+  const [team, setTeam] = useState<number>(firstTeam(d, focus) ?? 0);
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const lock = walshLock(d);

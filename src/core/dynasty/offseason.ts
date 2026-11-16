@@ -16,6 +16,7 @@
 // same offseason. The players before the offseason are kept so it can be started over.
 
 import { writeDynastySim } from './seasonSim';
+import { startCarousel } from './carousel';
 import { pollSet, preseasonPoll } from './poll';
 import { seasonReports } from './walshStore';
 import { writeReports } from '../walshReports';
@@ -79,7 +80,7 @@ export function groupMins(R: OffseasonRules = DEFAULT_RULES): { name: string; po
 /** The defaults (rules.ts has the dynasty's own). */
 export const GROUP_MIN = groupMins();
 
-export type OffseasonStep = 'depth' | 'portal' | 'recruiting' | 'signing' | 'cuts' | 'ready';
+export type OffseasonStep = 'carousel' | 'depth' | 'portal' | 'recruiting' | 'signing' | 'cuts' | 'ready';
 
 export interface OffseasonState {
   /** The season that just ended. */
@@ -123,6 +124,8 @@ export interface OffseasonState {
   /** 'random' signing classes (the default) or 'full' recruiting weeks. */
   mode?: 'random' | 'full';
   recruiting?: import('./recruiting').RecruitingState;
+  /** The coaching carousel (carousel.ts), the first step when the dynasty has coaches. */
+  carousel?: import('./carousel').CarouselState;
 }
 
 // ---- small helpers
@@ -273,6 +276,11 @@ export function startOffseason(d: Dynasty, opt: { seed?: number; force?: boolean
     st.train!.push({ player: p.id, leaving: p.cls, starter: inGame.has(p.id) });
     return { ...p, cls: CLASSES[Math.min(4, CLASSES.indexOf(p.cls) + 1)] };
   });
+  // Coaches (carousel.ts): the season's XP, retirements, firings and job offers; the carousel is the first step.
+  if (d.coaches) {
+    const c = startCarousel({ ...d, offseason: st }, st.seed);
+    return { ...d, players, coaches: c.coaches, offseason: { ...st, step: 'carousel', carousel: c.carousel, events: [...st.events, ...c.events] } };
+  }
   return { ...d, players, offseason: st };
 }
 
@@ -310,7 +318,7 @@ export function confirmDepth(d: Dynasty, projected: Record<number, (number | nul
 /** Starts the offseason over (the players as they were before it). */
 export function cancelOffseason(d: Dynasty): Dynasty {
   if (!d.offseason) return d;
-  return { ...d, players: d.offseason.before, offseason: undefined };
+  return { ...d, players: d.offseason.before, ...(d.offseason.carousel ? { coaches: d.offseason.carousel.before } : {}), offseason: undefined };
 }
 
 // ---- 2. transfer portal
