@@ -17,6 +17,7 @@
 
 import { writeDynastySim } from './seasonSim';
 import { startCarousel } from './carousel';
+import { developmentBoost, headCoach, recruitingLift, transferFactor } from './coachEffects';
 import { pollSet, preseasonPoll } from './poll';
 import { seasonReports } from './walshStore';
 import { writeReports } from '../walshReports';
@@ -278,8 +279,8 @@ export function startOffseason(d: Dynasty, opt: { seed?: number; force?: boolean
   });
   // Coaches (carousel.ts): the season's XP, retirements, firings and job offers; the carousel is the first step.
   if (d.coaches) {
-    const c = startCarousel({ ...d, offseason: st }, st.seed);
-    return { ...d, players, coaches: c.coaches, offseason: { ...st, step: 'carousel', carousel: c.carousel, events: [...st.events, ...c.events] } };
+    const c = startCarousel({ ...d, players, offseason: st }, st.seed);
+    return { ...d, players, coaches: c.coaches, coachQueue: c.coachQueue.length ? c.coachQueue : undefined, offseason: { ...st, step: 'carousel', carousel: c.carousel, events: [...st.events, ...c.events] } };
   }
   return { ...d, players, offseason: st };
 }
@@ -318,7 +319,7 @@ export function confirmDepth(d: Dynasty, projected: Record<number, (number | nul
 /** Starts the offseason over (the players as they were before it). */
 export function cancelOffseason(d: Dynasty): Dynasty {
   if (!d.offseason) return d;
-  return { ...d, players: d.offseason.before, ...(d.offseason.carousel ? { coaches: d.offseason.carousel.before } : {}), offseason: undefined };
+  return { ...d, players: d.offseason.before, ...(d.offseason.carousel ? { coaches: d.offseason.carousel.before, coachQueue: d.offseason.carousel.queueBefore } : {}), offseason: undefined };
 }
 
 // ---- 2. transfer portal
@@ -365,7 +366,9 @@ export function transferChance(d: Dynasty, p: DPlayer, ctx: PortalContext = port
   let c = role === 'starter' ? R.transferStarter : role === 'depth' ? R.transferDepth : R.transferBackup;
   if (!ctx.nextStarters.has(p.id)) c += R.transferBlocked;
   if (p.cls === 'SR' || p.cls === 'SR+') c += R.transferSenior;
-  return clamp(c * (1 - R.playingTimeCut * playingTime(ctx, p, R.playingTimeShare)), 0, 1);
+  // His coach (2026): a good one keeps players a little more; a coach who left makes them likelier to go, starters too.
+  const cf = transferFactor(d, p.team);
+  return clamp(c * (1 - R.playingTimeCut * playingTime(ctx, p, R.playingTimeShare)) * cf.times + cf.plus, 0, 1);
 }
 
 /** Labels of the Active Roster spots that aren't starting jobs. */
@@ -464,10 +467,12 @@ export function runPortal(d: Dynasty): Dynasty {
   const moved = new Map<number, number>();
   for (const p of entries) {
     const from = p.team!;
+    // A player whose coach left follows him if his new school would start him (it gets first pick; 2026 only).
+    const follow = transferFactor(d, from).followTo;
     const fits = d.teams
       .map((t) => t.index)
       .filter((t) => t !== from && (took.get(t) ?? 0) < rulesOf(d).transfersPerTeam && wouldStart(ctx, p, t))
-      .map((t) => ({ t, w: (0.5 + pres.get(t)!) * between(r, 0.5, 1.5) }))
+      .map((t) => ({ t, w: t === follow ? 1e6 : (0.5 + pres.get(t)!) * between(r, 0.5, 1.5) }))
       .sort((a, b) => b.w - a.w);
     if (!fits.length) continue;
     const to = fits[0].t;
@@ -595,7 +600,8 @@ export function runSigningDay(d: Dynasty, tpl: RecruitTemplates): Dynasty {
   const events: OffseasonEvent[] = [];
   const classes: { team: number; points: number; signed: number }[] = [];
   for (const t of d.teams) {
-    const pres = prestige(d, t.index);
+    // A good recruiter lifts the class a little (coachEffects.ts).
+    const pres = clamp(prestige(d, t.index) + recruitingLift(headCoach(d, t.index)), 0, 1);
     const counts = countBy(players, t.index);
     const roster = Object.values(counts).reduce((a, b) => a + b, 0);
     const n = clamp(ROSTER_LIMIT - roster, 0, rulesOf(d).classMax);
@@ -742,7 +748,9 @@ export function trainPlayers(d: Dynasty, players: DPlayer[], st: OffseasonState)
     const p = out[t.player - 1];
     if (!p || p.id !== t.player || p.status !== 'active' || p.team === null) continue;
     const room = (p.pot ?? p.ovr) - p.ovr;
-    const gain = room * growthRate(R, t.leaving) * between(r, R.growthMin, R.growthMax) + (t.starter ? R.starterBonus : 0) + gauss(r);
+    const gain0 = room * growthRate(R, t.leaving) * between(r, R.growthMin, R.growthMax) + (t.starter ? R.starterBonus : 0) + gauss(r);
+    // His head coach speeds it up or slows it down a little (coachEffects.ts; growth only).
+    const gain = gain0 > 0 ? gain0 * (1 + developmentBoost(headCoach(d, p.team), p.pos)) : gain0;
     let q = develop(p, gain, r, R, trainingOf(d, R, p.team));
     if (q.ovr > (q.pot ?? 99)) q = { ...q, pot: q.ovr };
     growth.push({ player: q.id, from: p.ovr, to: q.ovr });

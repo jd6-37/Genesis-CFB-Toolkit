@@ -9,6 +9,11 @@ import { editionOf } from '../src/core/dynasty/edition';
 import { autoSpend, finishCarousel, fireCoach, goalResults, goalsFor, hotSeat, openings, placeCoach, setManageXp, spendXp, tenure, xpCost } from '../src/core/dynasty/carousel';
 import { rng } from '../src/core/dynasty/model';
 import { cancelOffseason, startOffseason } from '../src/core/dynasty/offseason';
+import { coachTransfers, developmentBoost, recruitingDiscount, transferFactor } from '../src/core/dynasty/coachEffects';
+import { coachFromPlayer } from '../src/core/dynasty/carousel';
+import { coachLook, coachLookChoices } from '../src/core/dynasty/coachLook';
+import { drawHeadshot, HEAD_SIZE } from '../src/core/dynasty/headshot';
+import { offseasonStories } from '../src/core/dynasty/news';
 
 export function coachChecks(d: Dynasty, ok: (name: string) => void, opts: { seasonRom?: (d: Dynasty) => Uint8Array; offseason?: { at: Dynasty; finish: (d: Dynasty) => Dynasty } } = {}) {
   const data = JSON.parse(readFileSync(`public/data/coaches-${editionOf(d).id}.json`, 'utf8')) as CoachData;
@@ -96,5 +101,42 @@ function carouselChecks(c: Dynasty, ok: (name: string) => void) {
   const back = cancelOffseason(done);
   assert.deepEqual(back.coaches, managed.coaches, 'starting the offseason over restores the coaches');
   const st = o.offseason!.carousel!;
+  effectChecks(c, done, ok);
   ok(`coaching carousel: ${st.retired.length} retired, ${st.fired.length} fired, ${done.offseason!.carousel!.moves.length} hired; offers to the managed coach: ${(st.offers[managed.coaches!.find((y) => y.team === user)!.id] ?? []).length}; goals, hot seat, XP`);
+}
+
+/** Part 3: the coaches' effects, former players, headshots and stories. */
+function effectChecks(c: Dynasty, done: Dynasty, ok: (name: string) => void) {
+  const coach = c.coaches!.find((x) => x.team !== null)!;
+  const top = { ...coach, ratings: { passing: 99, running: 99, defense: 99, recruiting: 99, development: 99 }, prestige: 5 };
+  const low = { ...coach, ratings: { passing: 40, running: 40, defense: 40, recruiting: 40, development: 40 }, prestige: 1 };
+  for (const pos of ['QB', 'HB', 'LT', 'CB', 'K']) {
+    assert.ok(developmentBoost(top, pos) > 0.09 && developmentBoost(top, pos) <= 0.12, `boost ${pos}`);
+    assert.ok(developmentBoost(low, pos) < -0.07 && developmentBoost(low, pos) >= -0.12);
+  }
+  assert.equal(developmentBoost(undefined, 'QB'), 0);
+  assert.ok(recruitingDiscount(top) > 0.09 && recruitingDiscount(low) < 0);
+  // Transfers: only in 2026; a team whose coach left in the carousel has its players' chance raised.
+  if (coachTransfers(done)) {
+    const left = done.offseason!.carousel!.moves.find((m) => m.from !== null);
+    const changed = done.teams.find((t) => done.seasons.at(-1)!.coach![t.index] !== done.coaches!.find((x) => x.team === t.index)?.id);
+    if (changed) assert.ok(transferFactor(done, changed.index).plus > 0, 'a coach who left raises the chance');
+    if (left) assert.equal(transferFactor(done, left.from!).followTo, left.to, 'his players may follow him');
+  } else assert.deepEqual(transferFactor(done, 0), { times: 1, plus: 0, followTo: null }, '1994: no transfer effect');
+  // A former player as a coach: young, below an established coach.
+  const p = done.players.find((x) => x.status === 'graduated' || x.status === 'pro') ?? done.players[0];
+  const fc = coachFromPlayer({ ...p, leftYear: p.leftYear ?? done.offseason!.year }, 999, done.offseason!.year, true, rng(1));
+  assert.ok(coachOvr(fc.ratings) <= 72 && fc.formerPlayer?.drafted && fc.poolNote === 'Former NFL player');
+  // Headshots: every coach draws, the same every time; a user change sticks.
+  for (const x of c.coaches!.slice(0, 40)) {
+    const a = drawHeadshot(coachLook(x, c.startYear, ['#112233', '#ffffff']), '#112233', '#ffffff');
+    assert.equal(a.length, HEAD_SIZE * HEAD_SIZE * 4);
+    assert.deepEqual(a, drawHeadshot(coachLook(x, c.startYear, ['#112233', '#ffffff']), '#112233', '#ffffff'));
+  }
+  assert.equal(coachLookChoices({ ...coach, look: { hat: 'cap' } }, c.startYear).hat, 'cap');
+  // Stories: firings, hirings and retirements make the news.
+  const stories = offseasonStories(done, done.offseason!.events, done.offseason!.year);
+  const coachy = stories.filter((x) => /fires|hires|retires|takes over|is out at|coaching career/.test(x.headline));
+  assert.ok(coachy.length >= done.offseason!.carousel!.moves.filter((m) => m.kind !== 'yours').length, 'a story for each hire');
+  ok(`coach effects: development ±${Math.round(developmentBoost(top, 'QB') * 100)}%, recruiting ${Math.round(recruitingDiscount(top) * 100)}% cheaper at the top; ${coachy.length} coach stories; headshots`);
 }

@@ -117,6 +117,13 @@ export function CarouselStep({ actions, busy }: { actions: OffseasonActions; bus
         </Table>
       ) : <p className="dy-dim">Nobody was fired.</p>}
 
+      {(st.former?.length ?? 0) > 0 && (
+        <>
+          <SubHead>Former players in the pool</SubHead>
+          <ul>{st.former!.map((id) => <li key={id}><CoachLink coach={c(id)} /> <span className="dy-dim">({c(id).poolNote}, OVR {coachOvr(c(id).ratings)})</span></li>)}</ul>
+        </>
+      )}
+
       <SubHead>Your coaches' job offers</SubHead>
       {offerCoaches.length ? offerCoaches.map((cid) => {
         const coach = c(cid);

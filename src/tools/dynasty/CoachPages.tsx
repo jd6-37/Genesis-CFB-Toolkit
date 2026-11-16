@@ -1,12 +1,15 @@
 // The coaches' pages (spec: claude.ai project notes bw95-dynasty-coaches-spec.md; mockups: the "Dynasty coaches
 // mockups" canvas): the Coaches page (every coach, by job) and a page per coach (ratings against the average
 // head coach, his record and career, real seasons marked IRL).
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { drawHeadshot, HEAD_SIZE } from '../../core/dynasty/headshot';
+import { COACH_GLASSES, COACH_GLASSES_LABELS, COACH_HAIR, COACH_HAIR_COLOR_LABELS, COACH_HAIR_LABELS, COACH_HATS, COACH_HAT_LABELS, SKIN_LABELS, coachLook, coachLookChoices } from '../../core/dynasty/coachLook';
+import { SCHOOL_COLORS } from '../../core/dynasty/schoolColors';
 import {
   COACH_RATINGS, COACH_RATING_HELPS, COACH_RATING_LABELS, coachAge, coachOvr, coachRecord, dynastySeasons, headCoachField, type DCoach,
 } from '../../core/dynasty/coaches';
-import { Button, Check, DataTable, Empty, Field, Note, PageHead, SubHead, Table, Tabs, Tag } from '../../ui';
-import { createCoach, goalResults, heatLabel, hotSeat, setManageXp, spendXp, tenure, xpCost } from '../../core/dynasty/carousel';
+import { Button, Check, DataTable, Empty, Field, Note, PageHead, Select, SubHead, Table, Tabs, Tag } from '../../ui';
+import { createCoach, goalResults, heatLabel, hotSeat, setCoachLook, setManageXp, spendXp, tenure, xpCost } from '../../core/dynasty/carousel';
 import type { CoachRating, CoachRatings } from '../../core/dynasty/coaches';
 import { href, inkColor, mainColor, onColor, TeamLink, TeamMark, teamCss, useDyn } from './ui';
 
@@ -22,6 +25,22 @@ export function CoachStars({ stars }: { stars: number }) {
       {'★'.repeat(stars)}<span>{'★'.repeat(5 - stars)}</span>
     </span>
   );
+}
+
+/** A coach's 16-bit headshot (coachLook.ts): his team's colors on the polo and the hat, gray without a team. */
+export function CoachHeadshot({ c, size = 120 }: { c: DCoach; size?: number }) {
+  const { d, v } = useDyn();
+  const ref = useRef<HTMLCanvasElement>(null);
+  const year = d.offseason ? d.offseason.year + 1 : v.season.year;
+  const t = c.team;
+  const main = t !== null ? mainColor(d, t) : '#6b6e75';
+  const second = (t !== null && SCHOOL_COLORS[d.teams[t].school]?.[1]) || '#ffffff';
+  useEffect(() => {
+    const g = ref.current?.getContext('2d');
+    if (!g) return;
+    g.putImageData(new ImageData(drawHeadshot(coachLook(c, year, t !== null ? [main, second] : null), main, second), HEAD_SIZE, HEAD_SIZE), 0, 0);
+  }, [c, year, t, main, second]);
+  return <canvas ref={ref} className="dy-headshot" width={HEAD_SIZE} height={HEAD_SIZE} style={{ width: size, height: size }} role="img" aria-label={c.name} />;
 }
 
 export function CoachLink({ coach }: { coach: DCoach }) {
@@ -209,11 +228,12 @@ export function Coach({ id }: { id: number }) {
     <section>
       <header className="dy-teamhead" style={bg ? { background: teamCss(bg), color: onColor(bg) } : undefined}>
         <div className="dy-teamhead-id">
-          {team !== null && <a href={href(`team/${team}`)} aria-label={d.teams[team].school}><TeamMark team={team} size={96} /></a>}
+          <CoachHeadshot c={c} size={120} />
           <div>
             <h2>{c.name}</h2>
             <p>
               <span>{job}</span>
+              {c.formerPlayer && <Tag>{c.formerPlayer.drafted ? 'Former NFL player' : 'Former player'}</Tag>}
               <CoachStars stars={c.prestige} />
               <span>Age {coachAge(c, year)}{c.bornGuess ? ' (estimated)' : ''}</span>
               {c.hometown && <span>{c.hometown}</span>}
@@ -222,10 +242,14 @@ export function Coach({ id }: { id: number }) {
             </p>
           </div>
         </div>
-        <dl className={`dy-teamovr${bg && onColor(bg) === '#000' ? ' dy-on-light' : ''}`}>
-          <div><dt>OVR</dt><dd>{coachOvr(c.ratings)}</dd></div>
-        </dl>
+        <div className="dy-player-side">
+          <dl className={`dy-teamovr${bg && onColor(bg) === '#000' ? ' dy-on-light' : ''}`}>
+            <div><dt>OVR</dt><dd>{coachOvr(c.ratings)}</dd></div>
+          </dl>
+          {team !== null && <a className="dy-player-logo" href={href(`team/${team}`)} aria-label={d.teams[team].school}><TeamMark team={team} size={96} /></a>}
+        </div>
       </header>
+      <EditCoachLook c={c} />
 
       <SubHead>Ratings</SubHead>
       <CoachRatingsBox c={c} color={ink} />
@@ -262,6 +286,7 @@ export function Coach({ id }: { id: number }) {
         </Table>
       ) : <p className="dy-dim">No seasons yet.</p>}
       <p className="dy-dim dy-small">IRL: his real seasons before the dynasty, from Wikipedia (the link opens the page the row comes from). Dynasty: seasons played in this dynasty.</p>
+      {c.formerPlayer && <PlayerCareer id={c.formerPlayer.player} drafted={c.formerPlayer.drafted} />}
     </section>
   );
 }
@@ -276,6 +301,7 @@ export function TeamCoach({ team }: { team: number }) {
       <SubHead>Head coach</SubHead>
       {c ? (
         <p>
+          <CoachHeadshot c={c} size={48} />
           <a href={href(`coach/${c.id}`)} className="dy-teamcoach-name">{c.name}</a>
           <span className="dy-dim"> OVR </span><span className="ui-num">{coachOvr(c.ratings)}</span>{' '}
           <CoachStars stars={c.prestige} />
@@ -369,6 +395,55 @@ function ManageXp({ c }: { c: DCoach }) {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+/** A former player's playing career in the dynasty (spec: at the bottom of his coach page). */
+function PlayerCareer({ id, drafted }: { id: number; drafted: boolean }) {
+  const { d } = useDyn();
+  const p = d.players[id - 1];
+  if (!p) return null;
+  const years = p.years ?? [];
+  return (
+    <>
+      <SubHead>Player career</SubHead>
+      <p>
+        <a href={href(`player/${p.id}`)}>{p.pos} {p.first} {p.last}</a>
+        {p.leftYear !== undefined && <span className="dy-dim"> · left after {p.leftYear}{drafted ? ', drafted' : ''}</span>}
+      </p>
+      {years.length > 0 && (
+        <Table>
+          <thead><tr><th className="ui-left">Season</th><th className="ui-left">School</th><th className="ui-left">Pos</th><th className="ui-left">Class</th><th>OVR</th></tr></thead>
+          <tbody>
+            {years.map((y) => (
+              <tr key={y.year}><td className="ui-left ui-num">{y.year}</td><td className="ui-left"><TeamLink team={y.team} rank={false} /></td><td className="ui-left">{y.pos}</td><td className="ui-left">{y.cls}</td><td className="ui-num">{y.ovr}</td></tr>
+            ))}
+          </tbody>
+        </Table>
+      )}
+      <p className="dy-small dy-dim">His stats and honors are on his player page.</p>
+    </>
+  );
+}
+
+/** Edit a coach's headshot (any time; only the app's portrait, nothing goes into the ROM). */
+function EditCoachLook({ c }: { c: DCoach }) {
+  const { d, v, commit } = useDyn();
+  const [open, setOpen] = useState(false);
+  const year = d.offseason ? d.offseason.year + 1 : v.season.year;
+  const ch = coachLookChoices(c, year);
+  const set = (look: Parameters<typeof setCoachLook>[2]) => void commit(setCoachLook(d, c.id, look));
+  if (!open) return <div className="dy-row"><Button variant="quiet" onClick={() => setOpen(true)}>Edit appearance</Button></div>;
+  return (
+    <div className="dy-coachlook">
+      <Select label="Headwear" value={ch.hat} onChange={(x) => set({ hat: x as typeof ch.hat })} options={COACH_HATS.map((x) => ({ value: x, label: COACH_HAT_LABELS[x] }))} />
+      <Select label="Glasses" value={ch.glasses} onChange={(x) => set({ glasses: x as typeof ch.glasses })} options={COACH_GLASSES.map((x) => ({ value: x, label: COACH_GLASSES_LABELS[x] }))} />
+      <Select label="Hair" value={ch.hair} onChange={(x) => set({ hair: x as typeof ch.hair })} options={COACH_HAIR.map((x) => ({ value: x, label: COACH_HAIR_LABELS[x] }))} />
+      <Select label="Hair color" value={String(ch.hairColor)} onChange={(x) => set({ hairColor: Number(x) })} options={COACH_HAIR_COLOR_LABELS.map((x, i) => ({ value: String(i), label: x }))} />
+      <Select label="Skin tone" value={String(ch.skin)} onChange={(x) => set({ skin: Number(x) })} options={SKIN_LABELS.map((x, i) => ({ value: String(i), label: x }))} />
+      <Select label="Facial hair" value={ch.beard} onChange={(x) => set({ beard: x as typeof ch.beard })} options={[{ value: 'none', label: 'None' }, { value: 'stubble', label: 'Stubble' }, { value: 'goatee', label: 'Goatee' }, { value: 'beard', label: 'Beard' }]} />
+      <div className="dy-row"><Button variant="quiet" onClick={() => setOpen(false)}>Done</Button></div>
     </div>
   );
 }

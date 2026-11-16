@@ -213,6 +213,8 @@ interface Facts {
   bigGames: { opp: number; week: number; home: boolean; rank: number | null; rivalry: string | null }[];
   ovr: { off: number; def: number };
   theme: Theme;
+  /** A new head coach this season (coaches.ts): his name and where he coached before (a school, or null). */
+  newCoach: { name: string; from: string | null; former: boolean } | null;
 }
 
 const STARTERS = new Set([...OFF_START, ...DEF_START]);
@@ -336,7 +338,7 @@ function factsOf(L: WalshLeague, T: number): Facts {
     confPlace, lastFinal, champion: L.imported && vPrev.champion === T, post, wonConf,
     offRet, defRet, gone, inTransfers, recruits, classRank: classEv?.rank ?? null,
     qb, qbNew, hb: P(season.slots[T][1]), wr: best(WR), te: P(season.slots[T][13]), defStar,
-    honors, statOf, traits, bigGames, ovr, theme: 'steady',
+    honors, statOf, traits, bigGames, ovr, theme: 'steady', newCoach: newCoachOf(d, season, prev, T),
   };
   f.theme = themeOf(f, L);
   return f;
@@ -705,6 +707,25 @@ function arrivalSay(side: 'off' | 'def'): Gen {
   };
 }
 
+/** The head coach this season, when he's new (a coach who wasn't last season's). */
+function newCoachOf(d: Dynasty, season: DSeason, prev: DSeason, T: number): Facts['newCoach'] {
+  const now = season.coach?.[T], was = prev.coach?.[T];
+  if (now === null || now === undefined || was === undefined || now === was) return null;
+  const c = d.coaches?.[now];
+  if (!c) return null;
+  const from = prev.coach?.indexOf(now) ?? -1;
+  return { name: walshText(c.name), from: from >= 0 ? walshText(d.teams[from].school) : null, former: !!c.formerPlayer };
+}
+
+const coachSay: Gen = (c) => {
+  const { f, r } = c;
+  const k = f.newCoach;
+  if (!k) return null;
+  if (k.from) return pick(r, [`${k.name} comes over from ${k.from} for his first season.`, `In his first season, ${k.name} brings his program over from ${k.from}.`]);
+  if (k.former) return pick(r, [`${k.name}, a former player, gets his first head coaching job.`, `In his first season, former player ${k.name} takes over.`]);
+  return pick(r, [`In his first season, ${k.name} takes over the program.`, `${k.name} is the new head coach.`]);
+};
+
 const classSay: Gen = (c) => {
   const { f, r } = c;
   if (f.classRank === null || f.classRank > 10) return null;
@@ -869,6 +890,7 @@ export function walshReport(L: WalshLeague, team: number, variant = 0): Report {
   const c: Ctx = { f, r, n, L, team: teamNamer(f, r), post: '', said: new Set() };
 
   const offItems: Item[] = [
+    { side: 'off', weight: f.newCoach ? 12 : 0, say: coachSay, tag: 'coach' },
     { side: 'off', weight: 9, say: qbSay, tag: 'qb' },
     { side: 'off', weight: f.honors.some((h) => h.heisman) ? 10 : 6, say: honorSay('off'), tag: 'honor' },
     { side: 'off', weight: 6, say: runnerSay, tag: 'hb' },
