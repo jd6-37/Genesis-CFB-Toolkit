@@ -342,7 +342,18 @@ function Top25({ compact = false }: { compact?: boolean }) {
 
 export function Rankings() {
   const { d, v } = useDyn();
-  if (!v.save && preseasonPoll(d, v.season)) {
+  const poll = v.save ? null : preseasonPoll(d, v.season);
+  if (poll?.[0]?.real) {
+    return (
+      <section>
+        <PageHead title="Preseason Top 25">
+          The real {v.season.year} preseason AP poll. The game starts the season from it.
+        </PageHead>
+        <PreseasonTop25 />
+      </section>
+    );
+  }
+  if (poll) {
     return (
       <section>
         <PageHead title="Preseason Top 25">

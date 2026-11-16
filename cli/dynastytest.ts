@@ -3,7 +3,7 @@
 // The ROM is the 138-team 2026 Season Edition with the dynasty support (Elevated v2.0.1-test9 or later). The
 // save is a Genesis Plus GX (RetroArch) .srm of the 138-team edition with a season started and at least one week
 // played; the test puts its dynasty's mark (the ID block New Season copies) into it.
-import { VOTERS, pollSet, preseasonPoll } from '../src/core/dynasty/poll';
+import { AP_2026_PRESEASON, VOTERS, pollSet, preseasonPoll } from '../src/core/dynasty/poll';
 import { setSim } from '../src/core/dynasty/seasonSim';
 import { SIM_DEFAULTS, readSimSettings, simForRom } from '../src/core/simSettings';
 import { careerRecords, teamRecords } from '../src/core/dynasty/records';
@@ -911,9 +911,13 @@ assert.deepEqual(readStamp(rom2.subarray(DYN_AREA, DYN_AREA + 16))!.season, 2);
 ok('season rosters written to the dynasty area and read back');
 
 // The preseason poll (user, 2026-11-16: "let's make rankings in the app"): every team once, by points; the same every
-// time; in the season ROM's dynasty area ("PRE1" at header +0x30); none for the first season.
+// time; in the season ROM's dynasty area ("PRE1" at header +0x30). The first season's is the real 2026 AP poll the ROM
+// sets (test35 on; the ROM lane's H-017 reply), shown without points and not written.
 {
-  assert.equal(preseasonPoll(d0, first), null);
+  const p1 = preseasonPoll(d0, first)!;
+  assert.deepEqual(p1.slice(0, AP_2026_PRESEASON.length).map((p) => d0.teams[p.team].school), AP_2026_PRESEASON, 'every AP school found, in order');
+  assert.ok(p1.every((p) => p.real && p.points === 0));
+  assert.equal(new Set(p1.map((p) => p.team)).size, 138);
   assert.equal(readPollSet(Off.seasonRom(d0, first, rom)), null);
   const poll = preseasonPoll(o5, next)!;
   assert.equal(poll.length, 138);

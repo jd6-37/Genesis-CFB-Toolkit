@@ -14,7 +14,8 @@
 import type { Dynasty, DSeason } from './model';
 import { rng } from './model';
 import { seasonView } from './derive';
-import { seasonPrestige } from './prestige';
+import { seasonPrestige, AP_1994_PRESEASON } from './prestige';
+import { canonicalSchool } from './rivalries';
 
 export const VOTERS = 62;
 export const POLL_WEIGHTS = { ovr: 0.5, last: 0.25, returning: 0.15, prestige: 0.1 } as const;
@@ -32,6 +33,41 @@ export interface PollEntry {
   lastRank: number | null;
   returning: number;
   prestige: number;
+  /** The real preseason AP poll of the dynasty's first year (the ROM sets it; no points or votes are known). */
+  real?: boolean;
+}
+
+/**
+ * The real 2026 preseason AP poll (Aug. 17, 2026: the Top 25, then the others receiving votes), the order the 2026
+ * ROM starts a first season from since test35 (the ROM lane's prepoll.py, AP26; H-017). Names as the ROM has them.
+ */
+export const AP_2026_PRESEASON = [
+  'Ohio State', 'Oregon', 'Georgia', 'Notre Dame', 'Texas', 'Indiana', 'Miami', 'Texas A&M', 'Ole Miss', 'Oklahoma', 'LSU',
+  'Texas Tech', 'Alabama', 'BYU', 'USC', 'Michigan', 'Washington', 'Penn State', 'SMU', 'Tennessee', 'Utah', 'Iowa', 'Houston',
+  'Louisville', 'Missouri', 'Clemson', 'Florida', 'Boise State', 'Arizona', 'TCU', 'Navy', 'South Carolina', 'Illinois',
+  'Oklahoma State', 'Vanderbilt', 'Pitt', 'Virginia Tech', 'Minnesota', 'UNLV', 'New Mexico', 'Georgia Tech', 'James Madison',
+  'Auburn', 'Memphis', 'Cal', 'Liberty', 'Western Michigan', 'Tulane', 'Virginia',
+];
+
+/** The team index of each school of a list, in its order (a school the dynasty doesn't have is left out). */
+function teamsOf(d: Dynasty, schools: string[]): number[] {
+  const at = new Map<string, number>();
+  d.teams.forEach((t, i) => { at.set(t.school, i); at.set(canonicalSchool(t.school), i); });
+  return schools.map((s) => at.get(s) ?? at.get(canonicalSchool(s))).filter((t): t is number => t !== undefined);
+}
+
+/**
+ * A dynasty's first season: the real preseason AP poll of its year, as the ROM sets it (2026: AP_2026_PRESEASON since
+ * test35; 1994: AP_1994_PRESEASON), then the other teams by OVR. Points and votes are 0 (not known).
+ */
+function firstSeasonPoll(d: Dynasty, season: DSeason): PollEntry[] {
+  const ap = teamsOf(d, d.edition === '1994' ? AP_1994_PRESEASON : AP_2026_PRESEASON);
+  const ovr = d.teams.map((_, t) => season.teamOvr ? (season.teamOvr[t].off + season.teamOvr[t].def) / 2 : 0);
+  const pres = season.prestige ?? seasonPrestige(d, season);
+  const rest = d.teams.map((_, t) => t).filter((t) => !ap.includes(t)).sort((a, b) => ovr[b] - ovr[a] || a - b);
+  return [...ap, ...rest].map((t, k) => ({
+    team: t, rank: k + 1, points: 0, firstVotes: 0, score: 0, ovr: ovr[t], lastRank: null, returning: 0, prestige: pres[t], real: true,
+  }));
 }
 
 const z = (v: number[]) => {
@@ -52,9 +88,10 @@ const seedOf = (d: Dynasty, season: DSeason) => {
   return h >>> 0;
 };
 
-/** The preseason poll of a season after the first (null for the first: the ROM makes its own). */
+/** A season's preseason poll: the first season's is the real AP poll the ROM sets (firstSeasonPoll); later ones the app's. */
 export function preseasonPoll(d: Dynasty, season: DSeason): PollEntry[] | null {
   const i = d.seasons.indexOf(season);
+  if (i === 0) return firstSeasonPoll(d, season);
   if (i < 1 || !season.teamOvr) return null;
   const prev = d.seasons[i - 1];
   const n = d.teams.length;

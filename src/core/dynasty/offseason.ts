@@ -868,7 +868,7 @@ export function seasonRom(d: Dynasty, season: DSeason, rom: Uint8Array, now = Da
     names,
     fine,
     schedule: season.schedule ? scheduleSet(season.schedule) : undefined,
-    poll: (() => { const p = preseasonPoll(d, season); return p ? pollSet(p) : undefined; })(),
+    poll: (() => { const p = preseasonPoll(d, season); return p && !p[0]?.real ? pollSet(p) : undefined; })(), // the first season: the ROM's own
   });
   applyWhiteHome(out.data, d);
   writeConferences(out.data, d, season);

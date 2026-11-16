@@ -57,7 +57,7 @@ function PreseasonClasses() {
         <section>
           <SubHead level={2}>Preseason Top 25</SubHead>
           <PreseasonTop25 compact />
-          <p className="dy-small"><a href={href('rankings')}>Points and last year's finish</a></p>
+          {!poll[0]?.real && <p className="dy-small"><a href={href('rankings')}>Points and last year's finish</a></p>}
         </section>
       )}
       {v.season.events && <ClassRankings events={v.season.events} />}
@@ -315,7 +315,7 @@ function ClassRankings({ events }: { events: Parameters<typeof classRankings>[0]
   );
 }
 
-/** The app's preseason poll (poll.ts), before a season's first import, from the second season on. */
+/** The preseason poll (poll.ts) before a season's first import: the real AP poll in the first season, the app's after. */
 export function PreseasonTop25({ compact = false }: { compact?: boolean }) {
   const { d, v } = useDyn();
   const poll = useMemo(() => preseasonPoll(d, v.season), [d, v.season]);
@@ -326,7 +326,7 @@ export function PreseasonTop25({ compact = false }: { compact?: boolean }) {
         <li key={p.team}>
           <span className="dy-top-n">{p.rank}</span>
           <TeamLink team={p.team} rank={false} size={compact ? 20 : 48} />
-          <span className="dy-num">{p.points}{p.firstVotes > 0 && !compact ? ` (${p.firstVotes})` : ''}</span>
+          {!p.real && <span className="dy-num">{p.points}{p.firstVotes > 0 && !compact ? ` (${p.firstVotes})` : ''}</span>}
           {!compact && <span className="dy-move">{p.lastRank === null ? '' : p.lastRank <= 25 ? `Was No. ${p.lastRank}` : 'Was unranked'}</span>}
         </li>
       ))}
