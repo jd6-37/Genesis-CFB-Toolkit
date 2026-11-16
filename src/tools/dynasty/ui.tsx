@@ -21,7 +21,12 @@ export interface DynCtx {
   dark: boolean;
   /** Downloads the season's ROM (needs the user's ROM, kept in the browser). */
   downloadRom: (year: number) => void;
+  /** The user team picked in the masthead's team menu (with several teams), for pages that show one of them. */
+  focus?: number;
 }
+
+/** The user team a page starts on: the one picked in the masthead's menu, else the first. */
+export const firstTeam = (d: Dynasty, focus?: number) => (focus !== undefined && d.userTeams.includes(focus) ? focus : d.userTeams[0]);
 export const Ctx = createContext<DynCtx | null>(null);
 export const useDyn = () => useContext(Ctx)!;
 

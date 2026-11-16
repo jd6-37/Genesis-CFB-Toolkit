@@ -137,7 +137,10 @@ export type OffseasonEvent =
   | { kind: 'cut'; player: number; team: number; ovr: number }
   | { kind: 'walkon'; player: number; team: number; ovr: number }
   | { kind: 'class'; team: number; rank: number; signed: number; points: number }
-  | { kind: 'prestige'; team: number; from: number; to: number; finalRank: number };
+  | { kind: 'prestige'; team: number; from: number; to: number; finalRank: number }
+  | { kind: 'coachRetired'; coach: number; team: number }
+  | { kind: 'coachFired'; coach: number; team: number; heat: number }
+  | { kind: 'coachHired'; coach: number; team: number; from: number | null };
 
 /** A roster slot's ratings in the game: 0-15 steps and fine offsets, in the roster screen's column order. */
 export interface BwSlot {
@@ -178,6 +181,8 @@ export interface Dynasty {
   whiteHome?: boolean[];
   /** Every coach (coaches.ts; index = id): the real coaches of the edition's year, then any made in the dynasty. Absent until the app adds them. */
   coaches?: import('./coaches').DCoach[];
+  /** The user's teams' coaches can be fired too (spec: a setting; absent = yes). */
+  yourCoachFired?: boolean;
   /** The season sim's settings for this dynasty's season ROMs (seasonSim.ts); absent = the ROM's own. */
   sim?: import('../simSettings').SimSettings;
 }

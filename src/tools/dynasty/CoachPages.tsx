@@ -5,7 +5,9 @@ import { useMemo, useState } from 'react';
 import {
   COACH_RATINGS, COACH_RATING_HELPS, COACH_RATING_LABELS, coachAge, coachOvr, coachRecord, dynastySeasons, headCoachField, type DCoach,
 } from '../../core/dynasty/coaches';
-import { DataTable, Empty, Field, PageHead, SubHead, Table, Tabs, Tag } from '../../ui';
+import { Button, Check, DataTable, Empty, Field, Note, PageHead, SubHead, Table, Tabs, Tag } from '../../ui';
+import { createCoach, goalResults, heatLabel, hotSeat, setManageXp, spendXp, tenure, xpCost } from '../../core/dynasty/carousel';
+import type { CoachRating, CoachRatings } from '../../core/dynasty/coaches';
 import { href, inkColor, mainColor, onColor, TeamLink, TeamMark, teamCss, useDyn } from './ui';
 
 const ordinal = (n: number) => {
@@ -35,7 +37,7 @@ function jobText(d: ReturnType<typeof useDyn>['d'], c: DCoach) {
   return c.poolNote ?? 'Not coaching';
 }
 
-type Show = 'head' | 'pool' | 'all';
+type Show = 'head' | 'hot' | 'pool' | 'retired' | 'all';
 
 export function Coaches() {
   const { d, v } = useDyn();
@@ -46,21 +48,23 @@ export function Coaches() {
   const rows = useMemo(() => {
     const want = q.trim().toLowerCase();
     return all
-      .filter((c) => c.status !== 'retired' || show === 'all')
-      .filter((c) => (show === 'head' ? c.team !== null : show === 'pool' ? c.team === null && c.status === 'pool' : true))
+      .filter((c) => c.status !== 'retired' || show === 'all' || show === 'retired')
+      .filter((c) => (show === 'head' || show === 'hot' ? c.team !== null : show === 'pool' ? c.team === null && c.status === 'pool' : show === 'retired' ? c.status === 'retired' : true))
       .filter((c) => !want || c.name.toLowerCase().includes(want) || (c.team !== null && d.teams[c.team].school.toLowerCase().includes(want)) || (c.poolNote ?? '').toLowerCase().includes(want))
-      .map((c) => ({ c, ovr: coachOvr(c.ratings), rec: coachRecord(d, c) }))
-      .sort((a, b) => b.ovr - a.ovr || a.c.name.localeCompare(b.c.name));
+      .map((c) => ({ c, ovr: coachOvr(c.ratings), rec: coachRecord(d, c), heat: c.team !== null ? hotSeat(d, c) : null }))
+      .filter((r) => show !== 'hot' || (r.heat ?? 0) >= 55)
+      .sort((a, b) => (show === 'hot' ? (b.heat ?? 0) - (a.heat ?? 0) : 0) || b.ovr - a.ovr || a.c.name.localeCompare(b.c.name));
   }, [all, show, q, d]);
   if (!d.coaches) return <Empty><p>The coaches are being added to this dynasty. Reload the page if they don't appear.</p></Empty>;
   const heads = all.filter((c) => c.team !== null).length;
   const pool = all.filter((c) => c.team === null && c.status === 'pool').length;
+  const retired = all.filter((c) => c.status === 'retired').length;
   return (
     <section>
       <PageHead title="Coaches" />
       <p className="dy-dim dy-small">Every team's head coach, and the pool of coaches without a head coaching job: coordinators and head coaches out of work. Ratings are made by the app from each coach's record; no real source rates coaches.</p>
       <div className="dy-coach-tools">
-        <Tabs label="Coaches" value={show} onChange={setShow} tabs={[{ value: 'head', label: 'Head coaches', count: heads }, { value: 'pool', label: 'Pool', count: pool }, { value: 'all', label: 'All', count: all.length }]} />
+        <Tabs label="Coaches" value={show} onChange={setShow} tabs={[{ value: 'head', label: 'Head coaches', count: heads }, { value: 'hot', label: 'Hot seat' }, { value: 'pool', label: 'Pool', count: pool }, ...(retired ? [{ value: 'retired' as const, label: 'Retired', count: retired }] : []), { value: 'all', label: 'All', count: all.length }]} />
         <Field label="Find a coach or school" value={q} onChange={setQ} compact />
       </div>
       <DataTable
@@ -74,10 +78,55 @@ export function Coaches() {
           { key: 'age', label: 'Age', num: true, cell: (r) => coachAge(r.c, year) },
           { key: 'stars', label: 'Prestige', left: true, cell: (r) => <CoachStars stars={r.c.prestige} /> },
           { key: 'ovr', label: 'OVR', num: true, cell: (r) => r.ovr },
+          { key: 'heat', label: 'Hot seat', left: true, cell: (r) => (r.heat !== null ? <HeatBar heat={r.heat} small /> : '') },
           { key: 'rec', label: 'Record', num: true, cell: (r) => recordText(r.rec) },
         ]}
       />
+      <CreateCoach />
     </section>
+  );
+}
+
+/** The hot seat, 0-100: green to 40, gold to 55, red above (firing is possible from 55 in a coach's fourth year). */
+export function HeatBar({ heat, small }: { heat: number; small?: boolean }) {
+  const tone = heat >= 55 ? 'var(--bad)' : heat >= 40 ? 'var(--star)' : 'var(--good)';
+  return (
+    <span className={small ? 'dy-heat dy-heat-small' : 'dy-heat'} role="img" aria-label={`Hot seat ${heat} of 100: ${heatLabel(heat)}`} title={`Hot seat ${heat}: ${heatLabel(heat)}`}>
+      <span className="dy-heat-track"><span style={{ width: `${heat}%`, background: tone }} /></span>
+      <span className="ui-num">{heat}</span>{!small && <span className="dy-heat-label" style={{ color: tone }}>{heatLabel(heat)}</span>}
+    </span>
+  );
+}
+
+const BLANK: CoachRatings = { passing: 60, running: 60, defense: 60, recruiting: 60, development: 60 };
+
+/** Make a coach (spec: any time; he starts in the pool and is put on a team in the coaching carousel). */
+function CreateCoach() {
+  const { d, commit } = useDyn();
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState('');
+  const [age, setAge] = useState('40');
+  const [r, setR] = useState<CoachRatings>(BLANK);
+  const [err, setErr] = useState<string | null>(null);
+  if (!open) return <div className="dy-row"><Button variant="quiet" onClick={() => setOpen(true)}>Create a coach</Button></div>;
+  return (
+    <div className="dy-createcoach">
+      <SubHead>Create a coach</SubHead>
+      <p className="dy-small dy-dim">He starts in the pool. Put him on a team in the coaching carousel, the offseason's first step.</p>
+      <div className="dy-createcoach-fields">
+        <Field label="Name" value={name} onChange={setName} maxLength={30} />
+        <Field label="Age" type="number" min={25} max={85} value={age} onChange={setAge} />
+        {COACH_RATINGS.map((k) => (
+          <Field key={k} label={COACH_RATING_LABELS[k]} type="number" min={30} max={99} value={String(r[k])} onChange={(x) => setR({ ...r, [k]: Number(x) })} />
+        ))}
+      </div>
+      <p className="dy-small">OVR {coachOvr(r)}</p>
+      {err && <Note kind="error">{err}</Note>}
+      <div className="dy-row">
+        <Button onClick={() => { try { const next = createCoach(d, { name, age: Number(age), ratings: r }); void commit(next); setOpen(false); setName(''); setR(BLANK); setErr(null); window.location.hash = href(`coach/${next.coaches!.length - 1}`); } catch (e) { setErr((e as Error).message); } }}>Create</Button>
+        <Button variant="quiet" onClick={() => setOpen(false)}>Cancel</Button>
+      </div>
+    </div>
   );
 }
 
@@ -181,6 +230,9 @@ export function Coach({ id }: { id: number }) {
       <SubHead>Ratings</SubHead>
       <CoachRatingsBox c={c} color={ink} />
 
+      {team !== null && <GoalsBox team={team} />}
+      <ManageXp c={c} />
+
       <SubHead>Career</SubHead>
       {dyn.length + irl.length ? (
         <Table className="dy-coach-career">
@@ -239,4 +291,84 @@ export function SeasonCoach({ team, seasonIndex }: { team: number; seasonIndex: 
   const id = d.seasons[seasonIndex]?.coach?.[team];
   const c = id === null || id === undefined ? undefined : d.coaches?.[id];
   return c ? <CoachLink coach={c} /> : null;
+}
+
+/** The team's head coach's goals for the season and his hot seat (team and coach pages). */
+export function GoalsBox({ team }: { team: number }) {
+  const { d, v } = useDyn();
+  const si = d.seasons.length - 1;
+  const id = d.seasons[si].coach?.[team];
+  const c = id === null || id === undefined ? undefined : d.coaches?.[id];
+  if (!c) return null;
+  const res = goalResults(d, si, team, v);
+  const heat = hotSeat(d, c, si);
+  const years = tenure(d, c, si);
+  return (
+    <div className="dy-goals">
+      <SubHead>{v.season.year} goals and hot seat</SubHead>
+      {heat !== null && <HeatBar heat={heat} />}
+      <p className="dy-small dy-dim">{c.name}'s {ordinal(years)} season at {d.teams[team].school}. {years <= 2 ? 'He can\'t be fired in his first two seasons.' : years === 3 ? 'In his third season only a disaster (far below the win goal and a poor signing class) gets him fired.' : 'From 55 on the hot seat, the higher it is the likelier he is fired after the season.'}{d.userTeams.includes(team) && d.yourCoachFired === false ? ' Your teams\' coaches can\'t be fired (Offseason rules).' : ''}</p>
+      <Table>
+        <thead><tr><th className="ui-left">Goal</th><th className="ui-left">So far</th></tr></thead>
+        <tbody>
+          {res.map((g, i) => (
+            <tr key={i}>
+              <td className="ui-left">{g.text}</td>
+              <td className="ui-left"><span className={g.met === true ? 'dy-w' : g.met === false ? 'dy-l' : 'dy-dim'}>{g.met === true ? 'Met' : g.met === false ? 'Missed' : 'Open'}</span>{g.result ? `: ${g.result}` : ''}</td>
+            </tr>
+          ))}
+        </tbody>
+      </Table>
+    </div>
+  );
+}
+
+/** Manage XP (spec: per coach, off unless the user turns it on): on, the user spends his XP on his ratings. */
+function ManageXp({ c }: { c: DCoach }) {
+  const { d, commit } = useDyn();
+  const [add, setAdd] = useState<Partial<Record<CoachRating, number>>>({});
+  const [err, setErr] = useState<string | null>(null);
+  if (c.status === 'retired') return null;
+  const xp = c.xp ?? 0;
+  const val = (k: CoachRating) => c.ratings[k] + (add[k] ?? 0);
+  let spent = 0;
+  for (const k of COACH_RATINGS) for (let i = 0; i < (add[k] ?? 0); i++) spent += xpCost(c.ratings[k] + i);
+  const left = xp - spent;
+  const bump = (k: CoachRating, n: number) => setAdd((a) => ({ ...a, [k]: Math.max(0, (a[k] ?? 0) + n) }));
+  return (
+    <div className="dy-xp">
+      <SubHead>Manage XP</SubHead>
+      <Check checked={!!c.manageXp} onChange={(on) => { setAdd({}); void commit(setManageXp(d, c.id, on)); }}>I spend his XP</Check>
+      <p className="dy-small dy-dim">
+        Head coaches earn XP each season: wins, postseason wins, titles, goals met and the signing class. Off: it's spent for him on his best areas when the season ends.
+        On: you spend it here, and he gets job offers from other schools each offseason (the coaching carousel). A point costs more the higher the rating: 40 XP below 70, 80 to 79, 150 to 89, 300 from 90.
+      </p>
+      {c.manageXp && (
+        <>
+          <p><span className="ui-num">{left.toLocaleString('en-US')}</span> XP to spend{spent ? ` (${spent.toLocaleString('en-US')} picked)` : ''}</p>
+          <Table>
+            <thead><tr><th className="ui-left">Rating</th><th>Now</th><th>Next point</th><th></th></tr></thead>
+            <tbody>
+              {COACH_RATINGS.map((k) => (
+                <tr key={k}>
+                  <td className="ui-left">{COACH_RATING_LABELS[k]}</td>
+                  <td className="ui-num">{val(k)}{add[k] ? <span className="dy-w"> +{add[k]}</span> : ''}</td>
+                  <td className="ui-num">{val(k) >= 99 ? '' : xpCost(val(k))}</td>
+                  <td className="dy-xp-btns">
+                    <Button variant="quiet" label={`Take 1 off ${COACH_RATING_LABELS[k]}`} disabled={!add[k]} onClick={() => bump(k, -1)}>−</Button>
+                    <Button variant="quiet" label={`Add 1 to ${COACH_RATING_LABELS[k]}`} disabled={val(k) >= 99 || xpCost(val(k)) > left} onClick={() => bump(k, 1)}>+</Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+          {err && <Note kind="error">{err}</Note>}
+          <div className="dy-row">
+            <Button disabled={!spent} onClick={() => { try { void commit(spendXp(d, c.id, add)); setAdd({}); setErr(null); } catch (e) { setErr((e as Error).message); } }}>Save</Button>
+            <Button variant="quiet" disabled={!spent} onClick={() => setAdd({})}>Reset</Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
 }

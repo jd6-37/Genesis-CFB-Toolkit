@@ -6,6 +6,9 @@ import type { CoachData } from '../src/core/dynasty/coachData';
 import { COACH_RATINGS, coachOvr, coachRecord, dynastySeasons, headCoachField, withCoaches } from '../src/core/dynasty/coaches';
 import type { Dynasty } from '../src/core/dynasty/model';
 import { editionOf } from '../src/core/dynasty/edition';
+import { autoSpend, finishCarousel, fireCoach, goalResults, goalsFor, hotSeat, openings, placeCoach, setManageXp, spendXp, tenure, xpCost } from '../src/core/dynasty/carousel';
+import { rng } from '../src/core/dynasty/model';
+import { cancelOffseason, startOffseason } from '../src/core/dynasty/offseason';
 
 export function coachChecks(d: Dynasty, ok: (name: string) => void, opts: { seasonRom?: (d: Dynasty) => Uint8Array; offseason?: { at: Dynasty; finish: (d: Dynasty) => Dynasty } } = {}) {
   const data = JSON.parse(readFileSync(`public/data/coaches-${editionOf(d).id}.json`, 'utf8')) as CoachData;
@@ -39,6 +42,59 @@ export function coachChecks(d: Dynasty, ok: (name: string) => void, opts: { seas
     const last = nx.seasons.at(-1)!;
     assert.ok(nx.seasons.length >= 2 && last.coach?.every((id, t) => id !== null && nx.coaches![id].team === t), 'the next season has the head coaches');
   }
+  carouselChecks(c, ok);
   ok(`coaches: ${heads.length} head coaches and ${coaches.length - heads.length} in the pool; OVR ${ovrs[0]}-${ovrs[n - 1]} (median ${ovrs[n >> 1]}); best ${best.name} ${coachOvr(best.ratings)}`);
   return c;
+}
+
+/** The carousel (part 2): goals, hot seat, XP, the step itself (offers, the user's changes, the hiring), undo. */
+function carouselChecks(c: Dynasty, ok: (name: string) => void) {
+  const n = c.teams.length;
+  const si = c.seasons.length - 1;
+  for (let t = 0; t < n; t++) {
+    const g = goalsFor(c, si, t);
+    assert.ok(g.length >= 2 && g.length <= 3 && g[0].kind === 'wins', `${c.teams[t].school}: goals`);
+    assert.equal(goalResults(c, si, t).length, g.length);
+  }
+  for (const x of c.coaches!.filter((y) => y.team !== null)) {
+    const h = hotSeat(c, x, si);
+    assert.ok(h !== null && h >= 0 && h <= 100, `${x.name}: hot seat ${h}`);
+    assert.ok(tenure(c, x, si) >= 1);
+  }
+  // XP: spending for him keeps the cost rule; the user's purchase needs Manage XP and enough XP.
+  const best = c.coaches!.find((x) => x.team !== null)!;
+  const s = autoSpend(best.ratings, 2000, rng(5));
+  const gained = Object.keys(s.ratings).reduce((a, k) => a + s.ratings[k as keyof typeof s.ratings] - best.ratings[k as keyof typeof best.ratings], 0);
+  assert.ok(gained > 0 && s.xp >= 0 && s.xp < 300, 'automatic spending uses the XP');
+  assert.throws(() => spendXp(c, best.id, { passing: 1 }), /Manage XP/);
+  const m = setManageXp(c, best.id, true);
+  const rich = { ...m, coaches: m.coaches!.map((x) => (x.id === best.id ? { ...x, xp: xpCost(x.ratings.recruiting) } : x)) };
+  assert.equal(spendXp(rich, best.id, { recruiting: 1 }).coaches![best.id].ratings.recruiting, best.ratings.recruiting + 1);
+  assert.throws(() => spendXp(rich, best.id, { recruiting: 2 }), /Not enough XP/);
+  // The carousel: the offseason's first step.
+  const user = c.userTeams[0] ?? 0;
+  const managed = setManageXp(c, c.coaches!.find((x) => x.team === user)!.id, true);
+  const o = startOffseason(managed, { seed: 3, force: true });
+  assert.equal(o.offseason!.step, 'carousel');
+  assert.ok(o.coaches!.every((x) => x.status !== 'coach' || x.team !== null));
+  assert.throws(() => placeCoach(c, 0, 0), /carousel/);
+  // The user's changes: fire a coach, put a pool coach on another team.
+  const target = (user + 1) % n;
+  const pool = o.coaches!.find((x) => x.status === 'pool')!;
+  let x = fireCoach(o, user);
+  assert.ok(openings(x).includes(user));
+  x = placeCoach(x, pool.id, target);
+  assert.equal(x.coaches![pool.id].team, target);
+  const done = finishCarousel(x);
+  assert.equal(done.offseason!.step, 'depth');
+  assert.equal(openings(done).length, 0, 'every opening filled');
+  const heads = done.coaches!.filter((y) => y.team !== null);
+  assert.equal(heads.length, n);
+  assert.equal(new Set(heads.map((y) => y.team)).size, n, 'one coach per team');
+  assert.ok(done.coaches!.every((y) => y.status !== 'retired' || y.team === null));
+  assert.equal(done.coaches![pool.id].team, target, 'the user\'s pick stays');
+  const back = cancelOffseason(done);
+  assert.deepEqual(back.coaches, managed.coaches, 'starting the offseason over restores the coaches');
+  const st = o.offseason!.carousel!;
+  ok(`coaching carousel: ${st.retired.length} retired, ${st.fired.length} fired, ${done.offseason!.carousel!.moves.length} hired; offers to the managed coach: ${(st.offers[managed.coaches!.find((y) => y.team === user)!.id] ?? []).length}; goals, hot seat, XP`);
 }

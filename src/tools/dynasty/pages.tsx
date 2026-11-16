@@ -16,7 +16,7 @@ import { OffseasonSide, PreseasonTop25, SeasonMore, SeasonSide } from './HomeSid
 import { AddPlayer, EditLook, EditPlayer } from './EditPlayer';
 import { prestigeStars } from '../../core/dynasty/offseason';
 import { MAX_PRESTIGE } from '../../core/dynasty/prestige';
-import { SeasonCoach, TeamCoach } from './CoachPages';
+import { GoalsBox, SeasonCoach, TeamCoach } from './CoachPages';
 import type { SaveGame } from '../../core/dynasty/save';
 import type { DPlayer } from '../../core/dynasty/model';
 import { GROUP_COLUMNS, type Attr } from '../../core/rosterLayouts';
@@ -518,6 +518,7 @@ export function Team({ team }: { team: number }) {
             </div>
           )}
           <TeamCoach team={team} />
+          <GoalsBox team={team} />
           <SubHead>Schedule</SubHead>
           {mine && v.season.schedule && !scheduleLock(v.season) && <p className="dy-small"><a href={href(`schedule/${team}`)}>Change the schedule</a></p>}
           {games.length ? (
