@@ -27,6 +27,17 @@ export const NAME_LEN = 22;
 export const REG_WEEKS = 12;
 export const POWER4 = 4;
 
+/**
+ * What an edition's engine needs of the conferences: the regular season's weeks, and the conferences that play a
+ * title game (each needs 2 teams). The 2026 edition: 12 weeks, a title game in each of the ten; the 1994 edition
+ * (the Dynasty app, src/core/dynasty/edition.ts): 11 weeks, only the first conference's (the SEC's).
+ */
+export interface ConfRules {
+  weeks: number;
+  titleGames: number[];
+}
+export const RULES_2026: ConfRules = { weeks: REG_WEEKS, titleGames: Array.from({ length: INDEPENDENT }, (_, c) => c) };
+
 const NAMES_LEA = 0x211d40;
 const CWS_LEA = 0x211576;
 const CWN_LEA = 0x2115b2;
@@ -101,13 +112,14 @@ export const confSizes = (s: WideSeason) => Array.from({ length: CONFS }, (_, c)
 export const roundRobin = (n: number) => Math.max(0, n + (n % 2) - 1);
 
 /** The conference games each team of conference c gets in a random season (what the engine plays). */
-export function playedGames(s: WideSeason, c: number): number {
+export function playedGames(s: WideSeason, c: number, weeks = REG_WEEKS): number {
   if (c === INDEPENDENT) return 0;
-  return Math.max(0, Math.min(s.games[c], roundRobin(confSizes(s)[c]), REG_WEEKS - s.start[c]));
+  return Math.max(0, Math.min(s.games[c], roundRobin(confSizes(s)[c]), weeks - s.start[c]));
 }
 
 /** Why these settings can't go into the ROM; empty if they can. */
-export function wideSeasonIssues(s: WideSeason): string[] {
+export function wideSeasonIssues(s: WideSeason, rules: ConfRules = RULES_2026): string[] {
+  const REG_WEEKS = rules.weeks;
   const out: string[] = [];
   const sizes = confSizes(s);
   s.names.forEach((n, c) => {
@@ -118,7 +130,7 @@ export function wideSeasonIssues(s: WideSeason): string[] {
   });
   for (let c = 0; c < INDEPENDENT; c++) {
     const label = s.names[c].trim() || `Conference ${c + 1}`;
-    if (sizes[c] < 2) out.push(`${label} needs at least 2 teams for its title game.`);
+    if (rules.titleGames.includes(c) && sizes[c] < 2) out.push(`${label} needs at least 2 teams for its title game.`);
     if (sizes[c] > MAX_CONF_TEAMS) out.push(`${label} has ${sizes[c]} teams; the game takes at most ${MAX_CONF_TEAMS}.`);
     if (!(s.start[c] >= 0 && s.start[c] < REG_WEEKS)) out.push(`${label}: the first conference week must be 1-${REG_WEEKS}.`);
     if (s.start[c] + s.games[c] > REG_WEEKS) {
@@ -129,10 +141,10 @@ export function wideSeasonIssues(s: WideSeason): string[] {
 }
 
 /** Writes the settings in place (checksums are fixed when the ROM is saved). */
-export function writeWideSeason(d: Uint8Array, s: WideSeason): void {
+export function writeWideSeason(d: Uint8Array, s: WideSeason, rules: ConfRules = RULES_2026): void {
   const p = wideSeasonProblems(d);
   if (p.length) throw new Error(`This ROM's season can't be changed: ${p.join('; ')}.`);
-  const issues = wideSeasonIssues(s);
+  const issues = wideSeasonIssues(s, rules);
   if (issues.length) throw new Error(issues[0]);
   if (s.conf.length !== teamsOf(d)) throw new Error('the team count differs from the ROM');
   const t = tables(d);

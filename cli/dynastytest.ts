@@ -31,6 +31,8 @@ import { academicsOf, CFB27_ACADEMICS } from '../src/core/dynasty/academics';
 import { SCHOOL_STATE, stateCode } from '../src/core/dynasty/schoolStates';
 import { experienceOf, recordRatings, trainingResults, trainingYears } from '../src/core/dynasty/career';
 import { randomBench } from '../src/core/dynasty/bench';
+import * as Conf from '../src/core/dynasty/conferences';
+import { readWideSeason } from '../src/core/seasonWide';
 import { gameText, dynastyAreaProblem, dynastyHeaderValid, dynastyRomId, DYN_AREA, DYN_END, fineAddress, hasDynastyHooks, readStamp, scheduleAddress } from '../src/core/dynasty/dynastyArea';
 import { simFromOvr } from '../src/core/teamRatings';
 import { parseCsv } from '../src/core/rosterSheet';
@@ -774,6 +776,47 @@ assert.equal(g4.seasons.length, 2);
 assert.equal(g4.seasons[1].slots[user].filter((x) => x !== null).length, 32);
 assert.equal(Sim.simOffseason(f1, tpl).seasons.length, 2, 'from the middle of recruiting');
 ok(`sim: a recruiting week, the rest, the cuts, the whole offseason (${act(g4).filter((p) => p.team === user).length} players for ${g4.teams[user].school} in ${g4.seasons[1].year})`);
+
+// Conferences in the offseason (user, 2026-11-16: "We can edit conferences/conf alignment in dynasty offseason like
+// we can in toolkit, right? If not, build that (for 94 and 26)").
+{
+  assert.match(Conf.confLock(d1) ?? '', /first season/);
+  assert.equal(Conf.confLock(g4), null);
+  const s = g4.seasons[1];
+  const c0 = Conf.confSetupOf(s);
+  const at = (n: string) => g4.teams.findIndex((t) => t.school === n);
+  const nd = at('Notre Dame');
+  assert.equal(c0.conf[nd], INDEPENDENT, 'Notre Dame starts independent');
+  const c1 = { ...c0, conf: c0.conf.slice(), names: c0.names.slice() };
+  c1.conf[nd] = 1; // to the second conference (the Big Ten as released)
+  const lone = { ...c1, conf: c1.conf.map((c, t) => (c === 9 && t !== c1.conf.indexOf(9) ? INDEPENDENT : c)) };
+  assert.ok(Conf.confIssues(g4, lone).some((x) => /title game/.test(x)), 'a 2026 conference needs 2 teams for its title game');
+  assert.throws(() => Conf.setConferences(g4, lone), /title game/);
+  const g5 = Conf.setConferences(g4, c1);
+  const s5 = g5.seasons[1];
+  assert.equal(s5.conf[nd], 1);
+  assert.notDeepEqual(s5.schedule, s.schedule, 'a move makes a new schedule');
+  assert.deepEqual(checkSchedule(s5.schedule!, g5.teams.map((t) => t.school), s5.conf).broken, []);
+  const ndConf = s5.schedule!.games.filter((x) => (x.visitor === nd || x.home === nd) && s5.conf[x.visitor === nd ? x.home : x.visitor] === 1).length;
+  assert.ok(ndConf >= s5.confWeeks!.games[1] - 1, `Notre Dame plays its new conference (${ndConf})`);
+  const c2 = { ...c1, names: c1.names.slice() };
+  c2.names[1] = '  Big Fourteen ';
+  const g6 = Conf.setConferences(g5, c2);
+  assert.equal(g6.seasons[1].confNames[1], 'Big Fourteen');
+  assert.equal(g6.seasons[1].schedule, s5.schedule, 'a new name keeps the schedule');
+  assert.equal(Conf.setConferences(g6, c2), g6, 'no change, same dynasty');
+  const out = Off.seasonRom(g6, g6.seasons[1], rom, 1_800_000_000_000);
+  const w = readWideSeason(out);
+  assert.deepEqual(w.conf, c1.conf);
+  assert.equal(w.names[1], 'Big Fourteen');
+  assert.deepEqual(readWideSeason(Off.seasonRom(g4, s, rom, 1_800_000_000_000)), readWideSeason(rom), 'unchanged conferences keep the ROM\'s');
+  // After a download the ROM must be written again; a started season is locked.
+  const dl = { ...g4, seasons: [g4.seasons[0], { ...s, romDownloaded: true }] };
+  assert.equal(Conf.setConferences(dl, c1).seasons[1].lineupEdited, true);
+  const started = { ...g4, seasons: [g4.seasons[0], { ...s, imports: [g4.seasons[0].imports[0] ?? ({} as never)] }] };
+  assert.match(Conf.confLock(started) ?? '', /has started/);
+  ok('conferences: a move makes a new schedule, a name keeps it, the season ROM carries them; title-game rule, locks');
+}
 
 // A second offseason: players signed in the first can transfer now; this year's class can't.
 const y1 = Off.runPortal(Off.confirmDepth(Off.startOffseason(o5, { seed: 4, force: true })));

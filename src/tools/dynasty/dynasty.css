@@ -565,3 +565,11 @@
 .dy-editp h4 .dy-dim { font: 400 var(--fs-2)/1.2 var(--font-body); }
 .ui-table.ui-table-edit.dy-editp-table .ui-field input { width: 3.2rem; min-width: 3.2rem; padding-left: var(--sp-1); padding-right: var(--sp-1); text-align: center; }
 .dy-editp-table .dy-chip { margin-left: 0; }
+
+/* The offseason's Conferences step: the Toolkit's conference editor (season.css) on the Dynasty app's surfaces. */
+.dy-confedit .sea-conf { background: var(--surface-raised); border: 2px solid var(--rule-strong); border-radius: 0; color: var(--text); }
+.dy-confedit .sea-conf-changed { box-shadow: 4px 4px 0 var(--rule-strong); }
+.dy-confedit .hint, .dy-confedit .sea-random, .dy-confedit .sea-cweeks { color: var(--text-muted); }
+.dy-confedit .hint { max-width: 70ch; }
+.dy-confedit .sea-conf li { border-top-color: var(--rule); }
+.dy-confedit .sea-team-name.on { color: var(--text); font-weight: 700; text-decoration: underline; }

@@ -21,6 +21,7 @@ import { stories } from '../src/core/dynasty/news';
 import { playoffSize } from '../src/core/dynasty/outlook';
 import { checkSchedule, makeSchedule, protectedPairs, setOpponent, teamSchedule, scheduleSet, weeksOf } from '../src/core/dynasty/schedule';
 import { readWideSeason } from '../src/core/seasonWide';
+import * as Conf from '../src/core/dynasty/conferences';
 import { numberAllowed, NO_NUMBER } from '../src/core/dynasty/numbers';
 import { hasKits } from '../src/core/kits';
 import { SCHOOL_STATE } from '../src/core/dynasty/schoolStates';
@@ -241,5 +242,35 @@ const sa = scheduleAddress(out2)!;
 assert.equal(out2[sa + 4], 11);
 assert.equal(readStamp(out2.subarray(DYN_AREA, DYN_AREA + 16))!.season, 2);
 ok(`offseason: ${d2.players.filter((p) => p.status === 'active').length} players in 1995, an 11-week schedule in the 1995 ROM`);
+
+// ---- conferences in the 1995 offseason (user, 2026-11-16)
+{
+  assert.match(Conf.confLock(d1) ?? '', /first season/);
+  assert.equal(Conf.confLock(d2), null);
+  const c0 = Conf.confSetupOf(s2);
+  assert.deepEqual(c0.conf, readWideSeason(rom).conf, 'the first alignment is the ROM\'s');
+  const at = (n: string) => schoolList.indexOf(n);
+  const c1 = { ...c0, conf: c0.conf.slice(), names: c0.names.slice() };
+  c1.conf[at('Penn State')] = 0; // to the SEC (it plays in the West of the title game)
+  c1.conf[at('Notre Dame')] = 1;
+  // 1994: only the first conference (the SEC title game) needs 2 teams.
+  const oneBigEast = { ...c1, conf: c1.conf.map((c, t) => (c === 6 && t !== c1.conf.indexOf(6) ? 10 : c)) };
+  assert.deepEqual(Conf.confIssues(d2, oneBigEast), []);
+  const oneSec = { ...c1, conf: c1.conf.map((c, t) => (c === 0 && t !== c1.conf.indexOf(0) ? 10 : c)) };
+  assert.ok(Conf.confIssues(d2, oneSec).some((x) => /title game/.test(x)));
+  const tooLate = { ...c1, start: c1.start.map((x, i) => (i === 0 ? 4 : x)) };
+  assert.ok(Conf.confIssues(d2, tooLate).some((x) => /run past week 11/.test(x)), '11 weeks');
+  const d3 = Conf.setConferences(d2, c1);
+  const s3 = d3.seasons[1];
+  assert.equal(weeksOf(s3.schedule), 11);
+  assert.deepEqual(checkSchedule(s3.schedule!, schoolList, s3.conf, '1994').broken, []);
+  const ps = at('Penn State');
+  const psSec = s3.schedule!.games.filter((x) => (x.visitor === ps || x.home === ps) && s3.conf[x.visitor === ps ? x.home : x.visitor] === 0).length;
+  assert.ok(psSec >= 7, `Penn State plays an SEC schedule (${psSec}; 13 teams: a bye in one of the 8 rounds)`);
+  const out3 = Off.seasonRom(d3, s3, rom, 1_800_000_100_000);
+  assert.deepEqual(readWideSeason(out3).conf, c1.conf);
+  assert.equal(out3[scheduleAddress(out3)! + 4], 11);
+  ok(`conferences: Penn State to the SEC (${psSec} SEC games), Notre Dame to the Big Ten, into the 1995 ROM; only the SEC needs 2 teams`);
+}
 
 console.log(`\n${passed} passed (${EDITIONS['1994'].name})`);

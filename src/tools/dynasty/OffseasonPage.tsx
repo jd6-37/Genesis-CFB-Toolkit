@@ -17,6 +17,7 @@ import { Recruiting } from './RecruitingPage';
 import { playerName } from '../../core/dynasty/derive';
 import { Headshot, TeamLink, hometownText, href, mainColor, onColor, useDyn } from './ui';
 import { ScheduleEditor } from './SchedulePage';
+import { ConferencesStep } from './ConferencesStep';
 import { EditLook, EditPlayer } from './EditPlayer';
 import { applyEdits, editLock } from '../../core/dynasty/edit';
 import { sideOf } from '../../core/dynasty/numbers';
@@ -37,12 +38,13 @@ export interface OffseasonActions {
  * The offseason's steps, the new season's last four included (user, 2026-11-13: "I think the schedule
  * should be a proper step in the offseason, not a secondary button at the end"; "this needs its own step in
  * offseason, at the end, after cuts, a proper edit players step"). The first six follow the offseason
- * state; the last four come once the new season is set up and can be visited in any order.
+ * state; the last five come once the new season is set up and can be visited in any order (Conferences: user,
+ * 2026-11-16, conferences.ts).
  */
-const STEPS = ['Projected depth chart', 'Players leaving', 'Transfer portal', 'Signing day and cuts', 'Training', 'Training results', 'Edit players', 'Depth chart', 'Schedule', 'Download the ROM'] as const;
+const STEPS = ['Projected depth chart', 'Players leaving', 'Transfer portal', 'Signing day and cuts', 'Training', 'Training results', 'Edit players', 'Depth chart', 'Conferences', 'Schedule', 'Download the ROM'] as const;
 const STEP_OF = { depth: 0, portal: 1, recruiting: 2, signing: 2, cuts: 3, ready: 5 } as const;
 const FIRST_SEASON_STEP = 6;
-const SEASON_STEPS = ['players', 'depth', 'schedule', 'rom'] as const;
+const SEASON_STEPS = ['players', 'depth', 'conferences', 'schedule', 'rom'] as const;
 type SeasonStep = typeof SEASON_STEPS[number];
 const stepList = (full: boolean, links: boolean) => STEPS.map((label, i) => ({
   label: i === 2 && full ? 'Recruiting' : label,
@@ -160,7 +162,7 @@ export function Offseason({ actions, busy, arg }: { actions: OffseasonActions; b
     return (
       <section className={startedNew ? 'dy-off dy-off-wide' : 'dy-off'}>
         <PageHead title={startedNew ? `Offseason ${season.year - 1}` : 'Offseason'} />
-        {startedNew ? <SeasonSteps actions={actions} step={(SEASON_STEPS as readonly string[]).includes(arg ?? '') ? (arg as SeasonStep) : 'players'} /> : (
+        {startedNew ? <SeasonSteps actions={actions} busy={!!busy} step={(SEASON_STEPS as readonly string[]).includes(arg ?? '') ? (arg as SeasonStep) : 'players'} /> : (
           <>
             <p>
               {done
@@ -238,7 +240,7 @@ export function Offseason({ actions, busy, arg }: { actions: OffseasonActions; b
             busy={busy}
             label={`Next: set up the ${st.year + 1} season`}
             onClick={() => actions.run('Setting the depth charts…', async () => {
-              await actions.commit(finishOffseason(d), `The ${st.year + 1} season is set up. Four steps are left: your players' numbers and looks, your depth chart, your schedule and the ROM.`);
+              await actions.commit(finishOffseason(d), `The ${st.year + 1} season is set up. Five steps are left: your players' numbers and looks, your depth chart, the conferences, your schedule and the ROM.`);
             })}
           />
         </>
@@ -575,11 +577,11 @@ function TrainingStep({ actions, busy }: { actions: OffseasonActions; busy: stri
 }
 
 /**
- * The new season's four steps (Edit players first) (user, 2026-11-13: the schedule "should be a proper step in the offseason"):
- * the depth chart, the schedule, the ROM. The season is set up already, so they can be visited in any
+ * The new season's five steps (Edit players first) (user, 2026-11-13: the schedule "should be a proper step in the offseason"):
+ * the depth chart, the conferences (user, 2026-11-16), the schedule, the ROM. The season is set up already, so they can be visited in any
  * order; each has a button to the next.
  */
-function SeasonSteps({ actions, step }: { actions: OffseasonActions; step: SeasonStep }) {
+function SeasonSteps({ actions, step, busy }: { actions: OffseasonActions; step: SeasonStep; busy: boolean }) {
   const { d } = useDyn();
   const season = d.seasons[d.seasons.length - 1];
   const [team, setTeam] = useState(d.userTeams[0]);
@@ -609,12 +611,13 @@ function SeasonSteps({ actions, step }: { actions: OffseasonActions; step: Seaso
           </>
         )}
         <div className="dy-row dy-next">
-          <Button href={href('offseason/schedule')}>Next: the schedule</Button>
+          <Button href={href('offseason/conferences')}>Next: the conferences</Button>
           {team !== undefined && <Button variant="quiet" href={href(`team/${team}`)}>Change the depth chart</Button>}
         </div>
       </>
     );
   }
+  if (step === 'conferences') return <>{steps}<ConferencesStep commit={actions.commit} busy={busy} /></>;
   if (step === 'schedule') {
     return (
       <>
@@ -630,7 +633,7 @@ function SeasonSteps({ actions, step }: { actions: OffseasonActions; step: Seaso
       <SubHead>Download the {season.year} ROM</SubHead>
       <p>The {season.year} season is set up. Download its ROM and start a <b>New Season</b> in the game with it: it has the new rosters{season.schedule ? ' and your schedule' : ''}, and the app can only import saves of seasons started with it. Import the save after you play.</p>
       {season.romDownloaded && !season.lineupEdited && <Note kind="ok">You have downloaded the {season.year} ROM. Start a New Season in the game with it.</Note>}
-      {season.romDownloaded && season.lineupEdited && <Note>You changed the schedule or the depth chart after downloading. Download the ROM again before you start the New Season.</Note>}
+      {season.romDownloaded && season.lineupEdited && <Note>You changed the schedule, the conferences or the depth chart after downloading. Download the ROM again before you start the New Season.</Note>}
       <div className="dy-row dy-next">
         <Button onClick={() => actions.downloadRom(season.year)}>Download the {season.year} ROM</Button>
         <Button variant="quiet" href={href('offseason/depth')}>Back to the depth chart</Button>

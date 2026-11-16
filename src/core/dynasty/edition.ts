@@ -7,6 +7,7 @@
 // 1994 Season Edition (v2.0.1-test29 on): 107 teams, save mark 0x94, format 0x0001006B, 11 weeks, the 19 bowls
 //   of 1994 (the No. 1 team in the final poll is the champion); rosters straight from the ROM, backups generated.
 
+import { RULES_2026, type ConfRules } from '../seasonWide';
 import { teamsOf } from '../wide';
 
 export type EditionId = '2026' | '1994';
@@ -23,11 +24,13 @@ export interface Edition {
   /** Regular-season weeks of a Random schedule. */
   regWeeks: number;
   postseason: 'cfp' | 'bowls';
+  /** What the season engine needs of the conferences (seasonWide.ts): the weeks, and which conferences play a title game. */
+  confRules: ConfRules;
 }
 
 export const EDITIONS: Record<EditionId, Edition> = {
-  '2026': { id: '2026', name: '2026 Season Edition', teams: 138, startYear: 2026, saveSig: 0x6f, regWeeks: 12, postseason: 'cfp' },
-  '1994': { id: '1994', name: '1994 Season Edition', teams: 107, startYear: 1994, saveSig: 0x94, regWeeks: 11, postseason: 'bowls' },
+  '2026': { id: '2026', name: '2026 Season Edition', teams: 138, startYear: 2026, saveSig: 0x6f, regWeeks: 12, postseason: 'cfp', confRules: RULES_2026 },
+  '1994': { id: '1994', name: '1994 Season Edition', teams: 107, startYear: 1994, saveSig: 0x94, regWeeks: 11, postseason: 'bowls', confRules: { weeks: 11, titleGames: [0] } },
 };
 
 /** The edition of a ROM by its team count, or null (not a dynasty edition). */
