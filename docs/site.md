@@ -1,6 +1,6 @@
 # The site
 
-The Bill Walsh '95 Elevated website: the homepage (`/`), the manual (`/manual`) and Insights (`/insights`). The Mod Toolkit and Dynasty are at `/toolkit` and `/dynasty` (`app.html`).
+The Bill Walsh '95 Elevated website: the homepage (`/`), the manual (`/manual`) and Insights (`/insights`). The Mod Toolkit and Dynasty are at `/toolkit` and `/dynasty` (`app.html`; `vercel.json` rewrites both to `/app`, not `/app.html`: with `cleanUrls` on, a rewrite to `/app.html` answers 404).
 
 ## How it's built
 
