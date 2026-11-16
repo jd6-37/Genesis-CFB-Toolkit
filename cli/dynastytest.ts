@@ -3,6 +3,7 @@
 // The ROM is the 138-team 2026 Season Edition with the dynasty support (Elevated v2.0.1-test9 or later). The
 // save is a Genesis Plus GX (RetroArch) .srm of the 138-team edition with a season started and at least one week
 // played; the test puts its dynasty's mark (the ID block New Season copies) into it.
+import { AP_2026_PRESEASON, VOTERS, pollSet, preseasonPoll } from '../src/core/dynasty/poll';
 import { setSim } from '../src/core/dynasty/seasonSim';
 import { SIM_DEFAULTS, readSimSettings, simForRom } from '../src/core/simSettings';
 import { careerRecords, teamRecords } from '../src/core/dynasty/records';
@@ -37,7 +38,7 @@ import * as Conf from '../src/core/dynasty/conferences';
 import { rivalriesOf, rivalryIssues, setRivalries } from '../src/core/dynasty/schedule';
 import type { Rivalry } from '../src/core/dynasty/rivalries';
 import { readTitleGames, readWideSeason } from '../src/core/seasonWide';
-import { gameText, dynastyAreaProblem, dynastyHeaderValid, dynastyRomId, DYN_AREA, DYN_END, fineAddress, hasDynastyHooks, readStamp, scheduleAddress } from '../src/core/dynasty/dynastyArea';
+import { gameText, dynastyAreaProblem, dynastyHeaderValid, dynastyRomId, DYN_AREA, DYN_END, fineAddress, hasDynastyHooks, readStamp, scheduleAddress, readPollSet, POLL_AT } from '../src/core/dynasty/dynastyArea';
 import { simFromOvr } from '../src/core/teamRatings';
 import { parseCsv } from '../src/core/rosterSheet';
 import { rosterLayout } from '../src/core/rosterLayouts';
@@ -908,6 +909,33 @@ for (let t = 0; t < 138; t++) {
 }
 assert.deepEqual(readStamp(rom2.subarray(DYN_AREA, DYN_AREA + 16))!.season, 2);
 ok('season rosters written to the dynasty area and read back');
+
+// The preseason poll (user, 2026-11-16: "let's make rankings in the app"): every team once, by points; the same every
+// time; in the season ROM's dynasty area ("PRE1" at header +0x30). The first season's is the real 2026 AP poll the ROM
+// sets (test35 on; the ROM lane's H-017 reply), shown without points and not written.
+{
+  const p1 = preseasonPoll(d0, first)!;
+  assert.deepEqual(p1.slice(0, AP_2026_PRESEASON.length).map((p) => d0.teams[p.team].school), AP_2026_PRESEASON, 'every AP school found, in order');
+  assert.ok(p1.every((p) => p.real && p.points === 0));
+  assert.equal(new Set(p1.map((p) => p.team)).size, 138);
+  assert.equal(readPollSet(Off.seasonRom(d0, first, rom)), null);
+  const poll = preseasonPoll(o5, next)!;
+  assert.equal(poll.length, 138);
+  assert.deepEqual(new Set(poll.map((p) => p.team)).size, 138);
+  assert.deepEqual(poll.map((p) => p.rank), poll.map((_, k) => k + 1));
+  for (let k = 1; k < 138; k++) assert.ok(poll[k - 1].points >= poll[k].points, 'by points');
+  assert.equal(poll.reduce((a, p) => a + p.points, 0), VOTERS * 325, 'all 62 ballots counted');
+  assert.equal(poll.reduce((a, p) => a + p.firstVotes, 0), VOTERS);
+  assert.deepEqual(preseasonPoll(o5, next), poll, 'the same every time');
+  const top = poll.slice(0, 25);
+  const avgOvr = (l: typeof poll) => l.reduce((a, p) => a + p.ovr, 0) / l.length;
+  assert.ok(avgOvr(top) > avgOvr(poll.slice(50)) + 5, 'the Top 25 is rated well above the rest');
+  assert.ok(top.filter((p) => p.lastRank !== null && p.lastRank <= 25).length >= 10, 'most of last year\'s Top 25 stay');
+  assert.deepEqual(readPollSet(rom2), pollSet(poll));
+  assert.equal(u32at(rom2, DYN_AREA + POLL_AT), DYN_AREA + 0x4c00);
+  if (process.env.POLL) console.log(poll.slice(0, 30).map((p) => `${p.rank}. ${o5.teams[p.team].school} ${p.points} (${p.firstVotes}) ovr ${p.ovr.toFixed(1)} last ${p.lastRank} ret ${p.returning} pres ${p.prestige}`).join('\n'));
+  ok(`preseason poll: 138 teams by 62 ballots (No. 1 ${o5.teams[poll[0].team].school}, ${poll[0].firstVotes} first-place votes), in the season ROM`);
+}
 
 // Schedules from the second season (user, 2026-11-12: "Generate each year, and then the user can edit";
 // "keep protected rivalries"): the game's Random rules, every protected rivalry in, the finales in the last week.

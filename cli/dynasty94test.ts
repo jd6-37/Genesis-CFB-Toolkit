@@ -3,6 +3,8 @@
 // The ROM is the 107-team 1994 Season Edition (Elevated v2.0.1-test29 or later). The save is a Genesis Plus GX
 // (RetroArch) .srm of it with a season started and at least one week played (a whole season, bowls included,
 // also tests the champion and the bowl stories); the test puts its dynasty's mark into it.
+import { preseasonPoll } from '../src/core/dynasty/poll';
+import { AP_1994_PRESEASON } from '../src/core/dynasty/prestige';
 import { teamOvrs1994 } from '../src/core/dynasty/teamOvr94';
 import { hasSimSettings } from '../src/core/simSettings';
 import { readFileSync } from 'node:fs';
@@ -315,6 +317,14 @@ ok(`offseason: ${d2.players.filter((p) => p.status === 'active').length} players
     assert.ok(Math.max(...off) <= 1 && off.filter((x) => x).length <= 5, `test36 on: ${off.filter((x) => x).length} teams differ`);
     ok(`team OVRs from the rosters: the ROM's ${off.filter((x) => x === 0).length} of 107 exactly, the rest within 1`);
   } else ok('team OVRs: a ROM before test36 (its OVRs are not from the rosters; not compared)');
+}
+
+// The first season's preseason poll: the real 1994 AP poll the ROM sets (POLL94), without points; later seasons the app's.
+{
+  const p1 = preseasonPoll(d0, d0.seasons[0])!;
+  assert.deepEqual(p1.slice(0, AP_1994_PRESEASON.length).map((p) => d0.teams[p.team].school), AP_1994_PRESEASON, 'every AP school found, in order');
+  assert.ok(p1.every((p) => p.real) && p1.length === 107);
+  ok(`first season's poll: the real 1994 AP poll (No. 1 ${d0.teams[p1[0].team].school}), then the rest by OVR`);
 }
 
 console.log(`\n${passed} passed (${EDITIONS['1994'].name})`);

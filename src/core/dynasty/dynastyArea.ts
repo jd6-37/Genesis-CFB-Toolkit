@@ -18,6 +18,10 @@
 //   +0x28 season schedule (long; 0xFFFFFFFF = none, the first season): "SCH1", weeks (byte), then per week a
 //         game count (byte) and visitor/home team bytes, like the real 2026 table (REALTAB). Needs ROM support:
 //         New Season plays it instead of making a Random one or copying the real 2026 schedule.
+//   +0x2C reserved (the ROM lane expects to use it for the impact-player picks).
+//   +0x30 season preseason poll (long; 0xFFFFFFFF = none, the first season; poll.ts): "PRE1", count (word, every
+//         team), then per place from No. 1: team (byte), first-place votes (byte), points (word). Needs ROM support
+//         (H-017): New Season starts from this order, points and votes instead of its own preseason vote.
 // Season mode reads the sets when +0 is "DYN1" and the long at +0x10 is 0x0001008A (1994: 0x0001006B);
 // Exhibition keeps the ROM's own data. New Season copies the ID block into the save (the season block's +0x1330), so an
 // imported save says which dynasty and season it belongs to.
@@ -44,6 +48,8 @@ const SIMS = OVRS + 0x200; // 0x3E4800
 const NAMES = DYN_AREA + 0x5000; // 0x3E5000
 const FINE = 0x3fb000; // "FRC1" + 13,248 bytes
 const SCHEDULE = 0x3ff000; // up to 4 KB (12 weeks of 69 games: 1,673 bytes)
+const POLL = DYN_AREA + 0x4c00; // 0x3E4C00: "PRE1" + 2 + 138 × 4 = 558 bytes, before the names at 0x3E5000
+export const POLL_AT = 0x30;
 
 const u32 = (d: Uint8Array, a: number) => ((d[a] << 24) >>> 0) + (d[a + 1] << 16) + (d[a + 2] << 8) + d[a + 3];
 const u16 = (d: Uint8Array, a: number) => (d[a] << 8) | d[a + 1];
@@ -142,6 +148,8 @@ export interface DynastyAreaData {
   fine?: Uint8Array;
   /** The season's schedule set (schedule.ts `scheduleSet`), from the second season. */
   schedule?: Uint8Array;
+  /** The season's preseason poll (poll.ts `pollSet`), from the second season: every team, No. 1 first. */
+  poll?: { team: number; points: number; firstVotes: number }[];
 }
 
 /** Writes the dynasty area (in place); check dynastyAreaProblem first. */
@@ -182,6 +190,19 @@ export function writeDynastyArea(d: Uint8Array, data: DynastyAreaData): void {
     put32(d, DYN_AREA + 0x28, SCHEDULE);
   }
   // The ID block last.
+  if (data.poll) {
+    if (data.poll.length !== teams || new Set(data.poll.map((p) => p.team)).size !== teams || data.poll.some((p) => p.team < 0 || p.team >= teams)) {
+      throw new Error(`The preseason poll must rank each of the ${teams} teams once.`);
+    }
+    d.set([0x50, 0x52, 0x45, 0x31], POLL); // PRE1
+    put16(d, POLL + 4, teams);
+    data.poll.forEach((p, k) => {
+      d[POLL + 6 + 4 * k] = p.team;
+      d[POLL + 7 + 4 * k] = Math.max(0, Math.min(255, p.firstVotes));
+      put16(d, POLL + 8 + 4 * k, Math.max(0, Math.min(0xffff, p.points)));
+    });
+    put32(d, DYN_AREA + POLL_AT, POLL);
+  }
   const s = data.stamp;
   put32(d, DYN_AREA + 4, s.dynasty);
   put16(d, DYN_AREA + 8, s.season);
@@ -207,4 +228,13 @@ export function readNamesTable(d: Uint8Array, teams: number, at = 0x2c0000): (Dy
     }
     return row;
   });
+}
+
+/** The preseason poll in a season ROM's dynasty area, or null. */
+export function readPollSet(d: Uint8Array): { team: number; points: number; firstVotes: number }[] | null {
+  const at = u32(d, DYN_AREA + POLL_AT);
+  if (at === 0xffffffff || at < DYN_AREA || at + 6 > DYN_END) return null;
+  if (![0x50, 0x52, 0x45, 0x31].every((b, k) => d[at + k] === b)) return null;
+  const n = u16(d, at + 4);
+  return Array.from({ length: n }, (_, k) => ({ team: d[at + 6 + 4 * k], firstVotes: d[at + 7 + 4 * k], points: u16(d, at + 8 + 4 * k) }));
 }

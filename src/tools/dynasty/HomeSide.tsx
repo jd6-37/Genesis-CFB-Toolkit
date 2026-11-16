@@ -8,6 +8,7 @@ import { bowlOf, bowlWeek, INDEPENDENT, leaders, playerLines, playerName, standi
 import { bigGames, heismanWatch, playoffPicture } from '../../core/dynasty/outlook';
 import { classRankings, STAR_POINTS } from '../../core/dynasty/offseason';
 import { TeamLink, href, playerOf, recordText, useDyn } from './ui';
+import { preseasonPoll } from '../../core/dynasty/poll';
 
 export function SeasonSide() {
   const { d, v } = useDyn();
@@ -48,8 +49,20 @@ export function OffseasonSide() {
 /** Before the first game of a season: the classes it signed. */
 function PreseasonClasses() {
   const { d, v } = useDyn();
-  if (d.offseason || v.save || !v.season.events) return null;
-  return <ClassRankings events={v.season.events} />;
+  if (d.offseason || v.save) return null;
+  const poll = preseasonPoll(d, v.season);
+  return (
+    <>
+      {poll && (
+        <section>
+          <SubHead level={2}>Preseason Top 25</SubHead>
+          <PreseasonTop25 compact />
+          {!poll[0]?.real && <p className="dy-small"><a href={href('rankings')}>Points and last year's finish</a></p>}
+        </section>
+      )}
+      {v.season.events && <ClassRankings events={v.season.events} />}
+    </>
+  );
 }
 
 function PlayerLink({ id }: { id: number | null }) {
@@ -299,5 +312,24 @@ function ClassRankings({ events }: { events: Parameters<typeof classRankings>[0]
         ))}
       </ol>
     </section>
+  );
+}
+
+/** The preseason poll (poll.ts) before a season's first import: the real AP poll in the first season, the app's after. */
+export function PreseasonTop25({ compact = false }: { compact?: boolean }) {
+  const { d, v } = useDyn();
+  const poll = useMemo(() => preseasonPoll(d, v.season), [d, v.season]);
+  if (!poll) return null;
+  return (
+    <ol className={`dy-top25${compact ? ' dy-compact' : ''}`}>
+      {poll.slice(0, 25).map((p) => (
+        <li key={p.team}>
+          <span className="dy-top-n">{p.rank}</span>
+          <TeamLink team={p.team} rank={false} size={compact ? 20 : 48} />
+          {!p.real && <span className="dy-num">{p.points}{p.firstVotes > 0 && !compact ? ` (${p.firstVotes})` : ''}</span>}
+          {!compact && <span className="dy-move">{p.lastRank === null ? '' : p.lastRank <= 25 ? `Was No. ${p.lastRank}` : 'Was unranked'}</span>}
+        </li>
+      ))}
+    </ol>
   );
 }

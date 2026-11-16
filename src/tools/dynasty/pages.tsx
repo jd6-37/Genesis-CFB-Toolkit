@@ -11,7 +11,8 @@ import {
   INDEPENDENT, type PlayerLine, type StatCategory,
 } from '../../core/dynasty/derive';
 import { offseasonStories, stories, type Story } from '../../core/dynasty/news';
-import { OffseasonSide, SeasonMore, SeasonSide } from './HomeSide';
+import { preseasonPoll } from '../../core/dynasty/poll';
+import { OffseasonSide, PreseasonTop25, SeasonMore, SeasonSide } from './HomeSide';
 import { AddPlayer, EditLook, EditPlayer } from './EditPlayer';
 import { prestigeStars } from '../../core/dynasty/offseason';
 import { MAX_PRESTIGE } from '../../core/dynasty/prestige';
@@ -340,7 +341,30 @@ function Top25({ compact = false }: { compact?: boolean }) {
 }
 
 export function Rankings() {
-  const { v } = useDyn();
+  const { d, v } = useDyn();
+  const poll = v.save ? null : preseasonPoll(d, v.season);
+  if (poll?.[0]?.real) {
+    return (
+      <section>
+        <PageHead title="Preseason Top 25">
+          The real {v.season.year} preseason AP poll. The game starts the season from it.
+        </PageHead>
+        <PreseasonTop25 />
+      </section>
+    );
+  }
+  if (poll) {
+    return (
+      <section>
+        <PageHead title="Preseason Top 25">
+          {v.season.year} preseason poll: 62 voters, 25 points for a first-place vote down to 1 for 25th; first-place votes in
+          brackets; "Was" is last season's final poll. It comes from each team's rating, last season's finish, its returning starters and its prestige, and the
+          season ROM starts the game's poll from it.
+        </PageHead>
+        <PreseasonTop25 />
+      </section>
+    );
+  }
   if (!v.save) return <NoResults />;
   return (
     <section>
