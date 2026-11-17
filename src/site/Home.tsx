@@ -144,9 +144,15 @@ const FEATURES: { title: string; body: ReactNode; controls?: [GlyphKey[], string
   },
   {
     title: 'Throw to five receivers',
-    body: "With a 6-button pad, X throws to the 4th receiver and Y to the 5th. Hold Y before the snap to see the play's diagram and which button throws to each receiver. With a 3-button pad, passing works as in the original game.",
-    controls: [[['C'], 'Bring up the receiver icons'], [['X', 'Y'], 'Throw to receiver 4 or 5'], [['Y'], "Hold before the snap: the play's diagram and each receiver's button"]],
+    body: "With a 6-button pad, X throws to the 4th receiver and Y to the 5th. Hold X before the snap to see the play's diagram and which button throws to each receiver. With a 3-button pad, passing works as in the original game.",
+    controls: [[['C'], 'Bring up the receiver icons'], [['X', 'Y'], 'Throw to receiver 4 or 5'], [['X'], "Hold before the snap: the play's diagram and each receiver's button"]],
     media: { src: M('xy-passing.png'), alt: 'A pass play with the A, B, C, X and Y receiver icons' },
+  },
+  {
+    title: 'Hot routes and the speed option',
+    body: "Before the snap, press Y, then a receiver's button, then a direction to change his route: streak, out, slant or curl, or Y for a drag and C to block. Backs get a wheel, swing, angle, check-release or screen. Hold X to see every receiver's route above his head. New option plays (a speed option in five formations, and the Near and Far sweeps) let you keep the ball or pitch it with C. Backs in motion run out to the slot, and you can send several players in motion, one after another.",
+    controls: [[['Y'], 'Open the hot route menu'], [['A', 'B', 'C'], "Then the receiver's button (or X, Y)"], [['dpad'], 'Then his route'], [['Z'], 'Cancel'], [['X'], 'Hold: every route']],
+    media: { src: M('manual/presnap-offense.png'), alt: "X held before the snap: the play art top right, each receiver's button and number at his feet and his route above his head" },
   },
   {
     title: 'New formations and plays',

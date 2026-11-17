@@ -30,6 +30,12 @@ The first two rows are new in Elevated <New />: **Singleback, SB 3WR, SB 4WR, Pi
 - **RPO:** the quarterback keeps the ball and rolls out right to pass. If you press <Btn k="B" /> within about a second of the snap, he pitches to the halfback instead.
 - **HB SWING:** the halfback runs across in front of the quarterback, then up the sideline.
 
+**Speed option** <New />: SINGLEBACK, TRIPS, SB 4WR, 4 WR and SHOTGUN 2RB each have a SPEED OPT. play (in place of an HB toss or trap). The quarterback runs the option to the right with the halfback as the pitch man; with Flip Play it goes left. Your quarterback keeps the ball unless you press <Btn k="C" />, which pitches. A CPU quarterback pitches about half the time.
+
+**Option sweeps** <New />: NEAR's HB TS. SWEEP and FAR's HB TOSS SWP. run the same way as before, but they are options now: the quarterback keeps the ball unless you press <Btn k="C" /> to pitch.
+
+**Flip Play** keeps the offensive line on its side <New />: the backs and receivers swap sides, and the five linemen stay where they are and block the mirrored play.
+
 ## Before the snap
 
 <Controls rows={[
@@ -38,15 +44,47 @@ The first two rows are new in Elevated <New />: **Singleback, SB 3WR, SB 4WR, Pi
   [['A', 'X'], 'Flip the play at the line: everyone runs to his mirrored spot', 'new six'],
   [['up', 'down'], 'Pick a back or receiver to send in motion; a marker shows under him', 'new'],
   [['left', 'right'], 'Send him in motion; press the other way to bring him back', 'new'],
-  [['Y'], 'Hold: the play’s diagram, and each receiver’s button and jersey number', 'new six'],
   [['Z'], 'Hold: energy bars over every player', 'new six'],
+]} />
+
+<Controls rows={[
+  [['X'], 'Hold: each receiver’s button, jersey number and route above his head, and the play’s diagram', 'new six'],
+  [['Y'], 'Hot route menu (pass plays)', 'new six'],
 ]} />
 
 **Motion** <New />: press toward the middle of the field and he goes in motion across the formation. Press toward the sideline and he takes a short motion toward it. Defenders in man coverage follow him. The last player on the line (a tight end or split end) can also go in motion, if a receiver who is off the line on his side can step up to take his place.
 
+**More motions** <New />:
+- A back goes out to the slot on the side you press: up to the slot's depth first, then over (a small step aside first if the quarterback or another back is in his way). If a receiver already stands in the slot, the back goes to the wing, just outside the tight end or tackle. If both are taken, he takes the short motion.
+- The I-Form fullback takes a short shift to the side you press, at his depth.
+- A tight end on the line sent toward the sideline goes to the slot on his side, and the receiver outside him steps up to the line.
+- **Several motions in a row:** once the man in motion has stopped (at the end of his motion, or back on his spot), up and down pick the next man, or the same one again. Only one man moves at a time.
+- Goal Line and Tee formations have no motion, and the ball carrier can't go in motion.
+
 **Audibles:** each team has three. Set yours on the pause menu or in the pregame.
 
-<Shot src="/media/manual/presnap-offense.png" alt="Y held before the snap: the play art and the receiver icons with their numbers" caption="Hold Y before the snap: the play's diagram, and each receiver's button and jersey number." />
+<Shot src="/media/manual/presnap-offense.png" alt="X held before the snap: the play art top right, each receiver's button and number at his feet and his route above his head" caption="Hold X before the snap: the play's diagram, and each receiver's button, jersey number and route." />
+
+## Hot routes
+
+<Six /> <New /> Before the snap on a pass play, you can change one receiver's route:
+
+1. Press <Btn k="Y" />. "Hot Route" and "Z = CANCEL" show at the top right, and every receiver shows his button, number and route.
+2. Press the receiver's button: <Btn k="A" />, <Btn k="B" />, <Btn k="C" />, <Btn k="X" /> or <Btn k="Y" />. Only he stays marked.
+3. Pick his route:
+
+| Press | Receiver or tight end | Back in the backfield |
+|---|---|---|
+| Up | Streak | Wheel |
+| Toward his sideline | Out | Swing |
+| Toward the middle | Slant | Angle |
+| Down | Curl | Check-release (waits, then runs to the flat) |
+| <Btn k="Y" /> | Drag | Screen |
+| <Btn k="C" /> | Block | Block |
+
+<Btn k="Z" /> cancels at either step. Picking the receiver's hot route again puts him back on the called route. Inside the 12-yard line the streak becomes a fade, and the out and the curl break shorter. Flip Play and the flip at the line mirror hot routes; an audible or the next play clears them. Hold <Btn k="X" /> to check them: the route above each receiver shows his hot route, while the diagram top right still shows the called play. While the menu is open, the other buttons and the snap do nothing.
+
+<Shot src="/media/manual/hot-route-menu.png" alt="The top right of the screen with the hot route menu open: Hot Route, Z = CANCEL" />
 
 ## Running
 
@@ -55,6 +93,7 @@ The ball carrier runs where you point the D-pad.
 <Controls rows={[
   [['B'], 'Tap: lower a shoulder and drive forward'],
   [['B'], 'Hold: spin'],
+  [['Y'], 'Hold: lower a shoulder again and again, with or without a direction', 'new six'],
   [['C'], 'Dive'],
   [['C'], 'Quarterback on an option play: pitch to the back'],
 ]} />
