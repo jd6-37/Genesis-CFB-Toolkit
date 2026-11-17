@@ -626,7 +626,7 @@ function Manage({ d, art, list, busy, note, actions }: {
           <section className="dy-panel" id="dy-m-files">
             <h2>Backup and files</h2>
             <h3>Dynasty file</h3>
-            <p>Your dynasty lives in this browser. Download it after each import to keep a backup or to move it to another computer.</p>
+            <p>Your dynasty is saved in this browser, so you don't need to open a file each time. Download it after each import: the file brings the dynasty back if the browser's data is cleared, and opens it in another browser or on another computer.</p>
             <div className="dy-row">
               <Button onClick={actions.exportFile}>Download dynasty file</Button>
               <span className="dy-small dy-dim">{d.backedUp ? `Last download: ${when(d.backedUp)}` : 'Not downloaded yet.'}</span>

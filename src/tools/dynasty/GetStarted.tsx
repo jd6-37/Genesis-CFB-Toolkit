@@ -218,8 +218,9 @@ export function SeasonGuide({ year, first, backup }: { year: number; /** The dyn
       <li>
         <h2>Import your save</h2>
         <p>
-          <strong>After the last game at the latest</strong> (the postseason included). During the season it's optional: import whenever you like to follow
-          scores, standings and stats here.
+          After just one week, played or simmed, you can import your save to start the headlines on the Home tab and the stats. You don't have
+          to import every week. <strong>The one save you need is the final one</strong>, after the last game of the postseason: import it before you
+          start a new season in the game.
         </p>
         <details className="dy-guide-more">
           <summary>Where's the save?</summary>
@@ -265,6 +266,15 @@ export function WhatsNext() {
   let title: string;
   let text: string;
   let action: ReactNode;
+  // The one import a season needs (user, 2026-11-17): the final save, before a new season is started in the game.
+  const lastGame = editionOf(d).id === '1994' ? 'the bowl games' : 'the championship game';
+  const finalSave = (
+    <>
+      You don't have to import every week. <strong>The one save you need is the final one</strong>, after {lastGame}: import it before you start a
+      new season in the game. Then run the offseason here and download the {s.year + 1} ROM for next season.
+    </>
+  );
+  let more: ReactNode = null;
   if (d.offseason) {
     label = `${d.offseason.year} offseason`;
     title = 'Finish the offseason';
@@ -283,12 +293,14 @@ export function WhatsNext() {
   } else if (!s.imports.length) {
     label = `${s.year} season`;
     title = `Play the ${s.year} season`;
-    text = `${d.seasons.length === 1 ? 'Play it on your ROM as it is.' : `Play it on the ${s.year} ROM.`} Import your save whenever you like to follow it here, after the last game at the latest.`;
+    text = `${d.seasons.length === 1 ? 'Play it on your ROM as it is.' : `Play it on the ${s.year} ROM.`} After just one week, played or simmed, you can import your save to start the headlines here and the stats.`;
+    more = finalSave;
     action = <Button href={href('manage')}>Import save</Button>;
   } else {
     label = `${s.year} season, ${weekName(v, v.currentWeek)} next`;
     title = 'Play on, then import your save';
-    text = 'Import after you play to update scores, standings and stats, or wait until the season ends. After the last game at the latest.';
+    text = `Import after any week, played or simmed, to update the headlines here, the scores, standings and stats.`;
+    more = finalSave;
     action = <Button href={href('manage')}>Import save</Button>;
   }
   const at = lastImport(d);
@@ -300,10 +312,11 @@ export function WhatsNext() {
         <p className="dy-next-label">{label}</p>
         <h3>{title}</h3>
         <p>{text}</p>
+        {more && <p>{more}</p>}
         <div className="dy-row">{action}{guide}</div>
         {needsBackup && backup && (
           <div className="dy-next-backup">
-            <p className="dy-small"><strong>No backup since the last import.</strong> Your dynasty lives in this browser only.</p>
+            <p className="dy-small"><strong>No backup since the last import.</strong> Your dynasty is saved in this browser; the dynasty file brings it back if the browser's data is cleared.</p>
             <Button variant="quiet" onClick={backup}>Download dynasty file</Button>
           </div>
         )}
