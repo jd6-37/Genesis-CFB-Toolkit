@@ -23,6 +23,8 @@ export interface DynCtx {
   downloadRom: (year: number) => void;
   /** The user team picked in the masthead's team menu (with several teams), for pages that show one of them. */
   focus?: number;
+  /** Downloads the dynasty file (a backup) and remembers when. */
+  backup?: () => void;
 }
 
 /** The user team a page starts on: the one picked in the masthead's menu, else the first. */

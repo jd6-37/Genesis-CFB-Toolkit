@@ -1,5 +1,6 @@
 // The Dynasty's reading pages: the news front page, scores, standings, rankings, teams, players,
 // stat leaders and history.
+import { WhatsNext } from './GetStarted';
 import { playerHonors, seasonAwards } from '../../core/dynasty/awards';
 import { academicGrade } from '../../core/dynasty/academics';
 import { scheduleLock } from '../../core/dynasty/schedule';
@@ -127,12 +128,13 @@ export function Home() {
     () => (offEvents?.length ? offseasonStories(d, offEvents, d.offseason ? d.offseason.year : v.season.year - 1) : stories(d, v)),
     [d, v, offEvents],
   );
-  if (!list.length) return <NoResults />;
+  if (!list.length) return <WhatsNext />;
   const [lead, ...rest] = list;
   const second = rest.slice(0, 3);
   const heads = rest.slice(3);
   return (
     <>
+      <WhatsNext />
       {v.save && !d.offseason && <Ticker />}
       <div className="dy-front">
         <div className="dy-front-main">

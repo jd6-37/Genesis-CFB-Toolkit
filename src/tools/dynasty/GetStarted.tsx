@@ -1,0 +1,300 @@
+// Starting a dynasty step by step (Get started), the guide to a season (How a season works) and the home page's
+// What's next card. User, 2026-11-17: the creation note was "too much information in one alert banner"; "a better
+// step by step process for first time dynasty creation … When done then cta to link to the dynasty home page".
+// Mockups: the canvas "Dynasty Get started mockups" (approved: "build it").
+import { useContext, useState, type ReactNode } from 'react';
+import type { Dynasty } from '../../core/dynasty/model';
+import { EDITIONS, editionOf, type EditionId } from '../../core/dynasty/edition';
+import { weekName } from '../../core/dynasty/derive';
+import { seasonDone } from '../../core/dynasty/offseason';
+import { Button, Check, Field, FileButton, Note, Select, Steps, SubHead, Table } from '../../ui';
+import { Ctx, href } from './ui';
+
+/** A dynasty made from the user's ROM but not saved yet (Get started's step 1), with what goes into the browser with it. */
+export interface Prepared {
+  dyn: Dynasty;
+  rom: Uint8Array;
+  pics: unknown;
+  /** The ROM file's name (the version shows in it). */
+  fileName: string;
+}
+
+export interface StartActions {
+  /** Reads the ROM and makes the dynasty from it (throws with the reason when the ROM can't hold one). */
+  prepare: (rom: File) => Promise<Prepared>;
+  /** Applies the choices, saves the dynasty and opens it. */
+  finish: (p: Prepared, o: { name: string; teams: number[]; generated: boolean; coachSim: boolean }) => Promise<Dynasty>;
+  /** Downloads the dynasty file (and remembers when). */
+  exportFile: (d: Dynasty) => void;
+}
+
+const STEPS = ['ROM', 'Dynasty', 'Options', 'Play'];
+
+/** Where the backups start, by edition (also on Manage). */
+export const benchSource = (id: EditionId) =>
+  id === '1994' ? 'real players from the 1994 rosters (their ratings are generated)' : 'the next-best real players (CFB 27)';
+
+/** "v2.0.1-test50" from a ROM file's name, if it has one. */
+const versionOf = (fileName: string) => fileName.match(/v\d+\.\d+\.\d+(?:-test\d+)?/)?.[0];
+
+export function GetStarted({ actions, busy }: { actions: StartActions; busy: boolean }) {
+  const [step, setStep] = useState(0);
+  const [prep, setPrep] = useState<Prepared | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [working, setWorking] = useState<string | null>(null);
+  const [name, setName] = useState('');
+  const [teams, setTeams] = useState<number[]>([]);
+  const [addTeam, setAddTeam] = useState('');
+  const [generated, setGenerated] = useState(false);
+  const [coachSim, setCoachSim] = useState(false);
+  const [made, setMade] = useState<Dynasty | null>(null);
+
+  const go = (n: number) => { setStep(n); window.scrollTo(0, 0); };
+  const work = async (what: string, fn: () => Promise<void>) => {
+    setWorking(what);
+    setError(null);
+    try { await fn(); } catch (e) { setError((e as Error).message); } finally { setWorking(null); }
+  };
+  const dyn = prep?.dyn;
+  const edition = dyn ? editionOf(dyn) : null;
+  const off = busy || !!working;
+
+  return (
+    <div className="dy-start">
+      <Steps label="Start a dynasty" steps={STEPS.map((label) => ({ label }))} current={step} />
+      {working && <Note>{working}</Note>}
+      {error && <Note kind="error">{error}</Note>}
+
+      {step === 0 && (
+        <section>
+          <h1>Load your ROM</h1>
+          <p>
+            A dynasty needs Bill Walsh '95 Elevated: the {EDITIONS['2026'].name} (v2.0.1-test9 or later) or the {EDITIONS['1994'].name} (v2.0.1-test29
+            or later). The ROM stays in this browser. Nothing is uploaded.
+          </p>
+          {!dyn ? (
+            <div className="dy-start-drop">
+              <FileButton label="Choose ROM" accept=".md,.bin,.gen,.zip" disabled={off} onFile={(f) => work('Reading the ROM…', async () => setPrep(await actions.prepare(f)))} />
+              <p className="dy-small dy-dim">.md, .bin, .gen or .zip</p>
+            </div>
+          ) : (
+            <>
+              <div className="dy-start-found">
+                <p><strong>{edition!.name}{versionOf(prep!.fileName) ? `, ${versionOf(prep!.fileName)}` : ''}</strong></p>
+                <p className="dy-small dy-dim">{prep!.fileName}</p>
+                <p className="dy-small">
+                  {dyn.teams.length} teams, {dyn.players.length.toLocaleString('en-US')} players.{' '}
+                  {edition!.id === '1994'
+                    ? 'Players start from the ROM\'s rosters; each team\'s backups are real 1994 players.'
+                    : 'Players start from the built-in CFB 27 rosters; redshirted players start one class up.'}
+                </p>
+              </div>
+              <div className="dy-row">
+                <Button onClick={() => go(1)}>Next: name it</Button>
+                <Button variant="quiet" onClick={() => { setPrep(null); setTeams([]); }}>Choose another ROM</Button>
+              </div>
+            </>
+          )}
+        </section>
+      )}
+
+      {step === 1 && dyn && (
+        <section>
+          <h1>Name it and pick your teams</h1>
+          <Field label="Dynasty name" value={name} onChange={setName} placeholder="My Dynasty" maxLength={40} />
+          <h2>Your teams</h2>
+          <p className="dy-small dy-dim">The teams you play as. The game's save marks them too, so you can skip this and add teams later on Manage.</p>
+          {teams.length > 0 && (
+            <ul className="dy-chips">
+              {teams.map((t) => (
+                <li key={t}>
+                  {dyn.teams[t].school}
+                  <button type="button" aria-label={`Remove ${dyn.teams[t].school}`} onClick={() => setTeams(teams.filter((x) => x !== t))}>Remove</button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="dy-row">
+            <Select
+              label="Team to add" hideLabel value={addTeam}
+              options={[
+                { value: '', label: 'Choose a team' },
+                ...dyn.teams.filter((t) => !teams.includes(t.index)).sort((a, b) => a.school.localeCompare(b.school)).map((t) => ({ value: t.index, label: t.school })),
+              ]}
+              onChange={setAddTeam}
+            />
+            <Button variant="quiet" disabled={addTeam === ''} onClick={() => { setTeams([...teams, Number(addTeam)]); setAddTeam(''); }}>Add team</Button>
+          </div>
+          <div className="dy-row dy-start-nav">
+            <Button variant="quiet" onClick={() => go(0)}>Back</Button>
+            <Button onClick={() => go(2)}>Next: options</Button>
+          </div>
+        </section>
+      )}
+
+      {step === 2 && dyn && (
+        <section>
+          <h1>Options</h1>
+          <p className="dy-dim">All of these can be changed later on Manage.</p>
+          <fieldset className="dy-start-choice">
+            <legend>Backups</legend>
+            <p className="dy-small dy-dim">Every team has a backup for each of the 32 players on its Active Roster. A backup moves up when a spot opens.</p>
+            <label><input type="radio" name="dy-bench" checked={!generated} onChange={() => setGenerated(false)} /> <span><strong>Real players</strong><br /><span className="dy-small dy-dim">{benchSource(edition!.id).replace(/^./, (c) => c.toUpperCase())}.</span></span></label>
+            <label><input type="radio" name="dy-bench" checked={generated} onChange={() => setGenerated(true)} /> <span><strong>Generated players</strong><br /><span className="dy-small dy-dim">Made-up players instead of real ones.</span></span></label>
+          </fieldset>
+          <Check checked={coachSim} onChange={setCoachSim}><strong>Coaches affect the sim</strong></Check>
+          <p className="dy-small dy-dim dy-start-hint">In simulated games, a head coach better than the average adds 1 to his team's offense or defense OVR, a worse one takes 1 off. Off by default.</p>
+          <Note>More settings, for later: Offseason rules (spoilers) and the sim settings, both on Manage.</Note>
+          <div className="dy-row dy-start-nav">
+            <Button variant="quiet" onClick={() => go(1)}>Back</Button>
+            <Button disabled={off} onClick={() => work('Creating the dynasty…', async () => {
+              setMade(await actions.finish(prep!, { name, teams, generated, coachSim }));
+              go(3);
+            })}>Create dynasty</Button>
+          </div>
+        </section>
+      )}
+
+      {step === 3 && made && (
+        <section>
+          <Note kind="ok"><strong>{made.name} is ready:</strong> {made.players.length.toLocaleString('en-US')} players on {made.teams.length} teams.</Note>
+          <Renumbered d={made} />
+          <h1>How a season works</h1>
+          <SeasonGuide year={made.seasons[0].year} first backup={<Button variant="quiet" onClick={() => actions.exportFile(made)}>Download dynasty file</Button>} />
+          <div className="dy-start-go">
+            <Button href={href('home')} strong>Go to {made.name}</Button>
+            <p className="dy-small dy-dim">This guide stays on Manage, under "How a season works".</p>
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+/** The players renumbered at creation, closed until asked for (first season only: the next season's ROM has the new numbers). */
+export function Renumbered({ d }: { d: Dynasty }) {
+  const [show, setShow] = useState(false);
+  const list = d.renumbered;
+  if (!list?.length || d.seasons.length > 1 || d.offseason) return null;
+  const n = list.length;
+  return (
+    <div className="dy-renum">
+      <p>
+        <strong>{n} {n === 1 ? 'player got a new number' : 'players got new numbers'}.</strong> {n === 1 ? 'His' : 'Their'} number in the rosters file isn't allowed
+        at {n === 1 ? 'his' : 'their'} position in the game (a tight end in the 50s, say). Your ROM shows the old numbers this season; next season's ROM has the new ones.
+      </p>
+      <Button variant="quiet" onClick={() => setShow(!show)}>{show ? 'Hide the list' : n === 1 ? 'Show the player' : `Show the ${n} players`}</Button>
+      {show && (
+        <Table>
+          <thead><tr><th className="ui-left">Player</th><th className="ui-left">Team</th><th>Old</th><th>New</th></tr></thead>
+          <tbody>
+            {list.map((r, i) => (
+              <tr key={i}><td className="ui-left">{r.pos} {r.name}</td><td className="ui-left">{r.school}</td><td className="ui-num">{r.from}</td><td className="ui-num"><strong>{r.to}</strong></td></tr>
+            ))}
+          </tbody>
+        </Table>
+      )}
+    </div>
+  );
+}
+
+/** How a season works, in five steps (Get started's last step and its own page from Manage). */
+export function SeasonGuide({ year, first, backup }: { year: number; /** The dynasty's first season (played on the user's own ROM). */ first?: boolean; backup?: ReactNode }) {
+  return (
+    <ol className="dy-guide">
+      <li>
+        <h2>Play the {year} season{first ? ' on your ROM' : ` on the ${year} ROM`}</h2>
+        <p>
+          {first ? 'Play it as it is: the first season needs no download. ' : `The offseason gave you the ${year} ROM. `}
+          Use RetroArch's Genesis Plus GX core, start a new season in Season mode and choose your teams.
+        </p>
+      </li>
+      <li>
+        <h2>Import your save</h2>
+        <p>
+          <strong>After the last game at the latest</strong> (the postseason included). During the season it's optional: import whenever you like to follow
+          scores, standings and stats here.
+        </p>
+        <details className="dy-guide-more">
+          <summary>Where's the save?</summary>
+          <p>
+            It's the <code>.srm</code> file named like your ROM, in RetroArch's saves folder. To find the folder: RetroArch, Settings, Directory, Save Files.
+            The game writes it when you leave the game or close RetroArch.
+          </p>
+        </details>
+      </li>
+      <li>
+        <h2>Run the offseason</h2>
+        <p>The Offseason tab, one step at a time, from the coaching carousel to the Walsh Reports.</p>
+      </li>
+      <li>
+        <h2>Play next season on the new ROM</h2>
+        <p>The offseason ends with the {year + 1} ROM. Load it and start a new season in Season mode. A save from a season started on another ROM can't be imported.</p>
+      </li>
+      <li>
+        <h2>Keep a backup</h2>
+        <p>Your dynasty lives in this browser only. Download the dynasty file after each import; it also moves the dynasty to another computer.</p>
+        {backup && <div className="dy-row">{backup}</div>}
+      </li>
+    </ol>
+  );
+}
+
+/** The last import of the dynasty's latest season (ISO time), if any. */
+const lastImport = (d: Dynasty) => d.seasons[d.seasons.length - 1].imports.slice(-1)[0]?.at;
+
+/** The home page's card: what to do next, from where the dynasty is (user, 2026-11-17: "What else?" → approved mockup). */
+export function WhatsNext() {
+  const { d, v, downloadRom, backup } = useContext(Ctx)!;
+  const s = d.seasons[d.seasons.length - 1];
+  const guide = <a href={href('guide')} className="dy-small">How a season works</a>;
+  let label: string;
+  let title: string;
+  let text: string;
+  let action: ReactNode;
+  if (d.offseason) {
+    label = `${d.offseason.year} offseason`;
+    title = 'Finish the offseason';
+    text = `Go on where you left off. The offseason ends with the ${d.offseason.year + 1} ROM.`;
+    action = <Button href={href('offseason')}>Continue the offseason</Button>;
+  } else if (seasonDone(d)) {
+    label = `${s.year} season, over`;
+    title = 'Run the offseason';
+    text = `Every game is in. The offseason goes one step at a time, from the coaching carousel to the Walsh Reports, and ends with the ${s.year + 1} ROM.`;
+    action = <Button href={href('offseason')}>Start the offseason</Button>;
+  } else if (d.seasons.length > 1 && !s.romDownloaded && !s.imports.length) {
+    label = `${s.year} season, ready to start`;
+    title = `Download the ${s.year} ROM`;
+    text = 'Load it in RetroArch and start a new season in Season mode. A save from a season started on another ROM can\'t be imported.';
+    action = <Button onClick={() => downloadRom(s.year)}>Download the {s.year} ROM</Button>;
+  } else if (!s.imports.length) {
+    label = `${s.year} season`;
+    title = `Play the ${s.year} season`;
+    text = `${d.seasons.length === 1 ? 'Play it on your ROM as it is.' : `Play it on the ${s.year} ROM.`} Import your save whenever you like to follow it here, after the last game at the latest.`;
+    action = <Button href={href('manage')}>Import save</Button>;
+  } else {
+    label = `${s.year} season, ${weekName(v, v.currentWeek)} next`;
+    title = 'Play on, then import your save';
+    text = 'Import after you play to update scores, standings and stats, or wait until the season ends. After the last game at the latest.';
+    action = <Button href={href('manage')}>Import save</Button>;
+  }
+  const at = lastImport(d);
+  const needsBackup = !!at && (!d.backedUp || d.backedUp < at);
+  return (
+    <section className="dy-next" aria-labelledby="dy-next-h">
+      <SubHead level={2} id="dy-next-h">What's next</SubHead>
+      <div className="dy-next-body">
+        <p className="dy-next-label">{label}</p>
+        <h3>{title}</h3>
+        <p>{text}</p>
+        <div className="dy-row">{action}{guide}</div>
+        {needsBackup && backup && (
+          <div className="dy-next-backup">
+            <p className="dy-small"><strong>No backup since the last import.</strong> Your dynasty lives in this browser only.</p>
+            <Button variant="quiet" onClick={backup}>Download dynasty file</Button>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
