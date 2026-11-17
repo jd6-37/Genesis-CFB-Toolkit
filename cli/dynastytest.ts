@@ -14,6 +14,9 @@ import { careerRecords, teamRecords } from '../src/core/dynasty/records';
 import { checkSchedule, editSchedule, flipHome, moveGame, protectedPairs, remakeSchedule, SCHED_WEEKS, setOpponent, teamSchedule, type SchedGame } from '../src/core/dynasty/schedule';
 import { AWARD_SPOTS, AWARD_STATS_WEIGHT, POSITION_AWARDS, awardsOf, candidates, playerHonors, seasonAwards } from '../src/core/dynasty/awards';
 import { readFileSync, writeFileSync } from 'node:fs';
+import type { CoachData } from '../src/core/dynasty/coachData';
+import { withCoaches } from '../src/core/dynasty/coaches';
+import { hotSeat, tenure } from '../src/core/dynasty/carousel';
 import { basename } from 'node:path';
 import { strict as assert } from 'node:assert';
 import { openRom } from '../src/core/romfile';
@@ -218,6 +221,25 @@ for (const [t, sl] of first.slots.entries()) {
 }
 // Same inputs, same dynasty.
 assert.deepEqual(createDynasty(rom, csv, { name: 'Test', seed: 1, id: 'test', created: '2026-01-01T00:00:00.000Z' }), d0);
+// Another starting year (user, 2026-11-17: a 2027 dynasty on a ROM with 2027 rosters): the seasons count from it, the
+// real 2026 coaches come along (a year older), and the first season still starts from the ROM's real AP poll.
+{
+  const d27 = createDynasty(rom, csv, { name: 'Test', seed: 1, id: 'test27', created: '2026-01-01T00:00:00.000Z', startYear: 2027 });
+  assert.equal(d27.startYear, 2027);
+  assert.equal(d27.seasons[0].year, 2027);
+  const data = JSON.parse(readFileSync('public/data/coaches-2026.json', 'utf8')) as CoachData;
+  const c27 = withCoaches(d27, data);
+  assert.equal(c27.coachYear, 2026);
+  const c26 = withCoaches(d0, data);
+  assert.equal(c26.coachYear, undefined);
+  assert.deepEqual(c27.coaches!.map((x) => [x.name, x.team, x.born, x.ratings]), c26.coaches!.map((x) => [x.name, x.team, x.born, x.ratings]), 'the same coaches');
+  const smart = c27.coaches!.find((x) => x.name === 'Kirby Smart')!;
+  assert.equal(tenure(c27, smart, 0), tenure(c26, smart, 0), 'real seasons before the dynasty count the same');
+  assert.ok(tenure(c27, smart, 0) > 5);
+  assert.equal(hotSeat(c27, smart, 0), hotSeat(c26, smart, 0));
+  assert.deepEqual(preseasonPoll(c27, c27.seasons[0])!.slice(0, 25).map((e) => e.team), preseasonPoll(c26, c26.seasons[0])!.slice(0, 25).map((e) => e.team), 'the ROM\'s real poll');
+  ok('another starting year: seasons from 2027, the real 2026 coaches and poll');
+}
 // Team OVRs are the ROM's.
 assert.equal(first.teamOvr!.length, 138);
 first.teamOvr!.forEach((r, t) => assert.deepEqual(r, readRating(rom, t)));
