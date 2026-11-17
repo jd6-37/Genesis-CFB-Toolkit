@@ -225,11 +225,11 @@ export function SeasonGuide({ year, first, backup }: { year: number; /** The dyn
       </li>
       <li>
         <h2>Run the offseason</h2>
-        <p>The Offseason tab, one step at a time, from the coaching carousel to the Walsh Reports.</p>
+        <p>The Offseason tab, one step at a time. The heart of it is recruiting: weeks of scouting prospects, spending points, pitching your school and making offers, then signing day. Around it come the coaching carousel, players leaving, training, the depth chart, the schedule and the Walsh Reports.</p>
       </li>
       <li>
-        <h2>Play next season on the new ROM</h2>
-        <p>The offseason ends with the {year + 1} ROM. Load it and start a new season in Season mode. A save from a season started on another ROM can't be imported.</p>
+        <h2>Download the {year + 1} ROM and play it</h2>
+        <p>The offseason's last step, Download the ROM, gives you the new season's ROM. Download it, load it in RetroArch and start a new season in Season mode. Play on this ROM from now on: a save from a season started on another ROM can't be imported.</p>
       </li>
       <li>
         <h2>Keep a backup</h2>
@@ -260,7 +260,7 @@ export function WhatsNext() {
   } else if (seasonDone(d)) {
     label = `${s.year} season, over`;
     title = 'Run the offseason';
-    text = `Every game is in. The offseason goes one step at a time, from the coaching carousel to the Walsh Reports, and ends with the ${s.year + 1} ROM.`;
+    text = `Every game is in. The offseason goes one step at a time, with recruiting at its heart, and ends with the ${s.year + 1} ROM.`;
     action = <Button href={href('offseason')}>Start the offseason</Button>;
   } else if (d.seasons.length > 1 && !s.romDownloaded && !s.imports.length) {
     label = `${s.year} season, ready to start`;
