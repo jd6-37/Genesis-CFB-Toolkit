@@ -173,6 +173,11 @@ const FEATURES: { title: string; body: ReactNode; controls?: [KeyStep[], string]
     media: { src: M('flip-defense.png'), video: M('flip-defense.mp4'), alt: 'The offense flips at the line and the CPU defense realigns to match' },
   },
   {
+    title: 'Ratings from 0 to 99',
+    body: "The original game stores every rating in 16 steps, so a player's speed jumps from 90 to 96 with nothing between. Elevated adds 16 levels inside each step, and Team Rosters shows them from 0 to 99. Players one or two points apart now play differently, so two fast backs aren't the same back. In the Dynasty app, players improve a little each offseason instead of jumping a whole step at a time.",
+    media: { src: M('fine-ratings.png'), alt: 'Team Rosters for North Dakota State: speed 77, quickness 73, INTEL 67 and other ratings between the original steps' },
+  },
+  {
     title: 'Impact players',
     body: 'Every team has three impact players: its best players by position group, picked from the ratings. A white X under each one marks him all game, and Team Rosters shows a yellow dot next to his position. A hot streak puts an impact player in the zone: the X turns into a flame X, and his key ratings and awareness go up. A quarterback gets there with 4 completions in a row or a touchdown pass, a back with 3 runs of 4 yards or more in a row or a 15-yard run, a receiver with 3 catches on a drive or a 20-yard catch, a defender with a sack, a tackle for loss or an interception. A sack, an interception, a tackle for loss, a drop or a touchdown allowed knocks him out, and the zone lasts about 8 plays. CPU teams have impact players too. Both editions.',
     media: { src: M('manual/rosters-ratings.png'), alt: 'Team Rosters: the impact players have a yellow dot and a yellow position' },
@@ -198,7 +203,7 @@ const FEATURES: { title: string; body: ReactNode; controls?: [KeyStep[], string]
   },
   {
     title: 'Play recaps and milestones',
-    body: 'After each play, a recap names the players involved, with their jersey numbers. Banners appear for game milestones, such as a catch of 75 yards or more. Ranked teams show their Top 25 rank in the score box.',
+    body: 'Player names have been added alongside jersey numbers in the post-play recaps. Banners appear for game milestones, such as a catch of 75 yards or more. Ranked teams show their Top 25 rank in the score box.',
     media: { src: M('recap.png'), video: M('recap.mp4'), alt: 'A 75-yard touchdown pass, then the recap "Pass to #1 Derrick Mayes for 75 yards" and a "75+ Yard Catch" milestone banner' },
   },
   {
