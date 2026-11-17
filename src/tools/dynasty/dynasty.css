@@ -698,3 +698,4 @@
   .dy-start h1, .dy-manage-head h1 { font-size: var(--fs-7); }
   .dy-guide li { grid-template-columns: 56px minmax(0, 1fr); }
 }
+.dy-note-action { margin-top: var(--sp-3); }

@@ -2,7 +2,7 @@
 // own pages. Spec: docs/dynasty.md.
 import { TrainingResults } from './TrainingPage';
 import { Rules } from './RulesPage';
-import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { openRom } from '../../core/romfile';
 import { fetchCfb27Latest } from '../../core/cfb27Latest';
 import { createDynasty, DYNASTY_FILE, importSave, OLD_DYNASTY, type Dynasty } from '../../core/dynasty/model';
@@ -25,7 +25,7 @@ import { Offseason, type OffseasonActions } from './OffseasonPage';
 import { Coach, Coaches } from './CoachPages';
 import { fetchCoachData } from '../../core/dynasty/coachData';
 import { withCoaches } from '../../core/dynasty/coaches';
-import { seasonRom } from '../../core/dynasty/offseason';
+import { seasonDone, seasonRom } from '../../core/dynasty/offseason';
 import { canReplaceBench, randomBench } from '../../core/dynasty/bench';
 import { Button, Check, Field, FileButton, Masthead, Modal, NavBar, Note, Select, Table, ThemeToggle } from '../../ui';
 import { navClick } from '../../appNav';
@@ -92,7 +92,8 @@ function chooseFile(accept: string): Promise<File | null> {
   });
 }
 
-type Note = { kind: 'error' | 'ok'; text: string } | null;
+/** A message on top of the page; `action` is a button after it (after an import: on to Home). */
+type Note = { kind: 'error' | 'ok'; text: string; action?: ReactNode } | null;
 
 /**
  * Several of your teams: the masthead's logo is a menu to switch between them (user, 2026-11-16: "the logo at the
@@ -251,7 +252,10 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
         text: `Imported: ${r.played} games played${r.newGames > 0 ? ` (${r.newGames} new)` : ''}, next up ${nv.currentWeek < nv.weeks ? weekName(nv, nv.currentWeek) : 'nothing (the season is over)'}.` +
           (added.length ? ` Your ${added.length > 1 ? 'teams' : 'team'}: ${added.join(', ')}.` : '') +
           (r.warning ? ` ${r.warning}` : ''),
+        // User, 2026-11-17: "After importing a save, there should be a big CTA to continue to the Home/news headlines".
+        action: <Button href={href('home')}>{seasonDone(r.dynasty) ? 'Continue to Home' : 'See the headlines'}</Button>,
       });
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }),
     addArt: (romFile) => run('Reading team art…', async () => {
       if (!d) return;
@@ -533,7 +537,9 @@ function Manage({ d, art, list, busy, note, actions }: {
   return (
     <div className="dy-manage">
       {busy && <Note>{busy}</Note>}
-      {note && <Note kind={note.kind}>{note.text}</Note>}
+      {note && (note.action
+        ? <Note kind={note.kind} block><p>{note.text}</p><div className="dy-row dy-note-action">{note.action}</div></Note>
+        : <Note kind={note.kind}>{note.text}</Note>)}
 
       {d && season && (
         <>

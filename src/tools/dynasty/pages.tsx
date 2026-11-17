@@ -134,7 +134,6 @@ export function Home() {
   const heads = rest.slice(3);
   return (
     <>
-      <WhatsNext />
       {v.save && !d.offseason && <Ticker />}
       <div className="dy-front">
         <div className="dy-front-main">
@@ -175,6 +174,8 @@ export function Home() {
         </aside>
       </div>
       <SeasonMore />
+      {/* With headlines on the page, What's next goes to the bottom (user, 2026-11-17); with none, it's the whole page. */}
+      <WhatsNext />
     </>
   );
 }
