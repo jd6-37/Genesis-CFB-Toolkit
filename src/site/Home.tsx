@@ -178,6 +178,12 @@ const FEATURES: { title: string; body: ReactNode; controls?: [KeyStep[], string]
     media: { src: M('manual/rosters-ratings.png'), alt: 'Team Rosters: the impact players have a yellow dot and a yellow position' },
   },
   {
+    title: 'Alternate uniforms',
+    body: 'Press Y under a team on the controller screen to pick its helmet, jersey and pants before kickoff. The player beside the menu changes as you go. Most teams have their real alternates: in the 2026 edition an extra helmet and pants, often a second colored jersey, and blackouts for the teams that wear them; in the 1994 edition mostly a second pair of pants. The CPU picks for its own teams, and the Mod Toolkit edits every team\'s choices. Both editions.',
+    controls: [[['Y'], 'Open or close the uniform menu'], [['dpad'], 'Up and down: helmet, jersey or pants. Left and right: change it']],
+    media: { src: M('uniforms.png'), video: M('uniforms.mp4'), alt: 'The controller screen with the uniform menu open for Utah: helmet, jersey and pants change on the player beside it' },
+  },
+  {
     title: 'Play recaps and milestones',
     body: 'After each play, a recap names the players involved, with their jersey numbers. Banners appear for game milestones, such as a catch of 75 yards or more. Ranked teams show their Top 25 rank in the score box.',
     media: { src: M('recap.png'), video: M('recap.mp4'), alt: 'A 75-yard touchdown pass, then the recap "Pass to #1 Derrick Mayes for 75 yards" and a "75+ Yard Catch" milestone banner' },
@@ -246,7 +252,6 @@ const MORE: [string, string][] = [
   ['Onside kicks', 'The kicking team recovers them less often.'],
   ['Faster kickoff setup', 'About 5 seconds from a score to the kickoff instead of 13.'],
   ['Rosters on Game Setup', "Press Z on Game Setup to see any team's roster, with player names."],
-  ['Alternate uniforms', 'Press Y on the controller screen to pick a helmet, jersey and pants. Most teams have real alternates. Both editions.'],
   ['Menu music off', 'Press X on a menu to turn the music off. The game remembers the setting.'],
 ];
 
