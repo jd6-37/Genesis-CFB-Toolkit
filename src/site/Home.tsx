@@ -168,8 +168,8 @@ const FEATURES: { title: string; body: ReactNode; controls?: [KeyStep[], string]
     media: { src: M('swap.png'), video: M('swap.mp4'), alt: 'The play-call screen: SWAP HBS turns yellow when the second halfback is in' },
   },
   {
-    title: 'Harder CPU difficulty levels',
-    body: 'There are four difficulty levels: Normal (the original game), Smart, Elite and Champion. From Smart up, the CPU calls audibles against your formation, calls more plays to stop what has worked for you, goes for it on 4th and short, and realigns its defense when you flip a play.',
+    title: 'Difficulty levels, new to the game',
+    body: 'The original game has no difficulty setting: the CPU always plays one way. Elevated adds four levels: Normal (the original game\'s CPU), Smart, Elite and Champion. From Smart up, the CPU calls audibles against your formation, calls more plays to stop what has worked for you, goes for it on 4th and short, and realigns its defense when you flip a play.',
     media: { src: M('flip-defense.png'), video: M('flip-defense.mp4'), alt: 'The offense flips at the line and the CPU defense realigns to match' },
   },
   {
