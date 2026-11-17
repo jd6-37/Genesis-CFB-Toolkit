@@ -214,11 +214,19 @@ export function coachesFromData(d: Pick<Dynasty, 'teams' | 'startYear'>, data: C
  */
 export function withCoaches(d: Dynasty, data: CoachData): Dynasty {
   if (d.coaches) return d;
-  if (data.year !== d.startYear) throw new Error(`The coaches file is for ${data.year}, the dynasty starts in ${d.startYear}.`);
-  const coaches = coachesFromData(d, data);
+  // A dynasty that starts in another year than the coaches file (user, 2026-11-17: a starting year of the user's
+  // choice, say 2027 on a later rosters ROM) starts with the file's coaches as they were then; their ages count on from
+  // their birth years, and their real careers end the year before the file's.
+  const coaches = coachesFromData({ ...d, startYear: data.year }, data);
   const byTeam = d.teams.map((t) => coaches.find((c) => c.team === t.index)?.id ?? null);
-  return { ...d, coaches, seasons: d.seasons.map((s) => (s.coach ? s : { ...s, coach: [...byTeam] })) };
+  return {
+    ...d, coaches, ...(data.year !== d.startYear ? { coachYear: data.year } : {}),
+    seasons: d.seasons.map((s) => (s.coach ? s : { ...s, coach: [...byTeam] })),
+  };
 }
+
+/** The year the dynasty's real coaches are from: the starting year, unless the coaches file is another year's. */
+export const coachYearOf = (d: Pick<Dynasty, 'startYear' | 'coachYear'>) => d.coachYear ?? d.startYear;
 
 export const coachOf = (d: Dynasty, team: number): DCoach | undefined => {
   const id = d.coaches?.find((c) => c.team === team)?.id;

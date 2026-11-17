@@ -11,6 +11,7 @@ import {
   champions, leaders, playerLines, playerName, seasonView, standings, statValue, teamHistory, weekName,
   INDEPENDENT, type PlayerLine, type StatCategory,
 } from '../../core/dynasty/derive';
+import { editionOf } from '../../core/dynasty/edition';
 import { offseasonStories, stories, type Story } from '../../core/dynasty/news';
 import { preseasonPoll } from '../../core/dynasty/poll';
 import { OffseasonSide, PreseasonTop25, SeasonMore, SeasonSide } from './HomeSide';
@@ -352,7 +353,7 @@ export function Rankings() {
     return (
       <section>
         <PageHead title="Preseason Top 25">
-          The real {v.season.year} preseason AP poll. The game starts the season from it.
+          The real {editionOf(d).startYear} preseason AP poll, as the ROM sets it. The game starts the season from it.
         </PageHead>
         <PreseasonTop25 />
       </section>

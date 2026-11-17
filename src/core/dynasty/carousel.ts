@@ -5,7 +5,7 @@
 //
 // Goals, results and the hot seat are read from the dynasty (the seasons, their coaches and results); only the
 // carousel's decisions are kept (OffseasonState.carousel, then the coaches themselves).
-import { COACH_RATINGS, coachAge, coachOvr, type CoachRating, type CoachRatings, type DCoach } from './coaches';
+import { COACH_RATINGS, coachAge, coachOvr, coachYearOf, type CoachRating, type CoachRatings, type DCoach } from './coaches';
 import { INDEPENDENT, leaders, playerLines, seasonView, standings, type SeasonView, type StatCategory } from './derive';
 import { rng, type DPlayer, type Dynasty, type OffseasonEvent } from './model';
 import { protectedPairs, rivalriesOf } from './schedule';
@@ -126,7 +126,7 @@ export function tenure(d: Dynasty, coach: DCoach, seasonIndex: number): number {
   if (k < 0) {
     // He has coached here since the dynasty started: add his real seasons there just before it.
     const school = d.teams[team].school;
-    for (let y = d.startYear - 1; coach.irl.some((r) => r.year === y && r.role === 'HC' && r.school === school); y--) n++;
+    for (let y = coachYearOf(d) - 1; coach.irl.some((r) => r.year === y && r.role === 'HC' && r.school === school); y--) n++;
   }
   return n;
 }
@@ -157,7 +157,7 @@ export function hotSeat(d: Dynasty, coach: DCoach, seasonIndex = d.seasons.lengt
   if (first === 0) {
     // He was already there: his last real season's record against the school's win goal.
     const last = coach.irl.filter((r) => r.role === 'HC' && r.school === d.teams[team].school && r.w !== undefined).at(-1);
-    if (last && last.year === d.startYear - 1) {
+    if (last && last.year === coachYearOf(d) - 1) {
       const goal = Math.round(regularGames(d) * WIN_SHARE[starsIn(d, 0, team)]);
       heat = clamp(38 - (last.w! - goal) * 8, 0, 100);
     }

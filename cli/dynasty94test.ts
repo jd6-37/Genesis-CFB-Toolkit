@@ -10,6 +10,9 @@ import { AP_1994_PRESEASON } from '../src/core/dynasty/prestige';
 import { teamOvrs1994 } from '../src/core/dynasty/teamOvr94';
 import { hasSimSettings } from '../src/core/simSettings';
 import { readFileSync } from 'node:fs';
+import type { CoachData } from '../src/core/dynasty/coachData';
+import { withCoaches } from '../src/core/dynasty/coaches';
+import { tenure } from '../src/core/dynasty/carousel';
 import { basename } from 'node:path';
 import { strict as assert } from 'node:assert';
 import { openRom } from '../src/core/romfile';
@@ -73,6 +76,19 @@ assert.equal(d0.edition, '1994');
 assert.equal(editionOf(d0).teams, 107);
 assert.equal(d0.teams.length, 107);
 assert.equal(d0.startYear, 1994);
+{
+  // Another starting year: the seasons count from it; the real 1994 coaches come along.
+  const d95 = createDynasty1994(rom, csv, { name: 'Test 95', seed: 7, id: 'test95', created: '2026-11-15T00:00:00Z', startYear: 1995 });
+  assert.equal(d95.startYear, 1995);
+  assert.equal(d95.seasons[0].year, 1995);
+  const data = JSON.parse(readFileSync('public/data/coaches-1994.json', 'utf8')) as CoachData;
+  const c95 = withCoaches(d95, data);
+  assert.equal(c95.coachYear, 1994);
+  assert.equal(c95.coaches!.filter((x) => x.team !== null).length, 107);
+  const osborne = c95.coaches!.find((x) => x.name === 'Tom Osborne')!;
+  assert.equal(tenure(c95, osborne, 0), tenure(withCoaches(d0, data), osborne, 0));
+  ok('another starting year: seasons from 1995, the real 1994 coaches');
+}
 const s0 = d0.seasons[0];
 assert.equal(s0.year, 1994);
 assert.deepEqual(s0.confNames, readWideSeason(rom).names);

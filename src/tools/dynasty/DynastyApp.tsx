@@ -316,23 +316,29 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
     else await saveDynasty(next);
   };
 
+  // Makes the dynasty from the ROM, starting in `year` (the edition's own year unless the user picks another).
+  const build = async (rom: Uint8Array, year?: number): Promise<Dynasty> => {
+    let renumbered: { player: number; from: number; to: number }[] = [];
+    // The 1994 Season Edition: rosters from the ROM, backups from the built-in 1994 lists; 2026: the built-in CFB 27 file.
+    const made = editionOfRom(rom)?.id === '1994'
+      ? createDynasty1994(rom, await fetchRosters1994(), { name: '', startYear: year })
+      : createDynasty(rom, new TextDecoder().decode(await fetchCfb27Latest()), { name: '', startYear: year, onNumbers: (list) => { renumbered = list; } });
+    const named = renumbered.map((n) => {
+      const p = made.players[n.player - 1];
+      return { pos: p.pos, name: `${p.first} ${p.last}`.trim(), school: made.teams[p.team!].school, from: n.from, to: n.to };
+    });
+    return addCoaches(named.length ? { ...made, renumbered: named } : made).catch(() => made);
+  };
   const startActions: StartActions = {
     prepare: async (file) => {
       const rom = (await openRom(file.name, await readFile(file))).data;
-      let renumbered: { player: number; from: number; to: number }[] = [];
-      // The 1994 Season Edition: rosters from the ROM, backups from the built-in 1994 lists; 2026: the built-in CFB 27 file.
-      const made = editionOfRom(rom)?.id === '1994'
-        ? createDynasty1994(rom, await fetchRosters1994(), { name: '' })
-        : createDynasty(rom, new TextDecoder().decode(await fetchCfb27Latest()), { name: '', onNumbers: (list) => { renumbered = list; } });
-      const named = renumbered.map((n) => {
-        const p = made.players[n.player - 1];
-        return { pos: p.pos, name: `${p.first} ${p.last}`.trim(), school: made.teams[p.team!].school, from: n.from, to: n.to };
-      });
-      const dyn = await addCoaches(named.length ? { ...made, renumbered: named } : made).catch(() => made);
-      return { dyn, rom, pics: teamArt(rom), fileName: file.name };
+      return { dyn: await build(rom), rom, pics: teamArt(rom), fileName: file.name };
     },
     finish: async (p, o) => {
-      let dyn: Dynasty = { ...p.dyn, name: o.name.trim() || p.dyn.name, userTeams: o.teams, ...(o.coachSim ? { coachSim: true } : {}) };
+      // Another starting year (user, 2026-11-17: "if someone wants to make a 2027 roster next year, they can ... start
+      // their dynasty with year 2027"): made again from the same ROM, starting then.
+      const base = o.year !== p.dyn.startYear ? await build(p.rom, o.year) : p.dyn;
+      let dyn: Dynasty = { ...base, name: o.name.trim() || base.name, userTeams: o.teams, ...(o.coachSim ? { coachSim: true } : {}) };
       if (o.generated) dyn = randomBench(dyn);
       await saveDynasty(dyn);
       await saveArt(dyn.id, p.pics as TeamArt[]);

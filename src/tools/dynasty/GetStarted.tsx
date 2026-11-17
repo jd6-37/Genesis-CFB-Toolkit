@@ -23,7 +23,7 @@ export interface StartActions {
   /** Reads the ROM and makes the dynasty from it (throws with the reason when the ROM can't hold one). */
   prepare: (rom: File) => Promise<Prepared>;
   /** Applies the choices, saves the dynasty and opens it. */
-  finish: (p: Prepared, o: { name: string; teams: number[]; generated: boolean; coachSim: boolean }) => Promise<Dynasty>;
+  finish: (p: Prepared, o: { name: string; teams: number[]; generated: boolean; coachSim: boolean; year: number }) => Promise<Dynasty>;
   /** Downloads the dynasty file (and remembers when). */
   exportFile: (d: Dynasty) => void;
 }
@@ -47,6 +47,9 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
   const [addTeam, setAddTeam] = useState('');
   const [generated, setGenerated] = useState(false);
   const [coachSim, setCoachSim] = useState(false);
+  const [year, setYear] = useState('');
+  const yearN = Number(year);
+  const yearOk = /^\d{4}$/.test(year) && yearN >= 1950 && yearN <= 2099;
   const [made, setMade] = useState<Dynasty | null>(null);
 
   const go = (n: number) => { setStep(n); window.scrollTo(0, 0); };
@@ -74,7 +77,7 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
           </p>
           {!dyn ? (
             <div className="dy-start-drop">
-              <FileButton label="Choose ROM" accept=".md,.bin,.gen,.zip" disabled={off} onFile={(f) => work('Reading the ROM…', async () => setPrep(await actions.prepare(f)))} />
+              <FileButton label="Choose ROM" accept=".md,.bin,.gen,.zip" disabled={off} onFile={(f) => work('Reading the ROM…', async () => { const p = await actions.prepare(f); setPrep(p); setYear(String(p.dyn.startYear)); })} />
               <p className="dy-small dy-dim">.md, .bin, .gen or .zip</p>
             </div>
           ) : null}
@@ -97,7 +100,7 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
               </div>
               <div className="dy-row">
                 <Button onClick={() => go(1)}>Next: name it</Button>
-                <Button variant="quiet" onClick={() => { setPrep(null); setTeams([]); }}>Choose another ROM</Button>
+                <Button variant="quiet" onClick={() => { setPrep(null); setTeams([]); setYear(''); }}>Choose another ROM</Button>
               </div>
             </>
           )}
@@ -106,8 +109,12 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
 
       {step === 1 && dyn && (
         <section>
-          <h1>Name it and pick your teams</h1>
+          <h1>Name, starting year and teams</h1>
           <Field label="Dynasty name" value={name} onChange={setName} placeholder="My Dynasty" maxLength={40} />
+          <Field
+            label="Starting year" value={year} onChange={(x) => setYear(x.replace(/\D/g, '').slice(0, 4))} digits maxLength={4}
+            invalid={!yearOk} note={yearOk ? `The first season's year. ${dyn.startYear} for this ROM; a later year if your ROM has that year's rosters.` : 'A year from 1950 to 2099.'}
+          />
           <h2>Your teams</h2>
           <p className="dy-small dy-dim">The teams you play as. The game's save marks them too, so you can skip this and add teams later on Manage.</p>
           {teams.length > 0 && (
@@ -133,7 +140,7 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
           </div>
           <div className="dy-row dy-start-nav">
             <Button variant="quiet" onClick={() => go(0)}>Back</Button>
-            <Button onClick={() => go(2)}>Next: options</Button>
+            <Button disabled={!yearOk} onClick={() => go(2)}>Next: options</Button>
           </div>
         </section>
       )}
@@ -154,7 +161,7 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
           <div className="dy-row dy-start-nav">
             <Button variant="quiet" onClick={() => go(1)}>Back</Button>
             <Button disabled={off} onClick={() => work('Creating the dynasty…', async () => {
-              setMade(await actions.finish(prep!, { name, teams, generated, coachSim }));
+              setMade(await actions.finish(prep!, { name, teams, generated, coachSim, year: yearN }));
               go(3);
             })}>Create dynasty</Button>
           </div>

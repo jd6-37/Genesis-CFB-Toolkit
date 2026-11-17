@@ -169,6 +169,8 @@ export interface Dynasty {
   name: string;
   created: string;
   startYear: number;
+  /** The year of the real coaches it started with, when it isn't the starting year (coaches.ts withCoaches). */
+  coachYear?: number;
   userTeams: number[];
   teams: DTeam[];
   players: DPlayer[];
