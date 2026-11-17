@@ -210,7 +210,8 @@ a.ui-button-danger, a.ui-button-danger:hover { color: var(--bad); }
 
 /* The site's one loud action: the game's selection bar (the Mod Toolkit brand's --chrome). */
 .ui-button-chrome { background: var(--chrome); border-color: var(--on-chrome); color: var(--on-chrome); box-shadow: 4px 4px 0 var(--surface-sunken); font-style: italic; font-weight: 800; }
-a.ui-button-chrome, a.ui-button-chrome:hover { color: var(--on-chrome); }
+/* Two classes, so a page's own link color (the site's `.site a`) never wins over the dark text. */
+a.ui-button.ui-button-chrome, a.ui-button.ui-button-chrome:hover { color: var(--on-chrome); }
 
 /* A controller button: a white circle with a black letter, as on the game's music hint. */
 .ui-glyph {
