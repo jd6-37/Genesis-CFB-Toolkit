@@ -11,6 +11,7 @@ import { Awards } from './AwardsPage';
 import { Records } from './RecordsPage';
 import { History, Home, Leaders, Player, Rankings, Scores, Standings, Team, Teams } from './pages';
 import { Coach, Coaches } from './CoachPages';
+import { Rosters } from './RostersPage';
 import './dynasty.css';
 
 const THEME_KEY = 'dynasty-theme';
@@ -20,6 +21,7 @@ const PAGES = [
   { id: 'standings', label: 'Standings' },
   { id: 'rankings', label: 'Top 25' },
   { id: 'teams', label: 'Teams' },
+  { id: 'rosters', label: 'Rosters' },
   { id: 'coaches', label: 'Coaches' },
   { id: 'stats', label: 'Stats' },
   { id: 'history', label: 'History' },
@@ -89,6 +91,7 @@ export default function SnapshotApp({ id, toolkitHref }: { id: string; toolkitHr
       case 'standings': return <Standings />;
       case 'rankings': return <Rankings />;
       case 'teams': return <Teams />;
+      case 'rosters': return <Rosters key={arg ?? ''} arg={arg} />;
       case 'coaches': return <Coaches />;
       case 'coach': return num !== undefined ? <Coach id={num} /> : <Coaches />;
       case 'team': return num !== undefined ? <Team team={num} /> : <Teams />;

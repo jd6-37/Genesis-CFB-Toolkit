@@ -716,3 +716,39 @@
 .dy-locked > p a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
 .dy-gone { padding: var(--sp-6) 0; max-width: 64ch; }
 .dy-gone p { margin: var(--sp-3) 0 var(--sp-4); }
+/* Rosters: the filters, the sortable table (the name column stays put when the table scrolls sideways) */
+.dy-rfilters { display: flex; flex-direction: column; gap: var(--sp-3); margin-bottom: var(--sp-4); }
+.dy-rfilters-main { display: grid; gap: var(--sp-2) var(--sp-3); grid-template-columns: 1fr; }
+.dy-rfilters-checks { gap: var(--sp-2) var(--sp-4); }
+.dy-rfilters-more summary { cursor: pointer; font-weight: 700; min-height: 44px; display: flex; align-items: center; }
+.dy-rfilters-ranges { display: grid; gap: var(--sp-2) var(--sp-4); grid-template-columns: 1fr; padding: var(--sp-2) 0; }
+.dy-range { display: grid; grid-template-columns: 7rem 1fr 1fr; gap: var(--sp-2); align-items: center; }
+.dy-range > * { min-width: 0; }
+.dy-range input { width: 100%; }
+.dy-range > span { font-size: var(--fs-2); }
+.dy-rfilters p { margin: 0; }
+.dy-sort { all: unset; cursor: pointer; white-space: nowrap; }
+.dy-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.dy-sort abbr { text-decoration: none; }
+.dy-rtable td, .dy-rtable th { white-space: nowrap; }
+.dy-rname { position: sticky; left: 0; z-index: 1; }
+.dy-rtable tbody tr:nth-child(even) td.dy-rname { background: var(--surface); }
+.dy-rtable thead th:first-child { position: sticky; left: 0; z-index: 2; background: var(--surface); }
+/* Phones: the filters fold behind a button; from tablets up they're always shown. */
+.dy-rfilters-toggle { align-self: flex-start; }
+.dy-rfilters-body { display: none; flex-direction: column; gap: var(--sp-3); }
+.dy-rfilters-body.is-open { display: flex; }
+.dy-rname-in { display: inline-flex; gap: var(--sp-2); align-items: center; }
+.dy-rpages { justify-content: center; margin: var(--sp-4) 0; }
+@media (min-width: 760px) {
+  .dy-rfilters-toggle { display: none; }
+  .dy-rfilters-body { display: flex; }
+}
+@media (min-width: 640px) {
+  .dy-rfilters-main { grid-template-columns: repeat(2, 1fr); }
+  .dy-rfilters-ranges { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 1024px) {
+  .dy-rfilters-main { grid-template-columns: 2fr repeat(4, 1fr); }
+  .dy-rfilters-ranges { grid-template-columns: repeat(3, 1fr); }
+}

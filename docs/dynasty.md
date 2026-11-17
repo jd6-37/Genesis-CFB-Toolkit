@@ -435,3 +435,12 @@ User, 2026-11-17: "let the user define a starting year when creating a new dynas
 - Everything else counts from the dynasty's own years (classes, ages, history, records, season ROMs).
 - **Tests:** `test:dynasty` (a 2027 dynasty on the 2026 ROM: years, the same coaches with `coachYear` 2026, tenure and hot seat as in 2026, the same first-season poll), `test:dynasty94` (a 1995 dynasty: years, 107 head coaches, tenure).
 
+## Rosters
+
+User, 2026-11-17: "Let's add a Rosters section to the dynasty app. Every player. Filterable and sortable by everything. Toggle on and off backups. ... Toggle on and off headshots in the list. We also need to denote impact players somehow. Both in this rosters section and the Active Roster section of the Team page. Maybe also make an Impact Players section box towards the top of the page listing the three players."
+
+- **Rosters page** (`RostersPage.tsx`, nav between Teams and Coaches, also in snapshots): every active player with a team. Columns: name (headshot optional), #, team, position (the Active Roster spot's label, for example HB1 or RDE; a backup's position in gray), class, OVR, Speed, Quickness, Awareness, Hands, Power, Tackling, Blocking, Range, Accuracy (each `shownOf`, the number Team Rosters shows, 0-99; blank when the player has none), height, weight. Click a header to sort (again to reverse; names, teams and positions start A-Z, numbers high to low; blanks last; ties by OVR). Filters: name words (all must match), team, conference, position or group (`g.QB` … `g.ST`), class, min/max for OVR, each rating and weight, Backups (on by default), Headshots. 100 a page.
+- **The address:** `#rosters/<query>` (`q`, `team`, `conf`, `pos`, `cls`, `bk=0`, `hs=1`, `s`, `d=0`, `p`, `min.<Rating>`, `max.<Rating>`), written with `replaceState` so typing doesn't add history.
+- **Phone:** the filters fold behind a Filters button ("Filters (on)" when any is set); from 760 px they're always shown. The table scrolls sideways with the name column fixed.
+- **Tests:** browser: 8,522 players on a new 2026 dynasty (test54), 4,412 without backups, filters kept after a reload, no overflow at 390 px; snapshots show the page. Impact players were held back (user, 2026-11-17: "hold off on the impact players stuff then. we'll come back to that"); the work is on the branch `feature/dynasty-impact`.
+
