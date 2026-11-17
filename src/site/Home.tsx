@@ -239,7 +239,7 @@ function Features() {
 }
 
 const MORE: [string, string][] = [
-  ['Less slowdown on long runs', 'Ball carriers lose less speed on long runs and after a catch.'],
+  ['More explosive plays', 'Ball carriers keep more of their speed on long runs and after a catch, so big gains happen more often.'],
   ['Pitch fix', 'Pitches to fast backs no longer land behind them.'],
   ['Bug fixes', 'After a fumble on a 2-point try, the right team kicks off. The season sim no longer mixes up offense and defense ratings.'],
   ['Faster deep passes', 'Long, high passes spend less time in the air.'],
