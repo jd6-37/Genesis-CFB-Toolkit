@@ -10,8 +10,8 @@ const M = (f: string) => `/media/${f}`;
 
 type Edition = '1994' | '2026';
 const HERO: Record<Edition, { src: string; video: string; alt: string }> = {
-  '2026': { src: M('hero-2026.png'), video: M('hero-2026.mp4'), alt: 'A 2026 Season Edition game: Notre Dame at Florida State' },
-  '1994': { src: M('hero-1994.png'), video: M('hero-1994.mp4'), alt: 'A 1994 Season Edition game' },
+  '2026': { src: M('hero-2026.png'), video: M('hero-2026.mp4'), alt: 'A 2026 Season Edition game: a 69-yard catch by Delaware\'s #1 Brandon Rehmann, then the recap and a 50+ Yard Catch milestone' },
+  '1994': { src: M('hero-1994.png'), video: M('hero-1994.mp4'), alt: 'A 1994 Season Edition game: Nebraska\'s #1 Lawrence Phillips runs 67 yards before #52 Ray Lewis tackles him, then the recap and a 50+ Yard Run milestone' },
 };
 
 function Hero() {
@@ -52,8 +52,8 @@ function Notice() {
   return (
     <section className="home-notice" aria-label="Before you start">
       <div>
-        <h2>Free</h2>
-        <p>The patches and both apps are free. No account, no ads.</p>
+        <h2>100% Free</h2>
+        <p>The patches and both apps are 100% free, forever. Never pay for this mod.</p>
       </div>
       <div>
         <h2>Fan-made</h2>
@@ -139,7 +139,7 @@ function Fatigue() {
 const FEATURES: { title: string; body: ReactNode; controls?: [KeyStep[], string][]; media: { src: string; video?: string; alt: string; caption?: string } }[] = [
   {
     title: 'Motion, flips and shifts before the snap',
-    body: 'On offense, you can send a back or receiver in motion, and flip the play to the other side at the line. On defense, you can shift the line, the linebackers or the safeties a step left or right. Man-to-man defenders follow a player in motion, and the CPU defense usually realigns when you flip the play.',
+    body: 'On offense, you can send a back or receiver in motion (backs run out to the slot, and several players can go in motion one after another), and flip the play to the other side at the line. On defense, you can shift the line, the linebackers or the safeties a step left or right. Man-to-man defenders follow a player in motion, and the CPU defense usually realigns when you flip the play.',
     controls: [[['up', '/', 'down'], 'Pick the player to send in motion'], [['left', '/', 'right'], 'Send him in motion'], [['A', ',', 'X'], 'Flip the play at the line'], [['X', '/', 'Z', '/', 'Y'], 'On defense: pick the line, linebackers or safeties to shift']],
     media: { src: M('motion.png'), video: M('motion.mp4'), alt: 'A slot receiver goes in motion across the formation and his defender follows' },
   },
@@ -150,41 +150,73 @@ const FEATURES: { title: string; body: ReactNode; controls?: [KeyStep[], string]
     media: { src: M('xy-passing.png'), alt: 'A pass play with the A, B, C, X and Y receiver icons' },
   },
   {
-    title: 'Hot routes and the speed option',
-    body: "Before the snap, press Y, then a receiver's button, then a direction to change his route: streak, out, slant or curl, or Y for a drag and C to block. Backs get a wheel, swing, angle, check-release or screen. Hold X to see every receiver's route above his head. New option plays (a speed option in five formations, and the Near and Far sweeps) let you keep the ball or pitch it with C. Backs in motion run out to the slot, and you can send several players in motion, one after another.",
-    controls: [[['Y'], 'Open the hot route menu'], [['A', '/', 'B', '/', 'C'], "Then the receiver's button (or X, Y)"], [['dpad'], 'Then his route'], [['Z'], 'Cancel'], [['X'], 'Hold: every route']],
+    title: 'Hot routes and pre-snap play art',
+    body: "Hold X before the snap to see your play: its diagram at the top right, each receiver's button and jersey number at his feet, and his route above his head. On defense, X shows the play's diagram and what each defender does. To change a route, press Y, then the receiver's button, then a direction: streak, out, slant or curl, or Y for a drag and C to block. Backs get a wheel, swing, angle, check-release or screen.",
+    controls: [[['X'], 'Hold: the play art and every route'], [['Y'], 'Open the hot route menu'], [['A', '/', 'B', '/', 'C'], "Then the receiver's button (or X, Y)"], [['dpad'], 'Then his route'], [['Z'], 'Cancel']],
     media: { src: M('manual/presnap-offense.png'), alt: "X held before the snap: the play art top right, each receiver's button and number at his feet and his route above his head" },
   },
   {
     title: 'New formations and plays',
-    body: 'Eight new formations: Singleback, SB 3WR, SB 4WR, Pistol, 4 WR, Empty, Trips and Shotgun 2RB, with 100 plays adapted from Madden NFL 97. Also new: 67 plays from College Football USA 97, an RPO and an HB Swing. The CPU calls all of them, and Flip Play works on every play.',
+    body: 'Eight new formations: Singleback, SB 3WR, SB 4WR, Pistol, 4 WR, Empty, Trips and Shotgun 2RB, with 100 plays adapted from Madden NFL 97. Also new: 67 plays from College Football USA 97, an RPO, an HB Swing, a speed option in five formations, and the Near and Far option sweeps (keep the ball or pitch it with C). The CPU calls all of them, and Flip Play works on every play.',
     controls: [[['X'], 'Flip the play on the play-call screen'], [['Y'], 'Go back to the formations']],
     media: { src: M('playcall.png'), alt: 'The play-call screen: the Singleback, SB 3WR, SB 4WR, Pistol, 4 WR, Empty, Trips and Shotgun 2RB formations' },
   },
   {
-    title: 'Swap in your backup halfback or middle linebacker',
-    body: 'On the play-call screen, SWAP HBS puts your second halfback in for the first. On defense, SWAP MLBS does the same for the middle linebackers. The backup plays with his own ratings, energy and stats until you swap back or the half ends. CPU teams swap when their starter gets tired.',
+    title: 'Substitute players, a first in the game',
+    body: 'For the first time in Bill Walsh \'95, you can take a tired starter out. On the play-call screen, SWAP HBS puts your second halfback in for the first. On defense, SWAP MLBS does the same for the middle linebackers. The backup plays with his own ratings, energy and stats until you swap back or the half ends. CPU teams swap when their starter gets tired.',
     controls: [[['Z'], 'Swap on the play-call screen']],
     media: { src: M('swap.png'), video: M('swap.mp4'), alt: 'The play-call screen: SWAP HBS turns yellow when the second halfback is in' },
   },
   {
-    title: 'Harder CPU difficulty levels',
-    body: 'There are four difficulty levels: Normal (the original game), Smart, Elite and Champion. From Smart up, the CPU calls audibles against your formation, calls more plays to stop what has worked for you, goes for it on 4th and short, and realigns its defense when you flip a play.',
+    title: 'Difficulty levels, new to the game',
+    body: 'The original game has no difficulty setting: the CPU always plays one way. Elevated adds four levels: Normal (the original game\'s CPU), Smart, Elite and Champion. From Smart up, the CPU calls audibles against your formation, calls more plays to stop what has worked for you, goes for it on 4th and short, and realigns its defense when you flip a play.',
     media: { src: M('flip-defense.png'), video: M('flip-defense.mp4'), alt: 'The offense flips at the line and the CPU defense realigns to match' },
   },
   {
-    title: 'Play recaps, milestones and impact players',
-    body: 'After each play, a recap names the players involved, with their jersey numbers. Banners appear for game milestones, such as a catch of 75 yards or more. Ranked teams show their Top 25 rank in the score box. Each team has three impact players, marked on the field; when one gets into the zone, he plays above his ratings for a while.',
+    title: 'Ratings from 0 to 99',
+    body: "The original game stores every rating in 16 steps, so a player's speed jumps from 90 to 96 with nothing between. Elevated adds 16 levels inside each step, and Team Rosters shows them from 0 to 99. Players one or two points apart now play differently, so two fast backs aren't the same back. In the Dynasty app, players improve a little each offseason instead of jumping a whole step at a time.",
+    media: { src: M('fine-ratings.png'), alt: 'Team Rosters for North Dakota State: speed 77, quickness 73, INTEL 67 and other ratings between the original steps' },
+  },
+  {
+    title: 'Impact players',
+    body: 'Every team has three impact players: its best players by position group, picked from the ratings. A white X under each one marks him all game, and Team Rosters shows a yellow dot next to his position. A hot streak puts an impact player in the zone: the X turns into a flame X, and his key ratings and awareness go up. A quarterback gets there with 4 completions in a row or a touchdown pass, a back with 3 runs of 4 yards or more in a row or a 15-yard run, a receiver with 3 catches on a drive or a 20-yard catch, a defender with a sack, a tackle for loss or an interception. A sack, an interception, a tackle for loss, a drop or a touchdown allowed knocks him out, and the zone lasts about 8 plays. CPU teams have impact players too. Both editions.',
+    media: { src: M('manual/rosters-ratings.png'), alt: 'Team Rosters: the impact players have a yellow dot and a yellow position' },
+  },
+  {
+    title: 'Alternate uniforms',
+    body: 'Press Y under a team on the controller screen to pick its helmet, jersey and pants before kickoff. The player beside the menu changes as you go. Most teams have their real alternates: in the 2026 edition an extra helmet and pants, often a second colored jersey, and blackouts for the teams that wear them; in the 1994 edition mostly a second pair of pants. The CPU picks for its own teams, and the Mod Toolkit edits every team\'s choices. Both editions.',
+    controls: [[['Y'], 'Open or close the uniform menu'], [['dpad'], 'Up and down: helmet, jersey or pants. Left and right: change it']],
+    media: { src: M('uniforms.png'), video: M('uniforms.mp4'), alt: 'The controller screen with the uniform menu open for Utah: helmet, jersey and pants change on the player beside it' },
+  },
+  {
+    title: 'Dynasty: as many seasons as you like',
+    body: (
+      <>
+        Our companion <Button variant="link" href="/dynasty">Dynasty app</Button> turns the game's single season into a dynasty. Import your
+        save as you play: it keeps every score, standing, poll and stat, and writes the news. After the last game it runs the offseason step
+        by step: the coaching carousel with real head coaches, seniors leaving, recruiting, training, conferences and the schedule, and a new
+        Walsh Report for every team. Then it writes the next season into your ROM, rosters and all. It runs in your browser and works with
+        both editions.
+      </>
+    ),
+    media: { src: M('app-dynasty.png'), alt: 'The Dynasty app: the news front page of a dynasty' },
+  },
+  {
+    title: 'Play recaps and milestones',
+    body: 'Player names have been added alongside jersey numbers in the post-play recaps. Banners appear for game milestones, such as a catch of 75 yards or more. Ranked teams show their Top 25 rank in the score box.',
     media: { src: M('recap.png'), video: M('recap.mp4'), alt: 'A 75-yard touchdown pass, then the recap "Pass to #1 Derrick Mayes for 75 yards" and a "75+ Yard Catch" milestone banner' },
   },
   {
-    title: 'Real 1994 rosters for all 107 teams',
+    title: 'Real rosters for both seasons',
     body: (
       <>
-        The original game has 36 teams and no player names. The 1994 edition has all 107 Division I-A teams of 1994, and 2,962 of its 3,424
-        players have their real 1994 names, matched by team, jersey number and position. The names come from 9,872 rows of 1994 rosters, and
-        the ratings start from a ranked list of 2,857 of 1994's best players built from 10,731 facts. Each new team's players were rated to fit
-        its 1994 record and conference, and every team's OFF and DEF ratings come from its players' 20,544 ratings.{' '}
+        The original game has 36 teams and no player names. Both editions have every team of their season, with real players.
+        The 2026 rosters were the easy part, thanks to the hard work of the EA Sports team on College Football 27: all 138 FBS teams,
+        every player named, with ratings converted from CFB 27's (Week 9 update) to this game's scale. The 1994 rosters took our own
+        research: all 107 Division I-A teams, and 2,962 of 3,424 players with their real 1994 names, matched by team, jersey number
+        and position from 9,872 rows of 1994 rosters. Their ratings start from a ranked list of 2,857 of 1994's best players built
+        from 10,731 facts; each new team's players were rated to fit its 1994 record and conference, and every team's OFF and DEF
+        ratings come from its players' 20,544 ratings.{' '}
         <Button variant="link" href="/insights/1994-rosters">How we built the 1994 rosters</Button>
       </>
     ),
@@ -192,7 +224,13 @@ const FEATURES: { title: string; body: ReactNode; controls?: [KeyStep[], string]
   },
   {
     title: 'Full seasons with bowls or a playoff',
-    body: '1994 edition: an 11-week season in the 1994 conferences or the real 1994 schedule, starting from the real 1994 preseason AP poll, then the SEC Championship Game and the 19 bowl games of that year. 2026 edition: a random schedule or the real 2026 schedule, conference title games, then a 12-team playoff. You can also pick a 24- or 4-team playoff, a BCS title game, or no postseason. In both editions, simulated games score and end close to real seasons, and home teams win more often.',
+    body: (
+      <>
+        1994 edition: an 11-week season in the 1994 conferences or the real 1994 schedule, starting from the real 1994 preseason AP poll, then the SEC Championship Game and the 19 bowl games of that year. 2026 edition: a random schedule or the real 2026 schedule, conference title games, then a 12-team playoff. You can also pick a 24- or 4-team playoff, a BCS title game, or no postseason. In both editions, simulated games score and end close to real seasons, and home teams win more often.{' '}
+        Multi-year dynasties are now possible too: our companion <Button variant="link" href="/dynasty">Dynasty app</Button> carries
+        each season into the next one, for as many seasons as you like, with recruiting, player progression and coaches.
+      </>
+    ),
     media: { src: M('cfp-bracket.png'), alt: 'The CFP bracket screen: 12 teams, seeds 1 to 4 with a bye' },
   },
 ];
@@ -225,14 +263,13 @@ function Features() {
 }
 
 const MORE: [string, string][] = [
-  ['Less slowdown on long runs', 'Ball carriers lose less speed on long runs and after a catch.'],
+  ['More explosive plays', 'Ball carriers keep more of their speed on long runs and after a catch, so big gains happen more often.'],
   ['Pitch fix', 'Pitches to fast backs no longer land behind them.'],
   ['Bug fixes', 'After a fumble on a 2-point try, the right team kicks off. The season sim no longer mixes up offense and defense ratings.'],
   ['Faster deep passes', 'Long, high passes spend less time in the air.'],
   ['Onside kicks', 'The kicking team recovers them less often.'],
   ['Faster kickoff setup', 'About 5 seconds from a score to the kickoff instead of 13.'],
   ['Rosters on Game Setup', "Press Z on Game Setup to see any team's roster, with player names."],
-  ['Alternate uniforms', 'Press Y on the controller screen to pick a helmet, jersey and pants. Most teams have real alternates. Both editions.'],
   ['Menu music off', 'Press X on a menu to turn the music off. The game remembers the setting.'],
 ];
 
@@ -296,7 +333,10 @@ function GetIt() {
         </li>
         <li>
           <h3>Play it</h3>
-          <p>Play in RetroArch with the Genesis Plus GX core, or on a flash cart such as the Mega EverDrive Pro. The new controls need a 6-button pad.</p>
+          <p>
+            Play in RetroArch with the Genesis Plus GX core, or on a flash cart such as the Mega EverDrive Pro. The new controls need a 6-button pad.
+            For a dynasty over many seasons, start one in the <Button variant="link" href="/dynasty">Dynasty app</Button> and import your save as you play.
+          </p>
         </li>
       </ol>
       <div className="home-actions">
