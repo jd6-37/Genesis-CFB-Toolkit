@@ -66,4 +66,7 @@ The one exception to "no game art in the repo" (CLAUDE.md): pictures and short c
 
 - Screenshots: the game's own 320 × 224, PNG; the page scales them up with hard pixels.
 - Clips: H.264 MP4, no sound, the game's picture doubled with nearest-neighbor scaling (`ffmpeg … -vf "scale=iw*2:ih*2:flags=neighbor" -c:v libx264 -crf 26-28 -pix_fmt yuv420p -movflags +faststart`), a few seconds that loop, about 1 MB or less. Each clip has a PNG of its first frame as its poster.
+- Long clips (the hero): encode with `-preset veryslow -tune animation -crf 20` (half the size of a fast preset at the same quality) and add an AV1 copy, `name.av1.mp4` (`-c:v libsvtav1 -preset 4 -crf 38`), passed to `Screen` as `av1`; browsers that can play AV1 take it, the rest the H.264 file. Don't encode at the game's own 320x224 and let the browser scale it: the codec keeps color at half resolution, so colors smear.
+- From a screen recording (not a whole multiple of 320x224): sample each frame at the centers of the game's own pixel grid, then double it. Scaling the recording down with a smoothing filter blurs it.
+- Loading (`Screen` in `src/ui`): a clip loads when its screen nears the viewport and pauses off screen; with reduced motion or Save-Data only the picture shows; the hero's picture loads first (`priority`).
 - Captures came from the emulator (stable-retro, Genesis Plus GX): a recorded CPU-vs-CPU game cut into clips, and scripted button presses for screens like the play-call tiles (the project notes, `claude/bw95-website-notes.md`, have the scripts).
