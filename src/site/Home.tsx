@@ -52,8 +52,8 @@ function Notice() {
   return (
     <section className="home-notice" aria-label="Before you start">
       <div>
-        <h2>Free</h2>
-        <p>The patches and both apps are free. No account, no ads.</p>
+        <h2>100% Free</h2>
+        <p>The patches and both apps are 100% free, forever. Never pay for this mod.</p>
       </div>
       <div>
         <h2>Fan-made</h2>
