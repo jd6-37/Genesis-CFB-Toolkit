@@ -183,13 +183,16 @@ const FEATURES: { title: string; body: ReactNode; controls?: [KeyStep[], string]
     media: { src: M('recap.png'), video: M('recap.mp4'), alt: 'A 75-yard touchdown pass, then the recap "Pass to #1 Derrick Mayes for 75 yards" and a "75+ Yard Catch" milestone banner' },
   },
   {
-    title: 'Real 1994 rosters for all 107 teams',
+    title: 'Real rosters for both seasons',
     body: (
       <>
-        The original game has 36 teams and no player names. The 1994 edition has all 107 Division I-A teams of 1994, and 2,962 of its 3,424
-        players have their real 1994 names, matched by team, jersey number and position. The names come from 9,872 rows of 1994 rosters, and
-        the ratings start from a ranked list of 2,857 of 1994's best players built from 10,731 facts. Each new team's players were rated to fit
-        its 1994 record and conference, and every team's OFF and DEF ratings come from its players' 20,544 ratings.{' '}
+        The original game has 36 teams and no player names. Both editions have every team of their season, with real players.
+        The 2026 rosters were the easy part, thanks to the hard work of the EA Sports team on College Football 27: all 138 FBS teams,
+        every player named, with ratings converted from CFB 27's (Week 9 update) to this game's scale. The 1994 rosters took our own
+        research: all 107 Division I-A teams, and 2,962 of 3,424 players with their real 1994 names, matched by team, jersey number
+        and position from 9,872 rows of 1994 rosters. Their ratings start from a ranked list of 2,857 of 1994's best players built
+        from 10,731 facts; each new team's players were rated to fit its 1994 record and conference, and every team's OFF and DEF
+        ratings come from its players' 20,544 ratings.{' '}
         <Button variant="link" href="/insights/1994-rosters">How we built the 1994 rosters</Button>
       </>
     ),
