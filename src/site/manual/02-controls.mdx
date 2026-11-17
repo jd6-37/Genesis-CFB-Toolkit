@@ -10,6 +10,7 @@ This page lists every control. The chapters after it explain each one. <New /> m
   [['X'], 'Menu music off or on (title screen, Game Setup, season screens)', 'new six'],
   [['Z'], 'Game Setup: Team Rosters for the highlighted team', 'new six'],
   [['Y'], 'Controller screen: pick the team’s uniform', 'new six'],
+  [['Z', 'B'], 'Controller screen: back to Game Setup (Z needs a 6-button pad)', 'new'],
 ]} />
 
 ## Play-call screen
@@ -30,8 +31,12 @@ This page lists every control. The chapters after it explain each one. <New /> m
   [['A', 'X'], 'Flip the play at the line', 'new six'],
   [['up', 'down'], 'Pick a motion man (a marker shows under him)', 'new'],
   [['left', 'right'], 'Send him in motion; the other way brings him back', 'new'],
-  [['Y'], 'Hold: the play’s diagram, and each receiver’s button and jersey number', 'new six'],
   [['Z'], 'Hold: energy bars over every player', 'new six'],
+]} />
+
+<Controls rows={[
+  [['X'], 'Hold: each receiver’s button, jersey number and route, and the play’s diagram', 'new six'],
+  [['Y'], 'Hot route: Y, then the receiver’s button, then his new route (chapter 6). Z cancels', 'new six'],
 ]} />
 
 ## After the snap, offense
@@ -43,6 +48,7 @@ This page lists every control. The chapters after it explain each one. <New /> m
   [['X', 'Y'], 'Then throw to receiver 4 or 5', 'new six'],
   [['C'], 'Option plays: pitch. Ball carrier: dive'],
   [['B'], 'Ball carrier: tap to lower a shoulder, hold to spin'],
+  [['Y'], 'Ball carrier: hold to lower a shoulder again and again', 'new six'],
   [['B'], 'RPO play: within about a second of the snap, pitch to the halfback', 'new'],
 ]} />
 
@@ -55,9 +61,10 @@ This page lists every control. The chapters after it explain each one. <New /> m
   [['X', 'Z', 'Y'], 'Pick a shift: the line, the linebackers or the safeties', 'new six'],
   [['left', 'right'], 'Then shift that group a step (up to two)', 'new six'],
   [['up', 'down'], 'Then pinch or spread the line and linebackers, or move the safeties up or back', 'new six'],
-  [['Y'], 'Hold: the play’s diagram and each defender’s assignment', 'new six'],
   [['Z'], 'Hold: energy bars', 'new six'],
 ]} />
+
+<Controls rows={[[['X'], 'Hold: the play’s diagram and each defender’s assignment', 'new six']]} />
 
 ## After the snap, defense
 
