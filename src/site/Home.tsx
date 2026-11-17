@@ -184,6 +184,19 @@ const FEATURES: { title: string; body: ReactNode; controls?: [KeyStep[], string]
     media: { src: M('uniforms.png'), video: M('uniforms.mp4'), alt: 'The controller screen with the uniform menu open for Utah: helmet, jersey and pants change on the player beside it' },
   },
   {
+    title: 'Dynasty: as many seasons as you like',
+    body: (
+      <>
+        Our companion <Button variant="link" href="/dynasty">Dynasty app</Button> turns the game's single season into a dynasty. Import your
+        save as you play: it keeps every score, standing, poll and stat, and writes the news. After the last game it runs the offseason step
+        by step: the coaching carousel with real head coaches, seniors leaving, recruiting, training, conferences and the schedule, and a new
+        Walsh Report for every team. Then it writes the next season into your ROM, rosters and all. It runs in your browser and works with
+        both editions.
+      </>
+    ),
+    media: { src: M('app-dynasty.png'), alt: 'The Dynasty app: the news front page of a dynasty' },
+  },
+  {
     title: 'Play recaps and milestones',
     body: 'After each play, a recap names the players involved, with their jersey numbers. Banners appear for game milestones, such as a catch of 75 yards or more. Ranked teams show their Top 25 rank in the score box.',
     media: { src: M('recap.png'), video: M('recap.mp4'), alt: 'A 75-yard touchdown pass, then the recap "Pass to #1 Derrick Mayes for 75 yards" and a "75+ Yard Catch" milestone banner' },
