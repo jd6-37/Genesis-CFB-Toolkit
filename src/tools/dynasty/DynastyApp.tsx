@@ -24,6 +24,7 @@ import { ScheduleEditor } from './SchedulePage';
 import { History, Home, Leaders, Player, Rankings, Scores, Standings, Team, Teams } from './pages';
 import { Offseason, type OffseasonActions } from './OffseasonPage';
 import { Coach, Coaches } from './CoachPages';
+import { Rosters } from './RostersPage';
 import { fetchCoachData } from '../../core/dynasty/coachData';
 import { withCoaches } from '../../core/dynasty/coaches';
 import { seasonDone, seasonRom } from '../../core/dynasty/offseason';
@@ -41,6 +42,7 @@ const PAGES = [
   { id: 'standings', label: 'Standings' },
   { id: 'rankings', label: 'Top 25' },
   { id: 'teams', label: 'Teams' },
+  { id: 'rosters', label: 'Rosters' },
   { id: 'coaches', label: 'Coaches' },
   { id: 'stats', label: 'Stats' },
   { id: 'history', label: 'History' },
@@ -396,6 +398,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       case 'standings': return <Standings />;
       case 'rankings': return <Rankings />;
       case 'teams': return <Teams />;
+      case 'rosters': return <Rosters key={arg ?? ''} arg={arg} />;
       case 'coaches': return <Coaches />;
       case 'coach': return num !== undefined ? <Coach id={num} /> : <Coaches />;
       case 'team': return num !== undefined ? <Team team={num} /> : <Teams />;
