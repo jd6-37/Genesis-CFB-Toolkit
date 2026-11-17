@@ -380,7 +380,7 @@ function ManageXp({ c }: { c: DCoach }) {
         <>
           <p><span className="ui-num">{left.toLocaleString('en-US')}</span> XP to spend{spent ? ` (${spent.toLocaleString('en-US')} picked)` : ''}</p>
           <Table>
-            <thead><tr><th className="ui-left">Rating</th><th>Now</th><th>Next point</th><th></th></tr></thead>
+            <thead><tr><th className="ui-left">Rating</th><th>Now</th><th>Cost</th><th></th></tr></thead>
             <tbody>
               {COACH_RATINGS.map((k) => (
                 <tr key={k}>
