@@ -328,7 +328,10 @@ function GetIt() {
         </li>
         <li>
           <h3>Play it</h3>
-          <p>Play in RetroArch with the Genesis Plus GX core, or on a flash cart such as the Mega EverDrive Pro. The new controls need a 6-button pad.</p>
+          <p>
+            Play in RetroArch with the Genesis Plus GX core, or on a flash cart such as the Mega EverDrive Pro. The new controls need a 6-button pad.
+            For a dynasty over many seasons, start one in the <Button variant="link" href="/dynasty">Dynasty app</Button> and import your save as you play.
+          </p>
         </li>
       </ol>
       <div className="home-actions">
