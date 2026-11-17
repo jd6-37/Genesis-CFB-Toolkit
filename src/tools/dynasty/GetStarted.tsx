@@ -254,12 +254,41 @@ export function SeasonGuide({ year, first, backup }: { year: number; /** The dyn
   );
 }
 
+/**
+ * A shared snapshot's box at the bottom of Home, in place of What's next (user, 2026-11-17: explain the mod and the
+ * Dynasty app, "sell" it, with a link to try the mod and start a dynasty).
+ */
+function WhatsThis() {
+  return (
+    <section className="dy-next" aria-labelledby="dy-this-h">
+      <SubHead level={2} id="dy-this-h">What's this?</SubHead>
+      <div className="dy-next-body">
+        <h3>A dynasty played in Bill Walsh College Football '95 Elevated</h3>
+        <p>
+          Elevated is a free fan mod of the 1994 Sega Genesis classic: real rosters from the 2026 and 1994 seasons for over 100 teams, the
+          fatigue glitch fixed, hot routes, impact players, alternate uniforms and much more.
+        </p>
+        <p>
+          Its companion Dynasty app turns the game's single season into a dynasty that runs as many seasons as you like: recruiting, player
+          progression, real head coaches and a coaching carousel, and headlines like these every week.
+        </p>
+        <p><strong>The mod and both apps are 100% free.</strong></p>
+        <div className="dy-row">
+          <Button href="/#get-it">Get the mod</Button>
+          <Button variant="quiet" href="/dynasty">Start a dynasty</Button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /** The last import of the dynasty's latest season (ISO time), if any. */
 const lastImport = (d: Dynasty) => d.seasons[d.seasons.length - 1].imports.slice(-1)[0]?.at;
 
 /** The home page's card: what to do next, from where the dynasty is (user, 2026-11-17: "What else?" → approved mockup). */
 export function WhatsNext() {
-  const { d, v, downloadRom, backup } = useContext(Ctx)!;
+  const { d, v, downloadRom, backup, readOnly } = useContext(Ctx)!;
+  if (readOnly) return <WhatsThis />;
   const s = d.seasons[d.seasons.length - 1];
   const guide = <a href={href('guide')} className="dy-small">How a season works</a>;
   let label: string;

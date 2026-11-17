@@ -11,6 +11,7 @@ import '@fontsource/micro-5/400.css';
 import './styles.css';
 import App from './App';
 import { isDynastyPath, legacyAppUrl, NAV_EVENT } from './appNav';
+import { snapshotIdFromPath } from './core/dynasty/snapshotId';
 
 // An old address (/#rosters, /#dynasty/…, /app.html) goes to the same place under /toolkit or /dynasty.
 const fixed = legacyAppUrl(window.location.pathname.replace(/\/$/, '') || '/', window.location.hash);
@@ -19,6 +20,7 @@ if (fixed) window.history.replaceState(null, '', fixed);
 // Dynasty (/dynasty) is its own site; the tools stay mounted underneath so their ROMs and edits are
 // still there on the way back.
 const DynastyApp = lazy(() => import('./tools/dynasty/DynastyApp'));
+const SnapshotApp = lazy(() => import('./tools/dynasty/SnapshotApp'));
 const toolkitUrl = () => `/toolkit${window.location.hash || ''}`;
 
 function Root() {
@@ -42,7 +44,9 @@ function Root() {
       </div>
       {dynasty && (
         <Suspense fallback={null}>
-          <DynastyApp toolkitHref={back} />
+          {snapshotIdFromPath(window.location.pathname)
+            ? <SnapshotApp id={snapshotIdFromPath(window.location.pathname)!} toolkitHref={back} />
+            : <DynastyApp toolkitHref={back} />}
         </Suspense>
       )}
     </>

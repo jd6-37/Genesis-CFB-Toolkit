@@ -1,5 +1,5 @@
 // Small pieces the Dynasty pages share: the data they read, team marks and story art.
-import { createContext, useContext, useEffect, useRef } from 'react';
+import { createContext, useContext, useEffect, useRef, type ReactNode } from 'react';
 import { drawHeadshot, HEAD_SIZE, lookOf } from '../../core/dynasty/headshot';
 import { SpriteCanvas } from '../../components';
 import { toLevels, LEVELS } from '../../core/colors';
@@ -25,6 +25,8 @@ export interface DynCtx {
   focus?: number;
   /** Downloads the dynasty file (a backup) and remembers when. */
   backup?: () => void;
+  /** A shared snapshot (/dynasty/s/<id>): read-only, no saves, no ROM. */
+  readOnly?: boolean;
 }
 
 /** The user team a page starts on: the one picked in the masthead's menu, else the first. */
@@ -33,6 +35,22 @@ export const Ctx = createContext<DynCtx | null>(null);
 export const useDyn = () => useContext(Ctx)!;
 
 export const href = (path: string) => `#${path}`;
+
+/**
+ * An editor or action on a page a snapshot's visitor can open (user, 2026-11-17: "leave it but disable it with a
+ * hint that it's not available in read-only shared snapshots"): in a snapshot its controls are disabled (a
+ * disabled fieldset) and a line says why; elsewhere it's just its children.
+ */
+export function Locked({ children }: { children: ReactNode }) {
+  const c = useContext(Ctx);
+  if (!c?.readOnly) return <>{children}</>;
+  return (
+    <div className="dy-locked">
+      <fieldset disabled className="dy-locked-set">{children}</fieldset>
+      <p className="dy-small dy-dim">Not available in a read-only snapshot. <a href="/dynasty">Start your own dynasty</a>.</p>
+    </div>
+  );
+}
 
 const css = (c: number) => `#${toLevels(c).map((x) => LEVELS[x].toString(16).padStart(2, '0')).join('')}`;
 const lum = (hex: string) => {

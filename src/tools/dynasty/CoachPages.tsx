@@ -12,7 +12,7 @@ import { Button, Check, DataTable, Empty, Field, Note, PageHead, Select, SubHead
 import { createCoach, goalResults, heatLabel, hotSeat, setCoachLook, setManageXp, spendXp, tenure, xpCost } from '../../core/dynasty/carousel';
 import type { CoachRating, CoachRatings } from '../../core/dynasty/coaches';
 import { simNudges } from '../../core/dynasty/coachEffects';
-import { href, inkColor, mainColor, onColor, TeamLink, TeamMark, teamCss, useDyn } from './ui';
+import { href, inkColor, Locked, mainColor, onColor, TeamLink, TeamMark, teamCss, useDyn } from './ui';
 
 const ordinal = (n: number) => {
   const t = n % 100, u = n % 10;
@@ -102,7 +102,7 @@ export function Coaches() {
           { key: 'rec', label: 'Record', num: true, cell: (r) => recordText(r.rec) },
         ]}
       />
-      <CreateCoach />
+      <Locked><CreateCoach /></Locked>
     </section>
   );
 }
@@ -250,7 +250,7 @@ export function Coach({ id }: { id: number }) {
           {team !== null && <a className="dy-player-logo" href={href(`team/${team}`)} aria-label={d.teams[team].school}><TeamMark team={team} size={96} /></a>}
         </div>
       </header>
-      <EditCoachLook c={c} />
+      <Locked><EditCoachLook c={c} /></Locked>
 
       <SubHead>Ratings</SubHead>
       <CoachRatingsBox c={c} color={ink} />
@@ -262,7 +262,7 @@ export function Coach({ id }: { id: number }) {
       })()}
 
       {team !== null && <GoalsBox team={team} />}
-      <ManageXp c={c} />
+      <Locked><ManageXp c={c} /></Locked>
 
       <SubHead>Career</SubHead>
       {dyn.length + irl.length ? (

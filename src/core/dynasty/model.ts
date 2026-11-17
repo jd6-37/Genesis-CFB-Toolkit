@@ -7,6 +7,7 @@ import { openRosterRom, readPlayer } from '../rosterRom';
 import { parseCsv, type Sheet } from '../rosterSheet';
 import { readWideSeason, wideSeasonProblems } from '../seasonWide';
 import type { ConfWeeks, DSchedule } from './schedule';
+import type { DSnapshot } from './snapshot';
 import { parseBw95 } from '../bw95';
 import { teamsOf } from '../wide';
 import type { Attr, Group } from '../rosterLayouts';
@@ -197,6 +198,8 @@ export interface Dynasty {
   renumbered?: { pos: string; name: string; school: string; from: number; to: number }[];
   /** ISO time of the last dynasty file download (Manage, the home page's backup line). Absent = never. */
   backedUp?: string;
+  /** Shared snapshots (Manage, Share), at most SNAPSHOT_LIMIT, newest first, with their delete keys. */
+  snapshots?: DSnapshot[];
 }
 
 // ---- small helpers
