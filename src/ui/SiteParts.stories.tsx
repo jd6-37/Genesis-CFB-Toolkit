@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react';
-import { Button, Glyph, Row, Screen, SetupList, Tag } from './index';
+import { Button, Glyph, Keys, Row, Screen, SetupList, Tag } from './index';
 
 const meta: Meta = { title: 'Components/Site parts' };
 export default meta;
@@ -21,6 +21,17 @@ export const Glyphs: Story = {
     <>
       <p>Press <Glyph k="A" />, then <Glyph k="X" /> to flip the play at the line. <Glyph k="START" /> pauses.</p>
       <Row>{(['A', 'B', 'C', 'X', 'Y', 'Z', 'START', 'MODE', 'dpad', 'up', 'down', 'left', 'right'] as const).map((k) => <Glyph key={k} k={k} />)}</Row>
+    </>
+  ),
+};
+
+/** A control's buttons: a comma between presses one after another, a slash between choices. */
+export const KeysInARow: Story = {
+  render: () => (
+    <>
+      <p><Keys keys={['A', ',', 'X']} /> Flip the play at the line</p>
+      <p><Keys keys={['X', '/', 'Z', '/', 'Y']} /> Pick the line, linebackers or safeties to shift</p>
+      <p><Keys keys={['up', '/', 'down']} /> Pick a motion man</p>
     </>
   ),
 };

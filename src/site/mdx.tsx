@@ -2,7 +2,7 @@
 // is drawn (## is a section bar, tables get the shared look, code is a black game screen).
 import { Children, isValidElement, type ReactNode } from 'react';
 import type { MDXComponents } from 'mdx/types';
-import { Glyph, Screen, SubHead, Tag, type GlyphKey } from '../ui';
+import { Glyph, Keys, Screen, SubHead, Tag, type GlyphKey, type KeyStep } from '../ui';
 
 /** A heading's text as an address (#calling-a-play). */
 export const slugify = (node: ReactNode): string => {
@@ -18,7 +18,8 @@ const New = () => <Tag tone="accent">Elevated</Tag>;
 /** Needs a 6-button pad: <Six />. */
 const Six = () => <Tag tone="ink">6-button</Tag>;
 
-type ControlRow = [GlyphKey[], ReactNode, ('new' | 'six' | 'new six')?];
+/** Buttons (with ',' between presses in a row and '/' between choices), what they do, and whether it's new or needs a 6-button pad. */
+type ControlRow = [KeyStep[], ReactNode, ('new' | 'six' | 'new six')?];
 /** A list of controls: buttons, what they do, and whether it's new or needs a 6-button pad. */
 function Controls({ rows, title }: { rows: ControlRow[]; title?: string }) {
   return (
@@ -28,7 +29,7 @@ function Controls({ rows, title }: { rows: ControlRow[]; title?: string }) {
         <tbody>
           {rows.map(([keys, what, flags], i) => (
             <tr key={i}>
-              <td className="mdx-keys-cell"><span className="mdx-keys">{keys.map((k, j) => <Glyph key={j} k={k} />)}</span></td>
+              <td className="mdx-keys-cell"><Keys keys={keys} /></td>
               <td className="mdx-what">{what}</td>
               <td className="mdx-flags">{flags?.includes('new') && <New />} {flags?.includes('six') && <Six />}</td>
             </tr>
