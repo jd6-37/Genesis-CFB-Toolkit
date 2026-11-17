@@ -77,7 +77,13 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
               <FileButton label="Choose ROM" accept=".md,.bin,.gen,.zip" disabled={off} onFile={(f) => work('Reading the ROM…', async () => setPrep(await actions.prepare(f)))} />
               <p className="dy-small dy-dim">.md, .bin, .gen or .zip</p>
             </div>
-          ) : (
+          ) : null}
+          {!dyn && (
+            <p className="dy-small dy-start-alt">
+              Already have a dynasty in another browser or on another computer? <Button variant="link" href={href('manage')}>Open its dynasty file in Manage</Button>.
+            </p>
+          )}
+          {!dyn ? null : (
             <>
               <div className="dy-start-found">
                 <p><strong>{edition!.name}{versionOf(prep!.fileName) ? `, ${versionOf(prep!.fileName)}` : ''}</strong></p>
@@ -212,8 +218,9 @@ export function SeasonGuide({ year, first, backup }: { year: number; /** The dyn
       <li>
         <h2>Import your save</h2>
         <p>
-          <strong>After the last game at the latest</strong> (the postseason included). During the season it's optional: import whenever you like to follow
-          scores, standings and stats here.
+          After just one week, played or simmed, you can import your save to start the headlines on the Home tab and the stats. You don't have
+          to import every week. <strong>The one save you need is the final one</strong>, after the last game of the postseason: import it before you
+          start a new season in the game.
         </p>
         <details className="dy-guide-more">
           <summary>Where's the save?</summary>
@@ -225,15 +232,22 @@ export function SeasonGuide({ year, first, backup }: { year: number; /** The dyn
       </li>
       <li>
         <h2>Run the offseason</h2>
-        <p>The Offseason tab, one step at a time, from the coaching carousel to the Walsh Reports.</p>
+        <p>The Offseason tab, one step at a time. The heart of it is recruiting: weeks of scouting prospects, spending points, pitching your school and making offers, then signing day. Around it come the coaching carousel, players leaving, training, the depth chart, the schedule and the Walsh Reports.</p>
       </li>
       <li>
-        <h2>Play next season on the new ROM</h2>
-        <p>The offseason ends with the {year + 1} ROM. Load it and start a new season in Season mode. A save from a season started on another ROM can't be imported.</p>
+        <h2>Download the {year + 1} ROM and play it</h2>
+        <p>The offseason's last step, Download the ROM, gives you the new season's ROM. Download it, load it in RetroArch and start a new season in Season mode. Play on this ROM from now on: a save from a season started on another ROM can't be imported.</p>
       </li>
       <li>
         <h2>Keep a backup</h2>
-        <p>Your dynasty lives in this browser only. Download the dynasty file after each import; it also moves the dynasty to another computer.</p>
+        <p>
+          Your dynasty is saved in this browser. Come back in the same browser and it's here: there's no file to open, unless the
+          browser's site data gets cleared.
+        </p>
+        <p>
+          Still, download the dynasty file often, after every import is best. If the browser's data is cleared, the file brings the dynasty back.
+          It also opens the dynasty in another browser or on another computer (Manage, Open dynasty file).
+        </p>
         {backup && <div className="dy-row">{backup}</div>}
       </li>
     </ol>
@@ -252,6 +266,15 @@ export function WhatsNext() {
   let title: string;
   let text: string;
   let action: ReactNode;
+  // The one import a season needs (user, 2026-11-17): the final save, before a new season is started in the game.
+  const lastGame = editionOf(d).id === '1994' ? 'the bowl games' : 'the championship game';
+  const finalSave = (
+    <>
+      You don't have to import every week. <strong>The one save you need is the final one</strong>, after {lastGame}: import it before you start a
+      new season in the game. Then run the offseason here and download the {s.year + 1} ROM for next season.
+    </>
+  );
+  let more: ReactNode = null;
   if (d.offseason) {
     label = `${d.offseason.year} offseason`;
     title = 'Finish the offseason';
@@ -260,7 +283,7 @@ export function WhatsNext() {
   } else if (seasonDone(d)) {
     label = `${s.year} season, over`;
     title = 'Run the offseason';
-    text = `Every game is in. The offseason goes one step at a time, from the coaching carousel to the Walsh Reports, and ends with the ${s.year + 1} ROM.`;
+    text = `Every game is in. The offseason goes one step at a time, with recruiting at its heart, and ends with the ${s.year + 1} ROM.`;
     action = <Button href={href('offseason')}>Start the offseason</Button>;
   } else if (d.seasons.length > 1 && !s.romDownloaded && !s.imports.length) {
     label = `${s.year} season, ready to start`;
@@ -270,12 +293,14 @@ export function WhatsNext() {
   } else if (!s.imports.length) {
     label = `${s.year} season`;
     title = `Play the ${s.year} season`;
-    text = `${d.seasons.length === 1 ? 'Play it on your ROM as it is.' : `Play it on the ${s.year} ROM.`} Import your save whenever you like to follow it here, after the last game at the latest.`;
+    text = `${d.seasons.length === 1 ? 'Play it on your ROM as it is.' : `Play it on the ${s.year} ROM.`} After just one week, played or simmed, you can import your save to start the headlines here and the stats.`;
+    more = finalSave;
     action = <Button href={href('manage')}>Import save</Button>;
   } else {
     label = `${s.year} season, ${weekName(v, v.currentWeek)} next`;
     title = 'Play on, then import your save';
-    text = 'Import after you play to update scores, standings and stats, or wait until the season ends. After the last game at the latest.';
+    text = `Import after any week, played or simmed, to update the headlines here, the scores, standings and stats.`;
+    more = finalSave;
     action = <Button href={href('manage')}>Import save</Button>;
   }
   const at = lastImport(d);
@@ -287,10 +312,11 @@ export function WhatsNext() {
         <p className="dy-next-label">{label}</p>
         <h3>{title}</h3>
         <p>{text}</p>
+        {more && <p>{more}</p>}
         <div className="dy-row">{action}{guide}</div>
         {needsBackup && backup && (
           <div className="dy-next-backup">
-            <p className="dy-small"><strong>No backup since the last import.</strong> Your dynasty lives in this browser only.</p>
+            <p className="dy-small"><strong>No backup since the last import.</strong> Your dynasty is saved in this browser; the dynasty file brings it back if the browser's data is cleared.</p>
             <Button variant="quiet" onClick={backup}>Download dynasty file</Button>
           </div>
         )}

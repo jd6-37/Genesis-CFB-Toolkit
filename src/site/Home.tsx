@@ -193,8 +193,9 @@ const FEATURES: { title: string; body: ReactNode; controls?: [KeyStep[], string]
     body: (
       <>
         Our companion <Button variant="link" href="/dynasty">Dynasty app</Button> turns the game's single season into a dynasty. Import your
-        save as you play: it keeps every score, standing, poll and stat, and writes the news. After the last game it runs the offseason step
-        by step: the coaching carousel with real head coaches, seniors leaving, recruiting, training, conferences and the schedule, and a new
+        save as you play: it keeps every score, standing, poll and stat, and writes the news. After the last game comes the offseason, and
+        at its heart is recruiting: weeks of scouting prospects, spending points, pitching your school and making offers, then signing day.
+        Around it come the coaching carousel with real head coaches, seniors leaving, training, conferences and the schedule, and a new
         Walsh Report for every team. Then it writes the next season into your ROM, rosters and all. It runs in your browser and works with
         both editions.
       </>
