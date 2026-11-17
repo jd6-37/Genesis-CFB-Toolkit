@@ -173,8 +173,13 @@ const FEATURES: { title: string; body: ReactNode; controls?: [KeyStep[], string]
     media: { src: M('flip-defense.png'), video: M('flip-defense.mp4'), alt: 'The offense flips at the line and the CPU defense realigns to match' },
   },
   {
-    title: 'Play recaps, milestones and impact players',
-    body: 'After each play, a recap names the players involved, with their jersey numbers. Banners appear for game milestones, such as a catch of 75 yards or more. Ranked teams show their Top 25 rank in the score box. Each team has three impact players, marked on the field; when one gets into the zone, he plays above his ratings for a while.',
+    title: 'Impact players',
+    body: 'Every team has three impact players: its best players by position group, picked from the ratings. A white X under each one marks him all game, and Team Rosters shows a yellow dot next to his position. A hot streak puts an impact player in the zone: the X turns into a flame X, and his key ratings and awareness go up. A quarterback gets there with 4 completions in a row or a touchdown pass, a back with 3 runs of 4 yards or more in a row or a 15-yard run, a receiver with 3 catches on a drive or a 20-yard catch, a defender with a sack, a tackle for loss or an interception. A sack, an interception, a tackle for loss, a drop or a touchdown allowed knocks him out, and the zone lasts about 8 plays. CPU teams have impact players too. Both editions.',
+    media: { src: M('manual/rosters-ratings.png'), alt: 'Team Rosters: the impact players have a yellow dot and a yellow position' },
+  },
+  {
+    title: 'Play recaps and milestones',
+    body: 'After each play, a recap names the players involved, with their jersey numbers. Banners appear for game milestones, such as a catch of 75 yards or more. Ranked teams show their Top 25 rank in the score box.',
     media: { src: M('recap.png'), video: M('recap.mp4'), alt: 'A 75-yard touchdown pass, then the recap "Pass to #1 Derrick Mayes for 75 yards" and a "75+ Yard Catch" milestone banner' },
   },
   {

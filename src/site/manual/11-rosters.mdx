@@ -39,4 +39,17 @@ ENERGY goes down based on what a player does during each play. At every snap, he
 
 ## Impact players
 
-<New /> Every team has three impact players, picked from its roster by position group. On Team Rosters they have a yellow dot and a yellow position label. On the field, a marker shows over them. When one of them gets into the zone during a game, he plays above his ratings for a while.
+<New /> Every team has three impact players: its best offensive skill player, its best defender, and the better of the next two. Each player is compared with his own position group (quarterbacks, backs, receivers, tight ends, linemen, linebackers, defensive backs) on the ratings that matter there, INTEL included. A fullback is picked only when no halfback is. CPU teams have impact players too.
+
+On Team Rosters they have a yellow dot between number and position, and the position in yellow. On the field, a white X marks them all game.
+
+**In the zone.** A hot streak puts an impact player in the zone: his X turns into a flame X, and his key ratings and awareness go up.
+
+| Player | Into the zone | Knocked out |
+|---|---|---|
+| Quarterback | 4 completions in a row, or a touchdown pass | A sack or an interception |
+| Back | 3 runs of 4 yards or more in a row, or a run of 15 yards or more | A tackle for loss |
+| Receiver or tight end | 3 catches on one drive, or a catch of 20 yards or more | A drop, or no catch in the next 5 plays |
+| Defender | A sack, a tackle for loss or an interception | A touchdown allowed, or 2 first downs by the offense without a tackle or sack by him |
+
+The zone lasts 8 plays. From the 8th play on, a play of his own or a big play by his offense keeps him in it one play longer. It also ends at halftime and at the end of the game.
