@@ -659,6 +659,8 @@
 .dy-start .ui-field { max-width: 420px; }
 .dy-start-drop { display: flex; flex-direction: column; align-items: center; gap: var(--sp-2); padding: var(--sp-6) var(--sp-4); border: 2px dashed var(--rule-strong); background: var(--surface-sunken); text-align: center; }
 .dy-start-drop p { margin: 0; }
+.dy-start p.dy-start-alt { margin-top: var(--sp-3); }
+.dy-start-alt a { font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 .dy-start-found { border: 3px double var(--rule-strong); box-shadow: var(--shadow-hard); padding: var(--sp-4); margin: 0 0 var(--sp-5); }
 .dy-start-found p { margin: 0 0 var(--sp-1); }
 .dy-start-nav { margin-top: var(--sp-5); }

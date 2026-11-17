@@ -77,7 +77,13 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
               <FileButton label="Choose ROM" accept=".md,.bin,.gen,.zip" disabled={off} onFile={(f) => work('Reading the ROM…', async () => setPrep(await actions.prepare(f)))} />
               <p className="dy-small dy-dim">.md, .bin, .gen or .zip</p>
             </div>
-          ) : (
+          ) : null}
+          {!dyn && (
+            <p className="dy-small dy-start-alt">
+              Already have a dynasty in another browser or on another computer? <Button variant="link" href={href('manage')}>Open its dynasty file in Manage</Button>.
+            </p>
+          )}
+          {!dyn ? null : (
             <>
               <div className="dy-start-found">
                 <p><strong>{edition!.name}{versionOf(prep!.fileName) ? `, ${versionOf(prep!.fileName)}` : ''}</strong></p>
@@ -233,7 +239,14 @@ export function SeasonGuide({ year, first, backup }: { year: number; /** The dyn
       </li>
       <li>
         <h2>Keep a backup</h2>
-        <p>Your dynasty lives in this browser only. Download the dynasty file after each import; it also moves the dynasty to another computer.</p>
+        <p>
+          Your dynasty is saved in this browser. Come back in the same browser and it's here: there's no file to open, unless the
+          browser's site data gets cleared.
+        </p>
+        <p>
+          Still, download the dynasty file often, after every import is best. If the browser's data is cleared, the file brings the dynasty back.
+          It also opens the dynasty in another browser or on another computer (Manage, Open dynasty file).
+        </p>
         {backup && <div className="dy-row">{backup}</div>}
       </li>
     </ol>
