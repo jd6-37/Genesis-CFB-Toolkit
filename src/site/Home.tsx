@@ -139,7 +139,7 @@ function Fatigue() {
 const FEATURES: { title: string; body: ReactNode; controls?: [KeyStep[], string][]; media: { src: string; video?: string; alt: string; caption?: string } }[] = [
   {
     title: 'Motion, flips and shifts before the snap',
-    body: 'On offense, you can send a back or receiver in motion, and flip the play to the other side at the line. On defense, you can shift the line, the linebackers or the safeties a step left or right. Man-to-man defenders follow a player in motion, and the CPU defense usually realigns when you flip the play.',
+    body: 'On offense, you can send a back or receiver in motion (backs run out to the slot, and several players can go in motion one after another), and flip the play to the other side at the line. On defense, you can shift the line, the linebackers or the safeties a step left or right. Man-to-man defenders follow a player in motion, and the CPU defense usually realigns when you flip the play.',
     controls: [[['up', '/', 'down'], 'Pick the player to send in motion'], [['left', '/', 'right'], 'Send him in motion'], [['A', ',', 'X'], 'Flip the play at the line'], [['X', '/', 'Z', '/', 'Y'], 'On defense: pick the line, linebackers or safeties to shift']],
     media: { src: M('motion.png'), video: M('motion.mp4'), alt: 'A slot receiver goes in motion across the formation and his defender follows' },
   },
@@ -150,14 +150,14 @@ const FEATURES: { title: string; body: ReactNode; controls?: [KeyStep[], string]
     media: { src: M('xy-passing.png'), alt: 'A pass play with the A, B, C, X and Y receiver icons' },
   },
   {
-    title: 'Hot routes and the speed option',
-    body: "Before the snap, press Y, then a receiver's button, then a direction to change his route: streak, out, slant or curl, or Y for a drag and C to block. Backs get a wheel, swing, angle, check-release or screen. Hold X to see every receiver's route above his head. New option plays (a speed option in five formations, and the Near and Far sweeps) let you keep the ball or pitch it with C. Backs in motion run out to the slot, and you can send several players in motion, one after another.",
-    controls: [[['Y'], 'Open the hot route menu'], [['A', '/', 'B', '/', 'C'], "Then the receiver's button (or X, Y)"], [['dpad'], 'Then his route'], [['Z'], 'Cancel'], [['X'], 'Hold: every route']],
+    title: 'Hot routes and pre-snap play art',
+    body: "Hold X before the snap to see your play: its diagram at the top right, each receiver's button and jersey number at his feet, and his route above his head. On defense, X shows the play's diagram and what each defender does. To change a route, press Y, then the receiver's button, then a direction: streak, out, slant or curl, or Y for a drag and C to block. Backs get a wheel, swing, angle, check-release or screen.",
+    controls: [[['X'], 'Hold: the play art and every route'], [['Y'], 'Open the hot route menu'], [['A', '/', 'B', '/', 'C'], "Then the receiver's button (or X, Y)"], [['dpad'], 'Then his route'], [['Z'], 'Cancel']],
     media: { src: M('manual/presnap-offense.png'), alt: "X held before the snap: the play art top right, each receiver's button and number at his feet and his route above his head" },
   },
   {
     title: 'New formations and plays',
-    body: 'Eight new formations: Singleback, SB 3WR, SB 4WR, Pistol, 4 WR, Empty, Trips and Shotgun 2RB, with 100 plays adapted from Madden NFL 97. Also new: 67 plays from College Football USA 97, an RPO and an HB Swing. The CPU calls all of them, and Flip Play works on every play.',
+    body: 'Eight new formations: Singleback, SB 3WR, SB 4WR, Pistol, 4 WR, Empty, Trips and Shotgun 2RB, with 100 plays adapted from Madden NFL 97. Also new: 67 plays from College Football USA 97, an RPO, an HB Swing, a speed option in five formations, and the Near and Far option sweeps (keep the ball or pitch it with C). The CPU calls all of them, and Flip Play works on every play.',
     controls: [[['X'], 'Flip the play on the play-call screen'], [['Y'], 'Go back to the formations']],
     media: { src: M('playcall.png'), alt: 'The play-call screen: the Singleback, SB 3WR, SB 4WR, Pistol, 4 WR, Empty, Trips and Shotgun 2RB formations' },
   },
