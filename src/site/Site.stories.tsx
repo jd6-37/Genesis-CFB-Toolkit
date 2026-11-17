@@ -18,7 +18,7 @@ export const ManualParts: Story = {
   render: () => (
     <div className="manual" data-brand="dynasty" data-theme="light" data-edition="2026" style={{ padding: 24 }}>
       <div className="manual-text">
-        <Controls rows={[[['C'], 'Snap the ball'], [['A', 'X'], 'Flip the play at the line', 'new six'], [['up', 'down'], 'Pick a motion man', 'new']]} />
+        <Controls rows={[[['C'], 'Snap the ball'], [['A', ',', 'X'], 'Flip the play at the line', 'new six'], [['up', '/', 'down'], 'Pick a motion man', 'new']]} />
         <Tip>Two long runs in a row will slow your best back down.</Tip>
         <Fixed>In both Elevated editions.</Fixed>
         <Edition only="2026"><p>Text for the 2026 Season Edition only.</p></Edition>

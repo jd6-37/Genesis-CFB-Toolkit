@@ -454,6 +454,24 @@ export function Glyph({ k }: { k: GlyphKey }) {
   return <span className={cx('ui-glyph', k.length > 1 && 'ui-glyph-wide')} role="img" aria-label={`${k} button`}>{k}</span>;
 }
 
+/** One step in a row of buttons: a button, or what sits between two buttons. */
+export type KeyStep = GlyphKey | ',' | '/';
+
+/**
+ * Buttons for one control, with what's between them (owner, 2026-11-17): a comma between buttons pressed one after
+ * another (A, X: open the audible menu, then flip) and a slash between buttons to choose from (X / Z / Y).
+ */
+export function Keys({ keys }: { keys: KeyStep[] }) {
+  return (
+    <span className="ui-keys">
+      {keys.map((k, i) =>
+        k === ',' ? <span key={i} className="ui-keys-then">,<span className="ui-sr"> then</span></span>
+          : k === '/' ? <span key={i} className="ui-keys-or"><span aria-hidden="true">/</span><span className="ui-sr">or</span></span>
+            : <Glyph key={i} k={k} />)}
+    </span>
+  );
+}
+
 /** A small label: `accent` marks what the mod adds (Elevated), `ink` a requirement (6-button), `plain` a topic. */
 export function Tag({ children, tone = 'plain' }: { children: ReactNode; tone?: 'accent' | 'ink' | 'plain' }) {
   return <span className={cx('ui-tag', `ui-tag-${tone}`)}>{children}</span>;

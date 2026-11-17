@@ -2,7 +2,7 @@
 // Media are files in public/media (screenshots and clips from the test ROMs; the CLAUDE.md exception).
 // Copy rule (owner): direct and literal. Headings name the feature; sentences say what it does. No slogans or wordplay.
 import { useState, type ReactNode } from 'react';
-import { Button, Glyph, Screen, SetupList, SubHead, Tag, type GlyphKey } from '../ui';
+import { Button, Keys, Screen, SetupList, SubHead, Tag, type KeyStep } from '../ui';
 import { posts } from './content';
 import { REPO_URL } from './routes';
 
@@ -136,23 +136,23 @@ function Fatigue() {
   );
 }
 
-const FEATURES: { title: string; body: ReactNode; controls?: [GlyphKey[], string][]; media: { src: string; video?: string; alt: string; caption?: string } }[] = [
+const FEATURES: { title: string; body: ReactNode; controls?: [KeyStep[], string][]; media: { src: string; video?: string; alt: string; caption?: string } }[] = [
   {
     title: 'Motion, flips and shifts before the snap',
     body: 'On offense, you can send a back or receiver in motion, and flip the play to the other side at the line. On defense, you can shift the line, the linebackers or the safeties a step left or right. Man-to-man defenders follow a player in motion, and the CPU defense usually realigns when you flip the play.',
-    controls: [[['up', 'down'], 'Pick the player to send in motion'], [['left', 'right'], 'Send him in motion'], [['A', 'X'], 'Flip the play at the line'], [['X', 'Z', 'Y'], 'On defense: pick the line, linebackers or safeties to shift']],
+    controls: [[['up', '/', 'down'], 'Pick the player to send in motion'], [['left', '/', 'right'], 'Send him in motion'], [['A', ',', 'X'], 'Flip the play at the line'], [['X', '/', 'Z', '/', 'Y'], 'On defense: pick the line, linebackers or safeties to shift']],
     media: { src: M('motion.png'), video: M('motion.mp4'), alt: 'A slot receiver goes in motion across the formation and his defender follows' },
   },
   {
     title: 'Throw to five receivers',
     body: "With a 6-button pad, X throws to the 4th receiver and Y to the 5th. Hold X before the snap to see the play's diagram and which button throws to each receiver. With a 3-button pad, passing works as in the original game.",
-    controls: [[['C'], 'Bring up the receiver icons'], [['X', 'Y'], 'Throw to receiver 4 or 5'], [['X'], "Hold before the snap: the play's diagram and each receiver's button"]],
+    controls: [[['C'], 'Bring up the receiver icons'], [['X', '/', 'Y'], 'Throw to receiver 4 or 5'], [['X'], "Hold before the snap: the play's diagram and each receiver's button"]],
     media: { src: M('xy-passing.png'), alt: 'A pass play with the A, B, C, X and Y receiver icons' },
   },
   {
     title: 'Hot routes and the speed option',
     body: "Before the snap, press Y, then a receiver's button, then a direction to change his route: streak, out, slant or curl, or Y for a drag and C to block. Backs get a wheel, swing, angle, check-release or screen. Hold X to see every receiver's route above his head. New option plays (a speed option in five formations, and the Near and Far sweeps) let you keep the ball or pitch it with C. Backs in motion run out to the slot, and you can send several players in motion, one after another.",
-    controls: [[['Y'], 'Open the hot route menu'], [['A', 'B', 'C'], "Then the receiver's button (or X, Y)"], [['dpad'], 'Then his route'], [['Z'], 'Cancel'], [['X'], 'Hold: every route']],
+    controls: [[['Y'], 'Open the hot route menu'], [['A', '/', 'B', '/', 'C'], "Then the receiver's button (or X, Y)"], [['dpad'], 'Then his route'], [['Z'], 'Cancel'], [['X'], 'Hold: every route']],
     media: { src: M('manual/presnap-offense.png'), alt: "X held before the snap: the play art top right, each receiver's button and number at his feet and his route above his head" },
   },
   {
@@ -211,7 +211,7 @@ function Features() {
               <ul className="home-controls" aria-label="Controls">
                 {f.controls.map(([keys, what]) => (
                   <li key={what}>
-                    <span className="home-keys">{keys.map((k) => <Glyph key={k} k={k} />)}</span>
+                    <Keys keys={keys} />
                     {what}
                   </li>
                 ))}
