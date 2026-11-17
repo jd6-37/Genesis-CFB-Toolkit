@@ -88,6 +88,7 @@ const EDITIONS: { id: Edition; name: string; title: string; rows: [string, strin
       ['Schedule', 'Random, or the real 2026 schedule'],
       ['Postseason', 'Conference title games, then a 12-team playoff. Or a 24- or 4-team playoff, a BCS title game, or none'],
       ['Rosters', '2026 rosters with player names, rated from College Football 27'],
+      ['Rules', "Today's clock rules (the clock keeps running after first downs until the last 2:00 of a half) and today's overtime (no ties; two-point tries from the 3rd overtime)"],
     ],
   },
 ];
@@ -259,7 +260,7 @@ function Apps() {
           <h3 className="home-h3">Mod Toolkit</h3>
           <p>
             Patches your ROM in the browser. It also edits rosters, imports College Football 27 ratings, swaps teams, sets each team's offense and
-            defense style, and edits Walsh Reports.
+            defense style, edits Walsh Reports and alternate uniforms, moves teams between conferences, and sets how simulated games score and how big their stats are.
           </p>
           <Button variant="quiet" href="/toolkit">Open the Mod Toolkit</Button>
         </article>
@@ -267,8 +268,8 @@ function Apps() {
           <Screen wide src={M('app-dynasty.png')} alt="The Dynasty app" />
           <h3 className="home-h3">Dynasty</h3>
           <p>
-            Runs a dynasty over many seasons: recruiting, player progression, real head coaches and a coaching carousel, schedules, awards and records. After each season it writes the next
-            season into your ROM. Both editions.
+            Runs a dynasty over many seasons: recruiting, player progression, real head coaches and a coaching carousel, schedules, a preseason Top 25, a new Walsh Report for every team each season, awards and records. After each season it writes the next
+            season into your ROM. Both editions. Get started walks you through your first season step by step.
           </p>
           <Button variant="quiet" href="/dynasty">Open Dynasty</Button>
         </article>
