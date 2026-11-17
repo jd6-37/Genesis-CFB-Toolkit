@@ -13,5 +13,5 @@
     "allowImportingTsExtensions": false,
     "types": ["node"]
   },
-  "include": ["src", "cli"]
+  "include": ["src", "cli", "api"]
 }

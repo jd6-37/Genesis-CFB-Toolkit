@@ -27,15 +27,16 @@ import { seasonDone } from '../../core/dynasty/offseason';
 import type { Dynasty } from '../../core/dynasty/model';
 import { backupLabel, isBackup, lineupLock, moveToSpot, slotKind, slotOfSpot, spotLabel, spotsFor, SPOTS } from '../../core/dynasty/lineup';
 import { playerOvr, roleOfSlot } from '../../core/dynasty/ovr';
-import { accentOn, Empty, Headshot, StoryArt, TeamLink, TeamMark, href, heightText, hometownText, inkColor, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
+import { accentOn, Empty, Headshot, Locked, StoryArt, TeamLink, TeamMark, href, heightText, hometownText, inkColor, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
 
 // ---- front page
 
 function NoResults() {
+  const { readOnly } = useDyn();
   return (
     <Empty>
-      <p>No results yet. Play a week in the game, then import your save on the Manage page.</p>
-      <Button href={href('manage')}>Import a save</Button>
+      <p>{readOnly ? 'No results yet in this snapshot.' : 'No results yet. Play a week in the game, then import your save on the Manage page.'}</p>
+      {!readOnly && <Button href={href('manage')}>Import a save</Button>}
     </Empty>
   );
 }
@@ -458,7 +459,7 @@ export function Teams() {
 }
 
 export function Team({ team }: { team: number }) {
-  const { d, v, downloadRom, commit } = useDyn();
+  const { d, v, downloadRom, commit, readOnly } = useDyn();
   const lines = useMemo(() => playerLines(v).filter((l) => l.team === team), [v, team]);
   const [moveError, setMoveError] = useState<string | null>(null);
   const t = d.teams[team];
@@ -478,7 +479,8 @@ export function Team({ team }: { team: number }) {
   const reserves = d.players.filter((p) => p.team === team && p.status === 'active' && !placed.has(p.id));
   const mine = d.userTeams.includes(team);
   const lock = mine ? lineupLock(d, team) : null;
-  const edit = mine && !lock ? { team, onError: setMoveError } : undefined;
+  // In a snapshot the lineup is shown, not edited.
+  const edit = mine && !lock && !readOnly ? { team, onError: setMoveError } : undefined;
   const games = v.games.filter((g) => g.visitor === team || g.home === team);
   const ovr = v.season.teamOvr?.[team];
   const conf = v.season.conf[team];
@@ -514,16 +516,16 @@ export function Team({ team }: { team: number }) {
       <div className="dy-team-cols">
         <div>
           {mine && d.whiteHome && (
-            <div className="dy-homekit">
+            <Locked><div className="dy-homekit">
               <Select label="Home jersey" value={d.whiteHome[team] ? 'white' : 'dark'} options={[{ value: 'dark', label: 'Dark at home' }, { value: 'white', label: 'White at home' }]}
                 onChange={(x) => { try { void commit(setWhiteHome(d, team, x === 'white')); setMoveError(null); } catch (e) { setMoveError((e as Error).message); } }} />
               {whiteHomeLock(d, team) && <p className="dy-small dy-dim">{whiteHomeLock(d, team)}</p>}
-            </div>
+            </div></Locked>
           )}
           <TeamCoach team={team} />
           <GoalsBox team={team} />
           <SubHead>Schedule</SubHead>
-          {mine && v.season.schedule && !scheduleLock(v.season) && <p className="dy-small"><a href={href(`schedule/${team}`)}>Change the schedule</a></p>}
+          {mine && !readOnly && v.season.schedule && !scheduleLock(v.season) && <p className="dy-small"><a href={href(`schedule/${team}`)}>Change the schedule</a></p>}
           {games.length ? (
             <Table figures>
               <tbody>
@@ -572,7 +574,7 @@ export function Team({ team }: { team: number }) {
       </p>
       {edit && <p className="dy-small">Choose a player's position to move him: the player there takes his place. ★ marks the Active Roster spots. A player can change position once a season (HB and FB, FB and TE, DE and OLB, OLB and MLB, K and P).</p>}
       {lock && mine && <p className="dy-dim dy-small">{lock}</p>}
-      {mine && v.season.lineupEdited && (
+      {mine && !readOnly && v.season.lineupEdited && (
         <Note>
           You changed the lineup. Download the {v.season.year} ROM again before you start the New Season.{' '}
           <Button variant="quiet" onClick={() => downloadRom(v.season.year)}>Download the {v.season.year} ROM</Button>
@@ -583,7 +585,7 @@ export function Team({ team }: { team: number }) {
       <SubHead>Backups</SubHead>
       <p className="dy-dim dy-small">{bench.length + reserves.length} players who aren't on the Active Roster this season. Each backs up a spot and can move up when it opens.</p>
       <RosterTable rows={[...bench, ...reserves.map((p) => ({ p, spot: null, label: p.pos, ovr: null }))]} edit={edit} />
-      <AddPlayer team={team} />
+      <Locked><AddPlayer team={team} /></Locked>
     </section>
   );
 }
@@ -718,7 +720,7 @@ export function Player({ id }: { id: number }) {
           <StatTables lines={s.lines} />
         </div>
       ))}
-      <div className="dy-edit-wrap">{p.status === 'active' && team !== null && <EditPlayer key={p.id} p={p} />}<EditLook key={`look-${p.id}`} p={p} /></div>
+      <Locked><div className="dy-edit-wrap">{p.status === 'active' && team !== null && <EditPlayer key={p.id} p={p} />}<EditLook key={`look-${p.id}`} p={p} /></div></Locked>
       <SubHead>Attribute ratings</SubHead>
       {shownSlots.length ? shownSlots.map((slot) => <BwRatings key={slot} team={team!} slot={slot} name={playerName(p)} bench={onBench} player={p} />) : (
         <p className="dy-dim">

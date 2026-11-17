@@ -17,6 +17,7 @@ import {
   type DynastySummary, type TeamArt,
 } from '../../core/dynasty/storage';
 import { Ctx, href, TeamMark, type DynCtx } from './ui';
+import { SharePanel } from './SharePanel';
 import { Awards } from './AwardsPage';
 import { Records } from './RecordsPage';
 import { ScheduleEditor } from './SchedulePage';
@@ -383,7 +384,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
   const num = arg !== undefined && /^\d+$/.test(arg) ? Number(arg) : undefined;
   const body = (() => {
     if (page === 'start') return <GetStarted actions={startActions} busy={!!busy} />;
-    if (page === 'manage' || !ctx) return <Manage d={d} art={art} list={list} busy={busy} note={note} actions={actions} />;
+    if (page === 'manage' || !ctx) return <Manage d={d} art={art} list={list} busy={busy} note={note} actions={actions} focus={focus} ctx={ctx} />;
     switch (page) {
       case 'scores': return <Scores week={num} />;
       case 'standings': return <Standings />;
@@ -513,11 +514,15 @@ const MANAGE_SECTIONS = [
   { id: 'dy-m-teams', label: 'Your teams' },
   { id: 'dy-m-players', label: 'Players' },
   { id: 'dy-m-files', label: 'Backup and files' },
+  { id: 'dy-m-share', label: 'Share' },
   { id: 'dy-m-help', label: 'Rules and help' },
   { id: 'dy-m-others', label: 'Other dynasties' },
 ];
 
-function Manage({ d, art, list, busy, note, actions }: {
+function Manage({ d, art, list, busy, note, actions, focus, ctx }: {
+  /** The masthead's active team (Share follows it). */
+  focus?: number;
+  ctx: DynCtx | null;
   d: Dynasty | null;
   art: TeamArt[] | null;
   list: DynastySummary[] | null;
@@ -667,6 +672,8 @@ function Manage({ d, art, list, busy, note, actions }: {
               )}
             </div>
           </section>
+
+          <SharePanel d={d} art={art} focus={focus} commit={actions.commit} ctx={ctx} />
 
           <section className="dy-panel" id="dy-m-help">
             <h2>Rules and help</h2>

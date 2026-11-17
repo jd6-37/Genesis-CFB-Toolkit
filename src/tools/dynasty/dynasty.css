@@ -699,3 +699,20 @@
   .dy-guide li { grid-template-columns: 56px minmax(0, 1fr); }
 }
 .dy-note-action { margin-top: var(--sp-3); }
+/* Manage → Share */
+.dy-share-team { display: flex; gap: var(--sp-3); align-items: center; padding: var(--sp-3); margin-bottom: var(--sp-3); background: var(--surface-sunken); }
+.dy-share-team p { margin: 0; }
+.dy-share-link { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; margin-top: var(--sp-3); }
+.dy-share-link input { flex: 1 1 240px; min-width: 0; min-height: 48px; padding: 0 var(--sp-3); font: inherit; border: 2px solid var(--rule-strong); background: var(--surface); color: var(--text); }
+.dy-share-list { list-style: none; margin: 0; padding: 0; }
+.dy-share-list li { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); align-items: center; justify-content: space-between; padding: var(--sp-3) 0; border-bottom: 1px solid var(--rule); }
+/* A shared snapshot: the bar on top, the locked editors, the gone page */
+.dy-snapbar { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-4); align-items: center; justify-content: space-between; padding: var(--sp-2) var(--sp-4); background: var(--highlight); color: var(--text); border-bottom: 3px solid var(--rule-strong); }
+.dy-snapbar p { margin: 0; font-size: var(--fs-2); }
+.dy-snapbar a { font-weight: 700; font-size: var(--fs-2); color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+.dy-snaptag { display: inline-block; margin-right: var(--sp-2); padding: 0 var(--sp-2); background: var(--rule-strong); color: var(--surface); font: italic 800 var(--fs-3) var(--display); text-transform: uppercase; }
+.dy-locked-set { margin: 0; padding: 0; border: 0; min-width: 0; opacity: 0.55; }
+.dy-locked > p { margin: var(--sp-1) 0 var(--sp-3); }
+.dy-locked > p a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
+.dy-gone { padding: var(--sp-6) 0; max-width: 64ch; }
+.dy-gone p { margin: var(--sp-3) 0 var(--sp-4); }
