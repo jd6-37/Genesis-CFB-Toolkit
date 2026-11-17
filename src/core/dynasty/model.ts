@@ -192,6 +192,11 @@ export interface Dynasty {
   sim?: import('../simSettings').SimSettings;
   /** Sim stat multipliers for its season ROMs (seasonSim.ts, H-021); absent = the ROM's own (×1). */
   simStats?: import('../simStats').SimStats;
+  /** Players whose number from the rosters file the game doesn't allow at their position, renumbered at creation
+   *  (the first season's ROM still shows the old ones). Names as they were then; absent = none. */
+  renumbered?: { pos: string; name: string; school: string; from: number; to: number }[];
+  /** ISO time of the last dynasty file download (Manage, the home page's backup line). Absent = never. */
+  backedUp?: string;
 }
 
 // ---- small helpers
