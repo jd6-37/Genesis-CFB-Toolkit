@@ -177,7 +177,11 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
   );
 }
 
-/** The players renumbered at creation, closed until asked for (first season only: the next season's ROM has the new numbers). */
+/**
+ * The players renumbered at creation, closed until asked for (first season only). Their real number isn't allowed at
+ * their position; the ROM already wears the same new numbers (H-007; checked on 2026 test54: the 15 on its rosters
+ * match, the other 14 are backups the ROM doesn't carry).
+ */
 export function Renumbered({ d }: { d: Dynasty }) {
   const [show, setShow] = useState(false);
   const list = d.renumbered;
@@ -186,8 +190,8 @@ export function Renumbered({ d }: { d: Dynasty }) {
   return (
     <div className="dy-renum">
       <p>
-        <strong>{n} {n === 1 ? 'player got a new number' : 'players got new numbers'}.</strong> {n === 1 ? 'His' : 'Their'} number in the rosters file isn't allowed
-        at {n === 1 ? 'his' : 'their'} position in the game (a tight end in the 50s, say). Your ROM shows the old numbers this season; next season's ROM has the new ones.
+        <strong>{n} {n === 1 ? 'player wears' : 'players wear'} a different number than in real life.</strong> {n === 1 ? 'His' : 'Their'} real number isn't allowed
+        at {n === 1 ? 'his' : 'their'} position in the game (a tight end in the 50s, say). The ROM uses the same new numbers, so nothing changes in the game.
       </p>
       <Button variant="quiet" onClick={() => setShow(!show)}>{show ? 'Hide the list' : n === 1 ? 'Show the player' : `Show the ${n} players`}</Button>
       {show && (
