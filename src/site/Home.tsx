@@ -9,9 +9,9 @@ import { REPO_URL } from './routes';
 const M = (f: string) => `/media/${f}`;
 
 type Edition = '1994' | '2026';
-const HERO: Record<Edition, { src: string; video: string; alt: string }> = {
-  '2026': { src: M('hero-2026.png'), video: M('hero-2026.mp4'), alt: 'A 2026 Season Edition game: a 69-yard catch by Delaware\'s #1 Brandon Rehmann, then the recap and a 50+ Yard Catch milestone' },
-  '1994': { src: M('hero-1994.png'), video: M('hero-1994.mp4'), alt: 'A 1994 Season Edition game: Nebraska\'s #1 Lawrence Phillips runs 67 yards before #52 Ray Lewis tackles him, then the recap and a 50+ Yard Run milestone' },
+const HERO: Record<Edition, { src: string; video: string; av1: string; alt: string }> = {
+  '2026': { src: M('hero-2026.png'), video: M('hero-2026.mp4'), av1: M('hero-2026.av1.mp4'), alt: 'A 2026 Season Edition game: a 69-yard catch by Delaware\'s #1 Brandon Rehmann, then the recap and a 50+ Yard Catch milestone' },
+  '1994': { src: M('hero-1994.png'), video: M('hero-1994.mp4'), av1: M('hero-1994.av1.mp4'), alt: 'A 1994 Season Edition game: Nebraska\'s #1 Lawrence Phillips runs 67 yards before #52 Ray Lewis tackles him, then the recap and a 50+ Yard Run milestone' },
 };
 
 function Hero() {
@@ -35,7 +35,7 @@ function Hero() {
         <p className="home-fine">The game is not included. You patch your own copy.</p>
       </div>
       <div className="home-hero-screen">
-        <Screen key={ed} src={HERO[ed].src} video={HERO[ed].video} alt={HERO[ed].alt} />
+        <Screen key={ed} src={HERO[ed].src} video={HERO[ed].video} av1={HERO[ed].av1} alt={HERO[ed].alt} priority />
         <div className="home-switch" role="group" aria-label="Show a game from">
           {(['1994', '2026'] as const).map((e) => (
             <button key={e} type="button" aria-pressed={ed === e} onClick={() => setEd(e)}>

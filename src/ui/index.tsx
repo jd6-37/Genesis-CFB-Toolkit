@@ -479,31 +479,52 @@ export function Tag({ children, tone = 'plain' }: { children: ReactNode; tone?: 
 
 /** A picture or clip of the game's screen, scaled up with hard pixels, in the screen's frame. A clip plays
     muted in a loop; `poster` shows until it does (and for people who asked for less motion, instead of it). */
-export function Screen({ src, alt, video, poster, caption, wide }: {
+export function Screen({ src, alt, video, av1, poster, caption, wide, priority }: {
   /** The picture (also the clip's poster when `poster` isn't given). */
   src: string;
   alt: string;
-  /** An .mp4 clip to play over the picture. */
+  /** An H.264 .mp4 clip to play over the picture (plays everywhere). */
   video?: string;
+  /** The same clip in AV1 (smaller); browsers that can play it take it first. */
+  av1?: string;
   poster?: string;
   caption?: ReactNode;
   /** A picture that isn't 4:3 (a collage). */
   wide?: boolean;
+  /** Above the fold (the hero): the picture loads right away, with high priority. */
+  priority?: boolean;
 }) {
   // The clip loads only when the screen comes near the viewport, so a long page doesn't fetch every clip at once.
+  // No clip with reduced motion or Save-Data: the picture stays. Off screen, the clip pauses.
   const ref = useRef<HTMLElement>(null);
+  const vid = useRef<HTMLVideoElement>(null);
   const [near, setNear] = useState(false);
+  const [skip, setSkip] = useState(false);
   useEffect(() => {
-    if (!video || !ref.current || typeof IntersectionObserver === 'undefined') return;
-    const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { setNear(true); io.disconnect(); } }, { rootMargin: '300px' });
+    const c = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || c?.saveData) setSkip(true);
+  }, []);
+  useEffect(() => {
+    if (!video || skip || !ref.current || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver((es) => {
+      const on = es.some((e) => e.isIntersecting);
+      if (on) setNear(true);
+      const v = vid.current;
+      if (v) { if (on) v.play().catch(() => {}); else v.pause(); }
+    }, { rootMargin: '300px' });
     io.observe(ref.current);
     return () => io.disconnect();
-  }, [video]);
+  }, [video, skip, near]);
   return (
     <figure ref={ref} className={cx('ui-screen', wide && 'ui-screen-wide')}>
       <div className="ui-screen-glass">
-        <img src={poster ?? src} alt={alt} loading="lazy" decoding="async" />
-        {video && near && <video src={video} poster={poster ?? src} autoPlay muted loop playsInline aria-hidden="true" />}
+        <img src={poster ?? src} alt={alt} loading={priority ? 'eager' : 'lazy'} decoding="async" {...(priority ? { fetchpriority: 'high' } : {})} />
+        {video && near && !skip && (
+          <video ref={vid} poster={poster ?? src} autoPlay muted loop playsInline preload="auto" aria-hidden="true">
+            {av1 && <source src={av1} type='video/mp4; codecs="av01.0.04M.08"' />}
+            <source src={video} type="video/mp4" />
+          </video>
+        )}
       </div>
       {caption && <figcaption>{caption}</figcaption>}
     </figure>
