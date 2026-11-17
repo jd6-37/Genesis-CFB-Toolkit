@@ -162,8 +162,8 @@ const FEATURES: { title: string; body: ReactNode; controls?: [KeyStep[], string]
     media: { src: M('playcall.png'), alt: 'The play-call screen: the Singleback, SB 3WR, SB 4WR, Pistol, 4 WR, Empty, Trips and Shotgun 2RB formations' },
   },
   {
-    title: 'Swap in your backup halfback or middle linebacker',
-    body: 'On the play-call screen, SWAP HBS puts your second halfback in for the first. On defense, SWAP MLBS does the same for the middle linebackers. The backup plays with his own ratings, energy and stats until you swap back or the half ends. CPU teams swap when their starter gets tired.',
+    title: 'Substitute players, a first in the game',
+    body: 'For the first time in Bill Walsh \'95, you can take a tired starter out. On the play-call screen, SWAP HBS puts your second halfback in for the first. On defense, SWAP MLBS does the same for the middle linebackers. The backup plays with his own ratings, energy and stats until you swap back or the half ends. CPU teams swap when their starter gets tired.',
     controls: [[['Z'], 'Swap on the play-call screen']],
     media: { src: M('swap.png'), video: M('swap.mp4'), alt: 'The play-call screen: SWAP HBS turns yellow when the second halfback is in' },
   },
