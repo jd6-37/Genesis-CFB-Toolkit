@@ -10,7 +10,7 @@ const M = (f: string) => `/media/${f}`;
 
 type Edition = '1994' | '2026';
 const HERO: Record<Edition, { src: string; video: string; alt: string }> = {
-  '2026': { src: M('hero-2026.png'), video: M('hero-2026.mp4'), alt: 'A 2026 Season Edition game: Notre Dame at Florida State' },
+  '2026': { src: M('hero-2026.png'), video: M('hero-2026.mp4'), alt: 'A 2026 Season Edition game: a 69-yard catch by Delaware\'s #1 Brandon Rehmann, then the recap and a 50+ Yard Catch milestone' },
   '1994': { src: M('hero-1994.png'), video: M('hero-1994.mp4'), alt: 'A 1994 Season Edition game' },
 };
 
