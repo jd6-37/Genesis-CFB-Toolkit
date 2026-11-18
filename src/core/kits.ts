@@ -125,11 +125,80 @@ export const shadesOf = (main: number, accent: number): number[] => [accent, ste
 export const helmetOf = (shell: number, stripe: number): number[] => [shell, step(shell, -1), stripe];
 
 /** A team's own home and away uniform palettes (16 words each), the picker's first choices. */
-export function ownUniforms(d: Uint8Array, team: number): { home: number[]; away: number[] } {
-  const block = u32(d, 0x0028dc + 4 * team); // the team blocks' table (bw95.ts)
-  const at = block + u16(d, block + 2);
+export interface OwnUniforms { home: number[]; away: number[] }
+const ownAt = (d: Uint8Array, team: number) => { const block = u32(d, 0x0028dc + 4 * team); return block + u16(d, block + 2); }; // the team blocks' table (bw95.ts)
+export function ownUniforms(d: Uint8Array, team: number): OwnUniforms {
+  const at = ownAt(d, team);
   const words = (a: number) => Array.from({ length: 16 }, (_, k) => u16(d, a + 2 * k));
   return { home: words(at), away: words(at + 32) };
+}
+
+/**
+ * Writes a team's own home and away uniforms (user, 2026-11-18: the editor's own pieces are "Editable too"). Only the
+ * uniform places change (helmet [5]-[7], jersey [9]-[12], pants [3] and [13]-[15]); the rest of each palette (skin,
+ * shoes, …) stays the ROM's. The game takes its end zone and crowd colors from the home uniform. The checksum at
+ * 0x18E is the caller's to fix.
+ */
+export function writeOwnUniforms(d: Uint8Array, team: number, own: OwnUniforms): void {
+  const at = ownAt(d, team);
+  if (at <= 0 || at + 64 > d.length) throw new Error(`Team ${team} has no uniforms in this ROM.`);
+  const places = [...KIT_PLACES.helmets, ...KIT_PLACES.dark, ...KIT_PLACES.pants];
+  for (const [k, pal] of [[0, own.home], [1, own.away]] as const) {
+    if (pal.length !== 16 || pal.some((c) => (c & ~CRAM) !== 0)) throw new Error('A uniform color isn\'t a Genesis color.');
+    for (const i of places) { const a = at + 32 * k + 2 * i; d[a] = pal[i] >> 8; d[a + 1] = pal[i] & 255; }
+  }
+}
+
+/** The teams whose own uniforms differ between two ROMs (the uniform places only). */
+export function ownChanges(a: Uint8Array, b: Uint8Array): number[] {
+  if (!hasKits(a) || !hasKits(b)) return [];
+  const n = Math.min(u16(a, KTAB + 4), u16(b, KTAB + 4));
+  const places = [...KIT_PLACES.helmets, ...KIT_PLACES.dark, ...KIT_PLACES.pants];
+  const out: number[] = [];
+  for (let t = 0; t < n; t++) {
+    const x = ownUniforms(a, t), y = ownUniforms(b, t);
+    if (places.some((i) => x.home[i] !== y.home[i] || x.away[i] !== y.away[i])) out.push(t);
+  }
+  return out;
+}
+
+/** The player the picker on the controller screen shows (sprite bank frame 497: standing, front view), for previews. */
+export interface KitSprite { sprites: { x: number; y: number; tile: number; size: number }[]; tiles: Uint8Array }
+const SPRITE_BANK = 0x11495c, KIT_FRAME = 497;
+export function readKitSprite(d: Uint8Array): KitSprite | null {
+  try {
+    const sub = SPRITE_BANK + u32(d, SPRITE_BANK + 4);
+    const o0 = u16(d, sub + 2 * KIT_FRAME - 2), o1 = u16(d, sub + 2 * KIT_FRAME);
+    if (o1 <= o0 || (o1 - o0) % 8 || o1 - o0 > 64) return null;
+    const s16 = (v: number) => (v << 16) >> 16;
+    const raw = [];
+    for (let a = sub + o0; a < sub + o1; a += 8) raw.push({ x: s16(u16(d, a)), y: s16(u16(d, a + 2)), tile: u16(d, a + 4), size: u16(d, a + 6) & 0x0f });
+    // Only the frame's tiles, renumbered from 0.
+    const parts: number[] = [];
+    const sprites = raw.map((s) => {
+      const n = (((s.size >> 2) & 3) + 1) * ((s.size & 3) + 1);
+      const first = parts.length / 32;
+      for (let k = 0; k < n; k++) { const a = SPRITE_BANK + 10 + 32 * (s.tile + k); if (a + 32 > d.length) throw new Error('tiles'); parts.push(...d.subarray(a, a + 32)); }
+      return { ...s, tile: first };
+    });
+    return { sprites, tiles: new Uint8Array(parts) };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A palette that shows one part in its colors and the rest of the player faded to gray (the editor's previews; user,
+ * 2026-11-18: "Gray out and fade the other parts of the uniform").
+ */
+export function partPalette(palette: number[], part: KitPart): number[] {
+  const keep = new Set(KIT_PLACES[part]);
+  return palette.map((c, i) => {
+    if (i === 0 || keep.has(i)) return c;
+    const [r, g, b] = toLevels(c);
+    const v = Math.round(((0.3 * r + 0.59 * g + 0.11 * b) + 2 * 3) / 3); // gray, faded toward the background's level
+    return fromLevels(v, v, v);
+  });
 }
 
 export type KitPart = 'helmets' | 'dark' | 'white' | 'pants';

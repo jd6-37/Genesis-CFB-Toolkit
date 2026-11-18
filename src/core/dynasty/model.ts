@@ -195,6 +195,8 @@ export interface Dynasty {
   romUniforms?: import('./kit').RomUniforms;
   /** The teams whose extra uniforms the user changed (kit.ts): written over the ROM's in every season ROM. */
   kitEdits?: Record<number, import('../kits').TeamKit>;
+  /** The teams whose own home and away uniforms the user changed (kit.ts; the editor warns first): written into every season ROM. */
+  ownEdits?: Record<number, import('../kits').OwnUniforms>;
   /** Every coach (coaches.ts; index = id): the real coaches of the edition's year, then any made in the dynasty. Absent until the app adds them. */
   coaches?: import('./coaches').DCoach[];
   /** Drafted players who will come back as coaches after their pro careers (carousel.ts): player id, the offseason he joins the pool. */

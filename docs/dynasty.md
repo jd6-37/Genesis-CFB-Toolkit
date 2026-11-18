@@ -474,6 +474,13 @@ User, 2026-11-18: "Would it be possible to edit uniforms mid-season?", then "Let
   - `Dynasty.romUniforms`: the ROM's own home and away palettes and its KTAB, read at creation; older dynasties read it the first time the editor opens (`getRom`).
   - `Dynasty.kitEdits`: only the teams the user changed. `whiteHome` keeps the flags.
   - Season ROMs (`applyKits`): the ROM's table with the edited teams put in, and every flag.
+- **Editor, round 2** (user, 2026-11-18: "It doesn't show any white jerseys ... It should show all uniform parts", "make it very evident that all i have to do is modify the 'jersey' color", "can you just show the game sprite like we do in the pre-game uniform selection menu? Gray out and fade the other parts"; own pieces "Editable too", then "put a lock icon on them. If the user tries to edit them, open a modal warning ... that should pop up anytime they try to edit one of these"):
+  - `KitParts` lists each part's own pieces first (helmet and pants once when home and away share them, else both; the home jersey under dark jerseys, the away jersey under white), then the extras.
+  - Each piece is drawn on the picker's player sprite (`readKitSprite`: sprite bank 0x11495C frame 497) with `partPalette`: that part in color, the rest gray and faded.
+  - The main color is a big swatch; the accent (stripe, numbers and sleeve stripes, side and hem stripes) is normal; the shades are small, follow the main color and stay editable.
+  - Own pieces carry a lock. Every color pick on one opens the warning (end zones and crowd); "Change it anyway" opens the picker for that one change.
+  - Writing: `writeOwnUniforms` (the uniform places of both palettes only). Dynasty `ownEdits` per team, written by `applyKits` into season ROMs and the first season's `uniformRom`. Toolkit: counted as a Teams edit and carried over by team name (`ownChanges`, `carryEdits`).
+  - `romUniforms.sprite` keeps the sprite (base64); older dynasties read it from the ROM when the editor opens.
 - **Editor:** `UniformsBox.tsx` on every team page: chips of the home and away uniforms and the extras, then Edit uniforms with the home jersey menu, `KitParts` (shared with the Toolkit's `KitEditor`) and "Back to the ROM's uniforms". Changes are saved at once; `setKit` refuses a table that won't fit (`kitIssues`).
 - **Out-of-date ROM:**
   - `DSeason.kitsEdited` is set by a uniform change after the season's ROM was downloaded, or any time in the first season (played on the user's own ROM). It's never set in the offseason: the next season's ROM comes at its end. It is not a new `rosterVersion`, so the import's "earlier ROM" warning isn't triggered.

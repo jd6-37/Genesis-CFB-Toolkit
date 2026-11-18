@@ -84,8 +84,8 @@ export function ColorPicker({ value, onPick, onClose }: { value: number; onPick:
   );
 }
 
-export function Swatch({ color, label, onPick }: { color: number; label: string; onPick: (c: number) => void }) {
-  const [open, setOpen] = useState(false);
+export function Swatch({ color, label, onPick, startOpen = false }: { color: number; label: string; onPick: (c: number) => void; /** Opens with the picker showing. */ startOpen?: boolean }) {
+  const [open, setOpen] = useState(startOpen);
   return (
     <span className="swatch-wrap">
       <button

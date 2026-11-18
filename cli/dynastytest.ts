@@ -31,7 +31,8 @@ import { CFB27_LATEST } from '../src/core/cfb27Latest';
 import { OVR_FORMULAS, playerOvr, roleOfSlot } from '../src/core/dynasty/ovr';
 import { readRating } from '../src/core/teamRatings';
 import { hasKits, readKits } from '../src/core/kits';
-import { kitOf, setKit, setWhiteHome, whiteHomeLock } from '../src/core/dynasty/kit';
+import { ownUniforms } from '../src/core/kits';
+import { kitOf, ownOf, setKit, setOwn, setWhiteHome, whiteHomeLock } from '../src/core/dynasty/kit';
 import * as Off from '../src/core/dynasty/offseason';
 import * as Num from '../src/core/dynasty/numbers';
 import * as Rec from '../src/core/dynasty/recruiting';
@@ -1422,6 +1423,13 @@ if (hasKits(rom)) {
   const u = Off.uniformRom(k2, rom);
   const diff = [...u].flatMap((x, i) => (x === rom[i] || (i >= 0x2b6000 && i < 0x2b7000) ? [] : [i]));
   assert.ok(diff.every((i) => i < 0x200 || (i >= 0x1e6400 && i < 0x1e6440)), `only the uniforms and checksums change: ${diff.slice(0, 5).map((i) => i.toString(16))}`);
+  // A team's own uniform (behind a warning in the editor): written into season ROMs; back to the ROM's drops it.
+  const own = ownOf(k2, 5)!;
+  const o2 = setOwn(k2, 5, { home: own.home.map((c, i) => (i === 11 ? 0x0e00 : c)), away: own.away });
+  assert.equal(ownUniforms(Off.seasonRom(o2, o2.seasons[0], rom), 5).home[11], 0x0e00);
+  assert.equal(ownUniforms(Off.uniformRom(o2, rom), 5).home[11], 0x0e00);
+  assert.equal(setOwn(o2, 5, own).ownEdits, undefined);
+  assert.ok(k0.romUniforms?.sprite, 'the editor\'s player sprite is kept');
   // Back to the ROM's uniforms drops the edit.
   assert.equal(setKit(k2, 3, romKits[3]).kitEdits, undefined);
   // Too many extras are refused.
