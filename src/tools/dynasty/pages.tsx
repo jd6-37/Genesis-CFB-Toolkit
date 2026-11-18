@@ -698,11 +698,13 @@ function ImpactBox({ team, ids }: { team: number; ids: number[] }) {
         })}
       </ul>
       <p className="dy-small dy-dim">
-        {own
-          ? `Picked by you in the offseason. `
-          : 'The game picks them from the Active Roster: the best offensive skill player, the best defender, and the better of the next two. '}
+        {/* User, 2026-11-18: "The team's top players. A hot streak puts them in the zone. You can manually pick impact
+            players, only in the offseason." The last line only on the user's own teams (the others can't be picked). */}
+        {own ? 'Picked by you in the offseason. ' : "The team's top players. "}
         A hot streak puts them in the zone.
-        {canPick && <> <a href={href('offseason/impact')}>Change them</a> before you start the season.</>}
+        {d.userTeams.includes(team) && !readOnly && (canPick
+          ? <> <a href={href('offseason/impact')}>Change them</a> before you start the season.</>
+          : ' You can pick your impact players yourself, only in the offseason.')}
       </p>
     </section>
   );
@@ -710,8 +712,43 @@ function ImpactBox({ team, ids }: { team: number; ids: number[] }) {
 
 type RosterRow = { p: DPlayer; spot: number | null; label: string; ovr: number | null };
 
-function RosterTable({ rows, edit, impact = [] }: { rows: RosterRow[]; edit?: { team: number; onError: (m: string | null) => void }; impact?: number[] }) {
+/** The roster tables' sortable columns (user, 2026-11-18: "make the tables in the roster tab sortable by column"). */
+type RosterSort = 'pos' | 'num' | 'name' | 'ovr' | 'cls' | 'ht' | 'wt' | 'home';
+const CLASS_ORDER = ['FR', 'SO', 'JR', 'SR', 'SR+'];
+
+function RosterTable({ rows: given, edit, impact = [] }: { rows: RosterRow[]; edit?: { team: number; onError: (m: string | null) => void }; impact?: number[] }) {
   const { d, commit } = useDyn();
+  // Position = the game's roster order (the default); names and hometowns start A-Z, numbers high to low; blanks last.
+  const [sort, setSort] = useState<{ key: RosterSort; desc: boolean }>({ key: 'pos', desc: false });
+  const valueOf = (r: RosterRow, i: number, k: RosterSort): number | string | null => {
+    const p = r.p;
+    switch (k) {
+      case 'pos': return i;
+      case 'num': return p.jersey < 0 ? null : p.jersey;
+      case 'name': return p.first || p.last ? `${p.last} ${p.first}`.toLowerCase() : null; // unnamed players ("TE #83") last
+      case 'ovr': return r.ovr ?? null;
+      case 'cls': return CLASS_ORDER.indexOf(p.cls);
+      case 'ht': return p.heightIn || null;
+      case 'wt': return p.weight || null;
+      case 'home': return hometownText(p) || null;
+    }
+  };
+  const rows = given.map((r, i) => ({ r, i })).sort((a, b) => {
+    const x = valueOf(a.r, a.i, sort.key), y = valueOf(b.r, b.i, sort.key);
+    if (x === null || y === null) return x === y ? a.i - b.i : x === null ? 1 : -1;
+    const c = typeof x === 'string' ? x.localeCompare(y as string, 'en') : x - (y as number);
+    return (sort.desc ? -c : c) || a.i - b.i;
+  }).map((x) => x.r);
+  const head = (key: RosterSort, label: string, cls?: string) => {
+    const on = sort.key === key;
+    return (
+      <th className={cls} aria-sort={on ? (sort.desc ? 'descending' : 'ascending') : 'none'}>
+        <button type="button" className="dy-sort" onClick={() => setSort({ key, desc: on ? !sort.desc : !['pos', 'name', 'home', 'cls'].includes(key) })}>
+          {label}{on && !(key === 'pos' && !sort.desc) ? (sort.desc ? ' ▼' : ' ▲') : ''}
+        </button>
+      </th>
+    );
+  };
   const move = (p: DPlayer, spot: number) => {
     try {
       edit!.onError(null);
@@ -724,7 +761,7 @@ function RosterTable({ rows, edit, impact = [] }: { rows: RosterRow[]; edit?: { 
     <div className="dy-scroll">
       <Table className="dy-roster">
         <thead>
-          <tr><th className="ui-left">Pos</th><th>#</th><th className="ui-left">Name</th><th>OVR</th><th>Class</th><th className="dy-wide">Ht</th><th className="dy-wide">Wt</th><th className="ui-left dy-wide">Hometown</th></tr>
+          <tr>{head('pos', 'Pos', 'ui-left')}{head('num', '#')}{head('name', 'Name', 'ui-left')}{head('ovr', 'OVR')}{head('cls', 'Class')}{head('ht', 'Ht', 'dy-wide')}{head('wt', 'Wt', 'dy-wide')}{head('home', 'Hometown', 'ui-left dy-wide')}</tr>
         </thead>
         <tbody>
           {rows.map(({ p, spot, label, ovr }) => (

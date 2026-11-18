@@ -505,7 +505,7 @@ User, 2026-11-18: "The team page is getting kind of long. Should we give it its 
 - `Team` (pages.tsx) takes a `tab`. The router parses `team/<n>[/roster|stats|uniforms]` with `teamRoute`, in both the app and snapshots; links come from `teamHref`. `parseHash` now keeps the whole rest of the hash as the argument (it used to drop anything after the second `/`).
 - **Overview:** `ImpactBox`; the left column has the coach, goals and `StatLeaders`, the right column the schedule and history. On a phone the columns stack in that order.
 - `StatLeaders`: the season's top player in passing, rushing and receiving yards, tackles, sacks and interceptions, from the team's `playerLines`. A card has the headshot, name, position and the figure, with TDs or receptions where they apply. A link goes to the Stats tab.
-- **Roster:** Active Roster (the position menus, lock, download note), Backups, Add a player.
+- **Roster:** Active Roster (the position menus, lock, download note), Backups, Add a player. Both tables sort by any column (user, 2026-11-18: "make the tables in the roster tab sortable by column"; `RosterTable`). Pos is the game's roster order and the default; names, hometowns and class start A-Z or FR first, the others high to low; a second click reverses; blanks and unnamed players go last; ties keep the roster order.
 - **Stats:** `StatTables`.
 - **Uniforms:** `UniformsBox`.
 - The offseason's "Change the depth chart" and the schedule page's "Depth chart" link to the Roster tab.

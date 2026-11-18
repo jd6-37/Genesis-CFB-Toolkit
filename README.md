@@ -400,7 +400,7 @@ The pages:
 - **Team OVRs** follow the depth chart each offseason: in the 2026 edition from the starters' OVRs (as the Toolkit's College Football 27 import), in the 1994 edition from every slot's ratings against all 107 teams, on last season's scale (as the ROM's own since 1994 test36).
 - **Team pages** show the school's academic grade (a cap and the grade) beside its conference. Under the team's header are four tabs, each with its own link (`#team/12`, `#team/12/roster`, `#team/12/stats`, `#team/12/uniforms`):
   - **Overview:** impact players, head coach, goals and hot seat, stat leaders (passing, rushing and receiving yards, tackles, sacks and interceptions, with headshots), schedule, history.
-  - **Roster:** the Active Roster with your position menus, backups and Add a player.
+  - **Roster:** the Active Roster with your position menus, backups and Add a player. Click a column header to sort by it (again to reverse; Pos goes back to the game's roster order).
   - **Stats:** the full season stats.
   - **Uniforms:** the uniforms and their editor.
 
