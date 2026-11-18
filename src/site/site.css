@@ -112,7 +112,7 @@ body { margin: 0; background: var(--surface); color: var(--text); font: 400 var(
 }
 
 .home-more { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-5); }
-.home-more h3 { margin: 0 0 var(--sp-1); font: italic 900 var(--fs-5)/1.1 var(--font-display); color: var(--accent); }
+.home-more h3 { margin: 0 0 var(--sp-1); font: italic 800 var(--fs-5)/1.1 var(--font-display); letter-spacing: 0.015em; color: var(--accent); }
 .home-more p { margin: 0; max-width: 24em; }
 .home-more-link { margin: var(--sp-6) 0 0; }
 @media (min-width: 640px) { .home-more { grid-template-columns: 1fr 1fr; } }
@@ -141,7 +141,8 @@ body { margin: 0; background: var(--surface); color: var(--text); font: 400 var(
   background: var(--screen); color: var(--on-screen); border: var(--rule-w-strong) solid var(--screen-edge); text-decoration: none;
 }
 .home-posts a:hover, .insights-list a:hover { outline: 2px solid var(--accent); outline-offset: 2px; }
-.home-posts h3, .insights-list h2 { margin: 0; font: italic 900 var(--fs-5)/1.1 var(--font-display); color: var(--on-screen); }
+/* Small headlines: 800 with a little spacing, so the letters don't run together (user, 2026-11-18). */
+.home-posts h3, .insights-list h2 { margin: 0; font: italic 800 var(--fs-5)/1.1 var(--font-display); letter-spacing: 0.015em; color: var(--on-screen); }
 .home-posts p, .insights-list p { margin: 0; font-size: var(--fs-2); color: var(--on-screen); }
 .home-posts .ui-tag, .insights-list .ui-tag { justify-self: start; color: var(--on-screen); }
 @media (min-width: 960px) { .home-posts { grid-template-columns: repeat(3, 1fr); } }
@@ -181,7 +182,7 @@ body { margin: 0; background: var(--surface); color: var(--text); font: 400 var(
 .manual-index { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-3); }
 .manual-index a { display: flex; gap: var(--sp-3); align-items: baseline; padding: var(--sp-4); background: var(--surface); border: 2px solid var(--rule-strong); text-decoration: none; box-shadow: var(--shadow-hard); }
 .manual-index a:hover strong { text-decoration: underline; }
-.manual-index strong { display: block; font: italic 900 var(--fs-5)/1.1 var(--font-display); }
+.manual-index strong { display: block; font: italic 800 var(--fs-5)/1.1 var(--font-display); letter-spacing: 0.015em; }
 .manual-summary { display: block; margin-top: var(--sp-1); color: var(--text-muted); font-size: var(--fs-2); }
 @media (min-width: 960px) { .manual-body-index { grid-template-columns: 1fr; } .manual-index { grid-template-columns: 1fr 1fr; gap: var(--sp-4); } }
 
