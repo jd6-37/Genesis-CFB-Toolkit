@@ -122,8 +122,11 @@ export function KitParts({ kit, own, sprite, name, put, putOwn }: {
   return (
     <>
       {PARTS.map((def) => (
-        <div className="kit-part" key={def.part}>
-          <h4>{def.title}</h4>
+        <section className="kit-part" key={def.part} aria-label={def.title}>
+          <header className="kit-part-head">
+            <h4>{def.title}</h4>
+            <Button variant="quiet" onClick={() => add(def.part)} disabled={full(def.part)}>Add {def.part === 'pants' ? 'pants' : `a ${def.one}`}</Button>
+          </header>
           <ul>
             {ownPieces(def.part).map((o) => (
               <Piece key={o.title} title={o.title} def={def} colors={o.colors} base={o.base} sprite={sprite} onChange={(c) => setOwn(o.side, def.part, c)} locked={{ team: name, side: o.side === 'away' ? 'away' : o.side === 'home' ? 'home' : 'home and away' }} />
@@ -136,8 +139,7 @@ export function KitParts({ kit, own, sprite, name, put, putOwn }: {
               />
             ))}
           </ul>
-          <Button variant="quiet" onClick={() => add(def.part)} disabled={full(def.part)}>Add {def.part === 'pants' ? 'pants' : `a ${def.one}`}</Button>
-        </div>
+        </section>
       ))}
       <p className="kit-lead">
         Locked pieces are the team's own home and away uniforms: changing one asks first, since the game also takes the end zone
