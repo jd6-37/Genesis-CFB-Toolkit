@@ -9,7 +9,7 @@
 //   DELETE /api/snapshot             body { key }: deletes that key's snapshot
 import { BlobNotFoundError, del, head } from '@vercel/blob';
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
-import { isSnapshotId, isSnapshotKey, snapshotIdOf, snapshotPath, SNAPSHOT_MAX_BYTES, SNAPSHOT_TYPE } from '../src/core/dynasty/snapshotId';
+import { isSnapshotId, isSnapshotKey, snapshotIdOf, snapshotPath, SNAPSHOT_MAX_BYTES, SNAPSHOT_TYPE } from '../src/core/dynasty/snapshotId.js'; // .js: Node runs the function as ESM and needs the extension
 
 const json = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...headers } });
