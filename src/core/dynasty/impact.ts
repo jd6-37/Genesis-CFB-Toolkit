@@ -9,6 +9,9 @@
 //   is a lineman), the fullback 10 less, and the fullback only counts when the pick without him has no halfback.
 // - Pick order: the best offensive skill player, the best defender, then the better of the next offense and the next
 //   defense (offense on a tie). Inside a list, ties go to the lower slot.
+// - H-031 (user, 2026-11-18: "yes change it!"): the values are the fine ratings the game plays with, 16 × step + the
+//   slot's offset (−8..+7), clamped 0-255; bases and penalties × 16. With every offset 0 this picks as the steps did.
+//   Reference: the ROM lane's `finepick.py` (the ROM since 2026 test57 / 1994 test58).
 //
 // H-028 (user, 2026-11-17/18): the app picks for every team, the user may change his own teams' three in the offseason
 // ("Max 2 per side of the ball"), and the season ROM carries every team's three as the table "IMP1" (address at the
@@ -21,8 +24,9 @@ import { SLOT_DEFS, spotLabel } from './lineup';
 
 const SLOT_DEF = SLOT_DEFS.reduce<Record<number, (typeof SLOT_DEFS)[number]>>((m, x) => ((m[x.slot] = x), m), {});
 
-/** The ROM's nibble order per slot: 0 weight, 1 quickness (power for linemen), 2 speed, 3 INTEL, 4 hands / range, 5 the sixth. */
-type Nibbles = number[];
+/** A slot's fine values (16 × step + offset, 0-255) in the ROM's nibble order: 0 weight, 1 quickness (power for
+ * linemen), 2 speed, 3 INTEL, 4 hands / range, 5 power / tackle. */
+type Fine = number[];
 
 // name: rating bits over nibbles 1-5 (bit 0 = nibble 1), base. impact.py GROUPS (impact-test6 on).
 const GROUPS = {
@@ -48,7 +52,7 @@ const DEF = [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30];
  * The three impact slots of a roster (offense, defense, the third), from each slot's ROM nibbles (null = empty).
  * `fourThree`: slot 21 is a defensive lineman (every team of both Elevated editions is 4-3 by the ROM's bit table).
  */
-export function impactSlots(nib: (Nibbles | null)[], fourThree = true): number[] {
+export function impactSlots(nib: (Fine | null)[], fourThree = true): number[] {
   const isDl = (s: number) => s === 16 || s === 17 || s === 18 || (s === 21 && fourThree);
   const score = (s: number): number | null => {
     const n = nib[s];
@@ -56,15 +60,15 @@ export function impactSlots(nib: (Nibbles | null)[], fourThree = true): number[]
     const g = s === 21 && !fourThree ? GROUPS.LB : GROUPS[SLOTG[s]];
     let sum = 0;
     for (let i = 0; i < 5; i++) if ((g.mask >> i) & 1) sum += n[i + 1];
-    return 2 * (sum - g.base) + (s === 0 ? QBB : 0) - (s === 3 ? FBP : 0) - (isDl(s) ? DLP : 0);
+    return 2 * (sum - 16 * g.base) + 16 * ((s === 0 ? QBB : 0) - (s === 3 ? FBP : 0) - (isDl(s) ? DLP : 0));
   };
   const best = (list: number[], except: number, noFb: boolean, secondDl: boolean): [number, number] => {
-    let b = -1, bv = -1000;
+    let b = -1, bv = -Infinity;
     for (const s of list) {
       if (s === except || (s === 3 && noFb)) continue;
       const v0 = score(s);
       if (v0 === null) continue;
-      const v = v0 - (secondDl && isDl(s) ? DL2P : 0);
+      const v = v0 - (secondDl && isDl(s) ? 16 * DL2P : 0);
       if (v > bv) { b = s; bv = v; }
     }
     return [b, bv];
@@ -80,9 +84,15 @@ export function impactSlots(nib: (Nibbles | null)[], fourThree = true): number[]
   return [];
 }
 
-/** A slot's ROM nibbles from the app's slot record (its steps are in the editor's column order). */
-export function nibblesOf(b: BwSlot): Nibbles {
-  return GROUP_ATTRS[b.group].map((a) => b.steps[b.attrs.indexOf(a)] ?? 0);
+/** A fine value as the game plays it: 16 × step + offset, clamped 0-255. */
+export const fineValue = (step: number, off: number) => Math.max(0, Math.min(255, 16 * step + off));
+
+/** A slot's fine values in the ROM's nibble order, from the app's slot record (its steps are in the editor's column order). */
+export function fineOf(b: BwSlot): Fine {
+  return GROUP_ATTRS[b.group].map((a) => {
+    const i = b.attrs.indexOf(a);
+    return i < 0 ? 0 : fineValue(b.steps[i] ?? 0, b.offs?.[i] ?? 0);
+  });
 }
 
 /** The game's own pick for a team (player ids in pick order), from the season ROM's slot records (`bw`), or, where a
@@ -92,7 +102,7 @@ export function gameImpact(d: Pick<Dynasty, 'players'>, s: Pick<DSeason, 'slots'
   const nib = ids.map((id, slot) => {
     if (!id) return null;
     const b = s.bw?.[team]?.[slot] ?? (SLOT_DEF[slot] ? bwSlotOf(d.players[id - 1], SLOT_DEF[slot]!) : null);
-    return b ? nibblesOf(b) : null;
+    return b ? fineOf(b) : null;
   });
   return impactSlots(nib).map((slot) => ids[slot]).filter((id): id is number => !!id);
 }

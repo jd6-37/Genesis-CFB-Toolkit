@@ -293,8 +293,9 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
   const fineRom = hasFineRatings(roster.data);
   const offRand = rng((seed ^ 0x46524331) >>> 0);
   const drawn = () => Math.floor(offRand() * 16) - 8;
-  // The app's numbers run 0-100 (fine 0-240): nothing below step 0 (the game reads that as 0) or above step 15.
-  const inRange = (step: number, off: number) => Math.max(0, Math.min(240, 16 * step + off)) - 16 * step;
+  // Nothing below fine 0 (the game reads that as 0). Above step 15 the slot keeps the ROM's offset (fine up to 247, as
+  // the game plays it; H-031's impact pick counts it), though the player's number stops at 100.
+  const inRange = (step: number, off: number) => Math.max(0, 16 * step + off) - 16 * step;
   build.bw.forEach((sl, t) => sl.forEach((b, k) => {
     if (!b) return;
     const rec = fineRom ? readPlayer(roster, t, k).ratings : null;
