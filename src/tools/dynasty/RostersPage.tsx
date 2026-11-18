@@ -7,7 +7,7 @@ import type { DPlayer } from '../../core/dynasty/model';
 import { impactSet } from '../../core/dynasty/impact';
 import { INDEPENDENT } from '../../core/dynasty/derive';
 import { spotLabel } from '../../core/dynasty/lineup';
-import { shownOf } from '../../core/dynasty/ratings';
+import { roleOfPos, shownAt } from '../../core/dynasty/ratings';
 import type { Attr } from '../../core/rosterLayouts';
 import { Headshot, ImpactDot, href, heightText, useDyn } from './ui';
 
@@ -87,7 +87,7 @@ function toArg(f: Filters): string {
 }
 
 /** A rating as the game's Team Rosters shows it (0-99), or undefined when the player has none. */
-const rated = (p: DPlayer, k: Attr) => (p.ratings[k] === undefined ? undefined : shownOf(p.ratings[k]!));
+const rated = (p: DPlayer, k: Attr) => (p.ratings[k] === undefined ? undefined : shownAt(p.ratings[k]!, k, roleOfPos(p.pos)));
 
 interface Row { p: DPlayer; team: number; school: string; conf: number; slot: number; label: string; impact: boolean }
 

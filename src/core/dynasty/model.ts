@@ -15,7 +15,7 @@ import { ratingProblems, readRating, type TeamRating } from '../teamRatings';
 import { readDynastySave, type DynastySave } from './save';
 import { startingPrestige } from './prestige';
 import { buildRosters } from './rosters';
-import { ovrOf, ratingsFromSlot, valueOfFine, type Ratings } from './ratings';
+import { ovrOf, ratingsFromSlot, setRatingScale, valueOfFine, type Ratings } from './ratings';
 import { GROUP_ATTRS } from '../rosterLayouts';
 import { hasFineRatings, readFineOffsets } from './fine';
 import { romUniformsOf, whiteHomeOf } from './kit';
@@ -177,6 +177,12 @@ export interface Dynasty {
   name: string;
   created: string;
   startYear: number;
+  /**
+   * 8: made on a ROM with the v8 ratings (H-039; 2026 test60 on): the conversion's fine values, the CFB-style numbers
+   * and the v8 OVR formulas (ratings.ts setRatingScale). Unset: the older conversion and numbers (user, 2026-11-18:
+   * dynasties started before keep them).
+   */
+  ratingsV?: 8;
   /** The year of the real coaches it started with, when it isn't the starting year (coaches.ts withCoaches). */
   coachYear?: number;
   userTeams: number[];
@@ -298,6 +304,7 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
   // The 32 in the game and the bench (one backup per slot), both from the Rosters tool's conversion;
   // the dynasty keeps only these players, with the converted ratings as their own from now on.
   const build = buildRosters(roster, sheet);
+  setRatingScale(build.v8);
   const seed = opt.seed ?? Date.now();
   const random = rng(seed);
   // Fine ratings: the Active Roster's offsets are the ROM's (its table, when the record has the conversion's
@@ -308,15 +315,25 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
   // Nothing below fine 0 (the game reads that as 0). Above step 15 the slot keeps the ROM's offset (fine up to 247, as
   // the game plays it; H-031's impact pick counts it), though the player's number stops at 100.
   const inRange = (step: number, off: number) => Math.max(0, 16 * step + off) - 16 * step;
+  // v8 (H-039): the ROM's built-in ratings are the same conversion of the same players, and the first season plays
+  // the ROM, so every Active Roster slot takes the ROM's steps and offsets (the conversion's are the same within 1
+  // fine point, except weight and the few players the ROM's build couldn't match to CFB 27, which kept older values).
+  // Backups keep the conversion's.
   build.bw.forEach((sl, t) => sl.forEach((b, k) => {
     if (!b) return;
     const rec = fineRom ? readPlayer(roster, t, k).ratings : null;
     const order = GROUP_ATTRS[b.group];
+    if (build.v8) {
+      if (!rec) return;
+      const offs = readFineOffsets(roster.data, t, k);
+      order.forEach((a, n) => { const i = b.attrs.indexOf(a); b.steps[i] = rec[n]; b.offs[i] = inRange(rec[n], offs[n]); });
+      return;
+    }
     const same = !!rec && order.every((a, n) => rec[n] === b.steps[b.attrs.indexOf(a)]);
     const rom = same ? readFineOffsets(roster.data, t, k) : null;
     b.offs = b.attrs.map((a, i) => inRange(b.steps[i], rom ? rom[order.indexOf(a)] : drawn()));
   }));
-  build.benchBw.forEach((sl) => sl.forEach((b) => { if (b) b.offs = b.attrs.map((_, i) => inRange(b.steps[i], drawn())); }));
+  if (!build.v8) build.benchBw.forEach((sl) => sl.forEach((b) => { if (b) b.offs = b.attrs.map((_, i) => inRange(b.steps[i], drawn())); }));
   const teamOfRow = new Map<number, number>();
   const slotOfRow = new Map<number, BwSlot>();
   build.slots.forEach((sl, t) => sl.forEach((row, k) => { if (row !== null && !teamOfRow.has(row)) { teamOfRow.set(row, t); slotOfRow.set(row, build.bw[t][k]!); } })); // a kicker who also punts: the kicker's ratings
@@ -329,7 +346,11 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
     idOfRow.set(row, id);
     // His ratings: the steps the conversion gave him (as the game shows them), and the related group's.
     const ratings = ratingsFromSlot(slotOfRow.get(row)!);
-    for (const [a, step] of Object.entries(build.extra.get(row) ?? {}) as [Attr, number][]) if (ratings[a] === undefined) ratings[a] = valueOfFine(16 * step + (step ? drawn() : 0));
+    if (build.v8) {
+      for (const [a, fine] of Object.entries(build.extraFine.get(row) ?? {}) as [Attr, number][]) if (ratings[a] === undefined) ratings[a] = valueOfFine(fine);
+    } else {
+      for (const [a, step] of Object.entries(build.extra.get(row) ?? {}) as [Attr, number][]) if (ratings[a] === undefined) ratings[a] = valueOfFine(16 * step + (step ? drawn() : 0));
+    }
     const p: DPlayer = {
       id,
       first: r[cFirst].trim(),
@@ -370,6 +391,7 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
     name: opt.name.trim() || 'My Dynasty',
     created: opt.created ?? new Date().toISOString(),
     startYear,
+    ...(build.v8 ? { ratingsV: 8 as const } : {}),
     userTeams: opt.userTeams ?? [],
     teams,
     whiteHome: whiteHomeOf(rom),

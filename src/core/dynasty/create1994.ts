@@ -31,7 +31,8 @@ import { romUniformsOf, whiteHomeOf } from './kit';
 import { CLASSES, DYNASTY_FILE, rng, type BwSlot, type ClassYear, type CreateOptions, type DPlayer, type Dynasty, type DTeam } from './model';
 import { NO_NUMBER, numberAllowed, replacementNumber, sideOf } from './numbers';
 import { startingPrestige1994 } from './prestige';
-import { ovrOf, ratingsFromSlot, valueOfFine } from './ratings';
+import { ovrOf, ratingsFromSlot, setRatingScale, valueOfFine } from './ratings';
+import { hasV8 } from '../ratingsV8';
 import { nameKey, parseRosters1994, type Roster1994Row } from './rosters1994';
 import { SCHOOL_STATE } from './schoolStates';
 
@@ -57,6 +58,9 @@ const pick = <T>(r: () => number, xs: T[]) => xs[Math.floor(r() * xs.length)];
 
 /** A new 1994 dynasty from the user's 1994 Season Edition ROM and the built-in 1994 rosters (rosters1994.ts). */
 export function createDynasty1994(rom: Uint8Array, rostersText: string, opt: CreateOptions): Dynasty {
+  // The 1994 ROM shows the v8 numbers once H-040 is built (the same tables as 2026; its built-in ratings are read as they are).
+  const v8 = hasV8(rom);
+  setRatingScale(v8);
   const roster = openRosterRom(rom);
   if (!roster.wide || !hasDynastyHooks(rom)) throw new Error(`A dynasty needs ${DYNASTY_EDITION}.`);
   if (editionOfRom(rom)?.id !== '1994') throw new Error(`This isn't the ${EDITIONS['1994'].name}.`);
@@ -162,6 +166,7 @@ export function createDynasty1994(rom: Uint8Array, rostersText: string, opt: Cre
     name: opt.name.trim() || 'My Dynasty',
     created: opt.created ?? new Date().toISOString(),
     startYear,
+    ...(v8 ? { ratingsV: 8 as const } : {}),
     userTeams: opt.userTeams ?? [],
     teams,
     whiteHome: whiteHomeOf(rom),

@@ -10,7 +10,9 @@
 
 import { bw95Role } from '../rosterCfb27';
 import type { Attr } from '../rosterLayouts';
-import { fineAt, shownFine } from './ratings';
+import { fineAt, ratingScaleIsV8, shownFine } from './ratings';
+import { shownV8, V8_SLOT_POOLS } from '../ratingsV8';
+import { GROUP_ATTRS } from '../rosterLayouts';
 import type { BwSlot } from './model';
 
 export interface OvrFormula {
@@ -36,16 +38,41 @@ export const OVR_FORMULAS: Record<string, OvrFormula> = {
   P: { base: 62, scale: 0.24, weights: { Quickness: 55, Accuracy: 45 } }, // 138 starters: within 3 of CFB 27 for 91%, average miss 1.5
 };
 
+/**
+ * The v8 formulas (H-039): fitted the same way on the v8 numbers (ratingsV8.ts tables) to CFB 27 Overall, the 2026
+ * starters converted from the week-9 data (least squares with weights ≥ 0, 2026-11-18). Ratings that came out at 0
+ * are left out. Correlation with CFB 27 Overall: QB .93, HB .96, FB .80, WR .97, TE .96, OL .98, DE .98, DT .97,
+ * LB .97, CB .99, S .98, K .88, P .91; within 3 of CFB 27 for 74% (FB) to 100% of a position's starters.
+ */
+export const OVR_FORMULAS_V8: Record<string, OvrFormula> = {
+  QB: { base: -37.5, scale: 1.435, weights: { Quickness: 13, Awareness: 57, Range: 13, Power: 8, Speed: 9 } },
+  HB: { base: -57.1, scale: 1.671, weights: { Speed: 13, Quickness: 38, Awareness: 23, Hands: 8, Power: 18 } },
+  FB: { base: -1.3, scale: 1.001, weights: { Speed: 19, Awareness: 40, Hands: 20, Power: 21 } },
+  WR: { base: -62.6, scale: 1.715, weights: { Speed: 5, Quickness: 39, Awareness: 18, Hands: 32, Power: 6 } },
+  TE: { base: -26.3, scale: 1.381, weights: { Quickness: 5, Awareness: 49, Hands: 28, Power: 18 } },
+  OL: { base: -47.9, scale: 1.559, weights: { Power: 31, Blocking: 47, Speed: 8, Awareness: 14 } },
+  DE: { base: -39.6, scale: 1.467, weights: { Power: 33, Speed: 26, Awareness: 11, Tackling: 30 } },
+  DT: { base: -31.4, scale: 1.352, weights: { Power: 67, Awareness: 11, Tackling: 22 } },
+  LB: { base: -50.6, scale: 1.551, weights: { Quickness: 19, Awareness: 44, Tackling: 37 } },
+  CB: { base: -57.8, scale: 1.647, weights: { Speed: 21, Quickness: 27, Awareness: 47, Hands: 1, Tackling: 4 } },
+  S: { base: -39.1, scale: 1.466, weights: { Speed: 11, Quickness: 17, Awareness: 51, Hands: 1, Tackling: 20 } },
+  K: { base: 1.1, scale: 0.878, weights: { Quickness: 57, Accuracy: 43 } },
+  P: { base: -17.1, scale: 1.078, weights: { Quickness: 70, Accuracy: 30 } },
+};
+
 /** The role of a roster slot in the 138-team edition (one 4-3 layout for every team). */
 export const roleOfSlot = (slot: number) => bw95Role(slot, false, true);
 
 export function playerOvr(slot: number, b: BwSlot): number {
-  const f = OVR_FORMULAS[roleOfSlot(slot)];
+  const v8 = ratingScaleIsV8();
+  const f = (v8 ? OVR_FORMULAS_V8 : OVR_FORMULAS)[roleOfSlot(slot)];
   if (!f) return 0;
   let avg = 0;
   for (const [a, w] of Object.entries(f.weights) as [Attr, number][]) {
     const i = b.attrs.indexOf(a);
-    if (i >= 0) avg += (w / 100) * shownFine(fineAt(b, i));
+    if (i < 0) continue;
+    const k = v8 ? V8_SLOT_POOLS[slot]?.[GROUP_ATTRS[b.group].indexOf(a)] : null;
+    avg += (w / 100) * (k ? shownV8(k, fineAt(b, i)) : shownFine(fineAt(b, i)));
   }
   return Math.max(0, Math.min(99, Math.round(f.base + f.scale * avg)));
 }

@@ -10,6 +10,7 @@
 // - Every team is 4-3 by the ROM's Team Rosters bit table (the long at 0x06B100), which the port assumes.
 // - Three different players a team: the first an offensive skill player, the second a defender; a fullback only
 //   when no halfback is picked.
+import { hasV8 } from '../src/core/ratingsV8';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { openRom } from '../src/core/romfile';
@@ -59,7 +60,8 @@ for (const path of process.argv.slice(2)) {
     const fsu = d.teams.find((t) => t.school === 'Florida State')!.index;
     assert.deepEqual([...fromRom[fsu]].sort((a, b) => a - b), [11, 18, 19], 'Florida State 1994: #88, #90, #10 Brooks (H-031)');
   }
-  if (!is94) {
+  // The user's Ole Miss screenshot (QB and HB1) was on the older ratings; v8 changes the picks (H-038, expected).
+  if (!is94 && !hasV8(rom)) {
     const om = d.teams.find((t) => t.school === 'Ole Miss')!.index;
     const pos = teamImpact(d, s, om).map((id) => s.slots[om].indexOf(id));
     assert.ok(pos.includes(0) && pos.includes(1), 'Ole Miss: QB and HB1 (as the game marks them)');

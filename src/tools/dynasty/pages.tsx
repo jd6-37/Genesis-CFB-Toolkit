@@ -22,7 +22,7 @@ import { GoalsBox, SeasonCoach, TeamCoach } from './CoachPages';
 import type { SaveGame } from '../../core/dynasty/save';
 import type { DPlayer } from '../../core/dynasty/model';
 import { GROUP_COLUMNS, type Attr } from '../../core/rosterLayouts';
-import { fineAt, GROUP_OF_ROLE, RATINGS, roleOfPos, shownFine, shownOf } from '../../core/dynasty/ratings';
+import { fineAt, GROUP_OF_ROLE, RATINGS, roleOfPos, shownAt, shownFineInSlot, shownInSlot } from '../../core/dynasty/ratings';
 import { trainingYears, experienceOf } from '../../core/dynasty/career';
 import { seasonDone } from '../../core/dynasty/offseason';
 import type { Dynasty } from '../../core/dynasty/model';
@@ -690,7 +690,7 @@ function ImpactBox({ team, ids }: { team: number; ids: number[] }) {
                 <p className="dy-impactbox-name"><ImpactDot /><a href={href(`player/${id}`)}>{playerName(p)}</a></p>
                 <p className="dy-small dy-dim">{slot >= 0 ? spotLabel(slot) : p.pos}, {p.cls}, OVR {bw ? playerOvr(slot, bw) : p.ovr}</p>
                 <dl className="dy-impactbox-r">
-                  {(IMPACT_KEYS[group] ?? []).map((a) => <div key={a}><dt><abbr title={a}>{IMPACT_ABBR[a] ?? a}</abbr></dt><dd>{p.ratings[a] === undefined ? '' : shownOf(p.ratings[a]!)}</dd></div>)}
+                  {(IMPACT_KEYS[group] ?? []).map((a) => <div key={a}><dt><abbr title={a}>{IMPACT_ABBR[a] ?? a}</abbr></dt><dd>{p.ratings[a] === undefined ? '' : shownAt(p.ratings[a]!, a, roleOfPos(p.pos))}</dd></div>)}
                 </dl>
               </div>
             </li>
@@ -1063,8 +1063,8 @@ function BwRatings({ team, slot, name, bench = false, player }: { team: number; 
           {tiles.map(({ a, i }) => {
             const weight = a === 'Weight';
             const f = fv(b, i);
-            const shown = weight ? `${140 + f + b.weightPlus} lb` : shownFine(f);
-            const avgShown = weight ? `${Math.round(140 + avg[i] + b.weightPlus)} lb` : shownFine(Math.round(avg[i]));
+            const shown = weight ? `${140 + f + b.weightPlus} lb` : shownInSlot(slot, b, i);
+            const avgShown = weight ? `${Math.round(140 + avg[i] + b.weightPlus)} lb` : shownFineInSlot(slot, b.group, a, Math.round(avg[i]));
             return (
               <div key={a} className="dy-tile">
                 <div className="dy-tile-top"><span>{label(a)}</span><strong>{weight ? <>{parseInt(`${shown}`, 10)}<small> lb</small></> : shown}</strong></div>

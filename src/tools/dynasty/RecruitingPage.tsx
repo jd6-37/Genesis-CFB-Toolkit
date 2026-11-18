@@ -15,7 +15,7 @@ import { hasTransfers } from '../../core/dynasty/edition';
 import { academicGrade, academicsOf, gradeOf } from '../../core/dynasty/academics';
 import { costOf, interestRank, newOffers, offerCap, offersOut, pipelineStates, planCost, pointCost, withdrawOffer } from '../../core/dynasty/recruiting';
 import { SCHOOL_STATE, stateCode } from '../../core/dynasty/schoolStates';
-import { GROUP_OF_ROLE, roleOfPos, shownOf } from '../../core/dynasty/ratings';
+import { GROUP_OF_ROLE, roleOfPos, shownAt } from '../../core/dynasty/ratings';
 import { Empty, Headshot, heightText, hometownText, inkColor, mainColor, onColor, useDyn } from './ui';
 import { SimOffseason, getTemplates, type OffseasonActions } from './OffseasonPage';
 
@@ -39,7 +39,7 @@ function RatingsLine({ p }: { p: Prospect }) {
   return (
     <div className="dy-scout-ratings dy-small">
       {cols.map((a) => (
-        <span key={a}><span className="dy-dim">{group === 'KP' && a === 'Quickness' ? 'Kick distance' : a}</span> {shownOf(p.player.ratings[a] ?? 0)}</span>
+        <span key={a}><span className="dy-dim">{group === 'KP' && a === 'Quickness' ? 'Kick distance' : a}</span> {shownAt(p.player.ratings[a] ?? 0, a, roleOfPos(p.player.pos))}</span>
       ))}
     </div>
   );
@@ -468,7 +468,7 @@ function ProspectsTab({ hub, portal }: { hub: Hub; portal: boolean }) {
     if (sort === 'stars') return p.stars * 1000 + (lv >= 1 ? p.player.ovr : -1);
     if (sort === 'ovr') return knownOvr(rs, team, p);
     if (sort === 'interest') return share(R, p, team);
-    return lv >= 2 ? shownOf(p.player.ratings[sort as Attr] ?? 0) : -1;
+    return lv >= 2 ? shownAt(p.player.ratings[sort as Attr] ?? 0, sort as Attr, roleOfPos(p.player.pos)) : -1;
   };
   const text = q.trim().toLowerCase();
   const list = rs.prospects

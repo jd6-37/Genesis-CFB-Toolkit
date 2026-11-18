@@ -1,5 +1,6 @@
 // The Dynasty section (/dynasty): a news site for the user's dynasty, kept in the browser, with its
 // own pages. Spec: docs/dynasty.md.
+import { setRatingScale } from '../../core/dynasty/ratings';
 import { TrainingResults } from './TrainingPage';
 import { Rules } from './RulesPage';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -159,6 +160,8 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
   const [staleLater, setStaleLater] = useState<string | null>(null);
   const [list, setList] = useState<DynastySummary[] | null>(null);
   const [d, setD] = useState<Dynasty | null>(null);
+  // The v8 numbers for a dynasty made on a v8 ROM (ratings.ts), set before any page renders a rating.
+  setRatingScale(d?.ratingsV === 8);
   const [art, setArt] = useState<TeamArt[] | null>(null);
   const [note, setNote] = useState<Note>(null);
   const [busy, setBusy] = useState<string | null>(null);
