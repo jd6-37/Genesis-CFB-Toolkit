@@ -6,7 +6,7 @@
 // is the one big choice, the shades follow it and stay editable but less prominent ("make it very evident that all i
 // have to do is modify the 'jersey' color").
 import { useMemo, useState } from 'react';
-import { SpriteCanvas, Swatch, UniformChip } from '../../components';
+import { SpriteCanvas, Swatch, UniformChip, type PickerColor } from '../../components';
 import { KIT_LIMITS, helmetOf, partPalette, shadesOf, withPiece, type KitPart, type KitSprite, type OwnUniforms, type TeamKit } from '../../core/kits';
 import { renderSprites } from '../../core/render';
 import { toCss } from '../../core/colors';
@@ -34,8 +34,10 @@ const same = (a: number[], b: number[]) => a.every((x, i) => x === b[i]);
  * that warning to proceed ... that should pop up anytime they try to edit one of these"): every color pick on it
  * asks first, and the picker opens once it's accepted.
  */
-function Piece({ title, def, colors, base, sprite, onChange, onRemove, locked }: {
+function Piece({ title, def, colors, base, sprite, onChange, onRemove, locked, team }: {
   title: string; def: PartDef; colors: number[]; base: number[]; sprite: KitSprite | null; onChange: (c: number[]) => void; onRemove?: () => void;
+  /** The team's own colors, first in the picker. */
+  team: PickerColor[];
   /** The warning for a team's own piece; absent for extras. */
   locked?: { team: string; side: string };
 }) {
@@ -43,23 +45,30 @@ function Piece({ title, def, colors, base, sprite, onChange, onRemove, locked }:
   const [open, setOpen] = useState<number | null>(null);
   const pal = withPiece(base, def.part, colors);
   const pic = useMemo(() => (sprite ? renderSprites(sprite.tiles, partPalette(pal, def.part), [sprite.sprites]) : null), [sprite, pal.join(), def.part]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Helmets and pants can have no stripe (user, 2026-11-18: "just have a no-stripe option and handle the color matching
+  // on the backend"): the stripe is then the piece's own color, and it keeps following that color.
+  const stripeable = def.part === 'helmets' || def.part === 'pants';
+  const noStripe = stripeable && colors[def.accentAt] === colors[def.mainAt];
   const pick = (place: number, c: number) => {
     setOpen(null);
-    // The main color brings its shades along; every other color is set on its own.
+    // The main color brings its shades along (and a missing stripe); every other color is set on its own.
     if (place !== def.mainAt) return onChange(colors.map((x, k) => (k === place ? c : x)));
-    onChange(def.part === 'helmets' ? helmetOf(c, colors[2]) : shadesOf(c, colors[0]));
+    const accent = noStripe ? c : colors[def.accentAt];
+    onChange(def.part === 'helmets' ? helmetOf(c, accent) : shadesOf(c, accent));
   };
+  const none = (place: number) =>
+    stripeable && place === def.accentAt ? { label: 'No stripe', on: noStripe, pick: () => { setOpen(null); onChange(colors.map((x, k) => (k === def.accentAt ? colors[def.mainAt] : x))); } } : undefined;
   const sw = (place: number, label: string) =>
     locked && open !== place
-      ? <button type="button" className="swatch" style={{ background: toCss(colors[place]) }} aria-label={`${label}: locked, the team's own uniform. Change color`} onClick={() => setAsk(place)} />
-      : <Swatch key={`${place}${open === place}`} color={colors[place]} label={label} onPick={(c) => pick(place, c)} startOpen={open === place} />;
+      ? <button type="button" className={`swatch${none(place)?.on ? ' swatch-none' : ''}`} style={{ background: none(place)?.on ? undefined : toCss(colors[place]) }} aria-label={`${label}: locked, the team's own uniform. Change color`} onClick={() => setAsk(place)} />
+      : <Swatch key={`${place}${open === place}`} color={colors[place]} label={label} onPick={(c) => pick(place, c)} startOpen={open === place} top={team} none={none(place)} />;
   return (
     <li className="kit-piece">
       <div className="kit-sprite">{pic ? <SpriteCanvas pic={pic} scale={3} label={title} /> : <UniformChip u={pal} label={title} />}</div>
       <div className="kit-colors">
         <h5>{locked && <LockIcon />}{title}</h5>
         <label className="kit-main">{sw(def.mainAt, `${title}: ${def.main.toLowerCase()}`)}<span>{def.main}</span></label>
-        <label className="kit-accent">{sw(def.accentAt, `${title}: ${def.accent.toLowerCase()}`)}<span>{def.accent}</span></label>
+        <label className="kit-accent">{sw(def.accentAt, `${title}: ${def.accent.toLowerCase()}`)}<span>{noStripe ? 'No stripe' : def.accent}</span></label>
         <div className="kit-shades">
           {def.shadeAt.map((at, k) => <span key={at}>{sw(at, `${title}: ${def.shadeAt.length > 1 ? (k === 0 ? 'light shade' : 'dark shade') : 'shade'}`)}</span>)}
           <span>Shading, set from the {def.main.toLowerCase()}</span>
@@ -94,6 +103,23 @@ function LockIcon() {
 export function KitParts({ kit, own, sprite, name, put, putOwn }: {
   kit: TeamKit; own: OwnUniforms; sprite: KitSprite | null; name: string; put: (k: TeamKit) => void; putOwn: (o: OwnUniforms) => void;
 }) {
+  // The team's own colors for the picker: helmet, stripes, jerseys, numbers and pants of its home and away uniforms.
+  const team = useMemo(() => {
+    const out: PickerColor[] = [];
+    const add = (c: number, label: string) => { if (!out.some((x) => x.color === c)) out.push({ color: c, label }); };
+    for (const [pal, side] of [[own.home, 'Home'], [own.away, 'Away']] as const) {
+      add(pal[11], `${side} jersey`); add(pal[9], `${side} numbers`); add(pal[5], `${side} helmet`); add(pal[7], `${side} helmet stripe`);
+      add(pal[14], `${side} pants`); add(pal[3], `${side} pants stripe`);
+    }
+    return out.slice(0, 8);
+  }, [own.home.join(), own.away.join()]); // eslint-disable-line react-hooks/exhaustive-deps
+  // The game's own black and white (user, 2026-11-18: "do we recommend ... not using #000 and instead use a lighter
+  // shade?"): its uniforms use 0222 for black (0000 is the players' outline, so a black piece would melt into it) and
+  // 0CCC for white jerseys and pants (their lighter shade is then 0EEE); white helmets are 0EEE.
+  const bw = (part: KitPart): PickerColor[] => [
+    { color: 0x0222, label: 'Black, as the game uses it', group: 'The game\'s black and white' },
+    { color: part === 'helmets' ? 0x0eee : 0x0ccc, label: 'White, as the game uses it', group: 'The game\'s black and white' },
+  ];
   const setOwn = (pal: 'home' | 'away' | 'both', part: KitPart, colors: number[]) => {
     const next = { home: own.home.slice(), away: own.away.slice() };
     for (const side of pal === 'both' ? (['home', 'away'] as const) : [pal]) PLACES[part].forEach((p, i) => { next[side][p] = colors[i]; });
@@ -129,11 +155,11 @@ export function KitParts({ kit, own, sprite, name, put, putOwn }: {
           </header>
           <ul>
             {ownPieces(def.part).map((o) => (
-              <Piece key={o.title} title={o.title} def={def} colors={o.colors} base={o.base} sprite={sprite} onChange={(c) => setOwn(o.side, def.part, c)} locked={{ team: name, side: o.side === 'away' ? 'away' : o.side === 'home' ? 'home' : 'home and away' }} />
+              <Piece key={o.title} title={o.title} def={def} colors={o.colors} base={o.base} sprite={sprite} team={[...team, ...bw(def.part).filter((x) => !team.some((y) => y.color === x.color))]} onChange={(c) => setOwn(o.side, def.part, c)} locked={{ team: name, side: o.side === 'away' ? 'away' : o.side === 'home' ? 'home' : 'home and away' }} />
             ))}
             {kit[def.part].map((c, i) => (
               <Piece
-                key={i} title={`Extra ${def.one} ${i + 1}`} def={def} colors={c} base={def.part === 'white' ? own.away : own.home} sprite={sprite}
+                key={i} title={`Extra ${def.one} ${i + 1}`} def={def} colors={c} base={def.part === 'white' ? own.away : own.home} sprite={sprite} team={[...team, ...bw(def.part).filter((x) => !team.some((y) => y.color === x.color))]}
                 onChange={(x) => put({ ...kit, [def.part]: kit[def.part].map((y, k) => (k === i ? x : y)) })}
                 onRemove={() => put({ ...kit, [def.part]: kit[def.part].filter((_, k) => k !== i) })}
               />

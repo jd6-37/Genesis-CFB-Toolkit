@@ -11,7 +11,7 @@
 //   helmet [5] shell, [6] shadow, [7] stripe · jersey [9] numbers and trim, [10] light, [11] middle, [12] dark ·
 //   pants [3] side stripe, [13] light, [14] middle, [15] dark.
 // A team's own home and away uniforms are always the first choices and aren't in the table.
-import { fromLevels, toLevels } from './colors';
+import { fromLevels, LEVELS, toLevels } from './colors';
 
 export const KTAB = 0x2b6000;
 export const KTAB_SIZE = 0x1000;
@@ -210,3 +210,52 @@ export function withPiece(palette: number[], part: KitPart, colors: number[]): n
   KIT_PLACES[part].forEach((p, i) => { out[p] = colors[i]; });
   return out;
 }
+
+/**
+ * One piece cut out of the picker's player (user, 2026-11-18: the team page's summary shows "the extra uniform
+ * PIECES" on their own): the piece's pixels in the palette's colors, the dark outline around them, and for a helmet
+ * the face inside it; cropped to the piece. Null when the sprite has none of it.
+ */
+export function pieceCutout(sprite: KitSprite, palette: number[], part: KitPart): { width: number; height: number; data: Uint8ClampedArray } | null {
+  const { sprites, tiles } = sprite;
+  const sw = (s: KitSprite['sprites'][number]) => ((s.size >> 2) & 3) + 1;
+  const hOf = (s: KitSprite['sprites'][number]) => (s.size & 3) + 1;
+  const x0 = Math.min(...sprites.map((s) => s.x)), y0 = Math.min(...sprites.map((s) => s.y));
+  const W = Math.max(...sprites.map((s) => s.x + 8 * sw(s))) - x0, H = Math.max(...sprites.map((s) => s.y + 8 * hOf(s))) - y0;
+  const idx = new Uint8Array(W * H);
+  for (const s of sprites) for (let cx = 0; cx < sw(s); cx++) for (let cy = 0; cy < hOf(s); cy++) {
+    const t = s.tile + cx * hOf(s) + cy;
+    for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
+      const b = tiles[t * 32 + y * 4 + (x >> 1)]; const v = x & 1 ? b & 15 : b >> 4;
+      if (v) idx[(s.y - y0 + 8 * cy + y) * W + s.x - x0 + 8 * cx + x] = v;
+    }
+  }
+  const places = new Set(KIT_PLACES[part]);
+  const on = new Uint8Array(W * H);
+  let any = false;
+  for (let i = 0; i < idx.length; i++) if (places.has(idx[i])) { on[i] = 1; any = true; }
+  if (!any) return null;
+  const darkest = palette.reduce((best, c, i) => (i > 0 && lum(c) < lum(palette[best]) ? i : best), 1);
+  const box = () => { let a = W, b = H, c = -1, d = -1; for (let i = 0; i < on.length; i++) if (on[i]) { const x = i % W, y = (i / W) | 0; a = Math.min(a, x); b = Math.min(b, y); c = Math.max(c, x); d = Math.max(d, y); } return [a, b, c, d]; };
+  if (part === 'helmets') { const [a, b, c, d] = box(); for (let y = b; y <= d; y++) for (let x = a; x <= c; x++) if (idx[y * W + x] && !on[y * W + x] && idx[y * W + x] !== darkest) on[y * W + x] = 2; }
+  // The outline: dark pixels touching the piece.
+  const piece = on.slice();
+  for (let i = 0; i < idx.length; i++) {
+    if (piece[i] !== 1) continue;
+    const x = i % W, y = (i / W) | 0;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const X = x + dx, Y = y + dy, j = Y * W + X;
+      if (X >= 0 && Y >= 0 && X < W && Y < H && !on[j] && idx[j] === darkest) on[j] = 3;
+    }
+  }
+  const [a, b, c, d] = box();
+  const width = c - a + 1, height = d - b + 1, data = new Uint8ClampedArray(width * height * 4);
+  for (let y = b; y <= d; y++) for (let x = a; x <= c; x++) {
+    const i = y * W + x; if (!on[i]) continue;
+    const [r, g, bl] = toLevels(palette[idx[i]]).map((v) => LEVELS[v]);
+    const o = ((y - b) * width + x - a) * 4; data[o] = r; data[o + 1] = g; data[o + 2] = bl; data[o + 3] = 255;
+  }
+  return { width, height, data };
+}
+const lum = (c: number) => { const [r, g, b] = toLevels(c); return 0.3 * r + 0.59 * g + 0.11 * b; };
+
