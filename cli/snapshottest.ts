@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { makeSnapshot, packPicture, readSnapshot, unpackPicture, snapshotLabel } from '../src/core/dynasty/snapshot';
-import { isSnapshotId, isSnapshotKey, newSnapshotKey, snapshotIdFromPath, snapshotIdOf, snapshotPath } from '../src/core/dynasty/snapshotId';
+import { isSnapshotId, isSnapshotKey, newSnapshotKey, snapshotExpired, snapshotExpires, snapshotIdFromPath, snapshotIdOf, snapshotPath, SNAPSHOT_DAYS } from '../src/core/dynasty/snapshotId';
 import { dynastyFromFile, DYNASTY_FILE, type Dynasty } from '../src/core/dynasty/model';
 
 let n = 0;
@@ -65,5 +65,22 @@ process.env.BLOB_READ_WRITE_TOKEN ||= 'vercel_blob_rw_TESTSTORE123_fakesecretfak
   assert.equal((await GET(new Request('https://x.test/api/snapshot?id=../x'))).status, 400);
   assert.equal((await DELETE(req({ key: 'nope' }, 'DELETE'))).status, 400);
   ok('the upload function gives tokens only for a key\'s own snapshot');
+  // The daily cleanup runs only for Vercel's cron with CRON_SECRET.
+  const cron = (auth?: string) => new Request('https://x.test/api/snapshot?cleanup=1', auth ? { headers: { authorization: auth } } : {});
+  const was = process.env.CRON_SECRET;
+  delete process.env.CRON_SECRET;
+  assert.equal((await GET(cron('Bearer x'))).status, 500, 'no cleanup without CRON_SECRET');
+  process.env.CRON_SECRET = 'test-secret';
+  assert.equal((await GET(cron())).status, 401, 'no cleanup without the secret');
+  assert.equal((await GET(cron('Bearer wrong'))).status, 401, 'no cleanup with a wrong secret');
+  if (was === undefined) delete process.env.CRON_SECRET; else process.env.CRON_SECRET = was;
+  ok('the cleanup only runs for the cron');
 }
+// 90 days (user, 2026-11-18).
+assert.equal(SNAPSHOT_DAYS, 90);
+const t0 = Date.UTC(2026, 10, 18, 12);
+assert.equal(snapshotExpires(new Date(t0)).toISOString(), new Date(t0 + 90 * 86_400_000).toISOString());
+assert.equal(snapshotExpired(new Date(t0), t0 + 89 * 86_400_000), false);
+assert.equal(snapshotExpired(new Date(t0), t0 + 90 * 86_400_000), true);
+ok('a snapshot expires 90 days after it is shared');
 console.log(`${n} passed`);

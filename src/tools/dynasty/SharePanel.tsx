@@ -5,7 +5,7 @@ import { upload } from '@vercel/blob/client';
 import { seasonView, weekName } from '../../core/dynasty/derive';
 import type { Dynasty } from '../../core/dynasty/model';
 import { makeSnapshot, snapshotLabel, type DSnapshot } from '../../core/dynasty/snapshot';
-import { newSnapshotKey, snapshotIdOf, snapshotPath, snapshotUrl, SNAPSHOT_LIMIT, SNAPSHOT_TYPE } from '../../core/dynasty/snapshotId';
+import { newSnapshotKey, snapshotExpired, snapshotExpires, snapshotIdOf, snapshotPath, snapshotUrl, SNAPSHOT_DAYS, SNAPSHOT_LIMIT, SNAPSHOT_TYPE } from '../../core/dynasty/snapshotId';
 import type { TeamArt } from '../../core/dynasty/storage';
 import { Button, Modal, Note } from '../../ui';
 import { Ctx, firstTeam, TeamMark, type DynCtx } from './ui';
@@ -42,7 +42,8 @@ export function SharePanel({ d, art, focus, commit, ctx }: {
   const [shared, setShared] = useState<DSnapshot | null>(null);
   const [full, setFull] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
-  const list = d.snapshots ?? [];
+  // Expired snapshots (SNAPSHOT_DAYS) leave the list and the count; the server deletes their files.
+  const list = (d.snapshots ?? []).filter((x) => !snapshotExpired(x.sharedAt));
   const team = firstTeam(d, focus);
   const school = d.teams[team].school;
   const oldest = list[list.length - 1];
@@ -109,7 +110,7 @@ export function SharePanel({ d, art, focus, commit, ctx }: {
       <h2>Share</h2>
       <p>
         A snapshot is a read-only copy of this dynasty as it is right now, logos and helmets included. Anyone with its link can browse
-        it. It doesn't change when your dynasty does, and nobody can edit it.
+        it for {SNAPSHOT_DAYS} days. It doesn't change when your dynasty does, and nobody can edit it.
       </p>
       {d.userTeams.length > 1 && (
         <div className="dy-share-team">
@@ -130,7 +131,7 @@ export function SharePanel({ d, art, focus, commit, ctx }: {
       {error && <Note kind="error">{error}</Note>}
       {shared && (
         <Note kind="ok" block>
-          <p><strong>Snapshot shared.</strong> {d.teams[shared.team].school}, {shared.label}. Copy the link and send it to anyone.</p>
+          <p><strong>Snapshot shared.</strong> {d.teams[shared.team].school}, {shared.label}. Copy the link and send it to anyone. It works until {when(snapshotExpires(shared.sharedAt).toISOString())}.</p>
           <div className="dy-share-link">
             <label className="ui-sr" htmlFor="dy-share-new">Snapshot link</label>
             <input id="dy-share-new" readOnly value={link(shared.id)} onFocus={(e) => e.currentTarget.select()} />
@@ -145,7 +146,7 @@ export function SharePanel({ d, art, focus, commit, ctx }: {
           <ul className="dy-share-list">
             {list.map((s) => (
               <li key={s.id}>
-                <span><strong>{d.teams[s.team]?.school ?? 'Team'}, {s.label}</strong><br /><span className="dy-small dy-dim">Shared {when(s.sharedAt)}</span></span>
+                <span><strong>{d.teams[s.team]?.school ?? 'Team'}, {s.label}</strong><br /><span className="dy-small dy-dim">Shared {when(s.sharedAt)}. Works until {when(snapshotExpires(s.sharedAt).toISOString())}.</span></span>
                 <span className="dy-row">
                   <Button variant="quiet" onClick={() => void copy(s.id)}>{copied === s.id ? 'Copied' : 'Copy link'}</Button>
                   <a className="ui-button ui-button-quiet" href={link(s.id)} target="_blank" rel="noopener">Open</a>
@@ -155,8 +156,8 @@ export function SharePanel({ d, art, focus, commit, ctx }: {
             ))}
           </ul>
           <p className="dy-small dy-dim">
-            Deleting a snapshot breaks its link (within the hour). Only this dynasty can delete its snapshots, so keep your dynasty file
-            backed up: it carries them to another browser too.
+            A snapshot is deleted {SNAPSHOT_DAYS} days after you share it. Deleting one sooner breaks its link within the hour. Only this
+            dynasty can delete its snapshots, so keep your dynasty file backed up: it carries them to another browser too.
           </p>
         </>
       )}

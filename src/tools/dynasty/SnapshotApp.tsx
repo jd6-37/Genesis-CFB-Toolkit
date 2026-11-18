@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { seasonView, weekName } from '../../core/dynasty/derive';
 import { readSnapshot, type Snapshot } from '../../core/dynasty/snapshot';
+import { snapshotExpires, SNAPSHOT_DAYS } from '../../core/dynasty/snapshotId';
 import { Button, Masthead, NavBar, Note, ThemeToggle } from '../../ui';
 import { navClick } from '../../appNav';
 import { Ctx, href, TeamMark, type DynCtx } from './ui';
@@ -106,12 +107,13 @@ export default function SnapshotApp({ id, toolkitHref }: { id: string; toolkitHr
   const navPage = page === 'team' ? 'teams' : page === 'player' ? 'stats' : page === 'coach' ? 'coaches' : page === 'awards' || page === 'records' ? 'history' : page;
   const week = d?.offseason ? 'Offseason' : v && v.save ? (v.currentWeek < v.weeks ? weekName(v, v.currentWeek) : 'Season complete') : 'Preseason';
   const shared = snap ? new Date(snap.sharedAt).toLocaleDateString('en-US', { dateStyle: 'medium' }) : '';
+  const until = snap ? snapshotExpires(snap.sharedAt).toLocaleDateString('en-US', { dateStyle: 'medium' }) : '';
 
   return (
     <div className="dy" data-brand="dynasty" data-theme={dark ? 'dark' : 'light'}>
       {snap && d && (
         <div className="dy-snapbar">
-          <p><span className="dy-snaptag">Snapshot</span>{d.name} with {d.teams[snap.team]?.school}, {snap.label}. Shared {shared}. Read-only: it doesn't change.</p>
+          <p><span className="dy-snaptag">Snapshot</span>{d.name} with {d.teams[snap.team]?.school}, {snap.label}. Shared {shared}, link works until {until}. Read-only: it doesn't change.</p>
           <a href="/dynasty">Start your own dynasty</a>
         </div>
       )}
@@ -129,7 +131,7 @@ export default function SnapshotApp({ id, toolkitHref }: { id: string; toolkitHr
         {load.state === 'gone' && (
           <section className="dy-gone">
             <h1>This snapshot is gone</h1>
-            <p>Its owner deleted it, or the link is wrong. A snapshot is a copy of someone's dynasty at one moment: ask them for a new link.</p>
+            <p>Its owner deleted it, it expired (a link works for {SNAPSHOT_DAYS} days), or the link is wrong. A snapshot is a copy of someone's dynasty at one moment: ask them for a new link.</p>
             <div className="dy-row"><Button href="/dynasty">Start your own dynasty</Button><Button variant="quiet" href="/">About the mod</Button></div>
           </section>
         )}
