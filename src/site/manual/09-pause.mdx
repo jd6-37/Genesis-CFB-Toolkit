@@ -1,6 +1,6 @@
 export const meta = { n: 9, slug: 'pause', title: 'The pause menu', summary: 'Timeouts, instant replay, rosters, drive summaries, stats and the game settings.' }
 
-Press <Btn k="START" /> during a game to open the pause menu. Pick an item with the D-pad and press <Btn k="C" /> or <Btn k="START" />.
+Press <Btn k="START" /> during a game to open the pause menu; the game clock stops. Pick an item with up and down and press <Btn k="C" />. <Btn k="START" /> brings you back to the menu from any item, and from the menu back to the game.
 
 <Shot src="/media/manual/pause.png" alt="The pause menu: Resume Game, Timeout - 3 left, Team Rosters, Replay-Normal" />
 
@@ -10,16 +10,18 @@ Press <Btn k="START" /> during a game to open the pause menu. Pick an item with 
 | Timeout | Call a timeout. Elevated shows how many you have left, "Timeout - 2 left", right below Resume Game, when you control a team <New /> |
 | Team Rosters | Both rosters with energy; C switches to names <New />. Elevated moved it up to right after Timeout <New /> |
 | Replay-Normal, Replay-Reverse | Instant replay of the last play, seen from behind the offense (Normal) or from the other end (Reverse) |
-| Drive Summary | Every play of the current drive |
-| Game Stats, Team Stats | The game's statistics |
-| Scoreboard | The score and the game situation |
+| Drive Summary | Every play of the current drive: the play, yards gained or lost, time of possession and penalties. Left and right scroll |
+| Game Stats | The two teams' game statistics; up and down scroll |
+| Team Stats | Every player's stats for this game; up and down scroll the players, left and right switch teams |
+| Scoreboard | The scores of the day's other games |
+| Set Audibles | Change your audibles (chapter 4). Only there when you pause from the play-call screen |
 | Play Call | 3 Box or 1 Box (chapter 6) |
 | Pass Catch | Auto or Manual (chapter 6) |
 | Pass Window | Off (windowless passing) or On |
 
 ## Timeouts
 
-Each team has three timeouts a half. A timeout stops the clock and puts every player back at full energy, as halftime does. In Elevated, you call timeouts from the pause menu <New />. The play-call screen's TIME OUT tile is now SWAP HBS on offense and SWAP MLBS on defense.
+Each team has three timeouts a half; unused ones don't carry over to the second half. A timeout stops the clock, resets the play clock to 25 seconds and puts every player back at full energy, as halftime does. You can only call one after the whistle, between plays. In Elevated, you call timeouts from the pause menu <New />. The play-call screen's TIME OUT tile is now SWAP HBS on offense and SWAP MLBS on defense.
 
 <Edition only="2026">
 **The clock** <New />: until the last 2:00 of each half, the clock keeps running after a first down and after a runner goes out of bounds. The clock stops at 2:00 in the 2nd and 4th quarters. After a timeout, you can't call another one before the next snap (Timeout is hidden). The game clock also runs a little slower than in the original game.
@@ -29,4 +31,4 @@ Each team has three timeouts a half. A timeout stops the clock and puts every pl
 
 The replay keeps the whole play <New />: in the original game it showed only the last 11 seconds or so. On long plays the replay is a little choppier after that.
 
-While the replay runs: hold <Btn k="B" /> for slow motion, or tap it to go one frame at a time. <Btn k="C" /> plays at normal speed, and <Btn k="A" /> rewinds. The D-pad moves the camera around the field.
+While the replay runs: hold <Btn k="B" /> for slow motion, or tap it to go one frame at a time. <Btn k="C" /> plays at normal speed, and <Btn k="A" /> rewinds. The D-pad moves a target over a player or a part of the field to follow.

@@ -1,12 +1,14 @@
-export const meta = { n: 2, slug: 'controls', title: 'Controls', summary: 'Every button on one page: menus, the play-call screen, before and after the snap, kicks and the pause menu.' }
+export const meta = { n: 2, slug: 'controls', title: 'Controls', summary: 'Every button on one page: menus, the play-call screen, before and after the snap, kicks and instant replay.' }
 
 This page lists every control. The chapters after it explain each one. <New /> marks what the mod added, <Six /> what needs a 6-button pad.
 
 ## Menus
 
 <Controls rows={[
-  [['dpad'], 'Move between rows and change the highlighted setting'],
-  [['START'], 'Go on to the next screen'],
+  [['up', '/', 'down'], 'Move between rows or menu items'],
+  [['left', '/', 'right'], 'Change the highlighted setting, or page through teams, weeks and categories'],
+  [['C'], 'Pick the highlighted menu item'],
+  [['START'], 'Go on to the next screen, or back to the menu you came from'],
   [['X'], 'Menu music off or on (title screen, Game Setup, season screens)', 'new six'],
   [['Z'], 'Game Setup: Team Rosters for the highlighted team', 'new six'],
   [['Y'], 'Controller screen: pick the team’s uniform', 'new six'],
@@ -18,6 +20,9 @@ This page lists every control. The chapters after it explain each one. <New /> m
 <Controls rows={[
   [['dpad'], 'Move the boxes over the formations or plays'],
   [['A', '/', 'B', '/', 'C'], 'Choose the formation or play under that box'],
+  [['C'], '1 Box mode: pick the formation or play under the box'],
+  [['B'], '1 Box mode: a fake pick that sounds like a real one'],
+  [['A'], '1 Box mode: leave the play-call screen once you have picked'],
   [['X'], 'Flip the play (the same as the FLIP PLAY tile)', 'new six'],
   [['Y'], 'SET FORM: back to the formations', 'new six'],
   [['Z'], 'SWAP HBS on offense, SWAP MLBS on defense', 'new six'],
@@ -27,6 +32,7 @@ This page lists every control. The chapters after it explain each one. <New /> m
 
 <Controls rows={[
   [['C'], 'Snap the ball'],
+  [['B'], 'Hard count: a fake snap call that can draw the defense offside'],
   [['A'], 'Open the audible menu, then A, B or C to call that audible'],
   [['A', ',', 'X'], 'Flip the play at the line', 'new six'],
   [['up', '/', 'down'], 'Pick a motion man (a marker shows under him)', 'new'],
@@ -41,21 +47,41 @@ This page lists every control. The chapters after it explain each one. <New /> m
 
 ## After the snap, offense
 
-<Controls rows={[
-  [['dpad'], 'Run with the ball carrier, or scramble with the quarterback'],
-  [['C'], 'Quarterback on a pass play: bring up the receiver icons'],
-  [['A', '/', 'B', '/', 'C'], 'Then throw to that receiver (tap for a lob, hold for a bullet)'],
-  [['X', '/', 'Y'], 'Then throw to receiver 4 or 5', 'new six'],
-  [['C'], 'Option plays: pitch. Ball carrier: dive'],
-  [['B'], 'Ball carrier: tap to lower a shoulder, hold to spin'],
-  [['Y'], 'Ball carrier: hold to lower a shoulder again and again', 'new six'],
+<Controls title="Running" rows={[
+  [['dpad'], 'Run with the ball carrier'],
+  [['A'], 'Dive'],
+  [['B'], 'Tap: burst forward, lowering a shoulder'],
+  [['B'], 'Hold: spin'],
+  [['C'], 'Hurdle'],
+  [['C'], 'Quarterback: hand off, or pitch on an option play'],
+  [['Y'], 'Hold: lower a shoulder again and again', 'new six'],
   [['B'], 'RPO play: within about a second of the snap, pitch to the halfback', 'new'],
+]} />
+
+<Controls title="Passing" rows={[
+  [['dpad'], 'Take over the quarterback to scramble or roll out. If you don’t, the game runs the play for you'],
+  [['C'], 'Bring up the receiver icons'],
+  [['A', '/', 'B', '/', 'C'], 'Then throw to that receiver: tap for a lob, hold for a bullet'],
+  [['X', '/', 'Y'], 'Then throw to receiver 4 or 5', 'new six'],
+]} />
+
+<Controls title="While the pass is in the air" rows={[
+  [['B'], 'Switch to the receiver nearest the ball, then steer him with the D-pad'],
+  [['C'], 'Jump and reach for the catch'],
+  [['A'], 'Dive for the ball'],
+]} />
+
+<Controls title="Hurry-up, right after the whistle" rows={[
+  [['C'], 'Hold: line up without a huddle and run the same play again'],
+  [['A'], 'Hold: line up to spike the ball, then C to snap. Don’t touch the D-pad, or the spike is called off'],
 ]} />
 
 ## Before the snap, defense
 
 <Controls rows={[
+  [['dpad'], 'Move your defender'],
   [['B'], 'Switch to another defender'],
+  [['C'], 'Fire off the line at the snap. Too early is offside'],
   [['A'], 'Open the audible menu, then A, B or C'],
   [['A', ',', 'X'], 'Flip your alignment; again to flip back', 'new six'],
   [['X', '/', 'Z', '/', 'Y'], 'Pick a shift: the line, the linebackers or the safeties', 'new six'],
@@ -72,14 +98,28 @@ This page lists every control. The chapters after it explain each one. <New /> m
   [['B'], 'Switch to the defender nearest the ball'],
   [['A'], 'Dive at the ball carrier'],
   [['C'], 'Jump: knock down or pick off a pass, block a kick'],
+  [['C'], 'Near the ball carrier: power tackle'],
 ]} />
 
 ## Kicks
 
 <Controls rows={[
-  [['C'], 'Start the kick meter'],
+  [['C'], 'Snap the ball (field goals, punts) and start the kick meter'],
   [['left', '/', 'right'], 'Aim while the meter moves'],
   [['C'], 'Kick: the higher the meter, the longer the kick'],
+  [['A'], 'Kickoff: open the kickoff audibles, then A onside to the left, B normal kickoff, C onside to the right'],
+  [['A'], 'Receiving a kickoff: the same, to line up for an onside kick to the left (A) or right (C), or back to normal (B)'],
+  [['dpad'], 'Receiving a kick: take over the returner'],
+]} />
+
+## Instant replay
+
+<Controls rows={[
+  [['A'], 'Hold: rewind'],
+  [['B'], 'Tap: one frame at a time. Hold: slow motion'],
+  [['C'], 'Play at normal speed'],
+  [['dpad'], 'Move the camera’s target around the field'],
+  [['START'], 'Back to the pause menu'],
 ]} />
 
 ## Anytime

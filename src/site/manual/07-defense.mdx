@@ -7,7 +7,9 @@ On defense you call the formation and the play the same way as on offense (chapt
 ## Before the snap
 
 <Controls rows={[
+  [['dpad'], 'Move your defender'],
   [['B'], 'Switch to another defender'],
+  [['C'], 'Fire off the line at the snap. Too early is offside'],
   [['A'], 'Audible: open the menu, then A, B or C'],
   [['A', ',', 'X'], 'Flip your alignment and assignments; again to flip back', 'new six'],
   [['X'], 'Shift the line', 'new six'],
@@ -28,12 +30,17 @@ When you hold <Btn k="X" />, each defender gets a marker: **R** rush, **Z** zone
 
 After a defensive audible, your players walk to their new spots twice as fast as in the original game <New />, so they are less likely to be out of place at the snap.
 
+The defender you control stands on a circle. Your audibles are set in the pregame or on the pause menu, as on offense (chapter 4).
+
 ## After the snap
+
+The defense plays the call by itself: linemen rush, and defensive backs cover receivers. Take over whenever you want.
 
 <Controls rows={[
   [['B'], 'Switch to the defender nearest the ball'],
   [['A'], 'Dive at the ball carrier'],
   [['C'], 'Jump: knock down or pick off a pass, block a kick'],
+  [['C'], 'Near the ball carrier: power tackle'],
 ]} />
 
 Every time a defender touches the ball carrier, the game makes a random tackle check: the defender's TACKLE against the carrier's POWER. If the check fails, the tackle is broken and the carrier keeps running until the next defender touches him. More in chapter 11, and in the Insights post [What each player rating does in the game](/insights/player-ratings).
