@@ -2,6 +2,7 @@
 // Pure functions: the same season gives the same stories.
 
 import { bowlOf, bowlWeek, INDEPENDENT, leaders, playerLabel, playerLines, playerName, RECORD_STATS, seasonView, standings, statValue, weekName, type SeasonView } from './derive';
+import { preseasonPoll } from './poll';
 import { rivalryOf } from './rivalries';
 import { fromBase64, type Dynasty, type OffseasonEvent } from './model';
 import { readDynastySave, type DynastySave, type SaveGame } from './save';
@@ -26,7 +27,8 @@ export interface Story {
   box?: { result: string; lines: { cat: string; cells: [string, number | string][] }[] };
 }
 
-const rk = (r: number) => (r >= 1 && r <= 25 ? `No. ${r} ` : '');
+// A ranked team's rank before its name, "#8 Oregon" (user, 2026-11-18: both teams' ranks when both are ranked).
+const rk = (r: number) => (r >= 1 && r <= 25 ? `#${r} ` : '');
 
 /** One of a story's wordings, picked by its ID (the same story always reads the same). */
 function pick<T>(id: string, list: T[]): T {
@@ -68,9 +70,13 @@ export function stories(d: Dynasty, v: SeasonView = seasonView(d, d.seasons[d.se
   for (const g of v.games) if (g.vs !== null && g.week > week) week = g.week;
   if (week < 0) return out;
   const weekGames = v.games.filter((g) => g.week === week && g.vs !== null && g.visitor !== null && g.home !== null);
-  // Ranks before the week: the game keeps last week's ranks until the next week's first result.
+  // Ranks going into the week, the ones the game had at kickoff (user, 2026-11-18: "the rankings at the time of the
+  // game, not the new rankings after"): the save's ranks as of last week; before the first poll of the season, the
+  // preseason poll (the ROM's for the first season, the app's after); the current ranks only when neither is known.
   const nextStarted = v.games.some((g) => g.week === week + 1 && g.vs !== null);
-  const pre = nextStarted ? v.rank : s.lastRanks.map((r, t) => r || v.rank[t]);
+  const preseason = s.lastRanks.some((r) => r > 0) ? null : preseasonPoll(d, v.season);
+  const pollRank = preseason ? (() => { const r = new Array<number>(d.teams.length).fill(0); for (const e of preseason) r[e.team] = e.rank; return r; })() : null;
+  const pre = nextStarted ? v.rank : s.lastRanks.map((r, t) => r || pollRank?.[t] || v.rank[t]);
   const wk = weekName(v, week);
   const post = week > v.lastRegularWeek;
 
@@ -94,8 +100,8 @@ export function stories(d: Dynasty, v: SeasonView = seasonView(d, d.seasons[d.se
     if (v.champion === w && week === v.weeks - 1) {
       out.push({
         id: `${id}-champ`, kind: 'champion', week, weight: 100, teams: [w, l],
-        headline: `${name(w)} wins the ${year} national championship`,
-        dek: `${full(w)} beat ${name(l)} ${ws}-${ls} to finish ${v.records[w].w}-${v.records[w].l}.`,
+        headline: `${rk(rw)}${name(w)} wins the ${year} national championship`,
+        dek: `${full(w)} beat ${rk(rl)}${name(l)} ${ws}-${ls} to finish ${v.records[w].w}-${v.records[w].l}.`,
       });
       continue;
     }
@@ -110,13 +116,13 @@ export function stories(d: Dynasty, v: SeasonView = seasonView(d, d.seasons[d.se
     if (rl && (!rw || rw > rl + 10)) {
       out.push({
         id: `${id}-upset`, kind: 'upset', week, weight: 60 + (26 - rl), teams: [w, l],
-        headline: pick(id, [`${name(w)} stuns ${rk(rl)}${name(l)}, ${ws}-${ls}`, `Upset: ${name(w)} knocks off ${rk(rl)}${name(l)} ${ws}-${ls}`, `${rk(rl)}${name(l)} falls to ${name(w)}, ${ws}-${ls}`]),
+        headline: pick(id, [`${rk(rw)}${name(w)} stuns ${rk(rl)}${name(l)}, ${ws}-${ls}`, `Upset: ${rk(rw)}${name(w)} knocks off ${rk(rl)}${name(l)} ${ws}-${ls}`, `${rk(rl)}${name(l)} falls to ${rk(rw)}${name(w)}, ${ws}-${ls}`]),
         dek: pick(id + 'd', [`${full(w)} took down ${rk(rl)}${name(l)} ${where} in ${wk}.`, `${full(w)} (${v.records[w].w}-${v.records[w].l}) pulled the upset ${where} in ${wk}.`, `${name(l)} drops to ${v.records[l].w}-${v.records[l].l} after the loss ${w === g.home ? 'on the road' : 'at home'}.`]),
       });
     } else if (rw && rl) {
       out.push({
         id: `${id}-top`, kind: 'topgame', week, weight: 50 + (52 - rw - rl) / 2, teams: [w, l],
-        headline: pick(id, [`${rk(rw)}${name(w)} beats ${rk(rl)}${name(l)} ${ws}-${ls}`, `${rk(rw)}${name(w)} holds off ${rk(rl)}${name(l)}, ${ws}-${ls}`, `${rk(rw)}${name(w)} wins the Top 25 clash with ${name(l)}, ${ws}-${ls}`]),
+        headline: pick(id, [`${rk(rw)}${name(w)} beats ${rk(rl)}${name(l)} ${ws}-${ls}`, `${rk(rw)}${name(w)} holds off ${rk(rl)}${name(l)}, ${ws}-${ls}`, `${rk(rw)}${name(w)} wins the Top 25 clash with ${rk(rl)}${name(l)}, ${ws}-${ls}`]),
         dek: pick(id + 'd', [`A Top 25 matchup in ${wk} goes to ${name(w)} ${where}.`, `${name(w)} improves to ${v.records[w].w}-${v.records[w].l} with the win ${where}.`, `${name(l)} had no answer ${w === g.home ? 'on the road' : 'at home'} in ${wk}.`]),
       });
     } else if (rw && ws - ls >= 35) {
@@ -132,8 +138,8 @@ export function stories(d: Dynasty, v: SeasonView = seasonView(d, d.seasons[d.se
       out.push({
         id: `${id}-yours-${u}`, kind: 'yours', week, weight: 55, teams: [u, won ? l : w],
         headline: won
-          ? pick(id, [`${name(u)} beats ${rk(rl)}${name(l)} ${ws}-${ls}`, `${name(u)} takes care of ${rk(rl)}${name(l)}, ${ws}-${ls}`, `${name(u)} gets past ${rk(rl)}${name(l)} ${ws}-${ls}`])
-          : pick(id, [`${name(u)} falls to ${rk(rw)}${name(w)} ${ws}-${ls}`, `${rk(rw)}${name(w)} beats ${name(u)} ${ws}-${ls}`, `${name(u)} comes up short against ${rk(rw)}${name(w)}, ${ws}-${ls}`]),
+          ? pick(id, [`${rk(rw)}${name(u)} beats ${rk(rl)}${name(l)} ${ws}-${ls}`, `${rk(rw)}${name(u)} takes care of ${rk(rl)}${name(l)}, ${ws}-${ls}`, `${rk(rw)}${name(u)} gets past ${rk(rl)}${name(l)} ${ws}-${ls}`])
+          : pick(id, [`${rk(rl)}${name(u)} falls to ${rk(rw)}${name(w)} ${ws}-${ls}`, `${rk(rw)}${name(w)} beats ${rk(rl)}${name(u)} ${ws}-${ls}`, `${rk(rl)}${name(u)} comes up short against ${rk(rw)}${name(w)}, ${ws}-${ls}`]),
         dek: `${name(u)} is ${v.records[u].w}-${v.records[u].l} after ${wk}.`,
       });
     }
@@ -213,7 +219,7 @@ export function stories(d: Dynasty, v: SeasonView = seasonView(d, d.seasons[d.se
       const id = `${year}-${week}-${g.index}-rated`;
       out.push({
         id, kind: 'upset', week, weight: 40 + gap, teams: [w, l],
-        headline: pick(id, [`${name(w)} shocks ${rk(pre[l])}${name(l)}, ${ws}-${ls}`, `Underdog ${name(w)} beats ${rk(pre[l])}${name(l)} ${ws}-${ls}`, `${name(w)} pulls off a stunner against ${rk(pre[l])}${name(l)}`]),
+        headline: pick(id, [`${rk(pre[w])}${name(w)} shocks ${rk(pre[l])}${name(l)}, ${ws}-${ls}`, `Underdog ${rk(pre[w])}${name(w)} beats ${rk(pre[l])}${name(l)} ${ws}-${ls}`, `${rk(pre[w])}${name(w)} pulls off a stunner against ${rk(pre[l])}${name(l)}`]),
         dek: pick(id + 'd', [`${name(w)} came in rated ${Math.round(gap)} points lower than ${name(l)}.`, `On paper it was ${name(l)}'s game: ${name(w)} was rated ${Math.round(gap)} points lower.`]),
       });
     });
@@ -241,7 +247,7 @@ export function stories(d: Dynasty, v: SeasonView = seasonView(d, d.seasons[d.se
       dek: `${name(w)} beat ${name(l)} in ${wk}.` });
     const wonBefore = before(rl, true);
     if (wonBefore >= 6) out.push({ id: `${id}-snapped`, kind: 'streak', week, weight: 34 + wonBefore, teams: [w, l],
-      headline: pick(id, [`${name(w)} ends ${rk(pre[l])}${name(l)}'s ${wonBefore}-game winning streak`, `${rk(pre[l])}${name(l)}'s ${wonBefore}-game run ends at ${name(w)}`]),
+      headline: pick(id, [`${rk(pre[w])}${name(w)} ends ${rk(pre[l])}${name(l)}'s ${wonBefore}-game winning streak`, `${rk(pre[l])}${name(l)}'s ${wonBefore}-game run ends at ${rk(pre[w])}${name(w)}`]),
       dek: `${name(l)} drops to ${v.records[l].w}-${v.records[l].l}.` });
   }
 
