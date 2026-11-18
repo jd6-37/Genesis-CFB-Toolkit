@@ -1,15 +1,24 @@
 // A team's uniforms on its team page (user, 2026-11-18: "full uniform editing", "all teams's unis editable"): the
 // home jersey rule and the extra helmets, jerseys and pants for the picker on the controller screen, any team, any
 // time (mid-season too: the save keeps no uniform). The editor is the Toolkit's (KitParts); kit.ts keeps the changes.
-import { useState } from 'react';
-import { UniformChip } from '../../components';
-import { setKit, setWhiteHome, kitLock, kitOf, romUniformsOf } from '../../core/dynasty/kit';
+import { useMemo, useState } from 'react';
+import { SpriteCanvas, UniformChip } from '../../components';
+import { renderSprites } from '../../core/render';
+import { kitSpriteOf, ownOf, setKit, setOwn, setWhiteHome, kitLock, kitOf, romUniformsOf } from '../../core/dynasty/kit';
 import { withPiece, type KitPart } from '../../core/kits';
 import { Button, Note, Row, Select, SubHead } from '../../ui';
 import { KitParts } from '../styles/KitParts';
 import { useDyn } from './ui';
 
 const ORDER: KitPart[] = ['helmets', 'dark', 'white', 'pants'];
+
+/** A uniform on the game's player sprite (the picker's), or the drawn chip without it. */
+function Player({ u, label }: { u: number[]; label: string }) {
+  const { d } = useDyn();
+  const sprite = useMemo(() => kitSpriteOf(d), [d.romUniforms]); // eslint-disable-line react-hooks/exhaustive-deps
+  const pic = useMemo(() => (sprite ? renderSprites(sprite.tiles, u, [sprite.sprites]) : null), [sprite, u.join()]); // eslint-disable-line react-hooks/exhaustive-deps
+  return pic ? <SpriteCanvas pic={pic} scale={2} label={label} /> : <UniformChip u={u} label={label} />;
+}
 
 export function UniformsBox({ team }: { team: number }) {
   const { d, commit, readOnly, getRom, downloadRom } = useDyn();
@@ -19,19 +28,19 @@ export function UniformsBox({ team }: { team: number }) {
   if (!d.whiteHome || kitLock(d)) return null;
   const name = d.teams[team].school;
   const kit = kitOf(d, team);
-  const own = d.romUniforms?.own[team];
+  const own = ownOf(d, team);
   const names = d.teams.map((t) => t.school);
   const extras = kit ? ORDER.reduce((n, p) => n + kit[p].length, 0) : 0;
   const run = (f: () => Promise<void>) => { setError(null); f().catch((e: Error) => setError(e.message)); };
 
   // Older dynasties: the ROM's uniforms are read the first time the editor opens.
   const start = () => run(async () => {
-    if (!d.romUniforms) {
+    if (!d.romUniforms || !d.romUniforms.sprite) {
       const rom = await getRom?.();
       if (!rom) return;
       const ru = romUniformsOf(rom, d.teams.length);
       if (!ru) throw new Error('This ROM has no alternate uniforms.');
-      await commit({ ...d, romUniforms: ru });
+      await commit({ ...d, romUniforms: d.romUniforms ? { ...d.romUniforms, sprite: ru.sprite } : ru });
     }
     setOpen(true);
   });
@@ -41,16 +50,16 @@ export function UniformsBox({ team }: { team: number }) {
       <SubHead id={`dy-uni-${team}`}>Uniforms</SubHead>
       {kit && own && (
         <ul className="dy-uni-chips" aria-label={`${name} uniforms`}>
-          <li><UniformChip u={own.home} label={`${name} home`} /></li>
-          <li><UniformChip u={own.away} label={`${name} away`} /></li>
+          <li><Player u={own.home} label={`${name} home`} /></li>
+          <li><Player u={own.away} label={`${name} away`} /></li>
           {ORDER.flatMap((p) => kit[p].map((c, i) => (
-            <li key={`${p}${i}`}><UniformChip u={withPiece(p === 'white' ? own.away : own.home, p, c)} label={`${name} extra ${p} ${i + 1}`} /></li>
+            <li key={`${p}${i}`}><Player u={withPiece(p === 'white' ? own.away : own.home, p, c)} label={`${name} extra ${p} ${i + 1}`} /></li>
           )))}
         </ul>
       )}
       <p className="dy-small dy-dim">
         {d.whiteHome[team] ? 'White at home.' : 'Dark at home.'} {extras ? `${extras} extra ${extras === 1 ? 'piece' : 'pieces'} to pick on the controller screen (Y on a 6-button pad).` : 'No extra pieces.'}
-        {d.kitEdits?.[team] ? ' Changed in this dynasty.' : ''}
+        {d.kitEdits?.[team] || d.ownEdits?.[team] ? ' Changed in this dynasty.' : ''}
       </p>
       {!readOnly && !open && <Row><Button variant="quiet" onClick={start}>Edit uniforms</Button></Row>}
       {error && <Note kind="error">{error}</Note>}
@@ -70,9 +79,9 @@ export function UniformsBox({ team }: { team: number }) {
               onChange={(x) => run(() => commit(setWhiteHome(d, team, x === 'white')))}
             />
           </Row>
-          <KitParts kit={kit} own={own} name={name} put={(k) => run(() => commit(setKit(d, team, k, names)))} />
+          <KitParts kit={kit} own={own} sprite={kitSpriteOf(d)} name={name} put={(k) => run(() => commit(setKit(d, team, k, names)))} putOwn={(o) => run(() => commit(setOwn(d, team, o)))} />
           <Row>
-            {d.kitEdits?.[team] && <Button variant="quiet" onClick={() => run(() => commit(setKit(d, team, d.romUniforms!.kits[team], names)))}>Back to the ROM's uniforms</Button>}
+            {(d.kitEdits?.[team] || d.ownEdits?.[team]) && <Button variant="quiet" onClick={() => run(() => commit(setKit(setOwn(d, team, d.romUniforms!.own[team]), team, d.romUniforms!.kits[team], names)))}>Back to the ROM's uniforms</Button>}
             <Button variant="quiet" onClick={() => setOpen(false)}>Done</Button>
           </Row>
         </div>

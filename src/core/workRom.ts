@@ -16,7 +16,7 @@ import { rl, rw } from './bytes';
 import { editedReports, readReport, reportLength, REPORT_LIMIT, writeReports, type Report } from './walshReports';
 import type { Game } from './rosterLayouts';
 import { isWideBw95 } from './romfile';
-import { hasKits, kitsDiffer, readKits, writeKits } from './kits';
+import { hasKits, kitsDiffer, ownChanges, ownUniforms, readKits, writeKits, writeOwnUniforms } from './kits';
 import { teamsOf } from './wide';
 import { readWideSeason, wideSeasonProblems, wideSeasonRanges, writeWideSeason } from './seasonWide';
 
@@ -82,7 +82,8 @@ export function editsSince(base: Uint8Array, data: Uint8Array, game: Game): Edit
       (differs(base, data, styleRanges(base)) ||
         (!ratingProblems(base).length && differs(base, data, ratingRanges(base))) ||
         reportsDiffer(base, data) ||
-        kitsDiffer(base, data)),
+        kitsDiffer(base, data) ||
+        ownChanges(base, data).length > 0),
     rosters: differs(base, data, rosterRanges),
     any,
   };
@@ -223,6 +224,18 @@ export function carryEdits(from: Uint8Array, to: Uint8Array, fromBase?: Uint8Arr
     }
   } catch (e) {
     res.skipped.push(`Uniforms: ${(e as Error).message}`);
+  }
+  // The teams' own uniforms (kits.ts `writeOwnUniforms`), for slots that still hold the same team.
+  try {
+    const base = fromBase ?? to;
+    const fromNames = a.teams.map((t) => t.school), toNames = b.teams.map((t) => t.school);
+    for (const t of ownChanges(base, from)) {
+      if (fromNames[t] !== toNames[t]) { res.skipped.push(`Uniforms of ${fromNames[t]}: its slot now holds ${toNames[t]}`); continue; }
+      writeOwnUniforms(to, t, ownUniforms(from, t));
+      carried.add(t);
+    }
+  } catch (e) {
+    res.skipped.push(`Own uniforms: ${(e as Error).message}`);
   }
   res.teams = carried.size;
   return res;
