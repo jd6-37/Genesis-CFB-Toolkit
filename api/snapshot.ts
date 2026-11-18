@@ -7,9 +7,11 @@
 //   GET    /api/snapshot?id=<id>     { url } of the snapshot's file, or 404
 //   GET    /api/snapshot?status=1    { storage: "connected", uploads: "ready" } or what's missing (for checking a deployment)
 //   DELETE /api/snapshot             body { key }: deletes that key's snapshot
-import { BlobNotFoundError, del, head } from '@vercel/blob';
+//   GET    /api/snapshot?cleanup=1   the daily cron (vercel.json; Authorization: Bearer CRON_SECRET): deletes the
+//                                    snapshots older than SNAPSHOT_DAYS. A link stops answering at 90 days either way.
+import { BlobNotFoundError, del, head, list } from '@vercel/blob';
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
-import { isSnapshotId, isSnapshotKey, snapshotIdOf, snapshotPath, SNAPSHOT_MAX_BYTES, SNAPSHOT_TYPE } from '../src/core/dynasty/snapshotId.js'; // .js: Node runs the function as ESM and needs the extension
+import { isSnapshotId, isSnapshotKey, snapshotExpired, snapshotExpires, snapshotIdOf, snapshotPath, SNAPSHOT_MAX_BYTES, SNAPSHOT_TYPE } from '../src/core/dynasty/snapshotId.js'; // .js: Node runs the function as ESM and needs the extension
 
 const json = (body: unknown, status = 200, headers: Record<string, string> = {}) =>
   new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...headers } });
@@ -20,22 +22,26 @@ export async function GET(request: Request): Promise<Response> {
     try {
       // Sharing needs the store's read-write token too: it signs the browser's upload (reading works without it).
       const uploads = process.env.BLOB_READ_WRITE_TOKEN ? 'ready' : 'missing BLOB_READ_WRITE_TOKEN';
+      // The daily deletion of expired snapshots runs only with CRON_SECRET set (links stop at 90 days either way).
+      const expiry = process.env.CRON_SECRET ? 'ready' : 'missing CRON_SECRET';
       try {
         await head('s/status-check.json.gz');
       } catch (e) {
         if (!(e instanceof BlobNotFoundError)) throw e;
       }
-      return json({ storage: 'connected', uploads }, uploads === 'ready' ? 200 : 500);
+      return json({ storage: 'connected', uploads, expiry }, uploads === 'ready' ? 200 : 500);
     } catch (e) {
       return json({ storage: 'error', message: (e as Error).message }, 500);
     }
   }
+  if (q.has('cleanup')) return cleanup(request);
   const id = q.get('id');
   if (!isSnapshotId(id)) return json({ error: 'Not a snapshot id.' }, 400);
   try {
     const blob = await head(snapshotPath(id));
+    if (snapshotExpired(blob.uploadedAt)) return json({ error: 'This snapshot has expired.', expired: true }, 404, { 'cache-control': 'public, s-maxage=3600' });
     // The file never changes; a deleted one stops answering within the hour (the store's cache time).
-    return json({ url: blob.url }, 200, { 'cache-control': 'public, max-age=300, s-maxage=3600' });
+    return json({ url: blob.url, expires: snapshotExpires(blob.uploadedAt).toISOString() }, 200, { 'cache-control': 'public, max-age=300, s-maxage=3600' });
   } catch (e) {
     if (e instanceof BlobNotFoundError) return json({ error: 'This snapshot is gone.' }, 404, { 'cache-control': 'public, s-maxage=60' });
     return json({ error: 'The snapshot storage is not available right now.' }, 503);
@@ -84,4 +90,24 @@ export async function DELETE(request: Request): Promise<Response> {
   } catch {
     return json({ error: 'The snapshot storage is not available right now.' }, 503);
   }
+}
+
+/** The daily cron: deletes every snapshot older than SNAPSHOT_DAYS. Only Vercel's cron (with CRON_SECRET) may run it. */
+async function cleanup(request: Request): Promise<Response> {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return json({ error: 'CRON_SECRET is not set.' }, 500);
+  if (request.headers.get('authorization') !== `Bearer ${secret}`) return json({ error: 'Not allowed.' }, 401);
+  let cursor: string | undefined;
+  let checked = 0;
+  const old: string[] = [];
+  do {
+    const page = await list({ prefix: 's/', cursor, limit: 1000 });
+    for (const b of page.blobs) {
+      checked++;
+      if (snapshotExpired(b.uploadedAt)) old.push(b.url);
+    }
+    cursor = page.hasMore ? page.cursor : undefined;
+  } while (cursor);
+  for (let i = 0; i < old.length; i += 100) await del(old.slice(i, i + 100));
+  return json({ checked, deleted: old.length });
 }

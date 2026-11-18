@@ -14,5 +14,11 @@
       "source": "/dynasty/s/:id",
       "destination": "/app"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/snapshot?cleanup=1",
+      "schedule": "17 4 * * *"
+    }
   ]
 }
