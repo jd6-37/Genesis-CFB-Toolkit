@@ -63,6 +63,8 @@ export interface DPlayer {
   skin: number;
   /** Changes the user made to his generated portrait (headshot.ts `LookEdit`; editable any time, not in the ROM). */
   look?: import('./headshot').LookEdit;
+  /** 2 = made since the headshots' new hair styles (2026-11-18): his generated look can use any style. Absent = the earlier styles, so existing players keep their hair. */
+  lookV?: 2;
   status: 'active' | 'graduated' | 'pro' | 'transferred' | 'cut';
   /** The CFB 27 player ID for the starting players. */
   srcId?: number;
@@ -333,6 +335,7 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
       ovr: 0,
       ratings,
       skin: 0, // set below, from the name and position
+      lookV: 2,
       status: 'active',
       srcId: Number(r[cId]) || undefined,
     };

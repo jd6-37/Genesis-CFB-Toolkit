@@ -753,22 +753,34 @@ if (user !== undefined) {
   const e1 = editLook(d1, p0.id, { skin: 3, look: { hair: 'afro', beard: 'beard', eyeBlack: true } });
   const q = e1.players[p0.id - 1];
   assert.equal(q.skin, 3);
-  assert.deepEqual([lookOf(q).hair, lookOf(q).beard, lookOf(q).eyeBlack], ['afro', 'beard', true]);
+  assert.deepEqual([lookOf(q).hair, lookOf(q).beard, lookOf(q).acc?.eyeBlack], ['afro', 'beard', true]);
   assert.equal(lookOf(q).mouth, gen.mouth, 'the rest stays generated');
   {
     // Locs come long or short; adding the short style moved no other generated look.
+    // Players made before the new styles (no lookV) keep the earlier draws.
     const styles = new Map<string, number>();
-    for (const pl of d0.players) styles.set(lookOf(pl).hair, (styles.get(lookOf(pl).hair) ?? 0) + 1);
+    for (const pl of d0.players.map((x) => ({ ...x, lookV: undefined }))) styles.set(lookOf(pl).hair, (styles.get(lookOf(pl).hair) ?? 0) + 1);
     const long = styles.get('locs') ?? 0, short = styles.get('locsShort') ?? 0;
     assert.ok(long > 0 && short > 0 && Math.abs(long - short) < (long + short) * 0.15, `locs ${long} long, ${short} short`);
     assert.equal(styles.size, 11);
     for (const st of ['short', 'afro', 'flow']) assert.ok(Math.abs((styles.get(st) ?? 0) - (long + short)) < (long + short) * 0.15, st);
+    // New players (lookV 2) draw from every style; eye black on about 5%; never a wide jaw on a thin neck, never a
+    // thin neck on a lineman.
+    const v2 = new Set(d0.players.map((x) => lookOf(x).hair));
+    assert.ok(v2.size >= 16 && v2.has('sidepart') && v2.has('cornrows'), `new players' styles: ${v2.size}`);
+    const eb = d0.players.filter((x) => lookOf(x).acc?.eyeBlack).length / d0.players.length;
+    assert.ok(eb > 0.03 && eb < 0.07, `eye black ${(eb * 100).toFixed(1)}%`);
+    for (const x of d0.players) {
+      const l = lookOf(x);
+      assert.ok(!(l.jaw === 'wide' && l.neck === 'thin'), 'wide jaw on a thin neck');
+      if (l.build === 'wide') assert.notEqual(l.neck, 'thin', 'a lineman with a thin neck');
+    }
   }
   assert.deepEqual(e1.seasons, d1.seasons, 'nothing about the season changes');
   const back = editLook(e1, p0.id, { look: null }).players[p0.id - 1];
   assert.deepEqual(lookChoices(back), lookChoices({ ...p0, skin: 3 }), 'back to the generated look');
   assert.throws(() => editLook(d1, p0.id, { skin: 7 }), /skin tone/);
-  ok('appearance: skin, hair, facial hair and eye black saved; the rest stays generated; reset works');
+  ok('appearance: skin, hair, facial hair and eye black saved; the rest stays generated; reset works; new players get every style, eye black on about 5%, jaw and neck by position');
 }
 
 // Recruiting commitment stories: the latest week's 4-5★ commitments and the user teams' moves.
