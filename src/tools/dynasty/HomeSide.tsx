@@ -6,6 +6,7 @@ import { SubHead, Table } from '../../ui';
 import { useMemo } from 'react';
 import { bowlOf, bowlWeek, INDEPENDENT, leaders, playerLines, playerName, standings, statValue, weekName, type PlayerLine, type StatCategory } from '../../core/dynasty/derive';
 import { bigGames, heismanWatch, playoffPicture } from '../../core/dynasty/outlook';
+import { preseasonHeisman } from '../../core/dynasty/heismanPre';
 import { classRankings, STAR_POINTS } from '../../core/dynasty/offseason';
 import { TeamLink, href, playerOf, recordText, useDyn } from './ui';
 import { preseasonPoll } from '../../core/dynasty/poll';
@@ -60,8 +61,32 @@ function PreseasonClasses() {
           {!poll[0]?.real && <p className="dy-small"><a href={href('rankings')}>Points and last year's finish</a></p>}
         </section>
       )}
+      <PreseasonHeisman />
       {v.season.events && <ClassRankings events={v.season.events} />}
     </>
+  );
+}
+
+/** The preseason Heisman favorites (heismanPre.ts), in the Heisman watch's place until the first games are in. */
+function PreseasonHeisman() {
+  const { d, v } = useDyn();
+  const pre = useMemo(() => preseasonHeisman(d, v.season, 5), [d, v.season]);
+  if (!pre.length) return null;
+  return (
+    <section>
+      <SubHead level={2}>Preseason Heisman favorites</SubHead>
+      <ol className="dy-side-rank">
+        {pre.map((h, i) => (
+          <li key={h.player} className="dy-side-player">
+            <span className="dy-side-n">{i + 1}</span>
+            <span>
+              <PlayerLink id={h.player} />
+              <span className="dy-side-meta">{v.season.bw?.[h.team]?.[h.slot]?.label ?? h.role}, {d.teams[h.team].school}: OVR {h.ovr}{h.last ? `; last year ${h.last}` : ''}</span>
+            </span>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 
@@ -173,7 +198,9 @@ function keyLine(lines: PlayerLine[]): string {
 function Heisman() {
   const { d, v } = useDyn();
   const list = useMemo(() => heismanWatch(v), [v]);
-  if (!list.length) return null;
+  // Before the season's first games: the preseason favorites (user, 2026-11-18: "The pre-season favs would go away
+  // once the season starts, replaced by the Watch").
+  if (!list.length) return <PreseasonHeisman />;
   return (
     <section>
       <SubHead level={2}>Heisman watch</SubHead>

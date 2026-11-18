@@ -725,9 +725,10 @@
 .dy-impactbox li { display: flex; gap: var(--sp-3); align-items: flex-start; padding: var(--sp-3); background: var(--surface-sunken); }
 .dy-impactbox li p { margin: 0; }
 .dy-impactbox-name { font-weight: 700; font-size: var(--fs-3); }
-.dy-impactbox-r { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-3); margin: var(--sp-2) 0 0; }
-.dy-impactbox-r div { display: flex; gap: var(--sp-1); align-items: baseline; }
-.dy-impactbox-r dt { font-size: var(--fs-1); color: var(--text-muted); }
+.dy-impactbox-r { display: flex; gap: var(--sp-3); margin: var(--sp-2) 0 0; }
+.dy-impactbox-r div { display: flex; flex-direction: column; }
+.dy-impactbox-r dt { font-size: var(--fs-1); color: var(--text-muted); letter-spacing: 0.04em; }
+.dy-impactbox-r abbr { text-decoration: none; }
 .dy-impactbox-r dd { margin: 0; font-family: var(--font-num); font-size: var(--fs-2); }
 .dy-impactbox > p { margin-top: var(--sp-2); }
 @media (min-width: 760px) { .dy-impactbox ul { grid-template-columns: repeat(3, 1fr); } }
