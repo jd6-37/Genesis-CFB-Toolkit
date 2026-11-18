@@ -5,7 +5,7 @@ import { Rules } from './RulesPage';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { openRom } from '../../core/romfile';
 import { fetchCfb27Latest } from '../../core/cfb27Latest';
-import { createDynasty, DYNASTY_FILE, importSave, OLD_DYNASTY, type Dynasty } from '../../core/dynasty/model';
+import { createDynasty, DYNASTY_FILE, importSave, OLD_DYNASTY, type Dynasty, type DSeason } from '../../core/dynasty/model';
 import { createDynasty1994 } from '../../core/dynasty/create1994';
 import { editionOf, editionOfRom } from '../../core/dynasty/edition';
 import { fetchRosters1994 } from '../../core/dynasty/rosters1994';
@@ -27,7 +27,7 @@ import { Coach, Coaches } from './CoachPages';
 import { Rosters } from './RostersPage';
 import { fetchCoachData } from '../../core/dynasty/coachData';
 import { withCoaches } from '../../core/dynasty/coaches';
-import { seasonDone, seasonRom } from '../../core/dynasty/offseason';
+import { newRomId, seasonDone, seasonRom, seasonRomName, uniformRom } from '../../core/dynasty/offseason';
 import { canReplaceBench, randomBench } from '../../core/dynasty/bench';
 import { Button, Check, Field, FileButton, Masthead, Modal, NavBar, Note, Select, Table, ThemeToggle } from '../../ui';
 import { navClick } from '../../appNav';
@@ -152,6 +152,10 @@ async function addCoaches(dyn: Dynasty): Promise<Dynasty> {
 export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
   const [route, setRoute] = useState(parseHash);
   const [romLater, setRomLater] = useState<number | null>(null);
+  // The out-of-date ROM window (user, 2026-11-18: "The prompts to download the new rom need to be very clear, probably
+  // a modal"): shows once the user moves to another page after a change; "Later" hides it until the ROM is downloaded.
+  const [staleAt, setStaleAt] = useState<string | null>(null);
+  const [staleLater, setStaleLater] = useState<string | null>(null);
   const [list, setList] = useState<DynastySummary[] | null>(null);
   const [d, setD] = useState<Dynasty | null>(null);
   const [art, setArt] = useState<TeamArt[] | null>(null);
@@ -167,6 +171,11 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
     window.scrollTo(0, 0);
     if (route.page !== 'manage') setNote(null);
   }, [route.page, route.arg]);
+  const stale = d ? romStale(d) : null;
+  const here = `${route.page}/${route.arg ?? ''}`;
+  useEffect(() => {
+    if (!stale) { setStaleAt(null); setStaleLater(null); } else if (staleAt === null) setStaleAt(here);
+  }, [stale?.key, here, staleAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const refresh = useCallback(async () => setList(await listDynasties()), []);
   const open = useCallback(async (id: string) => {
@@ -215,6 +224,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
 
   const dlRef = useRef<(year: number) => void>(() => {});
   const backupRef = useRef<(dyn: Dynasty) => Promise<void>>(async () => {});
+  const romRef = useRef<() => Promise<Uint8Array | null>>(async () => null);
   const v = useMemo(() => (d ? seasonView(d, d.seasons[d.seasons.length - 1]) : null), [d]);
   // Light or dark: the reader's choice, kept in this browser (it's a preference, not part of a dynasty).
   const [dark, setDarkState] = useState(() => { try { return localStorage.getItem(THEME_KEY) === 'dark'; } catch { return false; } });
@@ -227,7 +237,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
   }, [d?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const setFocus = (t: number) => { setFocusState(t); try { if (d) localStorage.setItem(`dynasty.focus.${d.id}`, String(t)); } catch { /* private mode */ } };
   const ctx: DynCtx | null = useMemo(
-    () => (d && v ? { d, v, art, go: (p: string) => (window.location.hash = href(p)), commit, downloadRom: (y: number) => dlRef.current(y), dark, focus, backup: () => void backupRef.current(d) } : null),
+    () => (d && v ? { d, v, art, go: (p: string) => (window.location.hash = href(p)), commit, downloadRom: (y: number) => dlRef.current(y), dark, focus, backup: () => void backupRef.current(d), getRom: () => romRef.current() } : null),
     [d, v, art, commit, dark, focus],
   );
 
@@ -377,16 +387,27 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       if (!season) return;
       const rom = await getRom();
       if (!rom) throw new Error('Choose your ROM to write the season into it.');
-      const slug = d.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'dynasty';
-      download(`${slug}-${year}.md`, seasonRom(d, season, rom) as Uint8Array<ArrayBuffer>, 'application/octet-stream');
-      if (season.lineupEdited || !season.romDownloaded) await commit({ ...d, seasons: d.seasons.map((x) => (x === season ? { ...x, lineupEdited: false, romDownloaded: true } : x)) });
+      // The first season is played on the user's own ROM: only its uniforms change. Later seasons: the season ROM.
+      const first = season.index === 0;
+      const again = !!season.romDownloaded;
+      const done: DSeason = first
+        ? { ...season, romId: season.romId ?? newRomId(), kitsEdited: false } // the first season's lineup never goes into a ROM
+        : { ...season, romId: season.romId ?? newRomId(), lineupEdited: false, kitsEdited: false, romDownloaded: true };
+      const name = seasonRomName(d, done);
+      download(name, (first ? uniformRom(d, rom) : seasonRom(d, done, rom)) as Uint8Array<ArrayBuffer>, 'application/octet-stream');
+      await commit({ ...d, seasons: d.seasons.map((x) => (x === season ? done : x)) });
       setNote({
         kind: 'ok',
-        text: `Downloaded the ${year} ROM. Start a New Season with it in the game: Season mode plays the dynasty's rosters, Exhibition keeps the ROM's own.`,
+        text: first
+          ? `Downloaded ${name}: your ROM with this dynasty's uniforms. Put it in place of the ROM you play the ${year} season on, with that ROM's file name, so the game finds your save.`
+          : again
+            ? `Downloaded ${name} again. Put it in place of the one you have (same file name, so the game finds your save) and keep playing.`
+            : `Downloaded ${name}. Start a New Season with it in the game: Season mode plays the dynasty's rosters, Exhibition keeps the ROM's own.`,
       });
     }),
   };
   dlRef.current = offActions.downloadRom;
+  romRef.current = getRom;
 
   const { page, arg } = route;
   const num = arg !== undefined && /^\d+$/.test(arg) ? Number(arg) : undefined;
@@ -455,9 +476,42 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
             </Modal>
           );
         })()}
+        {d && stale && staleAt !== null && staleAt !== here && staleLater !== stale.key && page !== 'offseason' && (() => {
+          const s = d.seasons[d.seasons.length - 1];
+          const name = seasonRomName(d, { ...s, romId: s.romId ?? 'xxxxxx' });
+          return (
+            <Modal
+              title={stale.first ? `Download your ${s.year} ROM with the new uniforms` : `Download the ${s.year} ROM again`}
+              actions={<>
+                <Button disabled={!!busy} onClick={() => offActions.downloadRom(s.year)}>{stale.first ? 'Download the ROM' : `Download the ${s.year} ROM`}</Button>
+                <Button variant="quiet" onClick={() => setStaleLater(stale.key)}>Later</Button>
+              </>}
+            >
+              <p>You changed {stale.what} after {stale.first ? `you started the ${s.year} season` : `downloading the ${s.year} ROM`}. The ROM you play on doesn't have {stale.what === 'the uniforms' ? 'them' : 'that'} yet.</p>
+              <ol className="dy-steps">
+                <li>Download the ROM.</li>
+                {stale.first
+                  ? <li>Put it in place of the ROM you play the {s.year} season on and give it <b>that ROM's file name</b>, so the game finds your save.</li>
+                  : <li>Put it in place of the one you have. Its name must stay <b>{s.romId ? name : 'the same'}</b>{s.romId ? '' : ' as the ROM you have'}: if your browser saved it as "… (1).md", rename it. Then the game finds your save.</li>}
+                <li>{stale.uniformsOnly ? 'Keep playing: your season goes on, the save keeps no uniform.' : `Load your save with it and play on${s.imports.length ? '' : ` (or start the New Season with it if you haven't yet)`}.`}</li>
+              </ol>
+            </Modal>
+          );
+        })()}
       </main>
     </div>
   );
+}
+
+/** What the season's ROM is missing, or null when it's up to date (the current season, outside the offseason). */
+function romStale(d: Dynasty): { key: string; what: string; first: boolean; uniformsOnly: boolean } | null {
+  if (d.offseason) return null;
+  const s = d.seasons[d.seasons.length - 1];
+  const lineup = !!(s.romDownloaded && s.lineupEdited);
+  const kits = !!s.kitsEdited;
+  if (!lineup && !kits) return null;
+  const what = lineup && kits ? 'the uniforms and the lineup, schedule, conferences or impact players' : lineup ? 'the lineup, schedule, conferences or impact players' : 'the uniforms';
+  return { key: `${s.year}/${lineup}/${kits}/${s.rosterVersion ?? 1}`, what, first: s.index === 0, uniformsOnly: !lineup };
 }
 
 // ---- Manage

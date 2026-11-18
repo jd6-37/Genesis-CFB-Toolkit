@@ -1,39 +1,92 @@
-// Home jerseys in a dynasty (handoff H-004; user, 2026-11-12: "I can also add ability to change that during the
-// offseason in the Dynasty app"): each team's "wears white at home" flag of the ROM's alternate-uniforms table
-// (kits.ts). Read from the ROM when the dynasty is created, changed for the user's teams between seasons, and
-// written back into every season ROM. The teams' extra uniforms stay as the ROM has them (the Toolkit edits those).
-import { hasKits, readKits, writeKits } from '../kits';
+// Uniforms in a dynasty (handoff H-004; user, 2026-11-18: "Let's do the uniform thing. full uniform editing", "all
+// teams's unis editable"): each team's extra helmets, jerseys and pants for the picker on the controller screen and
+// its "wears white at home" flag (the ROM's alternate-uniforms table, kits.ts). Any team, any time, mid-season too:
+// the save keeps no uniform (the picker's choice lasts one game), so a season continues on a ROM whose only change
+// is uniforms. A change after the season's ROM was downloaded asks for the ROM again, without a new roster version.
+//
+// What the dynasty keeps: the ROM's own uniforms as a snapshot for the editor and the pages (`romUniforms`, read
+// when the dynasty is made or the first time the editor gets the ROM), the flags (`whiteHome`), and only the teams
+// the user changed (`kitEdits`). Season ROMs get the ROM's table with those teams put in.
+import { hasKits, kitIssues, ownUniforms, readKits, writeKits, type TeamKit } from '../kits';
 import type { DSeason, Dynasty } from './model';
+
+export interface RomUniforms {
+  /** Each team's own home and away uniform palettes (16 Genesis colors each): the picker's first choices. */
+  own: { home: number[]; away: number[] }[];
+  /** The ROM's table: each team's extras. */
+  kits: TeamKit[];
+}
 
 /** The flags a new dynasty starts with (undefined on a ROM without the uniform picker). */
 export const whiteHomeOf = (rom: Uint8Array): boolean[] | undefined => (hasKits(rom) ? readKits(rom).map((k) => k.whiteHome) : undefined);
 
-/** Why a team's home jersey can't be changed now, or null. */
-export function whiteHomeLock(d: Dynasty, team: number): string | null {
-  if (!d.whiteHome) return 'This dynasty\'s ROM has no alternate uniforms.';
-  if (!d.userTeams.includes(team)) return 'You can change the home jersey of your own teams.';
-  const s = d.seasons[d.seasons.length - 1];
-  if (!d.offseason && s.imports.length) return 'The home jersey can be changed in the offseason, before the next season starts.';
-  return null;
+/** The ROM's uniforms for the editor (undefined on a ROM without the uniform picker). */
+export function romUniformsOf(rom: Uint8Array, teams: number): RomUniforms | undefined {
+  if (!hasKits(rom)) return undefined;
+  const kits = readKits(rom);
+  if (kits.length !== teams) return undefined;
+  return { own: kits.map((_, t) => ownUniforms(rom, t)), kits };
 }
 
-/** Sets whether a user team wears white at home; after a ROM download the ROM has to be written again. */
+/** Why a team's uniforms can't be changed, or null. */
+export function kitLock(d: Dynasty): string | null {
+  if (!d.whiteHome) return 'This dynasty\'s ROM has no alternate uniforms.';
+  return null;
+}
+/** Kept for the home jersey menu. */
+export const whiteHomeLock = (d: Dynasty, _team?: number): string | null => kitLock(d);
+
+/** A team's uniforms now: the user's change, else the ROM's; the flag from `whiteHome`. Null without the snapshot. */
+export function kitOf(d: Dynasty, team: number): TeamKit | null {
+  const k = d.kitEdits?.[team] ?? d.romUniforms?.kits[team];
+  if (!k) return null;
+  return { ...k, whiteHome: !!d.whiteHome?.[team] };
+}
+
+/**
+ * The season's ROM needs downloading again: the current season once its ROM was downloaded, and the first season
+ * always (it's played on the user's own ROM, which doesn't have the change). Never in the offseason (the next
+ * season's ROM comes at its end).
+ */
+function romOutdated(d: Dynasty): DSeason[] {
+  const s = d.seasons[d.seasons.length - 1];
+  if (d.offseason || s.kitsEdited || (!s.romDownloaded && s.index > 0)) return d.seasons;
+  return [...d.seasons.slice(0, -1), { ...s, kitsEdited: true }];
+}
+
+/** Sets whether a team wears white at home. */
 export function setWhiteHome(d: Dynasty, team: number, on: boolean): Dynasty {
-  const lock = whiteHomeLock(d, team);
+  const lock = kitLock(d);
   if (lock) throw new Error(lock);
   if (d.whiteHome![team] === on) return d;
   const whiteHome = d.whiteHome!.slice(); whiteHome[team] = on;
-  const s = d.seasons[d.seasons.length - 1];
-  const season: DSeason = s.romDownloaded && !d.offseason
-    ? { ...s, lineupEdited: true, rosterVersion: s.lineupEdited ? s.rosterVersion ?? 1 : (s.rosterVersion ?? 1) + 1 }
-    : s;
-  return { ...d, whiteHome, seasons: [...d.seasons.slice(0, -1), season] };
+  return { ...d, whiteHome, seasons: romOutdated(d) };
 }
 
-/** Writes the dynasty's flags into a season ROM's uniforms table (nothing on a ROM without one). */
-export function applyWhiteHome(rom: Uint8Array, d: Dynasty): void {
+/** Sets a team's extra helmets, jerseys and pants (its flag stays `whiteHome`'s). Throws when the table won't fit. */
+export function setKit(d: Dynasty, team: number, kit: TeamKit, names?: string[]): Dynasty {
+  const lock = kitLock(d);
+  if (lock) throw new Error(lock);
+  if (!d.romUniforms) throw new Error('Choose your ROM first: the editor starts from its uniforms.');
+  const strip = (k: TeamKit): TeamKit => ({ helmets: k.helmets, dark: k.dark, white: k.white, pants: k.pants, whiteHome: false });
+  const next = strip(kit);
+  const all = d.romUniforms.kits.map((k, t) => strip(t === team ? next : d.kitEdits?.[t] ?? k));
+  const issues = kitIssues(all, names);
+  if (issues.length) throw new Error(issues[0]);
+  const edits = { ...(d.kitEdits ?? {}) };
+  if (JSON.stringify(next) === JSON.stringify(strip(d.romUniforms.kits[team]))) delete edits[team];
+  else edits[team] = next;
+  return { ...d, kitEdits: Object.keys(edits).length ? edits : undefined, seasons: romOutdated(d) };
+}
+
+/** Writes the dynasty's uniforms into a ROM's table: the user's teams over the ROM's own, every flag (nothing on a ROM without one). */
+export function applyKits(rom: Uint8Array, d: Dynasty): void {
   if (!d.whiteHome || !hasKits(rom)) return;
-  const kits = readKits(rom);
-  kits.forEach((k, t) => { k.whiteHome = !!d.whiteHome![t]; });
+  const kits = readKits(rom).map((k, t) => {
+    const e = d.kitEdits?.[t];
+    return { ...(e ?? k), whiteHome: !!d.whiteHome![t] };
+  });
   writeKits(rom, kits);
 }
+/** Kept for older callers. */
+export const applyWhiteHome = applyKits;

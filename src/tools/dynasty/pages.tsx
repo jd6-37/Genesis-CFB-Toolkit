@@ -4,7 +4,6 @@ import { WhatsNext } from './GetStarted';
 import { playerHonors, seasonAwards } from '../../core/dynasty/awards';
 import { academicGrade } from '../../core/dynasty/academics';
 import { scheduleLock } from '../../core/dynasty/schedule';
-import { setWhiteHome, whiteHomeLock } from '../../core/dynasty/kit';
 import { Button, Modal, Note, Num, PageHead, Select, SubHead, Table } from '../../ui';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -29,6 +28,7 @@ import { seasonDone } from '../../core/dynasty/offseason';
 import type { Dynasty } from '../../core/dynasty/model';
 import { backupLabel, isBackup, lineupLock, moveToSpot, slotKind, slotOfSpot, spotLabel, spotsFor, SPOTS } from '../../core/dynasty/lineup';
 import { playerOvr, roleOfSlot } from '../../core/dynasty/ovr';
+import { UniformsBox } from './UniformsBox';
 import { accentOn, Empty, Headshot, ImpactDot, Locked, StoryArt, TeamLink, TeamMark, href, heightText, hometownText, inkColor, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
 
 // ---- front page
@@ -520,13 +520,6 @@ export function Team({ team }: { team: number }) {
 
       <div className="dy-team-cols">
         <div>
-          {mine && d.whiteHome && (
-            <Locked><div className="dy-homekit">
-              <Select label="Home jersey" value={d.whiteHome[team] ? 'white' : 'dark'} options={[{ value: 'dark', label: 'Dark at home' }, { value: 'white', label: 'White at home' }]}
-                onChange={(x) => { try { void commit(setWhiteHome(d, team, x === 'white')); setMoveError(null); } catch (e) { setMoveError((e as Error).message); } }} />
-              {whiteHomeLock(d, team) && <p className="dy-small dy-dim">{whiteHomeLock(d, team)}</p>}
-            </div></Locked>
-          )}
           <TeamCoach team={team} />
           <GoalsBox team={team} />
           <SubHead>Schedule</SubHead>
@@ -571,6 +564,8 @@ export function Team({ team }: { team: number }) {
           {lines.some((l) => Object.values(l.s).some((x) => x > 0)) ? <StatTables lines={lines} /> : <p className="dy-dim">No stats yet.</p>}
         </div>
       </div>
+
+      <UniformsBox team={team} />
 
       <SubHead>Active Roster</SubHead>
       <p className="dy-dim dy-small">

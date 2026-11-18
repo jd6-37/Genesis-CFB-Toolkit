@@ -27,6 +27,8 @@ export interface DynCtx {
   backup?: () => void;
   /** A shared snapshot (/dynasty/s/<id>): read-only, no saves, no ROM. */
   readOnly?: boolean;
+  /** The user's ROM (kept in the browser, else he picks it); null when he doesn't. */
+  getRom?: () => Promise<Uint8Array | null>;
 }
 
 /** The user team a page starts on: the one picked in the masthead's menu, else the first. */
