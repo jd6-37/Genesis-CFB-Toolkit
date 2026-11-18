@@ -1,14 +1,15 @@
 // Rosters (user, 2026-11-17): every player of the dynasty in one table, filterable and sortable by everything, with
-// backups and headshots switchable. The filters live in the address (#rosters/<query>),
+// backups and headshots switchable and impact players marked. The filters live in the address (#rosters/<query>),
 // written with replaceState so typing doesn't add history or scroll the page.
 import { useMemo, useState } from 'react';
 import { Button, Check, Field, PageHead, Select, Table } from '../../ui';
 import type { DPlayer } from '../../core/dynasty/model';
+import { impactSet } from '../../core/dynasty/impact';
 import { INDEPENDENT } from '../../core/dynasty/derive';
 import { spotLabel } from '../../core/dynasty/lineup';
 import { shownOf } from '../../core/dynasty/ratings';
 import type { Attr } from '../../core/rosterLayouts';
-import { Headshot, href, heightText, useDyn } from './ui';
+import { Headshot, ImpactDot, href, heightText, useDyn } from './ui';
 
 const RATING_COLS: { key: Attr; label: string }[] = [
   { key: 'Speed', label: 'SPD' },
@@ -38,11 +39,11 @@ const PAGE = 100;
 type SortKey = 'name' | 'jersey' | 'team' | 'pos' | 'cls' | 'ovr' | 'ht' | 'wt' | Attr;
 interface Filters {
   q: string; team: string; conf: string; pos: string; cls: string;
-  backups: boolean; heads: boolean;
+  backups: boolean; impact: boolean; heads: boolean;
   min: Record<string, string>; max: Record<string, string>;
   sort: SortKey; desc: boolean; page: number;
 }
-const DEFAULTS: Filters = { q: '', team: '', conf: '', pos: '', cls: '', backups: true, heads: false, min: {}, max: {}, sort: 'ovr', desc: true, page: 0 };
+const DEFAULTS: Filters = { q: '', team: '', conf: '', pos: '', cls: '', backups: true, impact: false, heads: false, min: {}, max: {}, sort: 'ovr', desc: true, page: 0 };
 
 function fromArg(arg: string | undefined): Filters {
   const f: Filters = { ...DEFAULTS, min: {}, max: {} };
@@ -54,6 +55,7 @@ function fromArg(arg: string | undefined): Filters {
   f.pos = q.get('pos') ?? '';
   f.cls = q.get('cls') ?? '';
   f.backups = q.get('bk') !== '0';
+  f.impact = q.get('imp') === '1';
   f.heads = q.get('hs') === '1';
   f.sort = (q.get('s') as SortKey) || 'ovr';
   f.desc = q.get('d') !== '0';
@@ -73,6 +75,7 @@ function toArg(f: Filters): string {
   if (f.pos) q.set('pos', f.pos);
   if (f.cls) q.set('cls', f.cls);
   if (!f.backups) q.set('bk', '0');
+  if (f.impact) q.set('imp', '1');
   if (f.heads) q.set('hs', '1');
   if (f.sort !== 'ovr') q.set('s', f.sort);
   if (!f.desc) q.set('d', '0');
@@ -86,7 +89,7 @@ function toArg(f: Filters): string {
 /** A rating as the game's Team Rosters shows it (0-99), or undefined when the player has none. */
 const rated = (p: DPlayer, k: Attr) => (p.ratings[k] === undefined ? undefined : shownOf(p.ratings[k]!));
 
-interface Row { p: DPlayer; team: number; school: string; conf: number; slot: number; label: string }
+interface Row { p: DPlayer; team: number; school: string; conf: number; slot: number; label: string; impact: boolean }
 
 export function Rosters({ arg }: { arg?: string }) {
   const { d, v } = useDyn();
@@ -100,6 +103,7 @@ export function Rosters({ arg }: { arg?: string }) {
   };
 
   const rows = useMemo<Row[]>(() => {
+    const imp = impactSet(d, v.season);
     const slotOf = new Map<number, [number, number]>();
     v.season.slots.forEach((ids, team) => ids.forEach((id, slot) => { if (id) slotOf.set(id, [team, slot]); }));
     return d.players
@@ -108,7 +112,7 @@ export function Rosters({ arg }: { arg?: string }) {
         const at = slotOf.get(p.id);
         return {
           p, team: p.team!, school: d.teams[p.team!].school, conf: v.season.conf[p.team!],
-          slot: at ? at[1] : -1, label: at ? spotLabel(at[1]) : p.pos,
+          slot: at ? at[1] : -1, label: at ? spotLabel(at[1]) : p.pos, impact: imp.has(p.id),
         };
       });
   }, [d, v.season]);
@@ -121,6 +125,7 @@ export function Rosters({ arg }: { arg?: string }) {
     const value = (r: Row, k: string): number | undefined => (k === 'ovr' ? r.p.ovr : k === 'wt' ? r.p.weight : k === 'ht' ? r.p.heightIn : rated(r.p, k as Attr));
     const out = rows.filter((r) => {
       if (!f.backups && r.slot < 0) return false;
+      if (f.impact && !r.impact) return false;
       if (f.team !== '' && r.team !== Number(f.team)) return false;
       if (f.conf !== '' && r.conf !== Number(f.conf)) return false;
       if (f.cls && r.p.cls !== f.cls) return false;
@@ -163,7 +168,7 @@ export function Rosters({ arg }: { arg?: string }) {
   const page = Math.min(f.page, pages - 1);
   const list = shown.slice(page * PAGE, page * PAGE + PAGE);
   const confs = v.season.confNames.map((name, c) => ({ name: c === INDEPENDENT ? 'Independents' : name, c })).filter(({ c }) => v.season.conf.includes(c));
-  const filtered = f.q || f.team || f.conf || f.pos || f.cls || !f.backups || Object.values(f.min).some(Boolean) || Object.values(f.max).some(Boolean);
+  const filtered = f.q || f.team || f.conf || f.pos || f.cls || !f.backups || f.impact || Object.values(f.min).some(Boolean) || Object.values(f.max).some(Boolean);
   const head = (key: SortKey, label: string, title?: string, left = false) => {
     const on = f.sort === key;
     return (
@@ -184,7 +189,7 @@ export function Rosters({ arg }: { arg?: string }) {
 
   return (
     <section>
-      <PageHead title="Rosters">Every player in the dynasty this season. Sort by any column.</PageHead>
+      <PageHead title="Rosters">Every player in the dynasty this season. Sort by any column; a yellow dot marks the impact players.</PageHead>
       <div className="dy-rfilters">
         <div className="dy-rfilters-toggle">
           <Button variant="quiet" onClick={() => setOpen(!open)}>{open ? 'Hide filters' : filtered ? 'Filters (on)' : 'Filters'}</Button>
@@ -205,6 +210,7 @@ export function Rosters({ arg }: { arg?: string }) {
         </div>
         <div className="dy-row dy-rfilters-checks">
           <Check checked={f.backups} onChange={(x) => set({ backups: x })}>Backups</Check>
+          <Check checked={f.impact} onChange={(x) => set({ impact: x })}>Impact players only</Check>
           <Check checked={f.heads} onChange={(x) => set({ heads: x }, true)}>Headshots</Check>
         </div>
         <details className="dy-rfilters-more" open={Object.values(f.min).some(Boolean) || Object.values(f.max).some(Boolean) || undefined}>
@@ -253,7 +259,7 @@ export function Rosters({ arg }: { arg?: string }) {
                   </td>
                   <td className="ui-num">{r.p.jersey < 0 ? '' : r.p.jersey}</td>
                   <td className="ui-left"><a href={href(`team/${r.team}`)}>{r.school}</a></td>
-                  <td className="ui-left dy-strong">{r.slot >= 0 ? r.label : <span className="dy-dim" title="Backup">{r.p.pos}</span>}</td>
+                  <td className="ui-left dy-strong">{r.impact && <ImpactDot />}{r.slot >= 0 ? r.label : <span className="dy-dim" title="Backup">{r.p.pos}</span>}</td>
                   <td>{r.p.cls}</td>
                   <td className="ui-num dy-strong">{r.p.ovr}</td>
                   {RATING_COLS.map((c) => <td key={c.key} className="ui-num">{rated(r.p, c.key) ?? ''}</td>)}

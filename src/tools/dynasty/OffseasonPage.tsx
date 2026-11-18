@@ -19,6 +19,7 @@ import { playerName } from '../../core/dynasty/derive';
 import { Headshot, TeamLink, firstTeam, hometownText, href, mainColor, onColor, useDyn } from './ui';
 import { ScheduleEditor } from './SchedulePage';
 import { ConferencesStep } from './ConferencesStep';
+import { ImpactStep } from './ImpactStep';
 import { WalshStep } from './WalshStep';
 import { RivalriesEditor } from './RivalriesEditor';
 import { EditLook, EditPlayer } from './EditPlayer';
@@ -45,10 +46,10 @@ export interface OffseasonActions {
  * state; the last six come once the new season is set up and can be visited in any order (Conferences: user,
  * 2026-11-16, conferences.ts).
  */
-const STEPS = ['Coaching carousel', 'Projected depth chart', 'Players leaving', 'Transfer portal', 'Signing day and cuts', 'Training', 'Training results', 'Edit players', 'Depth chart', 'Conferences', 'Schedule', 'Walsh Reports', 'Download the ROM'] as const;
+const STEPS = ['Coaching carousel', 'Projected depth chart', 'Players leaving', 'Transfer portal', 'Signing day and cuts', 'Training', 'Training results', 'Edit players', 'Depth chart', 'Impact players', 'Conferences', 'Schedule', 'Walsh Reports', 'Download the ROM'] as const;
 const STEP_OF = { carousel: 0, depth: 1, portal: 2, recruiting: 3, signing: 3, cuts: 4, ready: 6 } as const;
 const FIRST_SEASON_STEP = 7;
-const SEASON_STEPS = ['players', 'depth', 'conferences', 'schedule', 'walsh', 'rom'] as const;
+const SEASON_STEPS = ['players', 'depth', 'impact', 'conferences', 'schedule', 'walsh', 'rom'] as const;
 type SeasonStep = typeof SEASON_STEPS[number];
 // Without transfers (the 1994 edition) step 4 is recruiting either way.
 const stepList = (full: boolean, links: boolean, portal = true) => STEPS.map((label, i) => ({
@@ -625,12 +626,13 @@ function SeasonSteps({ actions, step, busy }: { actions: OffseasonActions; step:
           </>
         )}
         <div className="dy-row dy-next">
-          <Button href={href('offseason/conferences')}>Next: the conferences</Button>
+          <Button href={href('offseason/impact')}>Next: the impact players</Button>
           {team !== undefined && <Button variant="quiet" href={href(`team/${team}`)}>Change the depth chart</Button>}
         </div>
       </>
     );
   }
+  if (step === 'impact') return <>{steps}<ImpactStep commit={actions.commit} busy={busy} /></>;
   if (step === 'conferences') return <>{steps}<ConferencesStep commit={actions.commit} busy={busy} /></>;
   if (step === 'schedule') {
     return (
@@ -649,7 +651,7 @@ function SeasonSteps({ actions, step, busy }: { actions: OffseasonActions; step:
       <SubHead>Download the {season.year} ROM</SubHead>
       <p>The {season.year} season is set up. Download its ROM and start a <b>New Season</b> in the game with it: it has the new rosters{season.schedule ? ' and your schedule' : ''}, and the app can only import saves of seasons started with it. Import the save after you play.</p>
       {season.romDownloaded && !season.lineupEdited && <Note kind="ok">You have downloaded the {season.year} ROM. Start a New Season in the game with it.</Note>}
-      {season.romDownloaded && season.lineupEdited && <Note>You changed the schedule, the conferences or the depth chart after downloading. Download the ROM again before you start the New Season.</Note>}
+      {season.romDownloaded && season.lineupEdited && <Note>You changed the schedule, the conferences, the depth chart or the impact players after downloading. Download the ROM again before you start the New Season.</Note>}
       <div className="dy-row dy-next">
         <Button onClick={() => actions.downloadRom(season.year)}>Download the {season.year} ROM</Button>
         <Button variant="quiet" href={href('offseason/depth')}>Back to the depth chart</Button>

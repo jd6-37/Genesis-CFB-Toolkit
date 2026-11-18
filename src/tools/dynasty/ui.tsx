@@ -36,6 +36,11 @@ export const useDyn = () => useContext(Ctx)!;
 
 export const href = (path: string) => `#${path}`;
 
+/** The mark of an impact player (the game's yellow dot on Team Rosters; impact.ts). */
+export function ImpactDot() {
+  return <span className="dy-impact" role="img" aria-label="Impact player" title="Impact player" />;
+}
+
 /**
  * An editor or action on a page a snapshot's visitor can open (user, 2026-11-17: "leave it but disable it with a
  * hint that it's not available in read-only shared snapshots"): in a snapshot its controls are disabled (a

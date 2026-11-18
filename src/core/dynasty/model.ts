@@ -129,6 +129,8 @@ export interface DSeason {
   coach?: (number | null)[];
   /** Walsh Reports (walshStore.ts): the wording picked per team ("Write it again") and the user's own edits. */
   walsh?: { variants?: Record<number, number>; edited?: Record<number, import('../walsh').Report> };
+  /** The user's own impact players per team (impact.ts, H-028): three player ids; other teams get the game's pick. */
+  impact?: Record<number, number[]>;
 }
 
 export type OffseasonEvent =
