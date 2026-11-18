@@ -2,6 +2,7 @@
 // Pure functions: the same season gives the same stories.
 
 import { bowlOf, bowlWeek, INDEPENDENT, leaders, playerLabel, playerLines, playerName, RECORD_STATS, seasonView, standings, statValue, weekName, type SeasonView } from './derive';
+import { preseasonPoll } from './poll';
 import { rivalryOf } from './rivalries';
 import { fromBase64, type Dynasty, type OffseasonEvent } from './model';
 import { readDynastySave, type DynastySave, type SaveGame } from './save';
@@ -69,9 +70,13 @@ export function stories(d: Dynasty, v: SeasonView = seasonView(d, d.seasons[d.se
   for (const g of v.games) if (g.vs !== null && g.week > week) week = g.week;
   if (week < 0) return out;
   const weekGames = v.games.filter((g) => g.week === week && g.vs !== null && g.visitor !== null && g.home !== null);
-  // Ranks before the week: the game keeps last week's ranks until the next week's first result.
+  // Ranks going into the week, the ones the game had at kickoff (user, 2026-11-18: "the rankings at the time of the
+  // game, not the new rankings after"): the save's ranks as of last week; before the first poll of the season, the
+  // preseason poll (the ROM's for the first season, the app's after); the current ranks only when neither is known.
   const nextStarted = v.games.some((g) => g.week === week + 1 && g.vs !== null);
-  const pre = nextStarted ? v.rank : s.lastRanks.map((r, t) => r || v.rank[t]);
+  const preseason = s.lastRanks.some((r) => r > 0) ? null : preseasonPoll(d, v.season);
+  const pollRank = preseason ? (() => { const r = new Array<number>(d.teams.length).fill(0); for (const e of preseason) r[e.team] = e.rank; return r; })() : null;
+  const pre = nextStarted ? v.rank : s.lastRanks.map((r, t) => r || pollRank?.[t] || v.rank[t]);
   const wk = weekName(v, week);
   const post = week > v.lastRegularWeek;
 
