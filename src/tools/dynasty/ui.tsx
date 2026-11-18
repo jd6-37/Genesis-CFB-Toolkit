@@ -36,14 +36,10 @@ export const useDyn = () => useContext(Ctx)!;
 
 export const href = (path: string) => `#${path}`;
 
-/** The app's mark of an impact player (impact.ts): a gold star (user, 2026-11-18: "Instead of a gold dot, make it a gold star"). */
-export function ImpactStar() {
-  return (
-    <svg className="dy-impact" viewBox="0 0 24 24" role="img" aria-label="Impact player">
-      <title>Impact player</title>
-      <path d="M12 1.8l3.1 6.6 7.2.9-5.3 5 1.4 7.1L12 17.9l-6.4 3.5 1.4-7.1-5.3-5 7.2-.9z" />
-    </svg>
-  );
+/** The app's mark of an impact player (impact.ts): a gold dot, like the game's on Team Rosters (user, 2026-11-18: a star
+ * was tried and dropped, since the Pos menus already mark Active Roster spots with ★). */
+export function ImpactDot() {
+  return <span className="dy-impact" role="img" aria-label="Impact player" title="Impact player" />;
 }
 
 /**

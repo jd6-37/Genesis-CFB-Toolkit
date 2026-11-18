@@ -9,7 +9,7 @@ import {
 } from '../../core/dynasty/impact';
 import type { Dynasty } from '../../core/dynasty/model';
 import { playerName } from '../../core/dynasty/derive';
-import { firstTeam, href, ImpactStar, useDyn } from './ui';
+import { firstTeam, href, ImpactDot, useDyn } from './ui';
 
 export function ImpactStep({ commit, busy }: { commit: (d: Dynasty, done?: string) => Promise<void>; busy: boolean }) {
   const { d, focus } = useDyn();
@@ -61,7 +61,7 @@ export function ImpactStep({ commit, busy }: { commit: (d: Dynasty, done?: strin
         <Select label="Team" value={team} options={d.userTeams.map((t) => ({ value: t, label: d.teams[t].school }))} onChange={(x) => setTeam(Number(x))} />
       )}
       <p className="dy-small">
-        <ImpactStar />{' '}
+        <ImpactDot />{' '}
         {own ? `${school}'s three are your pick. ` : `${school}'s three are the game's pick. `}
         The game's pick: {game.map(label).join('; ')}.
       </p>
