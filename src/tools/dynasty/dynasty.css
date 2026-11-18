@@ -716,8 +716,10 @@
 .dy-locked > p a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
 .dy-gone { padding: var(--sp-6) 0; max-width: 64ch; }
 .dy-gone p { margin: var(--sp-3) 0 var(--sp-4); }
-/* Impact players: the game's yellow dot (impact.ts), and the team page's box */
-.dy-impact { display: inline-block; width: 10px; height: 10px; margin-right: var(--sp-1); border-radius: 50%; background: var(--star); box-shadow: 1px 1px 0 var(--rule-strong); vertical-align: 1px; flex: none; }
+/* Impact players: the app's gold star (impact.ts), and the team page's box */
+.dy-poscell { display: flex; align-items: center; }
+.dy-poscell > :last-child { flex: 1; min-width: 0; }
+.dy-impact { display: inline-block; width: 14px; height: 14px; margin-right: var(--sp-1); vertical-align: -2px; flex: none; fill: var(--star); stroke: var(--rule-strong); stroke-width: 1.5; stroke-linejoin: round; }
 .dy-impactbox { margin: var(--sp-4) 0; }
 .dy-impactbox ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-3); grid-template-columns: 1fr; }
 .dy-impactbox li { display: flex; gap: var(--sp-3); align-items: flex-start; padding: var(--sp-3); background: var(--surface-sunken); }

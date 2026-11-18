@@ -9,7 +9,7 @@ import { INDEPENDENT } from '../../core/dynasty/derive';
 import { spotLabel } from '../../core/dynasty/lineup';
 import { shownOf } from '../../core/dynasty/ratings';
 import type { Attr } from '../../core/rosterLayouts';
-import { Headshot, ImpactDot, href, heightText, useDyn } from './ui';
+import { Headshot, ImpactStar, href, heightText, useDyn } from './ui';
 
 const RATING_COLS: { key: Attr; label: string }[] = [
   { key: 'Speed', label: 'SPD' },
@@ -189,7 +189,7 @@ export function Rosters({ arg }: { arg?: string }) {
 
   return (
     <section>
-      <PageHead title="Rosters">Every player in the dynasty this season. Sort by any column; a yellow dot marks the impact players.</PageHead>
+      <PageHead title="Rosters">Every player in the dynasty this season. Sort by any column; a gold star marks the impact players.</PageHead>
       <div className="dy-rfilters">
         <div className="dy-rfilters-toggle">
           <Button variant="quiet" onClick={() => setOpen(!open)}>{open ? 'Hide filters' : filtered ? 'Filters (on)' : 'Filters'}</Button>
@@ -259,7 +259,7 @@ export function Rosters({ arg }: { arg?: string }) {
                   </td>
                   <td className="ui-num">{r.p.jersey < 0 ? '' : r.p.jersey}</td>
                   <td className="ui-left"><a href={href(`team/${r.team}`)}>{r.school}</a></td>
-                  <td className="ui-left dy-strong">{r.impact && <ImpactDot />}{r.slot >= 0 ? r.label : <span className="dy-dim" title="Backup">{r.p.pos}</span>}</td>
+                  <td className="ui-left dy-strong">{r.impact && <ImpactStar />}{r.slot >= 0 ? r.label : <span className="dy-dim" title="Backup">{r.p.pos}</span>}</td>
                   <td>{r.p.cls}</td>
                   <td className="ui-num dy-strong">{r.p.ovr}</td>
                   {RATING_COLS.map((c) => <td key={c.key} className="ui-num">{rated(r.p, c.key) ?? ''}</td>)}

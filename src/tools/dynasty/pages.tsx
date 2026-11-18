@@ -29,7 +29,7 @@ import { seasonDone } from '../../core/dynasty/offseason';
 import type { Dynasty } from '../../core/dynasty/model';
 import { backupLabel, isBackup, lineupLock, moveToSpot, slotKind, slotOfSpot, spotLabel, spotsFor, SPOTS } from '../../core/dynasty/lineup';
 import { playerOvr, roleOfSlot } from '../../core/dynasty/ovr';
-import { accentOn, Empty, Headshot, ImpactDot, Locked, StoryArt, TeamLink, TeamMark, href, heightText, hometownText, inkColor, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
+import { accentOn, Empty, Headshot, ImpactStar, Locked, StoryArt, TeamLink, TeamMark, href, heightText, hometownText, inkColor, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
 
 // ---- front page
 
@@ -625,7 +625,7 @@ function ImpactBox({ team, ids }: { team: number; ids: number[] }) {
             <li key={id}>
               <Headshot p={p} size={72} />
               <div>
-                <p className="dy-impactbox-name"><ImpactDot /><a href={href(`player/${id}`)}>{playerName(p)}</a></p>
+                <p className="dy-impactbox-name"><ImpactStar /><a href={href(`player/${id}`)}>{playerName(p)}</a></p>
                 <p className="dy-small dy-dim">{slot >= 0 ? spotLabel(slot) : p.pos}, {p.cls}, OVR {bw ? playerOvr(slot, bw) : p.ovr}</p>
                 <dl className="dy-impactbox-r">
                   {(IMPACT_KEYS[group] ?? []).map((a) => <div key={a}><dt>{a}</dt><dd>{p.ratings[a] === undefined ? '' : shownOf(p.ratings[a]!)}</dd></div>)}
@@ -668,7 +668,8 @@ function RosterTable({ rows, edit, impact = [] }: { rows: RosterRow[]; edit?: { 
           {rows.map(({ p, spot, label, ovr }) => (
             <tr key={`${spot ?? label}-${p.id}`}>
               <td className="ui-left dy-strong">
-                {impact.includes(p.id) && spot !== null && !isBackup(spot) && <ImpactDot />}
+                <span className="dy-poscell">
+                {impact.includes(p.id) && spot !== null && !isBackup(spot) && <ImpactStar />}
                 {edit ? (
                   <Select
                     label={`Position of ${playerName(p)}`} hideLabel compact value={spot ?? ''}
@@ -684,6 +685,7 @@ function RosterTable({ rows, edit, impact = [] }: { rows: RosterRow[]; edit?: { 
                     onChange={(x) => move(p, Number(x))}
                   />
                 ) : label}
+                </span>
               </td>
               <td className="ui-num">{p.jersey < 0 ? '' : p.jersey}</td>
               <td className="ui-left"><a href={href(`player/${p.id}`)}>{playerName(p)}</a></td>
