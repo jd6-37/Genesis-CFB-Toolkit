@@ -787,3 +787,11 @@
 .dy-steps li { margin-bottom: var(--sp-2); }
 /* Team page: the rank before the school name, smaller, in the team's accent (user, 2026-11-18). */
 .dy-teamrank { font-size: 0.72em; margin-right: 0.25em; }
+
+/* Team page: the tab bar under the header, and the stat leaders (pages.tsx, user 2026-11-18). */
+.dy-teamtabs { margin: var(--sp-4) 0 var(--sp-2); overflow-x: auto; }
+.dy-leaders { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: var(--sp-2); margin: 0 0 var(--sp-2); padding: 0; list-style: none; }
+.dy-leaders li { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2); border: var(--rule-w) solid var(--rule); border-radius: var(--radius); min-width: 0; }
+.dy-leaders li > div { min-width: 0; }
+.dy-leader-stat { display: block; font-size: var(--fs-2); color: var(--text-muted); }
+.dy-leader-stat strong { color: var(--text); }

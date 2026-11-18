@@ -495,3 +495,18 @@ User, 2026-11-18: "Would it be possible to edit uniforms mid-season?", then "Let
 - **File names** (`seasonRomName`): `<dynasty>-<year>-<id>.md`, with `id` = `DSeason.romId` (6 letters and digits, made at the season's first download). Later downloads of the same season keep the name, so emulators and the Everdrive still find the save.
 - **ROM side, low priority:** H-037 asks for the save to keep the ID block of the ROM that last saved it. The import could then tell exactly which version was played.
 
+## Team page tabs
+
+User, 2026-11-18: "The team page is getting kind of long. Should we give it its own tabs/subpages? Stats on the main page could just be the stat leaders. Rosters can go to its own tab. uniforms on its own. the rest can probably stay on main page." The wireframe "Team page tabs: mockup" was approved. The user's answers:
+- the six stat leaders as proposed;
+- on a phone the schedule comes after the stat leaders;
+- a team page always opens on Overview.
+
+- `Team` (pages.tsx) takes a `tab`. The router parses `team/<n>[/roster|stats|uniforms]` with `teamRoute`, in both the app and snapshots; links come from `teamHref`. `parseHash` now keeps the whole rest of the hash as the argument (it used to drop anything after the second `/`).
+- **Overview:** `ImpactBox`; the left column has the coach, goals and `StatLeaders`, the right column the schedule and history. On a phone the columns stack in that order.
+- `StatLeaders`: the season's top player in passing, rushing and receiving yards, tackles, sacks and interceptions, from the team's `playerLines`. A card has the headshot, name, position and the figure, with TDs or receptions where they apply. A link goes to the Stats tab.
+- **Roster:** Active Roster (the position menus, lock, download note), Backups, Add a player.
+- **Stats:** `StatTables`.
+- **Uniforms:** `UniformsBox`.
+- The offseason's "Change the depth chart" and the schedule page's "Depth chart" link to the Roster tab.
+

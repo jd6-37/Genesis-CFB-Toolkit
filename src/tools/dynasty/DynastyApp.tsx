@@ -21,7 +21,7 @@ import { SharePanel } from './SharePanel';
 import { Awards } from './AwardsPage';
 import { Records } from './RecordsPage';
 import { ScheduleEditor } from './SchedulePage';
-import { History, Home, Leaders, Player, Rankings, Scores, Standings, Team, Teams } from './pages';
+import { History, Home, Leaders, Player, Rankings, Scores, Standings, Team, teamRoute, Teams } from './pages';
 import { Offseason, type OffseasonActions } from './OffseasonPage';
 import { Coach, Coaches } from './CoachPages';
 import { Rosters } from './RostersPage';
@@ -51,8 +51,9 @@ const PAGES = [
 ] as const;
 
 const parseHash = () => {
-  const [page, arg] = window.location.hash.replace(/^#/, '').split('/');
-  return { page: page || 'home', arg };
+  // The page, then the rest as its argument ("team/12/roster" → team, "12/roster").
+  const [page, ...rest] = window.location.hash.replace(/^#/, '').split('/');
+  return { page: page || 'home', arg: rest.length ? rest.join('/') : undefined };
 };
 
 const CURRENT = 'dynasty.current';
@@ -422,7 +423,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       case 'rosters': return <Rosters key={arg ?? ''} arg={arg} />;
       case 'coaches': return <Coaches />;
       case 'coach': return num !== undefined ? <Coach id={num} /> : <Coaches />;
-      case 'team': return num !== undefined ? <Team team={num} /> : <Teams />;
+      case 'team': { const tr = teamRoute(arg); return tr ? <Team team={tr.team} tab={tr.tab} /> : <Teams />; }
       case 'player': return num !== undefined ? <Player id={num} /> : <Home />;
       case 'stats': return <Leaders />;
       case 'history': return <History />;

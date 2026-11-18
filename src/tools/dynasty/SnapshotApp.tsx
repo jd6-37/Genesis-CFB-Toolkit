@@ -10,7 +10,7 @@ import { navClick } from '../../appNav';
 import { Ctx, href, TeamMark, type DynCtx } from './ui';
 import { Awards } from './AwardsPage';
 import { Records } from './RecordsPage';
-import { History, Home, Leaders, Player, Rankings, Scores, Standings, Team, Teams } from './pages';
+import { History, Home, Leaders, Player, Rankings, Scores, Standings, Team, teamRoute, Teams } from './pages';
 import { Coach, Coaches } from './CoachPages';
 import { Rosters } from './RostersPage';
 import './dynasty.css';
@@ -29,8 +29,9 @@ const PAGES = [
 ] as const;
 
 const parseHash = () => {
-  const [page, arg] = window.location.hash.replace(/^#/, '').split('/');
-  return { page: page || 'home', arg };
+  // The page, then the rest as its argument ("team/12/roster" → team, "12/roster").
+  const [page, ...rest] = window.location.hash.replace(/^#/, '').split('/');
+  return { page: page || 'home', arg: rest.length ? rest.join('/') : undefined };
 };
 
 type Load = { state: 'loading' } | { state: 'gone' } | { state: 'error'; message: string } | { state: 'ok'; snap: Snapshot };
@@ -95,7 +96,7 @@ export default function SnapshotApp({ id, toolkitHref }: { id: string; toolkitHr
       case 'rosters': return <Rosters key={arg ?? ''} arg={arg} />;
       case 'coaches': return <Coaches />;
       case 'coach': return num !== undefined ? <Coach id={num} /> : <Coaches />;
-      case 'team': return num !== undefined ? <Team team={num} /> : <Teams />;
+      case 'team': { const tr = teamRoute(arg); return tr ? <Team team={tr.team} tab={tr.tab} /> : <Teams />; }
       case 'player': return num !== undefined ? <Player id={num} /> : <Home />;
       case 'stats': return <Leaders />;
       case 'history': return <History />;

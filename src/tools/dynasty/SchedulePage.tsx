@@ -165,7 +165,7 @@ export function ScheduleEditor({ arg }: { arg?: string }) {
           <p>Your changes are saved as you make them: there is nothing to confirm here. Next, download the {season.year} ROM and start a New Season in the game with it.</p>
           <div className="dy-row">
             <Button onClick={() => downloadRom(season.year)}>Download the {season.year} ROM</Button>
-            <Button variant="quiet" href={href(`team/${team}`)}>Depth chart</Button>
+            <Button variant="quiet" href={href(`team/${team}/roster`)}>Depth chart</Button>
           </div>
           <SubHead>Start over</SubHead>
           <p className="dy-small dy-dim">Throws away this schedule, your changes included, and draws new games for every team.</p>
