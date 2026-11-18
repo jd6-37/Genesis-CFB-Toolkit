@@ -494,7 +494,7 @@ export function Team({ team }: { team: number }) {
         <div className="dy-teamhead-id">
           <TeamMark team={team} size={96} />
           <div>
-            <h2>{t.school} {t.nickname}</h2>
+            <h2>{v.save && v.rank[team] <= 25 && <span className="dy-teamrank" style={{ color: accentOn(d, team) }}>#{v.rank[team]}</span>}{t.school} {t.nickname}</h2>
             <p>
               <Prestige stars={prestigeStars(d, team)} />
               <span>{conf === INDEPENDENT ? 'Independent' : v.season.confNames[conf]}</span>
@@ -503,7 +503,6 @@ export function Team({ team }: { team: number }) {
                 {academicGrade(t.school)}
               </span>
               {v.save && <span className="dy-record"><strong>{recordText(r)}</strong>{conf !== INDEPENDENT && <>{' '}({r.cw}-{r.cl} in conference)</>}</span>}
-              {v.save && v.rank[team] <= 25 && <span>No. {v.rank[team]}</span>}
             </p>
           </div>
         </div>

@@ -779,3 +779,5 @@
 .dy-uni-edit { margin-top: var(--sp-3); }
 .dy-steps { margin: var(--sp-3) 0; padding-left: var(--sp-5); }
 .dy-steps li { margin-bottom: var(--sp-2); }
+/* Team page: the rank before the school name, smaller, in the team's accent (user, 2026-11-18). */
+.dy-teamrank { font-size: 0.72em; margin-right: 0.25em; }
