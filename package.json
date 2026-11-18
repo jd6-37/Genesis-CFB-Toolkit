@@ -17,6 +17,7 @@
     "test:swap": "tsx cli/swaptest.ts",
     "test:walsh": "tsx cli/walshtest.ts",
     "test:dynasty": "tsx cli/dynastytest.ts",
+    "test:impact": "tsx cli/impacttest.ts",
     "test:dynasty94": "tsx cli/dynasty94test.ts",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",

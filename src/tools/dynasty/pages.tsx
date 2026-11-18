@@ -12,6 +12,7 @@ import {
   INDEPENDENT, type PlayerLine, type StatCategory,
 } from '../../core/dynasty/derive';
 import { editionOf } from '../../core/dynasty/edition';
+import { impactLock, ownImpact, teamImpact } from '../../core/dynasty/impact';
 import { offseasonStories, stories, type Story } from '../../core/dynasty/news';
 import { preseasonPoll } from '../../core/dynasty/poll';
 import { OffseasonSide, PreseasonTop25, SeasonMore, SeasonSide } from './HomeSide';
@@ -22,13 +23,13 @@ import { GoalsBox, SeasonCoach, TeamCoach } from './CoachPages';
 import type { SaveGame } from '../../core/dynasty/save';
 import type { DPlayer } from '../../core/dynasty/model';
 import { GROUP_COLUMNS, type Attr } from '../../core/rosterLayouts';
-import { fineAt, GROUP_OF_ROLE, RATINGS, roleOfPos, shownFine } from '../../core/dynasty/ratings';
+import { fineAt, GROUP_OF_ROLE, RATINGS, roleOfPos, shownFine, shownOf } from '../../core/dynasty/ratings';
 import { trainingYears, experienceOf } from '../../core/dynasty/career';
 import { seasonDone } from '../../core/dynasty/offseason';
 import type { Dynasty } from '../../core/dynasty/model';
 import { backupLabel, isBackup, lineupLock, moveToSpot, slotKind, slotOfSpot, spotLabel, spotsFor, SPOTS } from '../../core/dynasty/lineup';
 import { playerOvr, roleOfSlot } from '../../core/dynasty/ovr';
-import { accentOn, Empty, Headshot, Locked, StoryArt, TeamLink, TeamMark, href, heightText, hometownText, inkColor, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
+import { accentOn, Empty, Headshot, ImpactDot, Locked, StoryArt, TeamLink, TeamMark, href, heightText, hometownText, inkColor, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
 
 // ---- front page
 
@@ -486,6 +487,7 @@ export function Team({ team }: { team: number }) {
   const ovr = v.season.teamOvr?.[team];
   const conf = v.season.conf[team];
   const hist = teamHistory(d, team);
+  const impact = teamImpact(d, v.season, team);
   return (
     <section>
       <header className="dy-teamhead" style={{ background: teamCss(c), color: onColor(c) }}>
@@ -513,6 +515,8 @@ export function Team({ team }: { team: number }) {
         )}
         <span className="dy-teamhead-helmet"><TeamMark team={team} size={96} kind="helmet" /></span>
       </header>
+
+      <ImpactBox team={team} ids={impact} />
 
       <div className="dy-team-cols">
         <div>
@@ -582,18 +586,69 @@ export function Team({ team }: { team: number }) {
         </Note>
       )}
       {moveError && <Note kind="error">{moveError}</Note>}
-      <RosterTable rows={roster} edit={edit} />
+      <RosterTable rows={roster} edit={edit} impact={impact} />
       <SubHead>Backups</SubHead>
       <p className="dy-dim dy-small">{bench.length + reserves.length} players who aren't on the Active Roster this season. Each backs up a spot and can move up when it opens.</p>
-      <RosterTable rows={[...bench, ...reserves.map((p) => ({ p, spot: null, label: p.pos, ovr: null }))]} edit={edit} />
+      <RosterTable rows={[...bench, ...reserves.map((p) => ({ p, spot: null, label: p.pos, ovr: null }))]} edit={edit} impact={impact} />
       <Locked><AddPlayer team={team} /></Locked>
+    </section>
+  );
+}
+
+/** The ratings each impact pick weighs, by the slot's group (impact.ts), to show with the player. */
+const IMPACT_KEYS: Record<string, Attr[]> = {
+  QB: ['Speed', 'Awareness', 'Range'],
+  RB: ['Speed', 'Quickness', 'Awareness', 'Power'],
+  REC: ['Speed', 'Quickness', 'Awareness', 'Hands'],
+  DL: ['Speed', 'Power', 'Awareness', 'Tackling'],
+  LB: ['Speed', 'Awareness', 'Tackling'],
+  DB: ['Speed', 'Awareness', 'Hands', 'Tackling'],
+};
+
+/** A team's three impact players (the game's pick for this season's Active Roster, or the user's: H-028). */
+function ImpactBox({ team, ids }: { team: number; ids: number[] }) {
+  const { d, v, readOnly } = useDyn();
+  if (!ids.length) return null;
+  const own = ownImpact(v.season, team);
+  const latest = v.season === d.seasons[d.seasons.length - 1];
+  const canPick = !readOnly && latest && d.userTeams.includes(team) && !impactLock(d);
+  return (
+    <section className="dy-impactbox" aria-labelledby="dy-impact-h">
+      <SubHead level={2} id="dy-impact-h">Impact players</SubHead>
+      <ul>
+        {ids.map((id) => {
+          const p = d.players[id - 1];
+          const slot = v.season.slots[team].indexOf(id);
+          const bw = v.season.bw?.[team]?.[slot];
+          const group = bw?.group ?? GROUP_OF_ROLE[roleOfPos(p.pos)];
+          return (
+            <li key={id}>
+              <Headshot p={p} size={72} />
+              <div>
+                <p className="dy-impactbox-name"><ImpactDot /><a href={href(`player/${id}`)}>{playerName(p)}</a></p>
+                <p className="dy-small dy-dim">{slot >= 0 ? spotLabel(slot) : p.pos}, {p.cls}, OVR {bw ? playerOvr(slot, bw) : p.ovr}</p>
+                <dl className="dy-impactbox-r">
+                  {(IMPACT_KEYS[group] ?? []).map((a) => <div key={a}><dt>{a}</dt><dd>{p.ratings[a] === undefined ? '' : shownOf(p.ratings[a]!)}</dd></div>)}
+                </dl>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      <p className="dy-small dy-dim">
+        {own
+          ? `Picked by you in the offseason. `
+          : 'The game picks them from the Active Roster: the best offensive skill player, the best defender, and the better of the next two. '}
+        A hot streak puts them in the zone.
+        {canPick && <> <a href={href('offseason/impact')}>Change them</a> before you start the season.</>}
+      </p>
     </section>
   );
 }
 
 type RosterRow = { p: DPlayer; spot: number | null; label: string; ovr: number | null };
 
-function RosterTable({ rows, edit }: { rows: RosterRow[]; edit?: { team: number; onError: (m: string | null) => void } }) {
+function RosterTable({ rows, edit, impact = [] }: { rows: RosterRow[]; edit?: { team: number; onError: (m: string | null) => void }; impact?: number[] }) {
   const { d, commit } = useDyn();
   const move = (p: DPlayer, spot: number) => {
     try {
@@ -613,6 +668,8 @@ function RosterTable({ rows, edit }: { rows: RosterRow[]; edit?: { team: number;
           {rows.map(({ p, spot, label, ovr }) => (
             <tr key={`${spot ?? label}-${p.id}`}>
               <td className="ui-left dy-strong">
+                <span className="dy-poscell">
+                {impact.includes(p.id) && spot !== null && !isBackup(spot) && <ImpactDot />}
                 {edit ? (
                   <Select
                     label={`Position of ${playerName(p)}`} hideLabel compact value={spot ?? ''}
@@ -628,6 +685,7 @@ function RosterTable({ rows, edit }: { rows: RosterRow[]; edit?: { team: number;
                     onChange={(x) => move(p, Number(x))}
                   />
                 ) : label}
+                </span>
               </td>
               <td className="ui-num">{p.jersey < 0 ? '' : p.jersey}</td>
               <td className="ui-left"><a href={href(`player/${p.id}`)}>{playerName(p)}</a></td>

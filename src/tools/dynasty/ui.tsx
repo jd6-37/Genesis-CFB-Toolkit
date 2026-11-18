@@ -36,6 +36,12 @@ export const useDyn = () => useContext(Ctx)!;
 
 export const href = (path: string) => `#${path}`;
 
+/** The app's mark of an impact player (impact.ts): a gold dot, like the game's on Team Rosters (user, 2026-11-18: a star
+ * was tried and dropped, since the Pos menus already mark Active Roster spots with ★). */
+export function ImpactDot() {
+  return <span className="dy-impact" role="img" aria-label="Impact player" title="Impact player" />;
+}
+
 /**
  * An editor or action on a page a snapshot's visitor can open (user, 2026-11-17: "leave it but disable it with a
  * hint that it's not available in read-only shared snapshots"): in a snapshot its controls are disabled (a

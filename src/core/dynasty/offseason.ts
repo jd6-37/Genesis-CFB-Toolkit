@@ -15,6 +15,7 @@
 // Pure functions: each returns a new dynasty. Randomness is seeded, so the same choices give the
 // same offseason. The players before the offseason are kept so it can be started over.
 
+import { impactTable } from './impact';
 import { writeDynastySim, writeDynastyStats } from './seasonSim';
 import { startCarousel } from './carousel';
 import { developmentBoost, headCoach, recruitingLift, simNudges, transferFactor } from './coachEffects';
@@ -891,6 +892,7 @@ export function seasonRom(d: Dynasty, season: DSeason, rom: Uint8Array, now = Da
     names,
     fine,
     schedule: season.schedule ? scheduleSet(season.schedule) : undefined,
+    impact: season.index > 0 ? impactTable(d, season) : undefined, // the first season: the ROM's own pick
     poll: (() => { const p = preseasonPoll(d, season); return p && !p[0]?.real ? pollSet(p) : undefined; })(), // the first season: the ROM's own
   });
   applyWhiteHome(out.data, d);

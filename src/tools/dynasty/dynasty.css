@@ -716,6 +716,21 @@
 .dy-locked > p a { color: inherit; text-decoration: underline; text-underline-offset: 3px; }
 .dy-gone { padding: var(--sp-6) 0; max-width: 64ch; }
 .dy-gone p { margin: var(--sp-3) 0 var(--sp-4); }
+/* Impact players: the app's gold dot (impact.ts), and the team page's box */
+.dy-poscell { display: flex; align-items: center; }
+.dy-poscell > :last-child { flex: 1; min-width: 0; }
+.dy-impact { display: inline-block; width: 10px; height: 10px; margin-right: var(--sp-1); border-radius: 50%; background: var(--star); box-shadow: 1px 1px 0 var(--rule-strong); vertical-align: 1px; flex: none; }
+.dy-impactbox { margin: var(--sp-4) 0; }
+.dy-impactbox ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-3); grid-template-columns: 1fr; }
+.dy-impactbox li { display: flex; gap: var(--sp-3); align-items: flex-start; padding: var(--sp-3); background: var(--surface-sunken); }
+.dy-impactbox li p { margin: 0; }
+.dy-impactbox-name { font-weight: 700; font-size: var(--fs-3); }
+.dy-impactbox-r { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-3); margin: var(--sp-2) 0 0; }
+.dy-impactbox-r div { display: flex; gap: var(--sp-1); align-items: baseline; }
+.dy-impactbox-r dt { font-size: var(--fs-1); color: var(--text-muted); }
+.dy-impactbox-r dd { margin: 0; font-family: var(--font-num); font-size: var(--fs-2); }
+.dy-impactbox > p { margin-top: var(--sp-2); }
+@media (min-width: 760px) { .dy-impactbox ul { grid-template-columns: repeat(3, 1fr); } }
 /* Rosters: the filters, the sortable table (the name column stays put when the table scrolls sideways) */
 .dy-rfilters { display: flex; flex-direction: column; gap: var(--sp-3); margin-bottom: var(--sp-4); }
 .dy-rfilters-main { display: grid; gap: var(--sp-2) var(--sp-3); grid-template-columns: 1fr; }
@@ -752,3 +767,7 @@
   .dy-rfilters-main { grid-template-columns: 2fr repeat(4, 1fr); }
   .dy-rfilters-ranges { grid-template-columns: repeat(3, 1fr); }
 }
+/* The offseason's Impact players step: the three picks side by side from tablets up. */
+.dy-impactstep-picks { display: grid; gap: var(--sp-2) var(--sp-3); grid-template-columns: 1fr; margin: var(--sp-3) 0; }
+.dy-impactstep-picks > * { min-width: 0; }
+@media (min-width: 760px) { .dy-impactstep-picks { grid-template-columns: repeat(3, 1fr); } }

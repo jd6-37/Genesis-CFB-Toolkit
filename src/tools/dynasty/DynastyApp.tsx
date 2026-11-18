@@ -451,7 +451,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
               </>}
             >
                 <p>The {s.year} season is set up. Download its ROM and start a <b>New Season</b> in the game with it: it has the new rosters{s.schedule ? ' and schedule' : ''}, and the app can only import saves of seasons started with it.</p>
-                <p className="dy-small dy-dim">The offseason's last steps are your depth chart{s.schedule ? ', your schedule' : ''} and this download. If you change either after downloading, download the ROM again.</p>
+                <p className="dy-small dy-dim">The offseason's last steps are your depth chart, your impact players{s.schedule ? ', your schedule' : ''} and this download. If you change any of them after downloading, download the ROM again.</p>
             </Modal>
           );
         })()}

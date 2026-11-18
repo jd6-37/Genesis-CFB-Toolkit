@@ -18,7 +18,9 @@
 //   +0x28 season schedule (long; 0xFFFFFFFF = none, the first season): "SCH1", weeks (byte), then per week a
 //         game count (byte) and visitor/home team bytes, like the real 2026 table (REALTAB). Needs ROM support:
 //         New Season plays it instead of making a Random one or copying the real 2026 schedule.
-//   +0x2C reserved (the ROM lane expects to use it for the impact-player picks).
+//   +0x2C season impact players (long; 0xFFFFFFFF = none, the first season; impact.ts, H-028): "IMP1", team count
+//         (word), 0 (word), then 3 roster slots per team (0xFF = none). Needs ROM support (2026 test55 / 1994 test56):
+//         Season mode's pick and Team Rosters' yellow dots read it; Exhibition keeps the ROM's own pick.
 //   +0x30 season preseason poll (long; 0xFFFFFFFF = none, the first season; poll.ts): "PRE1", count (word, every
 //         team), then per place from No. 1: team (byte), first-place votes (byte), points (word). Needs ROM support
 //         (H-017): New Season starts from this order, points and votes instead of its own preseason vote.
@@ -50,6 +52,8 @@ const FINE = 0x3fb000; // "FRC1" + 13,248 bytes
 const SCHEDULE = 0x3ff000; // up to 4 KB (12 weeks of 69 games: 1,673 bytes)
 const POLL = DYN_AREA + 0x4c00; // 0x3E4C00: "PRE1" + 2 + 138 × 4 = 558 bytes, before the names at 0x3E5000
 export const POLL_AT = 0x30;
+const IMPACT = DYN_AREA + 0x4e40; // 0x3E4E40: "IMP1" + 4 + 138 × 3 = 422 bytes, after the poll, before the names
+export const IMPACT_AT = 0x2c;
 
 const u32 = (d: Uint8Array, a: number) => ((d[a] << 24) >>> 0) + (d[a + 1] << 16) + (d[a + 2] << 8) + d[a + 3];
 const u16 = (d: Uint8Array, a: number) => (d[a] << 8) | d[a + 1];
@@ -148,6 +152,8 @@ export interface DynastyAreaData {
   fine?: Uint8Array;
   /** The season's schedule set (schedule.ts `scheduleSet`), from the second season. */
   schedule?: Uint8Array;
+  /** The season's impact players (impact.ts `impactTable`), from the second season. */
+  impact?: Uint8Array;
   /** The season's preseason poll (poll.ts `pollSet`), from the second season: every team, No. 1 first. */
   poll?: { team: number; points: number; firstVotes: number }[];
 }
@@ -188,6 +194,11 @@ export function writeDynastyArea(d: Uint8Array, data: DynastyAreaData): void {
   if (data.schedule) {
     d.set(data.schedule, SCHEDULE);
     put32(d, DYN_AREA + 0x28, SCHEDULE);
+  }
+  if (data.impact) {
+    if (data.impact.length !== 8 + 3 * teams || NAMES - IMPACT < data.impact.length) throw new Error('The impact players table has the wrong size.');
+    d.set(data.impact, IMPACT);
+    put32(d, DYN_AREA + IMPACT_AT, IMPACT);
   }
   // The ID block last.
   if (data.poll) {
