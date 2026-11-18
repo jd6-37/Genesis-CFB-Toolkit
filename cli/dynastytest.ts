@@ -31,7 +31,7 @@ import { CFB27_LATEST } from '../src/core/cfb27Latest';
 import { OVR_FORMULAS, playerOvr, roleOfSlot } from '../src/core/dynasty/ovr';
 import { readRating } from '../src/core/teamRatings';
 import { hasKits, readKits } from '../src/core/kits';
-import { setWhiteHome, whiteHomeLock } from '../src/core/dynasty/kit';
+import { kitOf, setKit, setWhiteHome, whiteHomeLock } from '../src/core/dynasty/kit';
 import * as Off from '../src/core/dynasty/offseason';
 import * as Num from '../src/core/dynasty/numbers';
 import * as Rec from '../src/core/dynasty/recruiting';
@@ -1396,27 +1396,46 @@ assert.ok(hasDynastyHooks(rom) && dynastyAreaProblem(rom) === null);
   ok('dynasty area: header, ID block, season rosters, OVRs, sim words and names; 2026 data untouched; lineup changes; busy area and older ROMs refused');
 }
 
-// Home jerseys (kit.ts, handoff H-004): the ROM's flags at the start, a user team's changed between seasons, written into the season ROM.
+// Uniforms (kit.ts; user, 2026-11-18: "full uniform editing", "all teams's unis editable"): the ROM's at the start, any
+// team any time, written into season ROMs over the ROM's table; mid-season a change asks for the ROM again without a
+// new roster version; the first season gets the user's ROM with only the uniform table changed.
 if (hasKits(rom)) {
-  const k0 = createDynasty(rom, csv, { name: 'kits', seed: 5, userTeams: [0] });
-  const romFlags = readKits(rom).map((k) => k.whiteHome);
+  const k0 = createDynasty(rom, csv, { name: 'My Dynasty!', seed: 5, userTeams: [0] });
+  const romKits = readKits(rom);
+  const romFlags = romKits.map((k) => k.whiteHome);
   assert.deepEqual(k0.whiteHome, romFlags);
-  assert.match(whiteHomeLock(k0, 1)!, /your own teams/);
-  assert.throws(() => setWhiteHome(k0, 1, true));
-  assert.equal(whiteHomeLock(k0, 0), null);
-  const k1 = setWhiteHome(k0, 0, !romFlags[0]);
-  assert.equal(k1.seasons[0].rosterVersion ?? 1, 1, 'no new ROM version before a download');
-  const outK = Off.seasonRom(k1, k1.seasons[0], rom);
-  const after = readKits(outK);
-  assert.equal(after[0].whiteHome, !romFlags[0]);
-  assert.deepEqual(after.map((k, t) => (t === 0 ? null : k)), readKits(rom).map((k, t) => (t === 0 ? null : k)), 'other teams and every extra uniform kept');
-  // After a download the ROM has to be written again; once the season has games, the flag waits for the offseason.
-  const dl = { ...k0, seasons: [{ ...k0.seasons[0], romDownloaded: true }] };
-  assert.equal(setWhiteHome(dl, 0, !romFlags[0]).seasons[0].rosterVersion, 2);
-  const played = { ...k0, seasons: [{ ...k0.seasons[0], imports: [{} as never] }] };
-  assert.match(whiteHomeLock(played, 0)!, /offseason/);
-  assert.equal(whiteHomeLock({ ...played, offseason: {} as never }, 0), null);
-  ok('home jersey: flags from the ROM, a user team changed, written into the season ROM, locked during the season');
+  assert.deepEqual(k0.romUniforms?.kits, romKits);
+  assert.equal(whiteHomeLock(k0, 1), null, 'any team');
+  const k1 = setWhiteHome(k0, 1, !romFlags[1]);
+  const helmet = [0x0eee, 0x0ccc, 0x0222];
+  const k2 = setKit(k1, 3, { ...kitOf(k1, 3)!, helmets: [...romKits[3].helmets, helmet] });
+  assert.equal(Object.keys(k2.kitEdits ?? {}).length, 1);
+  assert.equal(k2.seasons[0].kitsEdited, true, 'the first season is played on the user\'s own ROM: it needs the change');
+  assert.equal(k2.seasons[0].rosterVersion ?? 1, 1, 'uniforms are no new roster version');
+  for (const out of [Off.seasonRom(k2, k2.seasons[0], rom), Off.uniformRom(k2, rom)]) {
+    const after = readKits(out);
+    assert.equal(after[1].whiteHome, !romFlags[1]);
+    assert.deepEqual(after[3].helmets.at(-1), helmet);
+    assert.deepEqual(after.map((k, t) => (t === 1 || t === 3 ? null : k)), romKits.map((k, t) => (t === 1 || t === 3 ? null : k)), 'other teams kept');
+  }
+  // The first season's ROM: the user's ROM with only the uniform table (and the checksums) changed.
+  const u = Off.uniformRom(k2, rom);
+  const diff = [...u].flatMap((x, i) => (x === rom[i] || (i >= 0x2b6000 && i < 0x2b7000) ? [] : [i]));
+  assert.ok(diff.every((i) => i < 0x200 || (i >= 0x1e6400 && i < 0x1e6440)), `only the uniforms and checksums change: ${diff.slice(0, 5).map((i) => i.toString(16))}`);
+  // Back to the ROM's uniforms drops the edit.
+  assert.equal(setKit(k2, 3, romKits[3]).kitEdits, undefined);
+  // Too many extras are refused.
+  assert.throws(() => setKit(k2, 3, { ...romKits[3], helmets: Array(8).fill(helmet) }), /at most 7/);
+  // Mid-season (a later season's ROM downloaded, games played): allowed, asks for the ROM again, same roster version.
+  const mid = { ...k0, seasons: [{ ...k0.seasons[0], index: 1, romDownloaded: true, rosterVersion: 2, imports: [{ played: 5 } as never] }] };
+  const m2 = setWhiteHome(mid, 0, !romFlags[0]);
+  assert.equal(m2.seasons[0].kitsEdited, true);
+  assert.equal(m2.seasons[0].rosterVersion, 2);
+  assert.equal(setWhiteHome({ ...mid, offseason: {} as never }, 0, !romFlags[0]).seasons[0].kitsEdited, undefined, 'the offseason: into the next season\'s ROM');
+  // File names: the dynasty, the year and the season's ID.
+  assert.equal(Off.seasonRomName(k0, { ...k0.seasons[0], romId: 'fxh834' }), `my_dynasty-${k0.seasons[0].year}-fxh834.md`);
+  assert.match(Off.newRomId(), /^[a-z2-9]{6}$/);
+  ok('uniforms: the ROM\'s at the start, any team any time, into season ROMs over the ROM\'s table, first season = own ROM + uniforms only, mid-season asks for the ROM again (same roster version), file names with the season ID');
 }
 
 // Weight gain (user, 2026-11-13): everyone but kickers puts on a few pounds each offseason, more with a bigger Strength program.

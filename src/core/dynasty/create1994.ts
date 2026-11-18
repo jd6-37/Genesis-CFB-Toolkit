@@ -27,7 +27,7 @@ import { slotPosition } from './depth';
 import { DYNASTY_EDITION, hasDynastyHooks, readNamesTable } from './dynastyArea';
 import { EDITIONS, editionOfRom } from './edition';
 import { hasFineRatings, readFineOffsets } from './fine';
-import { whiteHomeOf } from './kit';
+import { romUniformsOf, whiteHomeOf } from './kit';
 import { CLASSES, DYNASTY_FILE, rng, type BwSlot, type ClassYear, type CreateOptions, type DPlayer, type Dynasty, type DTeam } from './model';
 import { NO_NUMBER, numberAllowed, replacementNumber, sideOf } from './numbers';
 import { startingPrestige1994 } from './prestige';
@@ -165,6 +165,7 @@ export function createDynasty1994(rom: Uint8Array, rostersText: string, opt: Cre
     userTeams: opt.userTeams ?? [],
     teams,
     whiteHome: whiteHomeOf(rom),
+    romUniforms: romUniformsOf(rom, teams.length),
     players,
     seasons: [{
       index: 0, year: startYear, conf: season.conf, confNames: season.names, confWeeks: { start: season.start, games: season.games },

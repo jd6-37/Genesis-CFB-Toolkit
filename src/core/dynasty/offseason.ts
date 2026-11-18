@@ -23,7 +23,7 @@ import { pollSet, preseasonPoll } from './poll';
 import { seasonReports } from './walshStore';
 import { writeReports } from '../walshReports';
 import { fineSetBytes, putFineOffsets } from './fine';
-import { applyWhiteHome } from './kit';
+import { applyKits } from './kit';
 import { lastGames, makeSchedule, RELEASE_CONF_WEEKS, rivalriesOf, scheduleSet } from './schedule';
 import { writeConferences } from './conferences';
 import { editionOf, editionOfRom, hasTransfers } from './edition';
@@ -849,6 +849,27 @@ export function classRankings(events: OffseasonEvent[]) {
  * New Season stamps into the save; Exhibition keeps the ROM's own rosters. The season's conferences go into
  * the ROM itself where they differ from its own (conferences.ts). Checksums fixed.
  */
+/**
+ * The first season's ROM with the dynasty's uniforms (user, 2026-11-18: uniforms editable mid-season): the first season
+ * is played on the user's own ROM, so this is that ROM with only the uniform table changed. A save keeps no uniform,
+ * so the season goes on with it.
+ */
+export function uniformRom(d: Dynasty, rom: Uint8Array): Uint8Array {
+  const out = openRosterRom(rom);
+  if (editionOfRom(out.data)?.id !== editionOf(d).id) throw new Error(`This dynasty is played in the ${editionOf(d).name}: use that ROM.`);
+  applyKits(out.data, d);
+  fixChecksums(out.data, out.game);
+  return out.data;
+}
+
+/** A season ROM's file name: the dynasty, the year and the season's ID (user, 2026-11-18: "…-my_dynasty-fxh834"). */
+export const seasonRomName = (d: Dynasty, season: DSeason) => {
+  const slug = d.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'dynasty';
+  return `${slug}-${season.year}${season.romId ? `-${season.romId}` : ''}.md`;
+};
+/** A new file name ID: six lowercase letters and digits. */
+export const newRomId = (rand: () => number = Math.random) => Array.from({ length: 6 }, () => 'abcdefghjkmnpqrstuvwxyz23456789'[Math.floor(rand() * 31)]).join('');
+
 export function seasonRom(d: Dynasty, season: DSeason, rom: Uint8Array, now = Date.now()): Uint8Array {
   const out = openRosterRom(rom);
   const problem = out.wide ? dynastyAreaProblem(out.data) : `This isn't ${DYNASTY_EDITION}.`;
@@ -895,7 +916,7 @@ export function seasonRom(d: Dynasty, season: DSeason, rom: Uint8Array, now = Da
     impact: season.index > 0 ? impactTable(d, season) : undefined, // the first season: the ROM's own pick
     poll: (() => { const p = preseasonPoll(d, season); return p && !p[0]?.real ? pollSet(p) : undefined; })(), // the first season: the ROM's own
   });
-  applyWhiteHome(out.data, d);
+  applyKits(out.data, d);
   writeConferences(out.data, d, season);
   writeDynastySim(out.data, d);
   writeDynastyStats(out.data, d);

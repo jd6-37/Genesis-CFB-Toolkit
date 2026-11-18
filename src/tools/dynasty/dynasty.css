@@ -772,3 +772,10 @@
 .dy-impactstep-picks { display: grid; gap: var(--sp-2) var(--sp-3); grid-template-columns: 1fr; margin: var(--sp-3) 0; }
 .dy-impactstep-picks > * { min-width: 0; }
 @media (min-width: 760px) { .dy-impactstep-picks { grid-template-columns: repeat(3, 1fr); } }
+
+/* Team page: uniforms (UniformsBox.tsx). */
+.dy-uniforms { margin-bottom: var(--sp-5); }
+.dy-uni-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); list-style: none; margin: 0 0 var(--sp-2); padding: 0; }
+.dy-uni-edit { margin-top: var(--sp-3); }
+.dy-steps { margin: var(--sp-3) 0; padding-left: var(--sp-5); }
+.dy-steps li { margin-bottom: var(--sp-2); }

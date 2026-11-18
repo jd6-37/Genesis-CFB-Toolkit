@@ -18,7 +18,7 @@ import { buildRosters } from './rosters';
 import { ovrOf, ratingsFromSlot, valueOfFine, type Ratings } from './ratings';
 import { GROUP_ATTRS } from '../rosterLayouts';
 import { hasFineRatings, readFineOffsets } from './fine';
-import { whiteHomeOf } from './kit';
+import { romUniformsOf, whiteHomeOf } from './kit';
 import { assignBlack, skinFor } from './appearance';
 import { recordYear, type YearRecord } from './career';
 import { DYNASTY_EDITION, dynastyRomId, hasDynastyHooks, readStamp } from './dynastyArea';
@@ -121,6 +121,10 @@ export interface DSeason {
   rosterVersion?: number;
   /** The season's ROM has been downloaded (the "download the ROM" window stops asking). */
   romDownloaded?: boolean;
+  /** Uniforms changed after the ROM was downloaded (download it again; not a new roster version: the save keeps no uniform). */
+  kitsEdited?: boolean;
+  /** The season ROM's file name ID (user, 2026-11-18: "…-my_dynasty-fxh834"), made at the first download; the same for the season's later downloads, so the save stays with the file. */
+  romId?: string;
   /** The ROM's conference week settings (first conference week and conference games per conference). */
   confWeeks?: ConfWeeks;
   /** Title game switches per conference (seasonWide.ts, CTG1); absent: the edition's defaults (conferences.ts). */
@@ -187,6 +191,10 @@ export interface Dynasty {
   training?: Record<number, import('./training').Training>;
   /** Per team: wears its white jersey at home (kit.ts; the ROM's alternate-uniforms table). Absent on a ROM without it. */
   whiteHome?: boolean[];
+  /** The ROM's own uniforms, for the uniform editor (kit.ts); absent on older dynasties until the editor gets the ROM. */
+  romUniforms?: import('./kit').RomUniforms;
+  /** The teams whose extra uniforms the user changed (kit.ts): written over the ROM's in every season ROM. */
+  kitEdits?: Record<number, import('../kits').TeamKit>;
   /** Every coach (coaches.ts; index = id): the real coaches of the edition's year, then any made in the dynasty. Absent until the app adds them. */
   coaches?: import('./coaches').DCoach[];
   /** Drafted players who will come back as coaches after their pro careers (carousel.ts): player id, the offseason he joins the pool. */
@@ -363,6 +371,7 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
     userTeams: opt.userTeams ?? [],
     teams,
     whiteHome: whiteHomeOf(rom),
+    romUniforms: romUniformsOf(rom, teams.length),
     players: recordYear(players, startYear),
     seasons: [{ index: 0, year: startYear, conf: season.conf, confNames: season.names, confWeeks: { start: season.start, games: season.games }, ...(season.titleGames ? { titleGames: season.titleGames } : {}), slots, bw, bench, benchBw, teamOvr, prestige: startingPrestige(teams.map((t) => t.school), teamOvr), imports: [] }],
   };
