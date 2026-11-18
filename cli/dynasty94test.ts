@@ -106,7 +106,7 @@ for (const t of d0.teams) {
     GROUP_COLUMNS[def.group].forEach((a, i) => {
       const k = GROUP_ATTRS[def.group].indexOf(a);
       assert.equal(b.steps[i], rec.ratings[k], `${t.school} ${def.label} ${a} step`);
-      const fine = Math.max(0, Math.min(240, 16 * rec.ratings[k] + offs[k]));
+      const fine = Math.max(0, 16 * rec.ratings[k] + offs[k]); // above step 15 the ROM's offset stays (H-031)
       assert.equal(16 * b.steps[i] + b.offs[i], fine, `${t.school} ${def.label} ${a} fine`);
     });
     assert.equal(p.jersey, jerseyNumber(rec.numberByte) ?? NO_NUMBER);
@@ -167,7 +167,7 @@ for (const t of [0, 40, 106]) for (let k = 0; k < 32; k++) {
 const fa = fineAddress(out)!;
 for (const t of [3, 70]) for (let k = 0; k < 32; k++) assert.deepEqual(readFineOffsets(out, t, k, fa), readFineOffsets(rom, t, k).map((x, i) => {
   const step = readPlayer(roster, t, k).ratings[i];
-  return Math.max(0, Math.min(240, 16 * step + x)) - 16 * step;
+  return Math.max(0, 16 * step + x) - 16 * step;
 }), 'the first season\'s offsets are the ROM\'s');
 assert.equal(scheduleAddress(out), null, 'no schedule in the first season');
 assert.throws(() => Off.seasonRom({ ...d0, edition: '2026' }, s0, rom), /2026 Season Edition/);

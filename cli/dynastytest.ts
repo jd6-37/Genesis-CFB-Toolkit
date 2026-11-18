@@ -158,7 +158,9 @@ for (const [grid, rated] of [[first0().slots, first0().bw], [first0().bench, fir
     const spots = first0().slots[t].filter((x) => x === id).length + (first0().bench?.[t].filter((x) => x === id).length ?? 0);
     if (spots > 1) return; // a kicker who also punts keeps the kicker's ratings (the season keeps both slots' steps)
     const mine = bwSlotOf(d0.players[id - 1], b);
-    assert.deepEqual([mine.steps, mine.offs], [b.steps, b.offs], `team ${t} slot ${slot}`);
+    // The player's number stops at 100 (fine 240); the slot keeps the ROM's offset above it (H-031).
+    const capped = b.offs.map((o, i) => Math.min(240, 16 * b.steps[i] + o) - 16 * b.steps[i]);
+    assert.deepEqual([mine.steps, mine.offs], [b.steps, capped], `team ${t} slot ${slot}`);
   }));
 }
 // Fine ratings (v2.0.1-test13 on): the Active Roster's offsets are the ROM's table, so the app shows what the
@@ -173,7 +175,7 @@ for (const [grid, rated] of [[first0().slots, first0().bw], [first0().bench, fir
     if (fineRom) {
       const want = readFineOffsets(rom, t, slot);
       const rec = GROUP_ATTRS[b.group].map((a) => b.steps[b.attrs.indexOf(a)]);
-      assert.deepEqual(GROUP_ATTRS[b.group].map((a) => b.offs[b.attrs.indexOf(a)]), want.map((o, i) => Math.max(0, Math.min(240, 16 * rec[i] + o)) - 16 * rec[i]), `offsets team ${t} slot ${slot}`);
+      assert.deepEqual(GROUP_ATTRS[b.group].map((a) => b.offs[b.attrs.indexOf(a)]), want.map((o, i) => Math.max(0, 16 * rec[i] + o) - 16 * rec[i]), `offsets team ${t} slot ${slot}`);
     }
     if (b.offs.some((o) => o)) nonzero++;
   }));

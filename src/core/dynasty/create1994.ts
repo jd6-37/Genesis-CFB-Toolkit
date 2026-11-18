@@ -113,7 +113,7 @@ export function createDynasty1994(rom: Uint8Array, rostersText: string, opt: Cre
       const steps = attrs.map((a) => rec.ratings[order.indexOf(a)] ?? 0);
       const offs = attrs.map((a, i) => {
         const off = romOffs ? romOffs[order.indexOf(a)] : drawn();
-        return Math.max(0, Math.min(240, 16 * steps[i] + off)) - 16 * steps[i]; // the app's numbers run 0-100
+        return Math.max(0, 16 * steps[i] + off) - 16 * steps[i]; // not below 0; above step 15 the ROM's offset stays (H-031)
       });
       const b: BwSlot = { label: def.label, group: def.group, attrs, steps, offs, weightPlus: def.group === 'OL' ? olPlus : 0 };
       bw[t.index][def.slot] = b;

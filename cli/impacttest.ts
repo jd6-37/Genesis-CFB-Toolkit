@@ -5,6 +5,8 @@
 // - H-028: the season ROM's IMP1 table (dynasty header +0x2C) holds, for every team, the ROM's own pick on the
 //   season's roster set, except the user's own picks; the picks' rules (three different players of the Active
 //   Roster at allowed spots, at most two on a side) and the first season (no table).
+// - H-031: the values are the fine ratings (16 × step + offset, 0-255): offsets from the ROM's table at 0x2E0000 for
+//   its built-in rosters, from the season ROM's FRC1 (header +0x24) for a dynasty set; 1994 Florida State: #88, #90, #10.
 // - Every team is 4-3 by the ROM's Team Rosters bit table (the long at 0x06B100), which the port assumes.
 // - Three different players a team: the first an offensive skill player, the second a defender; a fullback only
 //   when no halfback is picked.
@@ -12,7 +14,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { openRom } from '../src/core/romfile';
 import { openRosterRom, readPlayer } from '../src/core/rosterRom';
-import { gameImpact, impactChoices, impactSlots, impactSet, readImpactTable, setImpactPicks, teamImpact } from '../src/core/dynasty/impact';
+import { fineValue, gameImpact, impactChoices, impactSlots, impactSet, readImpactTable, setImpactPicks, teamImpact } from '../src/core/dynasty/impact';
 import { seasonRom } from '../src/core/dynasty/offseason';
 import type { Dynasty } from '../src/core/dynasty/model';
 import { createDynasty } from '../src/core/dynasty/model';
@@ -26,7 +28,14 @@ const OFF = new Set([0, 1, 2, 3, 9, 10, 11, 12, 13, 14]);
 for (const path of process.argv.slice(2)) {
   const rom = (await openRom(path, new Uint8Array(readFileSync(path)))).data;
   const rr = openRosterRom(rom);
-  const fromRom = rr.teams.map((t) => impactSlots(Array.from({ length: 32 }, (_, s) => readPlayer(rr, t.index, s).ratings)));
+  // Fine values: the record's steps and the offsets (3 bytes a slot, six signed nibbles in the record's order).
+  const fineFrom = (steps: number[], off: Uint8Array) => steps.map((st, k) => {
+    let o = k % 2 === 0 ? off[k >> 1] >> 4 : off[k >> 1] & 15;
+    if (o > 7) o -= 16;
+    return fineValue(st, o);
+  });
+  const FT = 0x2e0000;
+  const fromRom = rr.teams.map((t) => impactSlots(Array.from({ length: 32 }, (_, s) => fineFrom(readPlayer(rr, t.index, s).ratings, rom.subarray(FT + 96 * t.index + 3 * s, FT + 96 * t.index + 3 * s + 3)))));
   for (const picks of fromRom) {
     assert.equal(picks.length, 3);
     assert.equal(new Set(picks).size, 3);
@@ -46,6 +55,10 @@ for (const path of process.argv.slice(2)) {
     assert.deepEqual(teamImpact(d, s, t.index), want, `${t.school}: the dynasty's first season picks as the ROM`);
   }
   assert.equal(impactSet(d, s).size, 3 * d.teams.length);
+  if (is94) {
+    const fsu = d.teams.find((t) => t.school === 'Florida State')!.index;
+    assert.deepEqual([...fromRom[fsu]].sort((a, b) => a - b), [11, 18, 19], 'Florida State 1994: #88, #90, #10 Brooks (H-031)');
+  }
   if (!is94) {
     const om = d.teams.find((t) => t.school === 'Ole Miss')!.index;
     const pos = teamImpact(d, s, om).map((id) => s.slots[om].indexOf(id));
@@ -75,6 +88,8 @@ for (const path of process.argv.slice(2)) {
   assert.equal(((out[0x3e002c] << 24) >>> 0) + (out[0x3e002d] << 16) + (out[0x3e002e] << 8) + out[0x3e002f], 0x3e4e40);
   // Every other team: the ROM's own pick on the roster set the season ROM carries (header +0x14).
   const set = ((out[0x3e0014] << 24) >>> 0) + (out[0x3e0015] << 16) + (out[0x3e0016] << 8) + out[0x3e0017];
+  const frc = ((out[0x3e0024] << 24) >>> 0) + (out[0x3e0025] << 16) + (out[0x3e0026] << 8) + out[0x3e0027];
+  assert.equal(String.fromCharCode(...out.subarray(frc, frc + 4)), 'FRC1', 'the season ROM has its offsets');
   let same = 0;
   for (const t of d.teams) {
     const got: number[] = table![t.index];
@@ -84,9 +99,10 @@ for (const path of process.argv.slice(2)) {
     }
     const nib = Array.from({ length: 32 }, (_, k) => {
       const r = out.subarray(set + 128 * t.index + 4 * k, set + 128 * t.index + 4 * k + 4);
-      return [r[1] >> 4, r[1] & 15, r[2] >> 4, r[2] & 15, r[3] >> 4, r[3] & 15];
+      const o = frc + 4 + (32 * t.index + k) * 3;
+      return fineFrom([r[1] >> 4, r[1] & 15, r[2] >> 4, r[2] & 15, r[3] >> 4, r[3] & 15], out.subarray(o, o + 3));
     });
-    assert.deepEqual([...got].sort((a, b) => a - b), impactSlots(nib).sort((a, b) => a - b), `${t.school}: the table is the ROM's own pick`);
+    assert.deepEqual([...got].sort((a, b) => a - b), impactSlots(nib).sort((a, b) => a - b), `${t.school}: the table is the ROM's own pick (fine values from FRC1)`);
     same++;
   }
   // Back to the game's pick.
