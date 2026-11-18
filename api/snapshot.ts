@@ -5,7 +5,7 @@
 //
 //   POST   /api/snapshot             the Blob client's token request (clientPayload = the key)
 //   GET    /api/snapshot?id=<id>     { url } of the snapshot's file, or 404
-//   GET    /api/snapshot?status=1    { storage: "connected" } or the error (for checking a deployment)
+//   GET    /api/snapshot?status=1    { storage: "connected", uploads: "ready" } or what's missing (for checking a deployment)
 //   DELETE /api/snapshot             body { key }: deletes that key's snapshot
 import { BlobNotFoundError, del, head } from '@vercel/blob';
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
@@ -18,10 +18,15 @@ export async function GET(request: Request): Promise<Response> {
   const q = new URL(request.url).searchParams;
   if (q.has('status')) {
     try {
-      await head('s/status-check.json.gz');
-      return json({ storage: 'connected' });
+      // Sharing needs the store's read-write token too: it signs the browser's upload (reading works without it).
+      const uploads = process.env.BLOB_READ_WRITE_TOKEN ? 'ready' : 'missing BLOB_READ_WRITE_TOKEN';
+      try {
+        await head('s/status-check.json.gz');
+      } catch (e) {
+        if (!(e instanceof BlobNotFoundError)) throw e;
+      }
+      return json({ storage: 'connected', uploads }, uploads === 'ready' ? 200 : 500);
     } catch (e) {
-      if (e instanceof BlobNotFoundError) return json({ storage: 'connected' });
       return json({ storage: 'error', message: (e as Error).message }, 500);
     }
   }
