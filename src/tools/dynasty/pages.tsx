@@ -698,11 +698,13 @@ function ImpactBox({ team, ids }: { team: number; ids: number[] }) {
         })}
       </ul>
       <p className="dy-small dy-dim">
-        {own
-          ? `Picked by you in the offseason. `
-          : 'The game picks them from the Active Roster: the best offensive skill player, the best defender, and the better of the next two. '}
+        {/* User, 2026-11-18: "The team's top players. A hot streak puts them in the zone. You can manually pick impact
+            players, only in the offseason." The last line only on the user's own teams (the others can't be picked). */}
+        {own ? 'Picked by you in the offseason. ' : "The team's top players. "}
         A hot streak puts them in the zone.
-        {canPick && <> <a href={href('offseason/impact')}>Change them</a> before you start the season.</>}
+        {d.userTeams.includes(team) && !readOnly && (canPick
+          ? <> <a href={href('offseason/impact')}>Change them</a> before you start the season.</>
+          : ' You can pick your impact players yourself, only in the offseason.')}
       </p>
     </section>
   );
