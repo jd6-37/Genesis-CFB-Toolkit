@@ -725,7 +725,7 @@
 .dy-impactbox li { display: flex; gap: var(--sp-3); align-items: flex-start; padding: var(--sp-3); background: var(--surface-sunken); }
 .dy-impactbox li p { margin: 0; }
 .dy-impactbox-name { font-weight: 700; font-size: var(--fs-3); }
-.dy-impactbox-r { display: flex; gap: var(--sp-3); margin: var(--sp-2) 0 0; }
+.dy-impactbox-r { display: flex; gap: var(--sp-5); margin: var(--sp-2) 0 0; }
 .dy-impactbox-r div { display: flex; flex-direction: column; }
 .dy-impactbox-r dt { font-size: var(--fs-1); color: var(--text-muted); letter-spacing: 0.04em; }
 .dy-impactbox-r abbr { text-decoration: none; }
