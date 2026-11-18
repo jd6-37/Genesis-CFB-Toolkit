@@ -718,7 +718,7 @@
 .dy-gone p { margin: var(--sp-3) 0 var(--sp-4); }
 /* Impact players: the app's gold dot (impact.ts), and the team page's box */
 .dy-poscell { display: flex; align-items: center; }
-.dy-poscell > :last-child { flex: 1; min-width: 0; }
+.dy-poscell > :last-child:not(.dy-impact) { flex: 1; min-width: 0; } /* the dot stays round when the position is plain text (no menu) */
 .dy-impact { display: inline-block; width: 10px; height: 10px; margin-right: var(--sp-1); border-radius: 50%; background: var(--star); box-shadow: 1px 1px 0 var(--rule-strong); vertical-align: 1px; flex: none; }
 .dy-impactbox { margin: var(--sp-4) 0; }
 .dy-impactbox ul { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-3); grid-template-columns: 1fr; }
