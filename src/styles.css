@@ -215,6 +215,14 @@ button, input, select { font: inherit; color: inherit; }
 .picker-blue button { aspect-ratio: 2 / 1; }
 .picker button.on { border-color: var(--menu); box-shadow: 0 0 0 1px var(--menu); }
 .picker-note { margin: 8px 0 0; font-size: var(--fs-1); color: var(--chalk-dim); line-height: 1.35; }
+/* The team's own colors first, big (user, 2026-11-18: "the school colors need to be at the top of the picker and prominent"). */
+.picker-top { margin-bottom: 4px; }
+.picker-head { margin: 0 0 6px; font-size: var(--fs-1); font-weight: 700; color: var(--chalk); }
+.picker-team { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px; }
+.picker-team button { aspect-ratio: 3 / 2; border: 1px solid var(--chalk-dim); }
+/* "No stripe": the stripe then follows the helmet's or pants' color. */
+.picker-none { display: block; width: 100%; aspect-ratio: auto !important; margin-bottom: 10px; padding: 6px 8px !important; color: var(--chalk); background: transparent; border: 1px solid var(--chalk-dim) !important; font: inherit; font-size: var(--fs-2); text-align: left; }
+.swatch-none, .picker-none.on { background: repeating-linear-gradient(135deg, transparent 0 5px, var(--chalk-dim) 5px 6px); }
 
 .extras { display: flex; flex-direction: column; gap: 10px; }
 .extras .field-row { justify-content: flex-start; gap: 14px; font-size: var(--fs-3); }

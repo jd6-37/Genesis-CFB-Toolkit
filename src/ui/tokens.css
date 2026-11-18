@@ -149,11 +149,14 @@
   --screen: #000000;
   --screen-edge: #000000;
   --on-screen: #ffffff;
+  /* Behind the game's player sprites (uniforms): a Genesis gray, so white socks and jerseys show (user, 2026-11-18). */
+  --sprite-stage: #b6b6b6;
   color-scheme: light;
 }
 
 /* Dynasty, dark: the same booklet as a negative. */
 [data-brand='dynasty'][data-theme='dark'] {
+  --sprite-stage: #242424;
   --surface: #242424;
   --surface-raised: #363636;
   --surface-sunken: #121212;

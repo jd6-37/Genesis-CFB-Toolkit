@@ -24,8 +24,13 @@ export function SpriteCanvas({ pic, scale = 2, label }: { pic: Picture | null; s
   );
 }
 
-/** Genesis colors: pick blue level, then red x green. 512 colors in all. */
-export function ColorPicker({ value, onPick, onClose }: { value: number; onPick: (c: number) => void; onClose: () => void }) {
+/** A quick choice at the top of the picker (the team's own colors; user, 2026-11-18). */
+export interface PickerColor { color: number; label: string; /** A heading of its own (e.g. the game's black and white); else "Team colors". */ group?: string }
+/** A "none" choice (no stripe: user, 2026-11-18): picking it is the caller's to handle. */
+export interface PickerNone { label: string; on: boolean; pick: () => void }
+
+/** Genesis colors: the team's colors and a "none" choice first when given, then a blue level and red x green. 512 colors in all. */
+export function ColorPicker({ value, onPick, onClose, top, none }: { value: number; onPick: (c: number) => void; onClose: () => void; top?: PickerColor[]; none?: PickerNone }) {
   const [r0, g0, b0] = toLevels(value);
   const [blue, setBlue] = useState(b0);
   const ref = useRef<HTMLDivElement>(null);
@@ -43,6 +48,33 @@ export function ColorPicker({ value, onPick, onClose }: { value: number; onPick:
   }, [onClose]);
   return (
     <div className="picker" ref={ref} role="dialog" aria-label="Pick a Genesis color">
+      {none && (
+        <button type="button" className={`picker-none${none.on ? ' on' : ''}`} onClick={() => { none.pick(); onClose(); }} aria-pressed={none.on}>
+          {none.label}
+        </button>
+      )}
+      {top && top.length > 0 && (
+        <div className="picker-top">
+          {[...new Set(top.map((t) => t.group ?? 'Team colors'))].map((g) => (
+            <div key={g}>
+              <p className="picker-head">{g}</p>
+              <div className="picker-team">
+                {top.filter((t) => (t.group ?? 'Team colors') === g).map((t) => (
+                  <button
+                    key={t.color}
+                    className={t.color === value && !none?.on ? 'on' : ''}
+                    style={{ background: toCss(t.color) }}
+                    onClick={() => { onPick(t.color); onClose(); }}
+                    aria-label={`${t.label}: color ${toHex4(t.color)}`}
+                    title={`${t.label} (${toHex4(t.color)})`}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
+          <p className="picker-head">All colors</p>
+        </div>
+      )}
       <div className="picker-blue" role="radiogroup" aria-label="Blue level">
         {Array.from({ length: 8 }, (_, b) => (
           <button
@@ -84,19 +116,22 @@ export function ColorPicker({ value, onPick, onClose }: { value: number; onPick:
   );
 }
 
-export function Swatch({ color, label, onPick, startOpen = false }: { color: number; label: string; onPick: (c: number) => void; /** Opens with the picker showing. */ startOpen?: boolean }) {
+export function Swatch({ color, label, onPick, startOpen = false, top, none }: {
+  color: number; label: string; onPick: (c: number) => void; /** Opens with the picker showing. */ startOpen?: boolean;
+  top?: PickerColor[]; none?: PickerNone;
+}) {
   const [open, setOpen] = useState(startOpen);
   return (
     <span className="swatch-wrap">
       <button
-        className="swatch"
-        style={{ background: toCss(color) }}
+        className={`swatch${none?.on ? ' swatch-none' : ''}`}
+        style={{ background: none?.on ? undefined : toCss(color) }}
         onClick={() => setOpen((o) => !o)}
-        aria-label={`${label}: ${toHex4(color)}. Change color`}
+        aria-label={`${label}: ${none?.on ? none.label : toHex4(color)}. Change color`}
         aria-expanded={open}
         title={`${label} ${toHex4(color)}`}
       />
-      {open && <ColorPicker value={color} onPick={onPick} onClose={() => setOpen(false)} />}
+      {open && <ColorPicker value={color} onPick={onPick} onClose={() => setOpen(false)} top={top} none={none} />}
     </span>
   );
 }

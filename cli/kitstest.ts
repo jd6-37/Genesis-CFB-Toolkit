@@ -2,7 +2,7 @@
 // usage: tsx cli/kitstest.ts ROM: the 138-team 2026 Season Edition (v2.0.1-test14 or later) or the 107-team
 // 1994 Season Edition (test14 or later; H-012)
 import { parseBw95 } from '../src/core/bw95';
-import { ownChanges, ownUniforms, partPalette, readKitSprite, withPiece, writeOwnUniforms } from '../src/core/kits';
+import { ownChanges, ownUniforms, partPalette, pieceCutout, readKitSprite, withPiece, writeOwnUniforms } from '../src/core/kits';
 import { renderSprites } from '../src/core/render';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -104,6 +104,11 @@ ok('own uniforms: only the uniform places change, counted as a Teams edit and ca
   const g = partPalette(blocks[ala].home, 'helmets');
   assert.deepEqual([g[5], g[6], g[7]], [5, 6, 7].map((i) => blocks[ala].home[i]), 'the part keeps its colors');
   assert.ok([1, 2, 4, 8, 9, 10, 13].every((i) => { const c = g[i]; return (c & 0xe) === ((c >> 4) & 0xe) && (c & 0xe) === ((c >> 8) & 0xe); }), 'the rest is gray');
+  // The team page's cutouts: each piece on its own, smaller than the player.
+  for (const part of ['helmets', 'dark', 'pants'] as const) {
+    const c = pieceCutout(sp!, blocks[ala].home, part);
+    assert.ok(c && c.width < pic.width + 1 && c.height < pic.height && c.data.some((v, i) => i % 4 === 3 && v === 255), part);
+  }
 }
-ok('preview: the picker\'s player sprite from the ROM, one part in color, the rest gray');
+ok('preview: the picker\'s player sprite from the ROM, one part in color, the rest gray; pieces cut out on their own');
 console.log(`${n} passed (${N} teams)`);

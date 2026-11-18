@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react';
 import { SpriteCanvas, UniformChip } from '../../components';
 import { renderSprites } from '../../core/render';
 import { kitSpriteOf, ownOf, setKit, setOwn, setWhiteHome, kitLock, kitOf, romUniformsOf } from '../../core/dynasty/kit';
-import { withPiece, type KitPart } from '../../core/kits';
+import { pieceCutout, withPiece, type KitPart } from '../../core/kits';
 import { Button, Note, Row, Select, SubHead } from '../../ui';
 import { KitParts } from '../styles/KitParts';
 import { useDyn } from './ui';
@@ -17,7 +17,15 @@ function Player({ u, label }: { u: number[]; label: string }) {
   const { d } = useDyn();
   const sprite = useMemo(() => kitSpriteOf(d), [d.romUniforms]); // eslint-disable-line react-hooks/exhaustive-deps
   const pic = useMemo(() => (sprite ? renderSprites(sprite.tiles, u, [sprite.sprites]) : null), [sprite, u.join()]); // eslint-disable-line react-hooks/exhaustive-deps
-  return pic ? <SpriteCanvas pic={pic} scale={2} label={label} /> : <UniformChip u={u} label={label} />;
+  return pic ? <SpriteCanvas pic={pic} scale={3} label={label} /> : <UniformChip u={u} label={label} />;
+}
+
+/** One alternate piece on its own, cut out of the player. */
+function Cutout({ pal, part, label }: { pal: number[]; part: KitPart; label: string }) {
+  const { d } = useDyn();
+  const sprite = useMemo(() => kitSpriteOf(d), [d.romUniforms]); // eslint-disable-line react-hooks/exhaustive-deps
+  const pic = useMemo(() => (sprite ? pieceCutout(sprite, pal, part) : null), [sprite, pal.join(), part]); // eslint-disable-line react-hooks/exhaustive-deps
+  return pic ? <SpriteCanvas pic={pic} scale={3} label={label} /> : <UniformChip u={pal} label={label} />;
 }
 
 export function UniformsBox({ team }: { team: number }) {
@@ -49,13 +57,31 @@ export function UniformsBox({ team }: { team: number }) {
     <section className="dy-uniforms" aria-labelledby={`dy-uni-${team}`}>
       <SubHead id={`dy-uni-${team}`}>Uniforms</SubHead>
       {kit && own && (
-        <ul className="dy-uni-chips" aria-label={`${name} uniforms`}>
-          <li><Player u={own.home} label={`${name} home`} /></li>
-          <li><Player u={own.away} label={`${name} away`} /></li>
-          {ORDER.flatMap((p) => kit[p].map((c, i) => (
-            <li key={`${p}${i}`}><Player u={withPiece(p === 'white' ? own.away : own.home, p, c)} label={`${name} extra ${p} ${i + 1}`} /></li>
-          )))}
-        </ul>
+        // Home and away as full uniforms, then the alternate pieces on their own by type (user, 2026-11-18, from his
+        // sketch: "show the home and away uniforms ... as full kits on a player model. Then show the extra uniform
+        // PIECES").
+        <div className="dy-uni-sum">
+          <figure><figcaption>Home</figcaption><Player u={own.home} label={`${name} home uniform`} /></figure>
+          <figure><figcaption>Away</figcaption><Player u={own.away} label={`${name} away uniform`} /></figure>
+          {extras > 0 && (
+            <div className="dy-uni-alts">
+              <span className="dy-uni-altlab" aria-hidden="true">Alternates</span>
+              {([['Helmets', ['helmets']], ['Jerseys', ['dark', 'white']], ['Pants', ['pants']]] as [string, KitPart[]][]).map(([title, parts]) => {
+                const list = parts.flatMap((p) => kit[p].map((c, i) => ({ p, c, i })));
+                return (
+                  <figure key={title}>
+                    <figcaption>{title}</figcaption>
+                    <div className="dy-uni-stack">
+                      {list.length ? list.map(({ p, c, i }) => (
+                        <Cutout key={`${p}${i}`} pal={withPiece(p === 'white' ? own.away : own.home, p, c)} part={p} label={`${name} extra ${p === 'pants' ? 'pants' : p === 'helmets' ? 'helmet' : `${p} jersey`} ${i + 1}`} />
+                      )) : <span className="dy-dim dy-small">None</span>}
+                    </div>
+                  </figure>
+                );
+              })}
+            </div>
+          )}
+        </div>
       )}
       <p className="dy-small dy-dim">
         {d.whiteHome[team] ? 'White at home.' : 'Dark at home.'} {extras ? `${extras} extra ${extras === 1 ? 'piece' : 'pieces'} to pick on the controller screen (Y on a 6-button pad).` : 'No extra pieces.'}
