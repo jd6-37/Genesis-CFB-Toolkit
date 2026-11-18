@@ -605,6 +605,9 @@ const IMPACT_KEYS: Record<string, Attr[]> = {
   DB: ['Speed', 'Awareness', 'Hands', 'Tackling'],
 };
 
+/** Short rating labels for the impact box (user, 2026-11-18: "SPD, QUICK, AWR, HANDS, TAK"). */
+const IMPACT_ABBR: Record<string, string> = { Speed: 'SPD', Quickness: 'QUICK', Awareness: 'AWR', Hands: 'HANDS', Tackling: 'TAK', Power: 'PWR', Range: 'RNG' };
+
 /** A team's three impact players (the game's pick for this season's Active Roster, or the user's: H-028). */
 function ImpactBox({ team, ids }: { team: number; ids: number[] }) {
   const { d, v, readOnly } = useDyn();
@@ -628,7 +631,7 @@ function ImpactBox({ team, ids }: { team: number; ids: number[] }) {
                 <p className="dy-impactbox-name"><ImpactDot /><a href={href(`player/${id}`)}>{playerName(p)}</a></p>
                 <p className="dy-small dy-dim">{slot >= 0 ? spotLabel(slot) : p.pos}, {p.cls}, OVR {bw ? playerOvr(slot, bw) : p.ovr}</p>
                 <dl className="dy-impactbox-r">
-                  {(IMPACT_KEYS[group] ?? []).map((a) => <div key={a}><dt>{a}</dt><dd>{p.ratings[a] === undefined ? '' : shownOf(p.ratings[a]!)}</dd></div>)}
+                  {(IMPACT_KEYS[group] ?? []).map((a) => <div key={a}><dt><abbr title={a}>{IMPACT_ABBR[a] ?? a}</abbr></dt><dd>{p.ratings[a] === undefined ? '' : shownOf(p.ratings[a]!)}</dd></div>)}
                 </dl>
               </div>
             </li>
