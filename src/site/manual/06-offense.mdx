@@ -1,6 +1,6 @@
 export const meta = { n: 6, slug: 'offense', title: 'Offense', summary: 'The play-call screen, the new formations, audibles, motion and flips at the line, running, and passing to five receivers.' }
 
-Every offensive play starts on the play-call screen: pick a formation, then a play. The play clock runs while you choose. If it runs out, you get a 5-yard delay of game penalty.
+Every offensive play starts on the play-call screen: pick a formation, then a play. The 25-second play clock starts at the whistle and runs while you choose and line up. If it runs out before the snap, you get a 5-yard delay of game penalty. A timeout resets it to 25.
 
 ## Calling a play
 
@@ -13,7 +13,7 @@ Every offensive play starts on the play-call screen: pick a formation, then a pl
 
 Move the three boxes (marked A, B and C) with the D-pad. Press the button of the box that is over the formation you want. The plays of that formation appear; pick one the same way. Scroll up to reach the top row of tiles.
 
-**Play Call mode** (pause menu): *3 Box* is the default, described above. *1 Box* has one box: <Btn k="C" /> picks, and <Btn k="B" /> makes a fake pick that sounds the same, so the other player can't tell which play you picked. Only the last real pick counts.
+**Play Call mode** (pause menu): *3 Box* is the default, described above. *1 Box* has one box, for playing against someone on the same screen: <Btn k="C" /> picks, and <Btn k="B" /> makes a fake pick that sounds the same, so the other player can't tell which play you picked. You can pick more than once; only the last real pick counts. Press <Btn k="A" /> to leave the play-call screen when you're done.
 
 **The top row** <New />:
 - **SWAP HBS** puts your second halfback (HB2) in for your starter, or back. He stays in until you swap back, and plays with his own ratings, energy, jersey number and stats. Halftime and the start of a game put the starters back. Kicks, punts and field goals always use the starters. On a 6-button pad, <Btn k="Z" /> does the same from anywhere on the play-call screen.
@@ -40,6 +40,7 @@ The first two rows are new in Elevated <New />: **Singleback, SB 3WR, SB 4WR, Pi
 
 <Controls rows={[
   [['C'], 'Snap the ball'],
+  [['B'], 'Hard count: a fake snap call that can draw the defense offside'],
   [['A'], 'Audible: open the menu, then A, B or C for one of your three audibles'],
   [['A', ',', 'X'], 'Flip the play at the line: everyone runs to his mirrored spot', 'new six'],
   [['up', '/', 'down'], 'Pick a back or receiver to send in motion; a marker shows under him', 'new'],
@@ -61,7 +62,7 @@ The first two rows are new in Elevated <New />: **Singleback, SB 3WR, SB 4WR, Pi
 - **Several motions in a row:** once the man in motion has stopped (at the end of his motion, or back on his spot), up and down pick the next man, or the same one again. Only one man moves at a time.
 - Goal Line and Tee formations have no motion, and the ball carrier can't go in motion.
 
-**Audibles:** each team has three. Set yours on the pause menu or in the pregame.
+**Audibles:** when you don't like what the defense shows, change the play at the line. Press <Btn k="A" />, then the button of the audible you want, then <Btn k="C" /> to snap. Each team has three; set yours in the pregame or on the pause menu (chapter 4).
 
 <Shot src="/media/manual/presnap-offense.png" alt="X held before the snap: the play art top right, each receiver's button and number at his feet and his route above his head" caption="Hold X before the snap: the play's diagram, and each receiver's button, jersey number and route." />
 
@@ -88,14 +89,15 @@ The first two rows are new in Elevated <New />: **Singleback, SB 3WR, SB 4WR, Pi
 
 ## Running
 
-The ball carrier runs where you point the D-pad.
+On a run, the quarterback hands the ball to the back by himself. The ball carrier runs where you point the D-pad.
 
 <Controls rows={[
-  [['B'], 'Tap: lower a shoulder and drive forward'],
+  [['A'], 'Dive'],
+  [['B'], 'Tap: burst forward, lowering a shoulder'],
   [['B'], 'Hold: spin'],
-  [['Y'], 'Hold: lower a shoulder again and again, with or without a direction', 'new six'],
-  [['C'], 'Dive'],
+  [['C'], 'Hurdle'],
   [['C'], 'Quarterback on an option play: pitch to the back'],
+  [['Y'], 'Hold: lower a shoulder again and again, with or without a direction', 'new six'],
 ]} />
 
 A ball carrier keeps his full speed for about 1.5 seconds, then slows down. He slows down faster when he is tired. Elevated makes for more explosive plays <New />: ball carriers slow down less on long runs and on runs after a catch, so long gains happen more often. The game now corrects a pitch's path in the air, so pitches to fast backs no longer land behind them <New />.
@@ -104,14 +106,33 @@ A ball carrier keeps his full speed for about 1.5 seconds, then slows down. He s
 
 <Shot src="/media/xy-passing.png" alt="A pass play with the A, B, C, X and Y receiver icons" />
 
-1. After the snap, press <Btn k="C" /> to bring up the receiver icons. Before that, you can move the quarterback with the D-pad to scramble or roll out.
+If you don't touch the D-pad after the snap, the game runs the pass play for you. Press a direction to take over the quarterback; then the throw is up to you:
+
+1. Press <Btn k="C" /> to bring up the receiver icons. Before that, you can move the quarterback with the D-pad to scramble or roll out.
 2. Press the button of the receiver you want: <Btn k="A" />, <Btn k="B" /> or <Btn k="C" /> for receivers 1 to 3, and on a 6-button pad <Btn k="X" /> and <Btn k="Y" /> for receivers 4 and 5 <New /> <Six />. Tap for a lob, hold for a bullet.
 
 A quarterback's RANGE rating sets how far he can throw (about 40 to 56 yards). On longer throws, a quarterback with lower INTEL is less accurate. In Elevated, long, high passes travel faster, so they spend less time in the air <New />.
 
-**Pass Catch** (pause menu): with *Auto*, the CPU controls the receiver. With *Manual*, you control the receiver once the ball is in the air. As a receiver, <Btn k="C" /> jumps for the ball, <Btn k="A" /> dives, and <Btn k="B" /> switches to the receiver nearest the ball.
+A target on the field marks where the pass is going.
 
-**Pass Window** (pause menu): Off is the default, as in the original game. On shows a small window for each receiver.
+**While the ball is in the air:**
+
+<Controls rows={[
+  [['B'], 'Switch to the receiver nearest the ball; steer him with the D-pad'],
+  [['C'], 'Jump and reach for the catch'],
+  [['A'], 'Dive for the ball'],
+]} />
+
+**Pass Catch** (pause menu): with *Auto*, the game switches you to the receiver by itself and runs him to the ball; it's the easier mode. With *Manual*, you press <Btn k="B" /> to take the receiver and steer him yourself.
+
+**Pass Window** (pause menu): Off is the default, as in the original game: the button letters show next to the receivers on the field. On shows each receiver in a small window of his own.
+
+## Hurry-up offense
+
+For a drive late in a half, skip the huddle. Right after the whistle:
+
+- **Hold <Btn k="C" />:** your team goes straight to the line to run the same play again.
+- **Hold <Btn k="A" />:** your team lines up to stop the clock. Press <Btn k="C" /> to snap, and the quarterback spikes the ball. Don't touch the D-pad: taking over the quarterback calls off the spike.
 
 ## Fatigue
 
