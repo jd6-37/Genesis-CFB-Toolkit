@@ -627,7 +627,7 @@ function SeasonSteps({ actions, step, busy }: { actions: OffseasonActions; step:
         )}
         <div className="dy-row dy-next">
           <Button href={href('offseason/impact')}>Next: the impact players</Button>
-          {team !== undefined && <Button variant="quiet" href={href(`team/${team}`)}>Change the depth chart</Button>}
+          {team !== undefined && <Button variant="quiet" href={href(`team/${team}/roster`)}>Change the depth chart</Button>}
         </div>
       </>
     );

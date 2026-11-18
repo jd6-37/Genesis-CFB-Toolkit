@@ -4,7 +4,7 @@ import { WhatsNext } from './GetStarted';
 import { playerHonors, seasonAwards } from '../../core/dynasty/awards';
 import { academicGrade } from '../../core/dynasty/academics';
 import { scheduleLock } from '../../core/dynasty/schedule';
-import { Button, Modal, Note, Num, PageHead, Select, SubHead, Table } from '../../ui';
+import { Button, Modal, Note, Num, PageHead, Select, SubHead, Table, Tabs } from '../../ui';
 import { useEffect, useMemo, useState } from 'react';
 import {
   champions, leaders, playerLines, playerName, seasonView, standings, statValue, teamHistory, weekName,
@@ -460,8 +460,60 @@ export function Teams() {
   );
 }
 
-export function Team({ team }: { team: number }) {
-  const { d, v, downloadRom, commit, readOnly } = useDyn();
+/** The team page's tabs (user, 2026-11-18: "The team page is getting kind of long ... Stats on the main page could just
+ * be the stat leaders. Rosters can go to its own tab. uniforms on its own"); each has its own address, team/12/roster. */
+export const TEAM_TABS = ['overview', 'roster', 'stats', 'uniforms'] as const;
+export type TeamTab = (typeof TEAM_TABS)[number];
+const TEAM_TAB_LABELS: Record<TeamTab, string> = { overview: 'Overview', roster: 'Roster', stats: 'Stats', uniforms: 'Uniforms' };
+/** "12" or "12/roster" → the team and tab (null when it isn't one). */
+export function teamRoute(arg: string | undefined): { team: number; tab: TeamTab } | null {
+  const m = /^(\d+)(?:\/(roster|stats|uniforms))?$/.exec(arg ?? '');
+  return m ? { team: Number(m[1]), tab: (m[2] as TeamTab | undefined) ?? 'overview' } : null;
+}
+export const teamHref = (team: number, tab: TeamTab = 'overview') => href(`team/${team}${tab === 'overview' ? '' : `/${tab}`}`);
+
+/** The season's leaders of a team (user, 2026-11-18: passing, rushing and receiving yards, tackles, sacks, interceptions). */
+const LEADERS: { cat: StatCategory; key: string; what: string; more?: [string, string] }[] = [
+  { cat: 'passing', key: 'yds', what: 'pass yds', more: ['td', 'TD'] },
+  { cat: 'rushing', key: 'yds', what: 'rush yds', more: ['td', 'TD'] },
+  { cat: 'receiving', key: 'yds', what: 'rec yds', more: ['rec', 'rec'] },
+  { cat: 'defense', key: 'tkl', what: 'tackles' },
+  { cat: 'defense', key: 'sacks', what: 'sacks' },
+  { cat: 'defense', key: 'int', what: 'INT' },
+];
+function StatLeaders({ team, lines }: { team: number; lines: PlayerLine[] }) {
+  const { d } = useDyn();
+  const cards = LEADERS.flatMap((l) => {
+    const best = lines.filter((x) => x.cat === l.cat && statValue(x, l.key) > 0).sort((a, b) => statValue(b, l.key) - statValue(a, l.key))[0];
+    const p = best ? playerOf(d, best.player) : null;
+    return best && p ? [{ l, best, p }] : [];
+  });
+  return (
+    <>
+      <SubHead>Stat leaders</SubHead>
+      {cards.length ? (
+        <ul className="dy-leaders">
+          {cards.map(({ l, best, p }) => (
+            <li key={`${l.cat}${l.key}`}>
+              <Headshot p={p} size={48} />
+              <div>
+                <a href={href(`player/${p.id}`)}>{playerName(p)}</a> <span className="dy-dim">{p.pos}</span>
+                <span className="dy-leader-stat">
+                  <strong>{statValue(best, l.key).toLocaleString('en-US')}</strong> {l.what}
+                  {l.more && statValue(best, l.more[0]) > 0 && <>, {statValue(best, l.more[0]).toLocaleString('en-US')} {l.more[1]}</>}
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : <p className="dy-dim">No stats yet.</p>}
+      {cards.length > 0 && <p className="dy-small"><a href={teamHref(team, 'stats')}>All season stats</a></p>}
+    </>
+  );
+}
+
+export function Team({ team, tab = 'overview' }: { team: number; tab?: TeamTab }) {
+  const { d, v, downloadRom, commit, readOnly, go } = useDyn();
   const lines = useMemo(() => playerLines(v).filter((l) => l.team === team), [v, team]);
   const [moveError, setMoveError] = useState<string | null>(null);
   const t = d.teams[team];
@@ -515,12 +567,21 @@ export function Team({ team }: { team: number }) {
         <span className="dy-teamhead-helmet"><TeamMark team={team} size={96} kind="helmet" /></span>
       </header>
 
+      <div className="dy-teamtabs">
+        <Tabs label={`${t.school} sections`} value={tab} onChange={(x) => go(teamHref(team, x).slice(1))} tabs={TEAM_TABS.map((x) => ({ value: x, label: TEAM_TAB_LABELS[x] }))} />
+      </div>
+
+      {tab === 'overview' && <>
       <ImpactBox team={team} ids={impact} />
 
       <div className="dy-team-cols">
         <div>
           <TeamCoach team={team} />
           <GoalsBox team={team} />
+          {/* Phone order (user, 2026-11-18): coach, goals, stat leaders, then the schedule and history. */}
+          <StatLeaders team={team} lines={lines} />
+        </div>
+        <div>
           <SubHead>Schedule</SubHead>
           {mine && !readOnly && v.season.schedule && !scheduleLock(v.season) && <p className="dy-small"><a href={href(`schedule/${team}`)}>Change the schedule</a></p>}
           {games.length ? (
@@ -558,14 +619,17 @@ export function Team({ team }: { team: number }) {
             </tbody>
           </Table>
         </div>
-        <div>
-          <SubHead>Season stats</SubHead>
-          {lines.some((l) => Object.values(l.s).some((x) => x > 0)) ? <StatTables lines={lines} /> : <p className="dy-dim">No stats yet.</p>}
-        </div>
       </div>
+      </>}
 
-      <UniformsBox team={team} />
+      {tab === 'stats' && <>
+        <SubHead>Season stats</SubHead>
+        {lines.some((l) => Object.values(l.s).some((x) => x > 0)) ? <StatTables lines={lines} /> : <p className="dy-dim">No stats yet.</p>}
+      </>}
 
+      {tab === 'uniforms' && <UniformsBox team={team} />}
+
+      {tab === 'roster' && <>
       <SubHead>Active Roster</SubHead>
       <p className="dy-dim dy-small">
         The {roster.length} players in Bill Walsh '95 this season.
@@ -585,6 +649,7 @@ export function Team({ team }: { team: number }) {
       <p className="dy-dim dy-small">{bench.length + reserves.length} players who aren't on the Active Roster this season. Each backs up a spot and can move up when it opens.</p>
       <RosterTable rows={[...bench, ...reserves.map((p) => ({ p, spot: null, label: p.pos, ovr: null }))]} edit={edit} impact={impact} />
       <Locked><AddPlayer team={team} /></Locked>
+      </>}
     </section>
   );
 }
