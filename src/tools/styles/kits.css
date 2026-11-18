@@ -1,8 +1,10 @@
 /* Uniform editor (KitParts.tsx: the Teams tab and the Dynasty team page). Tokens only (docs/design-system.md); mobile first. */
 .kit { display: grid; gap: var(--sp-3); }
 .kit-lead { margin: 0; max-width: 64ch; font-size: var(--fs-2); color: var(--text-muted); }
-.kit-part { display: grid; gap: var(--sp-3); justify-items: start; padding-top: var(--sp-3); border-top: var(--rule-w) solid var(--rule); }
-.kit-part h4 { margin: 0; font-family: var(--font-display); font-size: var(--fs-4); }
+.kit-part { display: grid; gap: var(--sp-3); margin-bottom: var(--sp-5); padding: var(--sp-3); border: var(--rule-w) solid var(--rule); border-radius: var(--radius); }
+/* Each part is its own box: the title with its Add button on one line, then the pieces. */
+.kit-part-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-2); padding-bottom: var(--sp-2); border-bottom: var(--rule-w) solid var(--rule); }
+.kit-part h4 { margin: 0; font-family: var(--font-display); font-size: var(--fs-5); }
 .kit-part ul { display: grid; gap: var(--sp-4); width: 100%; margin: 0; padding: 0; list-style: none; }
 .kit-piece { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--sp-3); align-items: start; }
 .kit-sprite { display: grid; place-items: center; padding: var(--sp-2); background: var(--surface-sunken); border-radius: var(--radius); }
@@ -17,6 +19,7 @@
 .kit-shades .swatch { width: 18px; height: 16px; }
 .kit-shades span { font-size: var(--fs-1); color: var(--text-muted); }
 @media (min-width: 640px) {
+  .kit-part { padding: var(--sp-4); }
   .kit-part ul { grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr)); }
 }
 .kit-lock { vertical-align: -1px; margin-right: var(--sp-1); color: var(--text-muted); }
