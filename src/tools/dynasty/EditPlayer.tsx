@@ -3,7 +3,7 @@
 import { Button, Check, Field, Note, Select, SubHead } from '../../ui';
 import { useState } from 'react';
 import { applyEdits, editLock, editLook, newSkin, type PlayerEdit } from '../../core/dynasty/edit';
-import { BEARD_LABELS, BEARD_STYLES, HAIR_COLOR_LABELS, HAIR_STYLE_LABELS, HAIR_STYLES, lookChoices, MOUTH_LABELS, MOUTHS, type LookEdit } from '../../core/dynasty/headshot';
+import { AGE_LABELS, AGES, BEARD_LABELS, BEARD_STYLES, EYE_COLOR_LABELS, HAIR_COLOR_LABELS, HAIR_STYLE_LABELS, HAIR_STYLES, JAWS, lookChoices, MOUTH_LABELS, MOUTHS, NECKS, SIZE_LABELS, type LookEdit } from '../../core/dynasty/headshot';
 import { SKIN_TONES } from '../../core/dynasty/appearance';
 import { CLASSES, type ClassYear, type DPlayer } from '../../core/dynasty/model';
 import { makeRecruit, POSITIONS, recruitTemplates } from '../../core/dynasty/offseason';
@@ -147,7 +147,13 @@ export function EditLook({ p }: { p: DPlayer }) {
           <Select label="Hair color" value={look.hairColor} options={HAIR_COLOR_LABELS.map((h, i) => ({ value: i, label: h }))} onChange={(x) => pick('hairColor', Number(x))} />
           <Select label="Facial hair" value={look.beard} options={BEARD_STYLES.map((b) => ({ value: b, label: BEARD_LABELS[b] }))} onChange={(x) => pick('beard', x as Required<LookEdit>['beard'])} />
           <Select label="Expression" value={look.mouth} options={MOUTHS.map((m) => ({ value: m, label: MOUTH_LABELS[m] }))} onChange={(x) => pick('mouth', x as Required<LookEdit>['mouth'])} />
+          <Select label="Eye color" value={look.eyeColor} options={EYE_COLOR_LABELS.map((h, i) => ({ value: i, label: h }))} onChange={(x) => pick('eyeColor', Number(x))} />
+          <Select label="Age" value={look.age} options={AGES.map((a) => ({ value: a, label: AGE_LABELS[a] }))} onChange={(x) => pick('age', x as Required<LookEdit>['age'])} />
+          <Select label="Jaw" value={look.jaw} options={JAWS.map((j) => ({ value: j, label: SIZE_LABELS[j] }))} onChange={(x) => pick('jaw', x as Required<LookEdit>['jaw'])} />
+          <Select label="Neck" value={look.neck} options={NECKS.map((n) => ({ value: n, label: SIZE_LABELS[n] }))} onChange={(x) => pick('neck', x as Required<LookEdit>['neck'])} />
           <Check checked={look.eyeBlack} onChange={(v) => pick('eyeBlack', v)}>Eye black</Check>
+          <Check checked={look.earring} onChange={(v) => pick('earring', v)}>Earrings</Check>
+          <Check checked={look.chain} onChange={(v) => pick('chain', v)}>Chain</Check>
         </div>
       </div>
       {error && <Note kind="error">{error}</Note>}

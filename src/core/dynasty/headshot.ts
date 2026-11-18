@@ -1,354 +1,110 @@
-// 16-bit style headshots for the player pages (user, 2026-11-12: shaded, no outline, "a little more
-// detailed", plain darker gray background, the team's recorded colors). Drawn by code on a 40 × 40 grid from
-// the player alone, so a player always looks the same: skin tone (DPlayer.skin), build by position (wide
-// necks and shoulders for linemen, medium for HB, FB, TE and LB, slim for the rest), and from his ID a hair
-// style and color, facial hair, expression and eye black. The jersey is the team's main color with the
-// collar in its second color. Pure function: an RGBA image.
+// Players' headshots: the look a player has, drawn by portrait.ts (the 16-bit style; user, 2026-11-18). Skin tone
+// (DPlayer.skin) and build by position come from the player; from his ID a hair style and color, facial hair,
+// expression and eye black (the draws the earlier portraits used, so existing players keep their hair), and from a
+// second draw of their own the newer parts: jaw and neck by position, eye color, earrings and a chain, and for
+// players made since the new styles (DPlayer.lookV 2) a hair style from the full list. The user can change any
+// part (DPlayer.look). The jersey is the team's main color with the collar in its second color.
 
 import { rng, type DPlayer } from './model';
+import { BEARD_STYLES, drawPortrait, HAIR_STYLES, hexRgb, jawNeckFor, MOUTHS, pickW, PORTRAIT_SIZE, type Age, type Beard, type Build, type HairStyle, type Jaw, type Mouth, type Neck, type PortraitLook } from './portrait';
 
-export const HEAD_SIZE = 40;
-type RGB = [number, number, number];
+export { BEARD_STYLES, HAIR_STYLES, MOUTHS };
+export const HEAD_SIZE = PORTRAIT_SIZE;
+export type HeadshotLook = PortraitLook;
+export const drawHeadshot = drawPortrait;
 
-const SKIN: [RGB, RGB, RGB, RGB][] = [ // base, shade, highlight, deep (SKIN_TONES in appearance.ts: Light, Tan, Brown, Dark)
-  [[241, 198, 162], [214, 163, 128], [252, 222, 196], [190, 140, 108]],
-  [[207, 152, 112], [178, 122, 86], [228, 180, 142], [152, 100, 68]],
-  [[146, 100, 72], [116, 76, 54], [172, 126, 96], [94, 60, 42]],
-  [[92, 64, 46], [68, 46, 34], [118, 86, 64], [52, 36, 26]],
-];
-const HAIR: RGB[] = [[30, 24, 20], [74, 48, 30], [126, 84, 46], [208, 172, 104], [18, 18, 24]];
-/** The styles a player's ID picks from. Never add to or reorder this list: every generated look would change. */
+/** Hair colors by index (saved looks store the index: never reorder, only add). */
+const HAIR = ['#2b1d16', '#553522', '#86592f', '#c99c55', '#141218', '#7e3418', '#8e8a86'];
+export const HAIR_COLOR_LABELS = ['Dark brown', 'Brown', 'Light brown', 'Blond', 'Black', 'Red', 'Gray'] as const;
+/** Eye colors by index. */
+const EYES = ['#3a2418', '#28180f', '#6e542c', '#4a6842', '#466c96', '#68768a'];
+export const EYE_COLOR_LABELS = ['Brown', 'Dark brown', 'Hazel', 'Green', 'Blue', 'Gray'] as const;
+/** The styles a player's ID picks from for players made before the new styles. Never add to or reorder this list. */
 const GENERATED_STYLES = ['short', 'buzz', 'fade', 'curls', 'locs', 'flow', 'bald', 'twists', 'afro', 'mohawk'] as const;
-/** Every style, in the editor's order. 'locs' is the long version (it keeps its name for saved looks). */
-export const HAIR_STYLES = ['short', 'buzz', 'fade', 'curls', 'locs', 'locsShort', 'flow', 'bald', 'twists', 'afro', 'mohawk'] as const;
+/** Players made since (lookV 2): the full list, weighted by skin tone; mullet and man bun rare. */
+const STYLES_LIGHT: [HairStyle, number][] = [['short', 16], ['buzz', 11], ['fade', 10], ['sidepart', 13], ['flow', 10], ['curls', 8], ['flattop', 4], ['mohawk', 2], ['bald', 3], ['mullet', 2], ['manbun', 2]];
+const STYLES_DARK: [HairStyle, number][] = [['short', 7], ['buzz', 8], ['fade', 14], ['hightop', 5], ['flattop', 5], ['curls', 6], ['twists', 10], ['afro', 5], ['locs', 8], ['locsShort', 8], ['cornrows', 8], ['braids', 5], ['bald', 4], ['mohawk', 2], ['sidepart', 1]];
 const BEARDS = ['none', 'none', 'stubble', 'none', 'goatee', 'beard', 'stubble'] as const;
-export const MOUTHS = ['neutral', 'smile', 'smirk', 'serious', 'grin'] as const;
 
-/** Choices for the appearance editor (user, 2026-11-12: editable any time; nothing of it goes into the ROM). */
-export const HAIR_STYLE_LABELS: Record<(typeof HAIR_STYLES)[number], string> = {
-  short: 'Short', buzz: 'Buzz cut', fade: 'Fade', curls: 'Curls', locs: 'Locs long', locsShort: 'Locs short', flow: 'Flow', bald: 'Bald', twists: 'Twists', afro: 'Afro', mohawk: 'Mohawk',
+export const HAIR_STYLE_LABELS: Record<HairStyle, string> = {
+  short: 'Short', buzz: 'Buzz cut', fade: 'Fade', sidepart: 'Side part', flattop: 'Flat-top', hightop: 'High-top', curls: 'Curls', twists: 'Twists', afro: 'Afro',
+  locs: 'Locs long', locsShort: 'Locs short', cornrows: 'Cornrows', braids: 'Braids', flow: 'Flow', mullet: 'Mullet', manbun: 'Man bun', mohawk: 'Mohawk', bald: 'Bald',
 };
-export const HAIR_COLOR_LABELS = ['Dark brown', 'Brown', 'Light brown', 'Blond', 'Black'] as const;
-export const BEARD_STYLES = ['none', 'stubble', 'goatee', 'beard'] as const;
-export const BEARD_LABELS: Record<(typeof BEARD_STYLES)[number], string> = { none: 'None', stubble: 'Stubble', goatee: 'Goatee', beard: 'Beard' };
-export const MOUTH_LABELS: Record<(typeof MOUTHS)[number], string> = { neutral: 'Neutral', smile: 'Smile', smirk: 'Smirk', serious: 'Serious', grin: 'Grin' };
+export const BEARD_LABELS: Record<Beard, string> = { none: 'None', stubble: 'Stubble', mustache: 'Mustache', goatee: 'Goatee', beard: 'Beard' };
+export const MOUTH_LABELS: Record<Mouth, string> = { neutral: 'Neutral', smile: 'Smile', smirk: 'Smirk', serious: 'Serious', grin: 'Grin' };
+export const AGES = ['young', 'middle', 'older'] as const;
+export const AGE_LABELS: Record<Age, string> = { young: 'Young', middle: 'Middle-aged', older: 'Older' };
+export const JAWS = ['narrow', 'medium', 'wide'] as const;
+export const NECKS = ['thin', 'medium', 'thick'] as const;
+export const SIZE_LABELS: Record<Jaw | Neck, string> = { narrow: 'Narrow', medium: 'Medium', wide: 'Wide', thin: 'Thin', thick: 'Thick' };
 
 /** A player's stored changes to his generated look (`DPlayer.look`); anything left out stays generated. */
 export interface LookEdit {
-  hair?: (typeof HAIR_STYLES)[number];
+  hair?: HairStyle;
   /** Index into HAIR_COLOR_LABELS. */
   hairColor?: number;
-  beard?: (typeof BEARD_STYLES)[number];
-  mouth?: (typeof MOUTHS)[number];
+  beard?: Beard;
+  mouth?: Mouth;
   eyeBlack?: boolean;
+  age?: Age;
+  jaw?: Jaw;
+  neck?: Neck;
+  /** Index into EYE_COLOR_LABELS. */
+  eyeColor?: number;
+  earring?: boolean;
+  chain?: boolean;
 }
 
-/** Head half-width, neck half-width, shoulder half-width (grid cells). */
-const BUILD = { slim: [7.0, 3, 13], medium: [7.6, 4.5, 16], wide: [8.4, 6.2, 19.5] } as const;
-export const buildOf = (pos: string): keyof typeof BUILD =>
+export const buildOf = (pos: string): Build =>
   ['LT', 'LG', 'C', 'RG', 'RT', 'LE', 'RE', 'DT'].includes(pos) ? 'wide' : ['HB', 'FB', 'TE', 'LOLB', 'MLB', 'ROLB'].includes(pos) ? 'medium' : 'slim';
 
-const hex = (h: string): RGB => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
-const sh = (c: RGB, k: number): RGB => c.map((v) => Math.max(0, Math.min(255, Math.round(v * k)))) as RGB;
-const mix = (a: RGB, b: RGB, t: number): RGB => a.map((v, i) => Math.round(v * (1 - t) + b[i] * t)) as RGB;
-const WHITE: RGB = [255, 255, 255];
-
-export interface HeadshotLook {
-  skin: number; build: keyof typeof BUILD; hair: (typeof HAIR_STYLES)[number]; hairColor: RGB;
-  beard: (typeof BEARDS)[number]; mouth: (typeof MOUTHS)[number]; eyeBlack: boolean;
-  /** Coaches only (coachLook.ts): headwear in the team's colors, glasses, an older face's lines, thinning hair. */
-  hat?: 'none' | 'visor' | 'cap';
-  hatColors?: [string, string];
-  glasses?: 'none' | 'square' | 'round';
-  lines?: boolean;
-  thinning?: boolean;
+/** An eye color for a skin tone from a 0-1 draw: blue, green and hazel mostly on the lighter tones, brown on all. */
+export function eyeColorFor(skin: number, r: number): number {
+  if (skin === 0) return pickW(r, [[0, 40], [2, 15], [3, 10], [4, 30], [5, 5]]);
+  if (skin === 1) return pickW(r, [[0, 60], [1, 10], [2, 15], [3, 5], [4, 7], [5, 3]]);
+  return pickW(r, [[0, 45], [1, 50], [2, 5]]);
 }
 
-/** A player's look: skin and build from the player, the rest from his ID (the same every time). */
-export function lookOf(p: Pick<DPlayer, 'id' | 'skin' | 'pos' | 'cls' | 'look'>): HeadshotLook {
+/** The generated choices (what the editor shows before any change), with the player's changes on top. */
+export function lookChoices(p: Pick<DPlayer, 'id' | 'skin' | 'pos' | 'cls' | 'look' | 'lookV'>): Required<LookEdit> {
   const r = rng((Math.imul(p.id, 0x9e3779b1) ^ 0x5bd1e995) >>> 0);
   const skin = Math.max(0, Math.min(3, p.skin));
-  const hairColor = skin < 2 ? HAIR[Math.floor(r() * HAIR.length)] : [HAIR[0], HAIR[0], HAIR[1], HAIR[4]][Math.floor(r() * 4)];
-  let hair: (typeof HAIR_STYLES)[number] = GENERATED_STYLES[Math.floor(r() * GENERATED_STYLES.length)];
+  let hairColor = skin < 2 ? Math.floor(r() * 5) : [0, 0, 1, 4][Math.floor(r() * 4)];
+  let hair: HairStyle = GENERATED_STYLES[Math.floor(r() * GENERATED_STYLES.length)];
   // Locs come long or short (user, 2026-11-13), half each, from a draw of its own so nothing else about a look moves.
   if (hair === 'locs' && rng((Math.imul(p.id, 0x85ebca6b) ^ 0x10c5) >>> 0)() < 0.5) hair = 'locsShort';
   // Younger players have less facial hair.
-  let beard = BEARDS[Math.floor(r() * BEARDS.length)];
+  let beard: Beard = BEARDS[Math.floor(r() * BEARDS.length)];
   if ((p.cls === 'FR' || p.cls === 'SO') && beard === 'beard' && r() < 0.6) beard = 'stubble';
-  const gen: HeadshotLook = { skin, build: buildOf(p.pos), hair, hairColor, beard, mouth: MOUTHS[Math.floor(r() * MOUTHS.length)], eyeBlack: r() < 0.3 };
-  const e = p.look;
-  if (!e) return gen;
+  const mouth = MOUTHS[Math.floor(r() * MOUTHS.length)];
+  const eyeBlack = r() < 0.05; // user, 2026-11-18: "eye black on 30% is way too much. Make it like 5%"
+  // The newer parts, from a draw of their own (always the same number of draws, so each part stays put).
+  const r2 = rng((Math.imul(p.id + 7, 0x27d4eb2f) ^ 0x165667b1) >>> 0);
+  const d = Array.from({ length: 8 }, () => r2());
+  const { jaw, neck } = jawNeckFor(p.pos, d[0], d[1]);
+  if (p.lookV === 2) {
+    hair = pickW(d[5], skin < 2 ? STYLES_LIGHT : STYLES_DARK);
+    if (skin === 0 && d[6] < 0.05) hairColor = 5;
+    if (beard === 'none' && d[7] < 0.06) beard = 'mustache';
+  }
+  const gen: Required<LookEdit> = {
+    hair, hairColor, beard, mouth, eyeBlack, age: 'young', jaw, neck,
+    eyeColor: eyeColorFor(skin, d[2]), earring: d[3] < 0.15, chain: d[4] < 0.08,
+  };
+  return { ...gen, ...(p.look ?? {}) };
+}
+
+/** A player's look for drawHeadshot. */
+export function lookOf(p: Pick<DPlayer, 'id' | 'skin' | 'pos' | 'cls' | 'look' | 'lookV'>): HeadshotLook {
+  const c = lookChoices(p);
+  let hairColor = hexRgb(HAIR[c.hairColor] ?? HAIR[0]);
+  if (c.age === 'older' && c.hairColor !== 6) hairColor = hairColor.map((v, i) => Math.round(v * 0.4 + hexRgb(HAIR[6])[i] * 0.6));
   return {
-    ...gen,
-    ...(e.hair && { hair: e.hair }),
-    ...(e.hairColor !== undefined && HAIR[e.hairColor] && { hairColor: HAIR[e.hairColor] }),
-    ...(e.beard && { beard: e.beard }),
-    ...(e.mouth && { mouth: e.mouth }),
-    ...(e.eyeBlack !== undefined && { eyeBlack: e.eyeBlack }),
+    skin: Math.max(0, Math.min(3, p.skin)), build: buildOf(p.pos), jaw: c.jaw, neck: c.neck, age: c.age,
+    hair: c.hair, hairColor, beard: c.beard, mouth: c.mouth, eyeColor: hexRgb(EYES[c.eyeColor] ?? EYES[0]),
+    acc: { eyeBlack: c.eyeBlack, earring: c.earring, chain: c.chain },
   };
 }
 
-/** The generated look's choices as editor values (what the menus show before any change). */
-export function lookChoices(p: Pick<DPlayer, 'id' | 'skin' | 'pos' | 'cls' | 'look'>): Required<LookEdit> {
-  const l = lookOf(p);
-  const color = HAIR.findIndex((c) => c === l.hairColor);
-  return { hair: l.hair, hairColor: Math.max(0, color), beard: l.beard, mouth: l.mouth, eyeBlack: l.eyeBlack };
-}
-
-/** The headshot as RGBA (HEAD_SIZE × HEAD_SIZE): team colors as CSS hex (#rrggbb). */
-export function drawHeadshot(look: HeadshotLook, jersey: string, trim: string): Uint8ClampedArray<ArrayBuffer> {
-  const S = HEAD_SIZE;
-  const px = new Map<number, RGB>();
-  const put = (x: number, y: number, c: RGB) => { if (x >= 0 && x < S && y >= 0 && y < S) px.set(y * S + x, c); };
-  const get = (x: number, y: number) => px.get(y * S + x);
-  const [base, shade, hi, deep] = SKIN[look.skin];
-  const hair = look.hairColor, hdark = sh(hair, 0.7), hhi = mix(hair, WHITE, 0.28);
-  const jc = hex(jersey), tc = hex(trim);
-  const [hw, nw, sw] = BUILD[look.build];
-  const cx = 19.5;
-
-  // Shoulders and jersey: lit pad tops, the right side in shade.
-  const top = 30;
-  for (let y = top; y < S; y++) {
-    const k = y - top;
-    const half = k < 3 ? Math.min(sw, sw - 6 + k * 2.2) : sw + Math.min(2, (k - 3) * 0.5);
-    for (let x = 0; x < S; x++) {
-      const d = Math.abs(x + 0.5 - cx);
-      if (d > half) continue;
-      let c = jc;
-      if (x + 0.5 > cx + half - 3) c = sh(jc, 0.8);
-      else if (x + 0.5 < cx - half + 2) c = mix(jc, WHITE, 0.1);
-      if (k === 0 || (k === 1 && d > half - 2)) c = mix(jc, WHITE, 0.2);
-      if (k >= 2 && d > half - 1) c = sh(c, 0.85); // pad edge
-      put(x, y, c);
-    }
-  }
-  // Collar: a V neck in the trim color.
-  for (let i = 0; i < 5; i++) {
-    for (const side of [-1, 1]) {
-      const x = Math.floor(cx + side * (nw + 1 - i * 0.8));
-      put(x, top + i, tc);
-      put(x + (side < 0 ? 1 : -1), top + i, sh(tc, 0.85));
-    }
-  }
-  // Long hair falls behind the head onto the shoulders (user: "go down behind the head too, not just on
-  // the sides"): drawn before the neck and head, which then cover its middle.
-  if (look.hair === 'flow' || look.hair === 'locs') {
-    for (let y = 8; y < 33; y++) {
-      const w = y <= 21 ? hw + 1.6 : hw + 1.6 + (y - 21) * 0.3;
-      for (let x = 0; x < S; x++) {
-        const d = Math.abs(x + 0.5 - cx);
-        if (d > w || y > 29 + ((x * 5) % 4)) continue; // a ragged bottom edge
-        let c: RGB;
-        if (look.hair === 'locs') c = x % 2 ? hdark : (y + x) % 5 === 0 ? hhi : hair;
-        else c = x + 0.5 > cx + w - 2.5 ? hdark : x + 0.5 < cx - w + 1.5 && y % 4 === 1 ? hhi : hair;
-        put(x, y, c);
-      }
-    }
-  }
-  // Neck.
-  for (let y = 24; y < top + 4; y++) {
-    const lim = y < top ? nw : nw - (y - top);
-    for (let x = 0; x < S; x++) {
-      if (Math.abs(x + 0.5 - cx) > lim) continue;
-      let c = y < 27 ? shade : base;
-      if (x + 0.5 > cx + lim - 1.5) c = y < 27 ? deep : shade;
-      put(x, y, c);
-    }
-  }
-  // Head: a profile of half-widths by row.
-  const prof = new Map<number, number>();
-  for (let y = 6; y < 28; y++) {
-    const t = y - 6;
-    const w = t < 4 ? hw - (4 - t) * 1.1 + (t === 3 ? 0.4 : 0) : y <= 21 ? hw : hw - (y - 21) * (look.build === 'wide' ? 0.75 : 0.95);
-    prof.set(y, w);
-    for (let x = 0; x < S; x++) {
-      const d = Math.abs(x + 0.5 - cx);
-      if (d > w) continue;
-      let c = base;
-      if (x + 0.5 > cx + w - 1.6) c = shade;
-      if (x + 0.5 < cx - w + 1.2 && y > 9 && y < 21) c = hi;
-      if (y >= 25) c = d > w - 2 ? shade : base;
-      put(x, y, c);
-    }
-  }
-  // Ears right against the head's widest columns (the user saw a detached ear in the mockup).
-  const headL = Math.ceil(cx - hw - 0.5), headR = Math.floor(cx + hw - 0.5);
-  const L = headL - 1, R = headR + 1;
-  for (let y = 15; y < 21; y++) { put(L, y, y === 15 || y === 20 ? shade : y === 17 || y === 18 ? shade : base); put(R, y, shade); }
-  put(L, 17, deep); put(R, 17, deep);
-  for (const x of [15, 16, 17]) put(x, 10, hi);
-  put(16, 9, hi);
-  // Eyes looking straight ahead: white, pupil, white, mirrored about the face's center line (x 19.5).
-  const EY = 17;
-  for (const ex of [15, 22]) {
-    put(ex, EY, [248, 248, 248]); put(ex + 1, EY, [26, 22, 26]); put(ex + 2, EY, [248, 248, 248]);
-    for (let x = ex; x < ex + 3; x++) { put(x, EY - 1, deep); put(x, EY + 1, shade); }
-  }
-  const brow = look.hair === 'bald' ? deep : hdark;
-  if (look.mouth === 'serious') for (const [x, y] of [[14, 14], [15, 15], [16, 15], [17, 15], [25, 14], [24, 15], [23, 15], [22, 15]]) put(x, y, brow);
-  else { for (const x of [14, 15, 16, 17, 22, 23, 24, 25]) put(x, 14, brow); put(17, 15, brow); put(22, 15, brow); }
-  // Nose.
-  put(20, 18, shade); put(20, 19, shade); put(19, 19, hi); put(18, 20, deep); put(21, 20, deep); put(19, 21, shade); put(20, 21, shade);
-  if (look.eyeBlack) for (const x of [14, 15, 16, 17, 22, 23, 24, 25]) put(x, 19, [22, 22, 26]);
-  // Mouth.
-  const lip = mix(deep, [150, 60, 60], 0.25), lip2 = mix(shade, [170, 90, 90], 0.2), teeth: RGB = [246, 244, 236];
-  const MY = 23;
-  const mouthPx = new Set<number>();
-  const m = (x: number, y: number, c: RGB) => { put(x, y, c); mouthPx.add(y * S + x); };
-  if (look.mouth === 'smile') { for (const [x, y] of [[16, MY - 1], [17, MY], [18, MY], [19, MY], [20, MY], [21, MY], [22, MY], [23, MY - 1]]) m(x, y, lip); for (let x = 18; x < 22; x++) m(x, MY + 1, lip2); }
-  else if (look.mouth === 'grin') { m(16, MY - 1, lip); m(23, MY - 1, lip); for (let x = 17; x < 23; x++) { m(x, MY - 1, teeth); m(x, MY, lip); } for (let x = 18; x < 22; x++) m(x, MY + 1, lip2); }
-  else if (look.mouth === 'smirk') { for (const [x, y] of [[17, MY], [18, MY], [19, MY], [20, MY], [21, MY], [22, MY - 1]]) m(x, y, lip); for (let x = 18; x < 21; x++) m(x, MY + 1, lip2); }
-  else { for (let x = 17; x < 23; x++) m(x, MY, lip); for (let x = 18; x < 22; x++) m(x, MY + 1, lip2); }
-  // Facial hair.
-  if (look.beard === 'stubble') {
-    for (let y = 20; y < 27; y++) {
-      const w = prof.get(y) ?? 0;
-      for (let x = 0; x < S; x++) {
-        const d = Math.abs(x + 0.5 - cx), c = get(x, y);
-        if (c && d <= w && (x + y) % 2 === 0 && (y >= 24 || d > w - 2.5) && !mouthPx.has(y * S + x)) put(x, y, mix(c, hair, 0.45));
-      }
-    }
-  } else if (look.beard === 'goatee') {
-    for (const [x, y] of [[18, 25], [19, 25], [20, 25], [21, 25], [19, 26], [20, 26], [17, 22], [18, 22], [21, 22], [22, 22]]) put(x, y, hair);
-  } else if (look.beard === 'beard') {
-    for (let y = 18; y < 28; y++) {
-      const w = prof.get(y) ?? 0;
-      for (let x = 0; x < S; x++) {
-        const d = Math.abs(x + 0.5 - cx);
-        if (d <= w && (y >= 24 || d > w - 2) && !mouthPx.has(y * S + x)) put(x, y, x + 0.5 > cx + w - 1.5 ? hdark : hair);
-      }
-    }
-    for (let x = 17; x < 23; x++) put(x, MY, lip);
-  }
-  // Hair: a cap over the head's top (rounded above the head too), then each style's own shape.
-  const widthAt = (y: number) => prof.get(y) ?? Math.max(1, hw - 1.2 - (6 - y) * 1.0);
-  const cap = (y0: number, y1: number, grow: number) => {
-    for (let y = y0; y < y1; y++) {
-      const w = (y < 9 ? Math.max(widthAt(y), hw - 1.5 - Math.max(0, 6 - y) * 1.1) : widthAt(y)) + grow;
-      for (let x = 0; x < S; x++) {
-        if (Math.abs(x + 0.5 - cx) > w) continue;
-        let c = hair;
-        if (x + 0.5 > cx + w - 2) c = hdark;
-        if (y === y0 + 1 && x + 0.5 > cx - w + 2 && x + 0.5 < cx - 1) c = hhi;
-        put(x, y, c);
-      }
-    }
-  };
-  switch (look.thinning ? 'thinning' : look.hair) {
-    case 'thinning':
-      // Hair only on the sides and a little at the back of the crown (the top of the head shows).
-      for (let y = 9; y < 17; y++) { put(headL, y, hair); put(headL + 1, y, y % 2 ? hair : hhi); put(headR, y, hdark); put(headR - 1, y, hair); }
-      for (const [x, y] of [[headL + 2, 8], [headR - 2, 8], [headL + 1, 7], [headR - 1, 7]]) put(x, y, hair);
-      break;
-    case 'short':
-      cap(4, 11, 0.6);
-      for (const y of [11, 12]) { put(headL, y, hair); put(headR, y, hdark); }
-      for (const [x, y] of [[15, 5], [15, 6], [16, 7]]) put(x, y, hhi); // a side part
-      break;
-    case 'buzz':
-      for (let y = 6; y < 11; y++) {
-        const w = widthAt(y);
-        for (let x = 0; x < S; x++) if (Math.abs(x + 0.5 - cx) <= w) put(x, y, mix(base, hair, (x + y) % 2 ? 0.75 : 0.55));
-      }
-      break;
-    case 'fade':
-      cap(4, 9, 0.3);
-      for (let y = 9; y < 14; y++) { put(headL, y, mix(base, hair, 0.5)); put(headR, y, mix(shade, hair, 0.5)); }
-      break;
-    case 'curls': case 'afro': {
-      const [rx, ry, cy] = look.hair === 'curls' ? [10.5, 7.5, 9] : [12.5, 9.5, 9.5];
-      for (let y = 0; y < 16; y++) {
-        for (let x = 0; x < S; x++) {
-          if (((x + 0.5 - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 > 1 || (y >= 11 && Math.abs(x + 0.5 - cx) < hw - 0.5)) continue;
-          // Clumps of curls: 2 × 2 cells, each with a lit corner, darker toward the right.
-          const clump = ((x >> 1) + (y >> 1) * 3) % 3;
-          const lit = x % 2 === 0 && y % 2 === 0;
-          put(x, y, x + 0.5 > cx + rx - 3 ? hdark : lit && clump !== 2 ? hhi : clump === 2 ? hdark : hair);
-        }
-      }
-      break;
-    }
-    case 'locs': case 'locsShort': // the same strands beside the face; the long version also falls behind the head (above)
-      cap(4, 10, 1.0);
-      for (const x of [headL - 1, headL, headR, headR + 1]) for (let y = 10; y < 24 + (x % 2) * 2; y++) put(x, y, y % 3 ? hair : hhi);
-      break;
-    case 'flow':
-      cap(4, 11, 1.2);
-      for (let y = 11; y < 28; y++) {
-        put(headL - 1, y, hair); put(headR + 1, y, hdark);
-        if (y < 15) { put(headL, y, hair); put(headR, y, hdark); }
-      }
-      break;
-    case 'twists':
-      cap(5, 10, 0.6);
-      // Short twists: two-pixel clumps standing up across the top, lit on the left.
-      for (let x = headL; x <= headR; x += 2) {
-        const h = 3 + ((x * 7) % 3);
-        for (let y = 6 - h; y < 7; y++) { put(x, y, y === 6 - h ? hhi : hair); put(x + 1, y, hdark); }
-      }
-      break;
-    case 'mohawk':
-      for (let y = 1; y < 10; y++) for (const x of [18, 19, 20, 21]) put(x, y, x === 18 ? hhi : x === 21 ? hdark : hair);
-      for (const y of [7, 8, 9]) { const w = widthAt(y); for (let x = 0; x < S; x++) if (Math.abs(x + 0.5 - cx) <= w && (x < 18 || x > 21)) put(x, y, mix(base, hair, 0.3)); }
-      break;
-    case 'bald':
-      break;
-  }
-
-  // Coaches: an older face's lines, glasses, then headwear over the hair.
-  if (look.lines) {
-    for (const x of [16, 17, 18, 21, 22, 23]) put(x, 11, mix(base, deep, 0.45));
-    for (const x of [17, 18, 21, 22]) put(x, 12, mix(base, deep, 0.35));
-    for (const [x, y] of [[14, 20], [14, 21], [25, 20], [25, 21], [15, 22], [24, 22]]) put(x, y, mix(base, deep, 0.4));
-  }
-  if (look.glasses && look.glasses !== 'none') {
-    // Two lenses of 4 × 3 over the eyes (x 14-17 and 22-25), a frame around each, a bridge and the arms.
-    const frame: RGB = [28, 26, 30];
-    const tint = (x: number, y: number) => { const c = get(x, y); if (c) put(x, y, mix(c, [200, 220, 235], 0.22)); };
-    for (const lx of [14, 22]) {
-      for (let x = lx; x < lx + 4; x++) for (let y = EY - 1; y <= EY + 1; y++) tint(x, y);
-      const round = look.glasses === 'round';
-      for (let x = lx + (round ? 1 : 0); x < lx + (round ? 3 : 4); x++) { put(x, EY - 2, frame); put(x, EY + 2, frame); }
-      for (let y = EY - (round ? 1 : 2); y <= EY + (round ? 1 : 2); y++) { put(lx - 1, y, frame); put(lx + 4, y, frame); }
-    }
-    put(19, EY - 1, frame); put(20, EY - 1, frame);
-    put(headL, EY - 1, frame); put(headR, EY - 1, frame);
-  }
-  if (look.hat && look.hat !== 'none') {
-    const hc = hex(look.hatColors?.[0] ?? '#3a3d44'), ht = hex(look.hatColors?.[1] ?? '#ffffff');
-    if (look.hat === 'cap') {
-      // The crown over the top of the head, a button, the logo patch, then the bill in front.
-      for (let y = 1; y < 11; y++) {
-        const w = y < 6 ? Math.max(2, hw + 0.4 - (6 - y) * (6 - y) * 0.32) : hw + 0.4;
-        for (let x = 0; x < S; x++) {
-          const d = Math.abs(x + 0.5 - cx);
-          if (d > w) continue;
-          put(x, y, x + 0.5 > cx + w - 2 ? sh(hc, 0.78) : y === 3 && x + 0.5 < cx - 1 ? mix(hc, WHITE, 0.2) : hc);
-        }
-      }
-      for (let y = 5; y < 9; y++) for (let x = 18; x < 22; x++) put(x, y, ht);
-    } else {
-      // A visor: an open band (the hair shows above it) and a stripe in the trim color.
-      for (let y = 9; y < 11; y++) for (let x = 0; x < S; x++) { const d = Math.abs(x + 0.5 - cx); if (d <= hw) put(x, y, y === 9 ? ht : x + 0.5 > cx + hw - 2 ? sh(hc, 0.78) : hc); }
-    }
-    // The bill, seen from the front: a short curved strip below the band, its underside in shade.
-    for (let x = 0; x < S; x++) {
-      const d = Math.abs(x + 0.5 - cx);
-      if (d > hw - 0.5) continue;
-      put(x, 11, hc);
-      if (d <= hw - 2.5) put(x, 12, sh(hc, 0.6));
-    }
-  }
-
-  // Background: a darker gray, a touch lighter at the top.
-  const out = new Uint8ClampedArray(S * S * 4);
-  for (let y = 0; y < S; y++) {
-    const bg = mix([164, 167, 173], [138, 141, 148], y / S);
-    for (let x = 0; x < S; x++) {
-      const c = px.get(y * S + x) ?? bg;
-      out.set([c[0], c[1], c[2], 255], (y * S + x) * 4);
-    }
-  }
-  return out;
-}
+/** Eye colors as RGB for coachLook.ts. */
+export const eyeRgb = (i: number) => hexRgb(EYES[i] ?? EYES[0]);

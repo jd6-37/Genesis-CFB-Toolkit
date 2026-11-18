@@ -233,7 +233,7 @@ export function readPlayersCsv(d: Dynasty, text: string): CsvImport {
       if (e.team === undefined || e.team === null || !e.pos) { out.problems.push(`Row ${k + 2}: a new player needs a Team and a Position.`); return; }
       const np: DPlayer = {
         id: 0, first: e.first ?? '', last: e.last ?? '', pos: e.pos, team: e.team, cls: e.cls ?? 'FR', jersey: e.jersey ?? NO_NUMBER, heightIn: e.heightIn ?? 72, weight: e.weight ?? 200,
-        hometown: e.hometown ?? '', state: e.state ?? '', ovr: 0, ratings: { Weight: 140 + 16 * 4, ...e.ratings }, skin: 0, status: 'active', pot: e.pot,
+        hometown: e.hometown ?? '', state: e.state ?? '', ovr: 0, ratings: { Weight: 140 + 16 * 4, ...e.ratings }, skin: 0, status: 'active', pot: e.pot, lookV: 2,
       };
       np.skin = newSkin(np);
       out.adds.push(np);

@@ -580,7 +580,7 @@ export function makeRecruit(d: Dynasty, tpl: RecruitTemplates, r: Rand, id: numb
   return {
     id, first, last, pos, team, cls: 'FR', jersey: NO_NUMBER,
     heightIn: clamp(Math.round(t.heightIn + gauss(r)), 64, 82), weight: w0, weight0: w0,
-    hometown: town.hometown, state: town.state, ovr, ratings, skin: skinFor(black, r), status: 'active',
+    hometown: town.hometown, state: town.state, ovr, ratings, skin: skinFor(black, r), status: 'active', lookV: 2,
     pot: clamp(Math.round(between(r, plo, phi)), ovr + 3, 99), recruit: { stars, year },
   };
 }

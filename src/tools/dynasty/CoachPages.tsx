@@ -2,8 +2,8 @@
 // mockups" canvas): the Coaches page (every coach, by job) and a page per coach (ratings against the average
 // head coach, his record and career, real seasons marked IRL).
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { drawHeadshot, HEAD_SIZE } from '../../core/dynasty/headshot';
-import { COACH_GLASSES, COACH_GLASSES_LABELS, COACH_HAIR, COACH_HAIR_COLOR_LABELS, COACH_HAIR_LABELS, COACH_HATS, COACH_HAT_LABELS, SKIN_LABELS, coachLook, coachLookChoices } from '../../core/dynasty/coachLook';
+import { AGE_LABELS, BEARD_LABELS, drawHeadshot, HEAD_SIZE } from '../../core/dynasty/headshot';
+import { COACH_GLASSES, COACH_GLASSES_LABELS, COACH_HAIR, COACH_HAIR_COLOR_LABELS, COACH_HAIR_LABELS, COACH_HATS, COACH_HAT_LABELS, COACH_AGES, COACH_BEARDS, SKIN_LABELS, coachLook, coachLookChoices } from '../../core/dynasty/coachLook';
 import { SCHOOL_COLORS } from '../../core/dynasty/schoolColors';
 import {
   COACH_RATINGS, COACH_RATING_HELPS, COACH_RATING_LABELS, coachAge, coachOvr, coachRecord, dynastySeasons, headCoachField, type DCoach,
@@ -449,7 +449,8 @@ function EditCoachLook({ c }: { c: DCoach }) {
       <Select label="Hair" value={ch.hair} onChange={(x) => set({ hair: x as typeof ch.hair })} options={COACH_HAIR.map((x) => ({ value: x, label: COACH_HAIR_LABELS[x] }))} />
       <Select label="Hair color" value={String(ch.hairColor)} onChange={(x) => set({ hairColor: Number(x) })} options={COACH_HAIR_COLOR_LABELS.map((x, i) => ({ value: String(i), label: x }))} />
       <Select label="Skin tone" value={String(ch.skin)} onChange={(x) => set({ skin: Number(x) })} options={SKIN_LABELS.map((x, i) => ({ value: String(i), label: x }))} />
-      <Select label="Facial hair" value={ch.beard} onChange={(x) => set({ beard: x as typeof ch.beard })} options={[{ value: 'none', label: 'None' }, { value: 'stubble', label: 'Stubble' }, { value: 'goatee', label: 'Goatee' }, { value: 'beard', label: 'Beard' }]} />
+      <Select label="Facial hair" value={ch.beard} onChange={(x) => set({ beard: x as typeof ch.beard })} options={COACH_BEARDS.map((x) => ({ value: x, label: BEARD_LABELS[x] }))} />
+      <Select label="Age" value={ch.age} onChange={(x) => set({ age: x as typeof ch.age })} options={COACH_AGES.map((x) => ({ value: x, label: AGE_LABELS[x] }))} />
       <div className="dy-row"><Button variant="quiet" onClick={() => setOpen(false)}>Done</Button></div>
     </div>
   );

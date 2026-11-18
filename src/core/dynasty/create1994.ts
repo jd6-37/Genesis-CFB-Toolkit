@@ -131,7 +131,7 @@ export function createDynasty1994(rom: Uint8Array, rostersText: string, opt: Cre
       const pl: DPlayer = {
         id: players.length + 1, first: named ? nm!.first : '', last: named ? nm!.last : '', pos, team: t.index, cls: cls ?? 'JR',
         jersey: jerseyNumber(rec.numberByte) ?? NO_NUMBER, heightIn: real?.heightIn || madeHeight(pos), weight: ratings.Weight ?? 200,
-        hometown: town.hometown, state: town.state, ovr: 0, ratings, skin: 0, status: 'active', srcId: 100000 + 32 * t.index + def.slot,
+        hometown: town.hometown, state: town.state, ovr: 0, ratings, skin: 0, status: 'active', lookV: 2, srcId: 100000 + 32 * t.index + def.slot,
       };
       pl.ovr = ovrOf(pl);
       players.push(pl);
