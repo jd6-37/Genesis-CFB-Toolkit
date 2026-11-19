@@ -313,7 +313,7 @@ body { margin: 0; background: var(--surface); color: var(--text); font: 400 var(
 .rc-ea { grid-column: 1 / 3; grid-row: 3; display: flex; justify-content: flex-end; margin-top: var(--sp-2); }
 .rc-ea img { width: 64px; height: auto; }
 .rc-box { position: relative; }
-.rc-seal { --w: 64px; position: absolute; width: var(--w); height: auto; top: calc(var(--w) * -0.81 + 18px); right: calc(var(--w) * -0.3); z-index: 1; }
+.rc-seal { --w: 64px; position: absolute; width: var(--w); height: auto; top: calc(var(--w) * -0.81 + 18px); right: calc(var(--w) * -0.5 + 1.5px); z-index: 1; }
 .rc-impact { display: inline-block; width: 10px; height: 10px; margin-left: var(--sp-1); border-radius: 50%; background: var(--bar-on); box-shadow: 1px 1px 0 var(--rule-strong); vertical-align: 1px; }
 .rc-line { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--sp-1) var(--sp-3); margin: 0 0 var(--sp-3); padding-right: 48px; font: 500 var(--fs-4)/1.1 var(--font-display); text-transform: uppercase; }
 .rc-line b { font-weight: 800; }
