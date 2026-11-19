@@ -72,6 +72,16 @@ RetroArch's Genesis Plus GX core writes a 65,456-byte `.srm`: cartridge save RAM
 | Punting | 118 | 31 | punts w, yds sw, long, inside 10 |
 | Defense | 124 | 16-30, 4 bytes each | tackles w, sacks, int |
 
+**Save layout 2** (H-033; 2026 test63 / 1994 test64 on; the claude.ai project's `bw95-manifest-spec.md`, section 2). `openSave` tells the layouts apart by the signature (`layoutOfSig`): 2026 0xE6, 1994 0xE4 (layout 1: 0x6F / 0x94). The season block is 0x1370 bytes: the dynasty stamp at +0x1330 as before, then the build stamp **ELVB** at +0x1340 (`readElvb` in `src/core/manifest.ts`: start build serial and number at New Season, last build serial and number on every season save, generation, save layout, edition, variant) and, at +0x1360, the **last-played ID** (H-037): the dynasty ID block of the ROM that saved the season last. Stats records are 169 bytes (stride 0x152 in the window): bytes 0-123 as above, then the 15 defenders in 3 bytes each: tackles bits 0-7; (tackles bits 8-9 << 6) | sacks; interceptions. A ROM with save layout 2 resets an older save once (no season), so a season can't be carried across the change.
+
+**The ROM manifest** (`src/core/manifest.ts`, the same spec, section 1): `readManifest` reads "ELV1" at 0x2DFF00 (build name, serial, generation, mid-season-from, variant, the 16-byte entries). What the app does with it:
+- `newerRomMessage`: a ROM with a required entry (flags bit 0) whose version, or a generation, this app doesn't know is refused at creation and when a season ROM is written ("this ROM is newer than this version of the Dynasty app").
+- `DSeason.romBuild`: the base ROM's build, recorded at creation and at every season ROM download; `SaveImport.elvb`: the save's ELVB at import.
+- The mid-season check at import (`midSeasonProblem`): the save's last build differs from its start build and the start is older than the last build's mid-season-from → a warning. Mid-season-from comes from the season's `romBuild` when it is that build, else from `KNOWN_BUILDS` (add a line for each mainline).
+- H-037: the roster version warning uses the last-played ID when the save has one, so a season started on an earlier download and played on the newest gives no warning; one last played on an older download names its version.
+- `hasFineRatings` answers from the FINE entry when there is a manifest.
+- `npm run test:manifest -- ROM [SAVE …]` checks a mainline's manifest against the app (every required entry known, the build in `KNOWN_BUILDS`, the addresses the app uses) and reads saves made on it (layout 2, ELVB, packed defenders). The ROM lane can run it on each new mainline.
+
 A record still all FF has never been cleared and reads as zeros. Passing and receiving add up across the league but not always per team (the game sometimes credits a catch without a completion).
 
 Week names follow the game: with the Real 2026 schedule the first week is Week 0; after the regular season come the conference championships and then the playoff rounds (1, 2, 4 or 5 rounds for 2, 4, 12 or 24 teams).

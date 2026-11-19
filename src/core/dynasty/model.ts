@@ -13,6 +13,7 @@ import { teamsOf } from '../wide';
 import type { Attr, Group } from '../rosterLayouts';
 import { ratingProblems, readRating, type TeamRating } from '../teamRatings';
 import { readDynastySave, type DynastySave } from './save';
+import { midSeasonProblem, newerRomMessage, readManifest, type Elvb } from '../manifest';
 import { startingPrestige } from './prestige';
 import { buildRosters } from './rosters';
 import { ovrOf, ratingsFromSlot, setRatingScale, valueOfFine, type Ratings } from './ratings';
@@ -91,6 +92,24 @@ export interface SaveImport {
   weeksDone: number;
   /** The save's data bytes (packed), base64. */
   data: string;
+  /** The save's build stamp at import (save layout 2; H-033), when the ROM wrote one. */
+  elvb?: Elvb;
+}
+
+/** The base ROM's build a season ROM was written from (H-033), from its manifest. */
+export interface RomBuild {
+  name: string;
+  serial: number;
+  number: [number, number, number, number];
+  generation: number;
+  variant: number;
+  midSeasonFrom: number;
+}
+
+/** A ROM's build record, or undefined without a manifest. */
+export function romBuildOf(rom: Uint8Array): RomBuild | undefined {
+  const m = readManifest(rom);
+  return m ? { name: m.name, serial: m.serial, number: m.buildNumber, generation: m.generation, variant: m.variant, midSeasonFrom: m.midSeasonFrom } : undefined;
 }
 
 export interface DSeason {
@@ -125,6 +144,8 @@ export interface DSeason {
   kitsEdited?: boolean;
   /** The season ROM's file name ID (user, 2026-11-18: "…-my_dynasty-fxh834"), made at the first download; the same for the season's later downloads, so the save stays with the file. */
   romId?: string;
+  /** The base ROM's build (H-033): at creation for the first season, at each download of the season ROM after. */
+  romBuild?: RomBuild;
   /** The ROM's conference week settings (first conference week and conference games per conference). */
   confWeeks?: ConfWeeks;
   /** Title game switches per conference (seasonWide.ts, CTG1); absent: the edition's defaults (conferences.ts). */
@@ -279,6 +300,9 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
   // Only ROMs with the dynasty support until the first public release (user, 2026-11-12).
   if (!roster.wide || !hasDynastyHooks(rom)) throw new Error(`A dynasty needs ${DYNASTY_EDITION}.`);
   if (editionOfRom(rom)?.id !== '2026') throw new Error('This is the 1994 Season Edition: its dynasty is made from the ROM\'s own rosters (createDynasty1994).');
+  const newer = newerRomMessage(readManifest(rom));
+  if (newer) throw new Error(newer);
+  const romBuild = romBuildOf(rom);
   const p = wideSeasonProblems(rom);
   if (p.length) throw new Error(`This ROM's season settings can't be read: ${p.join('; ')}.`);
   const n = teamsOf(rom);
@@ -397,7 +421,7 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
     whiteHome: whiteHomeOf(rom),
     romUniforms: romUniformsOf(rom, teams.length),
     players: recordYear(players, startYear),
-    seasons: [{ index: 0, year: startYear, conf: season.conf, confNames: season.names, confWeeks: { start: season.start, games: season.games }, ...(season.titleGames ? { titleGames: season.titleGames } : {}), slots, bw, bench, benchBw, teamOvr, prestige: startingPrestige(teams.map((t) => t.school), teamOvr), imports: [] }],
+    seasons: [{ index: 0, year: startYear, ...(romBuild ? { romBuild } : {}), conf: season.conf, confNames: season.names, confWeeks: { start: season.start, games: season.games }, ...(season.titleGames ? { titleGames: season.titleGames } : {}), slots, bw, bench, benchBw, teamOvr, prestige: startingPrestige(teams.map((t) => t.school), teamOvr), imports: [] }],
   };
 }
 
@@ -462,9 +486,18 @@ export function importSave(d: Dynasty, file: Uint8Array, opt: { at?: string; all
     const year = d.seasons[stamp.season - 1]?.year;
     throw new Error(`This save's season was started with the ${year ?? 'another season\'s'} ROM, and the dynasty is in ${season.year}.${year !== undefined && year < season.year ? ` Start a New Season in the game with the ${season.year} ROM.` : ''}`);
   }
-  if (stamp && stamp.rosterVersion !== (season.rosterVersion ?? 1)) {
-    warning = `This season was started with an earlier ${season.year} ROM, from before your last lineup or schedule change: its stats are counted for the lineup the app has now.`;
+  // H-037 (save layout 2): the ROM that saved the season last, so a season started on an earlier download and played
+  // on the newest one isn't flagged. Without it, the ROM the season was started with.
+  const lastRom = readStamp(save.lastPlayed);
+  const played_on = lastRom && lastRom.dynasty === stamp?.dynasty && lastRom.season === stamp?.season ? lastRom : stamp;
+  if (played_on && played_on.rosterVersion !== (season.rosterVersion ?? 1)) {
+    warning = lastRom && played_on === lastRom
+      ? `This season was last played on version ${played_on.rosterVersion} of the ${season.year} ROM, from before your last lineup or schedule change (the newest is ${season.rosterVersion ?? 1}): its stats are counted for the lineup the app has now.`
+      : `This season was started with an earlier ${season.year} ROM, from before your last lineup or schedule change: its stats are counted for the lineup the app has now.`;
   }
+  // H-033: a season started on one Elevated build and saved on another that isn't safe to switch to mid-season.
+  const mid = midSeasonProblem(save.elvb, season.romBuild);
+  if (mid) warning = warning ? `${mid} ${warning}` : mid;
   // The dynasty's schedule (second season on): the save's regular season should be the same games.
   if (season.schedule && !warning) {
     const want = new Set(season.schedule.games.map((g) => `${g.week}/${g.visitor}/${g.home}`));
@@ -487,7 +520,7 @@ export function importSave(d: Dynasty, file: Uint8Array, opt: { at?: string; all
       });
     if (!same) throw new Error(`This save's season isn't the one imported for ${season.year} so far (its games differ).`);
   }
-  const imp: SaveImport = { at: opt.at ?? new Date().toISOString(), played, weeksDone: weeksDone(save), data: toBase64(packed(file, save)) };
+  const imp: SaveImport = { at: opt.at ?? new Date().toISOString(), played, weeksDone: weeksDone(save), data: toBase64(packed(file, save)), ...(save.elvb ? { elvb: save.elvb } : {}) };
   const imports = season.imports.filter((i) => i.weeksDone !== imp.weeksDone);
   imports.push(imp);
   imports.sort((a, b) => a.played - b.played);

@@ -14,6 +14,7 @@
 //   - Heights nobody has are drawn from the lists' players of the same position; hometowns from the school's own
 //     players in the lists, else mostly from towns in the school's state.
 //   - Starting prestige: the 1994 preseason AP poll, then the teams' OVRs (prestige.ts).
+import { newerRomMessage, readManifest } from '../manifest';
 import { parseBw95 } from '../bw95';
 import { GROUP_ATTRS, GROUP_COLUMNS, type Group } from '../rosterLayouts';
 import { hasOlPatch, OL_PATCH } from '../rosterOlPatch';
@@ -28,7 +29,7 @@ import { DYNASTY_EDITION, hasDynastyHooks, readNamesTable } from './dynastyArea'
 import { EDITIONS, editionOfRom } from './edition';
 import { hasFineRatings, readFineOffsets } from './fine';
 import { romUniformsOf, whiteHomeOf } from './kit';
-import { CLASSES, DYNASTY_FILE, rng, type BwSlot, type ClassYear, type CreateOptions, type DPlayer, type Dynasty, type DTeam } from './model';
+import { CLASSES, DYNASTY_FILE, rng, romBuildOf, type BwSlot, type ClassYear, type CreateOptions, type DPlayer, type Dynasty, type DTeam } from './model';
 import { NO_NUMBER, numberAllowed, replacementNumber, sideOf } from './numbers';
 import { startingPrestige1994 } from './prestige';
 import { ovrOf, ratingsFromSlot, setRatingScale, valueOfFine } from './ratings';
@@ -64,6 +65,9 @@ export function createDynasty1994(rom: Uint8Array, rostersText: string, opt: Cre
   const roster = openRosterRom(rom);
   if (!roster.wide || !hasDynastyHooks(rom)) throw new Error(`A dynasty needs ${DYNASTY_EDITION}.`);
   if (editionOfRom(rom)?.id !== '1994') throw new Error(`This isn't the ${EDITIONS['1994'].name}.`);
+  const newer = newerRomMessage(readManifest(rom));
+  if (newer) throw new Error(newer);
+  const romBuild = romBuildOf(rom);
   const p = wideSeasonProblems(rom);
   if (p.length) throw new Error(`This ROM's season settings can't be read: ${p.join('; ')}.`);
   const n = roster.teams.length;
@@ -173,7 +177,7 @@ export function createDynasty1994(rom: Uint8Array, rostersText: string, opt: Cre
     romUniforms: romUniformsOf(rom, teams.length),
     players,
     seasons: [{
-      index: 0, year: startYear, conf: season.conf, confNames: season.names, confWeeks: { start: season.start, games: season.games },
+      index: 0, year: startYear, ...(romBuild ? { romBuild } : {}), conf: season.conf, confNames: season.names, confWeeks: { start: season.start, games: season.games },
       ...(season.titleGames ? { titleGames: season.titleGames } : {}),
       slots, bw, bench: teams.map(() => new Array(32).fill(null)), benchBw: teams.map(() => new Array(32).fill(null)), teamOvr,
       prestige: startingPrestige1994(teams.map((t) => t.school), teamOvr), imports: [],

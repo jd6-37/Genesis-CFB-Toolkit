@@ -4,18 +4,24 @@
 // The game keeps its save in the odd bytes of the cartridge window at 0x200000. Genesis Plus GX (RetroArch)
 // writes the window as it is (file offset k = address 0x200000 + k, data on odd offsets); other tools may
 // write only the data bytes. Layout (claude.ai project notes: bw95-dynasty-spec.md, section 3):
-//   $200001 signature (0x6F 2026, 0x94 1994), $200003 0 once a season exists, $200E01 season block (0x1330 data
-//   bytes; the per-team tables at their 138-team offsets, 107 entries used in 1994), $203951 team season stats
-//   (one 0xB8-byte record per team).
+//   $200001 signature, $200003 0 once a season exists, $200E01 season block (the per-team tables at their 138-team
+//   offsets, 107 entries used in 1994), $203951 team season stats. Two layouts (layoutOfSig):
+//   1 (up to 2026 test62 / 1994 test63): signatures 0x6F / 0x94, a 0x1330-byte block + the 16-byte dynasty stamp,
+//     one 0xB8-byte stats record per team.
+//   2 (H-033, 2026 test63 / 1994 test64 on; bw95-manifest-spec.md section 2): signatures 0xE6 / 0xE4, the block is
+//     0x1370 bytes (stamp +0x1330, ELVB +0x1340, last-played ID +0x1360), 169-byte stats records whose 15 defenders
+//     are packed in 3 bytes each.
 
-import { editionOfSig, EDITIONS } from './edition';
+import { editionOfSig, EDITIONS, layoutOfSig } from './edition';
+import { readElvb, type Elvb } from '../manifest';
 
 export const SAVE_SIG = 0x6f;
 const SB_ADDR = 0xe01; // address − 0x200000
 const ST_ADDR = 0x3951;
 const SB_LEN = 0x1330;
-const ST_LEN = 0xb8;
 const SB_SIG = 0x5a;
+/** Per save layout: the stats record's length (data bytes). */
+const ST_LEN: Record<1 | 2, number> = { 1: 0xb8, 2: 169 };
 
 /** A data byte of the save by its window offset (address − 0x200000). */
 type Peek = (offset: number) => number;
@@ -23,16 +29,16 @@ type Peek = (offset: number) => number;
 export type SaveFormat = 'window' | 'packed';
 
 /** Detects the layout and returns a reader of data bytes, or why it isn't a save of this game. */
-export function openSave(file: Uint8Array): { format: SaveFormat; peek: Peek; teams: number } {
+export function openSave(file: Uint8Array): { format: SaveFormat; peek: Peek; teams: number; layout: 1 | 2 } {
   // Genesis Plus GX: the whole window, data on odd offsets (32-64 KB).
-  const w = editionOfSig(file[1]);
-  if (w && file.length >= 2 * (ST_ADDR >> 1) + 2 * w.teams * ST_LEN) {
-    return { format: 'window', peek: (o) => file[o] ?? 0xff, teams: w.teams };
+  const w = editionOfSig(file[1]), lw = layoutOfSig(file[1]);
+  if (w && lw && file.length >= 2 * (ST_ADDR >> 1) + 2 * w.teams * ST_LEN[lw]) {
+    return { format: 'window', peek: (o) => file[o] ?? 0xff, teams: w.teams, layout: lw };
   }
   // Only the data bytes: offset k holds window offset 2k + 1.
-  const p = editionOfSig(file[0]);
-  if (p && file.length >= (ST_ADDR >> 1) + p.teams * ST_LEN) {
-    return { format: 'packed', peek: (o) => file[o >> 1] ?? 0xff, teams: p.teams };
+  const p = editionOfSig(file[0]), lp = layoutOfSig(file[0]);
+  if (p && lp && file.length >= (ST_ADDR >> 1) + p.teams * ST_LEN[lp]) {
+    return { format: 'packed', peek: (o) => file[o >> 1] ?? 0xff, teams: p.teams, layout: lp };
   }
   throw new Error(`This isn't a battery save of Bill Walsh '95 Elevated's ${EDITIONS['2026'].name} or ${EDITIONS['1994'].name} (no save signature found).`);
 }
@@ -119,12 +125,18 @@ export interface DynastySave {
   stats: TeamSaveStats[];
   /** The season's stamp (dynasty ID block), when the ROM wrote one (Elevated, later). */
   stamp: Uint8Array | null;
+  /** Save layout 1 or 2 (by the signature). */
+  layout: 1 | 2;
+  /** Layout 2: the build stamp ELVB (null when the ROM had no manifest). */
+  elvb: Elvb | null;
+  /** Layout 2 (H-037): the dynasty ID block of the ROM that saved the season last (null if it had no dynasty area). */
+  lastPlayed: Uint8Array | null;
 }
 
 /** Parses a save. Throws with a reason when it isn't one. */
 export function readDynastySave(file: Uint8Array): DynastySave {
-  const { format, peek, teams: TEAMS } = openSave(file);
-  const sb = bytes(peek, SB_ADDR, SB_LEN + 16);
+  const { format, peek, teams: TEAMS, layout } = openSave(file);
+  const sb = bytes(peek, SB_ADDR, layout === 2 ? 0x1370 : SB_LEN + 16);
   const hasSeason = peek(3) === 0 && sb[0] === SB_SIG;
   let season: SaveSeason | null = null;
   if (hasSeason) {
@@ -170,7 +182,9 @@ export function readDynastySave(file: Uint8Array): DynastySave {
     };
   }
   const stamp = sb.subarray(SB_LEN, SB_LEN + 16);
-  const stats = Array.from({ length: TEAMS }, (_, t) => teamStats(bytes(peek, ST_ADDR + 2 * ST_LEN * t, ST_LEN)));
+  const len = ST_LEN[layout];
+  const stats = Array.from({ length: TEAMS }, (_, t) => teamStats(bytes(peek, ST_ADDR + 2 * len * t, len), layout));
+  const last = layout === 2 ? sb.subarray(0x1360, 0x1370) : null;
   return {
     format,
     teams: TEAMS,
@@ -178,10 +192,13 @@ export function readDynastySave(file: Uint8Array): DynastySave {
     season,
     stats,
     stamp: stamp[0] === 0x44 && stamp[1] === 0x59 ? new Uint8Array(stamp) : null, // "DY…"
+    layout,
+    elvb: layout === 2 ? readElvb(sb.subarray(0x1340, 0x1360)) : null,
+    lastPlayed: last && last[0] === 0x44 && last[1] === 0x59 ? new Uint8Array(last) : null,
   };
 }
 
-function teamStats(b: Uint8Array): TeamSaveStats {
+function teamStats(b: Uint8Array, layout: 1 | 2): TeamSaveStats {
   // Bytes still 0xFF mean the stats were never cleared (no season played since the save was made).
   const blank = b.every((x) => x === 0xff);
   const z = (n: number) => (blank ? 0 : n);
@@ -201,6 +218,11 @@ function teamStats(b: Uint8Array): TeamSaveStats {
     kicking: [{ slot: 15, s: { fga: z(b[112]), fgm: z(b[113]), long: z(b[114]), blocked: z(b[115]), xpa: z(b[116]), xpm: z(b[117]) } }],
     punting: [{ slot: 31, s: { punts: z(word(b, 118)), yds: z(sword(b, 120)), long: z(b[122]), in10: z(b[123]) } }],
     defense: STAT_SLOTS.defense.map((slot, k) => {
+      if (layout === 2) {
+        // Three bytes: tackles bits 0-7; (tackles bits 8-9 << 6) | sacks; interceptions.
+        const o = 124 + 3 * k;
+        return { slot, s: { tkl: z(b[o] | ((b[o + 1] >> 6) << 8)), sacks: z(b[o + 1] & 63), int: z(b[o + 2]) } };
+      }
       const o = 124 + 4 * k;
       return { slot, s: { tkl: z(word(b, o)), sacks: z(b[o + 2]), int: z(b[o + 3]) } };
     }),

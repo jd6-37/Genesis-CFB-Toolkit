@@ -4,6 +4,7 @@
 // table at 0x2E0000: 138 teams × 32 slots × 3 bytes, six nibbles in the roster record's order, −8..+7 (the 1994
 // Season Edition has the same table for its 107 teams, test23 on).
 // A dynasty season's offsets go in the dynasty area (dynastyArea.ts, header +0x24).
+import { entryOf, readManifest } from '../manifest';
 import { GROUP_ATTRS } from '../rosterLayouts';
 import type { BwSlot } from './model';
 
@@ -27,6 +28,9 @@ const long = (d: Uint8Array, a: number) => ((d[a] << 24) >>> 0) + (d[a + 1] << 1
  * four hops are followed. Before this check knew a hook, the app made up the first season's offsets.
  */
 export function hasFineRatings(d: Uint8Array): boolean {
+  // H-033: a ROM with a manifest says so (entry FINE); older ROMs are found by following the snap's hooks.
+  const m = readManifest(d);
+  if (m) return !!entryOf(m, 'FINE');
   if (d.length < 0x400000 || d[0x06faf4] !== 0x4e || d[0x06faf5] !== 0xf9) return false;
   const isFine = (t: number) => t >= FINE_CODE && t < FINE_CODE_END;
   const passes = (t: number) => PASS_THROUGH.some(([a, b]) => t >= a && t < b);
