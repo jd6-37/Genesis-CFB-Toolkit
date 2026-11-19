@@ -102,7 +102,7 @@ function Grid({ d }: { d: RosterPageData }) {
  * select none/all"): each roster label goes to one position, the depth number and side dropped. */
 const POSITIONS: { id: string; side: 'Offense' | 'Defense' | 'Kicking' }[] = [
   { id: 'QB', side: 'Offense' }, { id: 'HB', side: 'Offense' }, { id: 'FB', side: 'Offense' }, { id: 'WR', side: 'Offense' }, { id: 'TE', side: 'Offense' },
-  { id: 'OT', side: 'Offense' }, { id: 'OG', side: 'Offense' }, { id: 'C', side: 'Offense' },
+  { id: 'OL', side: 'Offense' },
   { id: 'DE', side: 'Defense' }, { id: 'DT', side: 'Defense' }, { id: 'OLB', side: 'Defense' }, { id: 'MLB', side: 'Defense' }, { id: 'CB', side: 'Defense' }, { id: 'S', side: 'Defense' },
   { id: 'K', side: 'Kicking' }, { id: 'P', side: 'Kicking' },
 ];
@@ -111,8 +111,7 @@ function positionOf(label: string): string {
   if (/^HB/.test(label)) return 'HB';
   if (/^(SE|FL|WR)/.test(label)) return 'WR';
   if (/^TE/.test(label)) return 'TE';
-  if (label === 'LT' || label === 'RT') return 'OT';
-  if (label === 'LG' || label === 'RG') return 'OG';
+  if (['LT', 'LG', 'C', 'RG', 'RT'].includes(label)) return 'OL';
   if (/DE$/.test(label)) return 'DE';
   if (/^(DT|LDT|RDT|NT)/.test(label)) return 'DT';
   if (/OLB$/.test(label)) return 'OLB';
@@ -216,8 +215,8 @@ function PlayerTable({ d }: { d: RosterPageData }) {
         <fieldset className="rosters-pos">
           <legend>Positions</legend>
           <div className="rosters-pos-all">
-            <Button variant="quiet" onClick={() => { setPosSet(new Set(ALL_POSITIONS)); setPage(0); }}>All</Button>
-            <Button variant="quiet" onClick={() => { setPosSet(new Set()); setPage(0); }}>None</Button>
+            <button type="button" className="rosters-pos-btn" onClick={() => { setPosSet(new Set(ALL_POSITIONS)); setPage(0); }}>All</button>
+            <button type="button" className="rosters-pos-btn" onClick={() => { setPosSet(new Set()); setPage(0); }}>None</button>
           </div>
           {(['Offense', 'Defense', 'Kicking'] as const).map((side) => (
             <div className="rosters-pos-side" key={side} role="group" aria-label={side}>
@@ -225,7 +224,7 @@ function PlayerTable({ d }: { d: RosterPageData }) {
                 <Check key={id} checked={posSet.has(id)} onChange={(v) => {
                   setPosSet((s) => { const n = new Set(s); if (v) n.add(id); else n.delete(id); return n; });
                   setPage(0);
-                }}>{id}</Check>
+                }}>{id === 'OL' ? 'OLINE' : id}</Check>
               ))}
             </div>
           ))}
