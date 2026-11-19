@@ -61,15 +61,15 @@ export function RosterCard({ team, edition, sheet }: { team: TeamRoster; edition
                   {side.filter((g) => groups.has(g)).map((g) => (
                     <table className={names ? 'rc-group' : 'rc-group rc-nonames'} key={g}>
                       <colgroup>
-                        <col className="rc-c-pos" /><col className="rc-c-no" />{names && <col className="rc-c-name" />}
+                        <col className="rc-c-pos" /><col className="rc-c-no" />{names && <><col className="rc-c-name" /><col className="rc-c-ovr" /></>}
                         {COLS[g].map((k) => <col className="rc-c-r" key={k} />)}
                       </colgroup>
                       <thead>
-                        <tr className="rc-bar"><th colSpan={COLS[g].length + (names ? 3 : 2)} scope="colgroup">{TITLES[g]}</th></tr>
+                        <tr className="rc-bar"><th colSpan={COLS[g].length + (names ? 4 : 2)} scope="colgroup">{TITLES[g]}</th></tr>
                         <tr className="rc-head">
                           <th scope="col"><span className="rc-sr">Position</span></th>
                           <th scope="col">No.</th>
-                          {names && <th scope="col" className="rc-left">Name</th>}
+                          {names && <><th scope="col" className="rc-left">Name</th><th scope="col" className="rc-ovr"><abbr title="Overall at his position">OVR</abbr></th></>}
                           {COLS[g].map((k) => { const [l, full] = ratingLabel(k, g); return <th scope="col" key={k}><abbr title={full}><span className="rc-long">{l}</span><span className="rc-short" aria-hidden="true">{SHORT[k]}</span></abbr></th>; })}
                         </tr>
                       </thead>
@@ -78,7 +78,7 @@ export function RosterCard({ team, edition, sheet }: { team: TeamRoster; edition
                           <tr key={p[0]}>
                             <th scope="row" className="rc-pos">{p[0]}</th>
                             <td>{p[1] ?? ''}</td>
-                            {names && <td className="rc-name" title={`${p[2]} ${p[3]}`.trim() || 'Name not in the game'}>{shortName(p[2], p[3]) || '–'}</td>}
+                            {names && <><td className="rc-name" title={`${p[2]} ${p[3]}`.trim() || 'Name not in the game'}>{shortName(p[2], p[3]) || '–'}</td><td className="rc-ovr">{p[5]}</td></>}
                             {COLS[g].map((k) => <td key={k}>{p[7][k] ?? ''}</td>)}
                           </tr>
                         ))}
