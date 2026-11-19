@@ -44,30 +44,44 @@ function Rosters({ d }: { d: RosterPageData }) {
         </div>
       </div>
       {d.kind === 'cards' && <Grid d={d} />}
-      {d.kind === 'team' && d.team && (
-        <div className="rosters-team">
-          <TeamSteps d={d} label="Teams" />
-          <RosterCard team={d.team} edition={d.edition} sheet={d.sheet} />
-          <TeamSteps d={d} label="Teams, after the card" />
-          <p className="rosters-source">{source(d)}</p>
-        </div>
-      )}
+      {d.kind === 'team' && d.team && <TeamPage d={d} />}
       {d.kind === 'table' && <PlayerTable d={d} />}
     </div>
   );
 }
 
 /** Previous and next team in the edition (A-Z, around the end; user, 2026-11-19), and the way back to the grid. */
-function TeamSteps({ d, label }: { d: RosterPageData; label: string }) {
+/** Previous / next team (A-Z, wrapping), among the teams the filter keeps (the team shown may be outside it). */
+function TeamSteps({ d, label, keep = () => true, query = '' }: { d: RosterPageData; label: string; keep?: (t: { conf: string }) => boolean; query?: string }) {
+  const n = d.teams.length;
   const i = d.teams.findIndex((t) => t.id === d.team!.id);
-  const prev = d.teams[(i - 1 + d.teams.length) % d.teams.length], next = d.teams[(i + 1) % d.teams.length];
+  const step = (dir: 1 | -1) => {
+    for (let k = 1; k < n; k++) { const t = d.teams[(i + dir * k + n * k) % n]; if (keep(t)) return t; }
+    return null;
+  };
+  const prev = step(-1), next = step(1);
   const ed = editionInfo(d.edition);
   return (
     <nav className="rosters-steps" aria-label={label}>
-      <Button variant="quiet" href={rostersHref(d.edition, prev.id)} label={`Previous team: ${prev.school}`}>← {prev.school}</Button>
-      <a className="rosters-all" href={rostersHref(d.edition)}>All {ed.id === 'historic' ? 'historic' : ed.label} teams</a>
-      <Button variant="quiet" href={rostersHref(d.edition, next.id)} label={`Next team: ${next.school}`}>{next.school} →</Button>
+      {prev ? <Button variant="quiet" href={rostersHref(d.edition, prev.id) + query} label={`Previous team: ${prev.school}`}>← {prev.school}</Button> : <span />}
+      <a className="rosters-all" href={rostersHref(d.edition) + query}>All {ed.id === 'historic' ? 'historic' : ed.label} teams</a>
+      {next ? <Button variant="quiet" href={rostersHref(d.edition, next.id) + query} label={`Next team: ${next.school}`}>{next.school} →</Button> : <span />}
     </nav>
+  );
+}
+
+/** A team page: the conference filters (for previous / next), the steps, the card. */
+function TeamPage({ d }: { d: RosterPageData }) {
+  const f = useConfFilter(d, () => {});
+  const hasFilters = POWER[d.edition] || d.teams.some((t) => t.conf);
+  return (
+    <div className="rosters-team">
+      {hasFilters && <div className="rosters-filters rosters-grid-filters">{f.controls}</div>}
+      <TeamSteps d={d} label="Teams" keep={f.keep} query={f.query} />
+      <RosterCard team={d.team!} edition={d.edition} sheet={d.sheet} />
+      <TeamSteps d={d} label="Teams, after the card" keep={f.keep} query={f.query} />
+      <p className="rosters-source">{source(d)}</p>
+    </div>
   );
 }
 
@@ -81,6 +95,26 @@ function useConfFilter(d: RosterPageData, onChange: () => void) {
   const [conf, setConf] = useState('');
   const [power, setPower] = useState(true);
   const [nonPower, setNonPower] = useState(true);
+  // Kept in the address (?conf=SEC&show=power), so the team pages' previous / next and the links between the grid and
+  // the team pages keep the filter (user, 2026-11-19: the filters on the team page too). Read after the first render,
+  // so the built page and the browser's first render match.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const c = q.get('conf') ?? '', show = q.get('show');
+    if (c && d.teams.some((t) => t.conf === c)) setConf(c);
+    if (show === 'power' || show === 'nonpower' || show === 'none') { setPower(show === 'power'); setNonPower(show === 'nonpower'); }
+  }, [d.teams]);
+  const query = (() => {
+    const q = new URLSearchParams();
+    if (conf) q.set('conf', conf);
+    if (!power || !nonPower) q.set('show', power ? 'power' : nonPower ? 'nonpower' : 'none');
+    const s = q.toString();
+    return s ? `?${s}` : '';
+  })();
+  useEffect(() => {
+    const url = window.location.pathname + query + window.location.hash;
+    if (url !== window.location.pathname + window.location.search + window.location.hash) window.history.replaceState(null, '', url);
+  }, [query]);
   const confs = useMemo(() => [...new Set(d.teams.map((t) => t.conf).filter((c): c is string => !!c))].sort((a, b) => a.localeCompare(b)), [d.teams]);
   const pc = POWER[d.edition];
   const keep = (t: { conf: string }) => (!conf || t.conf === conf) && (!pc || (pc.includes(t.conf ?? '') ? power : nonPower));
@@ -99,7 +133,7 @@ function useConfFilter(d: RosterPageData, onChange: () => void) {
       )}
     </>
   );
-  return { keep, controls, deps: [conf, power, nonPower] as const };
+  return { keep, controls, query, deps: [conf, power, nonPower] as const };
 }
 
 function Grid({ d }: { d: RosterPageData }) {
@@ -113,7 +147,7 @@ function Grid({ d }: { d: RosterPageData }) {
     <ul className="rosters-grid">
       {teams.map((t) => (
         <li key={t.id}>
-          <a className="rosters-tile" data-brand="dynasty" href={rostersHref(d.edition, t.id)} style={{ '--team': t.color, '--stripe': t.stripe } as CSSProperties}>
+          <a className="rosters-tile" data-brand="dynasty" href={rostersHref(d.edition, t.id) + f.query} style={{ '--team': t.color, '--stripe': t.stripe } as CSSProperties}>
             <span className="rosters-tile-body">
               <span className="rosters-tile-title">{cardTitle(t, d.edition)}</span>
               <span className="rosters-tile-nick">{t.nickname}</span>
