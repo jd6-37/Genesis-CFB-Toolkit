@@ -137,8 +137,8 @@ export const buildText = (n: readonly number[]) => `${n[0]}.${n[1]}.${n[2]}${n[3
  * give the app the ROM the save was last written by. Add each mainline's line when it's delivered.
  */
 export const KNOWN_BUILDS: Record<number, Record<number, { name: string; midSeasonFrom: number }>> = {
-  2026: { 63: { name: 'v2.0.1-test63', midSeasonFrom: 63 }, 64: { name: 'v2.0.1-test64', midSeasonFrom: 64 }, 65: { name: 'v2.0.1-test65', midSeasonFrom: 65 }, 66: { name: 'v2.0.1-test66', midSeasonFrom: 66 }, 67: { name: 'v2.0.1-test67', midSeasonFrom: 67 }, 68: { name: 'v2.0.1-test68', midSeasonFrom: 68 }, 69: { name: 'v2.0.1-test69', midSeasonFrom: 69 } },
-  1994: { 64: { name: 'v2.0.1-test64', midSeasonFrom: 64 }, 65: { name: 'v2.0.1-test65', midSeasonFrom: 65 }, 66: { name: 'v2.0.1-test66', midSeasonFrom: 66 }, 67: { name: 'v2.0.1-test67', midSeasonFrom: 67 }, 68: { name: 'v2.0.1-test68', midSeasonFrom: 68 }, 69: { name: 'v2.0.1-test69', midSeasonFrom: 69 }, 70: { name: 'v2.0.1-test70', midSeasonFrom: 70 } },
+  2026: { 63: { name: 'v2.0.1-test63', midSeasonFrom: 63 }, 64: { name: 'v2.0.1-test64', midSeasonFrom: 64 }, 65: { name: 'v2.0.1-test65', midSeasonFrom: 65 }, 66: { name: 'v2.0.1-test66', midSeasonFrom: 66 }, 67: { name: 'v2.0.1-test67', midSeasonFrom: 67 }, 68: { name: 'v2.0.1-test68', midSeasonFrom: 68 }, 69: { name: 'v2.0.1-test69', midSeasonFrom: 69 }, 71: { name: 'v2.0.1-test71', midSeasonFrom: 71 } },
+  1994: { 64: { name: 'v2.0.1-test64', midSeasonFrom: 64 }, 65: { name: 'v2.0.1-test65', midSeasonFrom: 65 }, 66: { name: 'v2.0.1-test66', midSeasonFrom: 66 }, 67: { name: 'v2.0.1-test67', midSeasonFrom: 67 }, 68: { name: 'v2.0.1-test68', midSeasonFrom: 68 }, 69: { name: 'v2.0.1-test69', midSeasonFrom: 69 }, 70: { name: 'v2.0.1-test70', midSeasonFrom: 70 }, 72: { name: 'v2.0.1-test72', midSeasonFrom: 72 } },
 };
 
 /**
