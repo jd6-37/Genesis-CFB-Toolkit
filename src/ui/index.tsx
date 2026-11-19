@@ -541,3 +541,74 @@ export function SetupList({ rows, label }: { rows: [ReactNode, ReactNode][]; lab
     </dl>
   );
 }
+
+export interface SwitchItem { label: string; href: string; current?: boolean }
+/**
+ * A row of linked choices in one box, the open one filled (an edition, a view): each choice is its own page.
+ * Wraps on phones.
+ */
+export function LinkSwitch({ label, items }: { label: string; items: SwitchItem[] }) {
+  return (
+    <nav className="ui-switch" aria-label={label}>
+      {items.map((x) => (
+        <a key={x.href} href={x.href} className="ui-switch-item" aria-current={x.current ? 'page' : undefined}>{x.label}</a>
+      ))}
+    </nav>
+  );
+}
+
+export interface ComboOption { value: string; label: string; sub?: string }
+/**
+ * A text field that filters a list to pick from (a team among 138): type to narrow it, arrows and Enter, or click.
+ * The list shows on focus. `onPick` gets the option's value.
+ */
+export function Combobox({ label, options, onPick, placeholder, max = 60 }: {
+  label: string;
+  options: ComboOption[];
+  onPick: (value: string) => void;
+  placeholder?: string;
+  /** The most options shown at once. */
+  max?: number;
+}) {
+  const id = useId();
+  const [q, setQ] = useState('');
+  const [open, setOpen] = useState(false);
+  const [at, setAt] = useState(0);
+  const box = useRef<HTMLDivElement>(null);
+  const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const shown = options.filter((o) => words.every((w) => `${o.label} ${o.sub ?? ''}`.toLowerCase().includes(w))).slice(0, max);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [open]);
+  const pick = (o: ComboOption | undefined) => { if (!o) return; setOpen(false); setQ(''); onPick(o.value); };
+  return (
+    <div className="ui-field ui-combo" ref={box}>
+      <label htmlFor={`${id}-in`}>{label}</label>
+      <input
+        id={`${id}-in`} type="text" role="combobox" autoComplete="off" aria-expanded={open} aria-controls={`${id}-list`} aria-autocomplete="list"
+        aria-activedescendant={open && shown[at] ? `${id}-o${at}` : undefined} placeholder={placeholder} value={q}
+        onFocus={() => setOpen(true)}
+        onChange={(e) => { setQ(e.target.value); setAt(0); setOpen(true); }}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowDown') { e.preventDefault(); setOpen(true); setAt((a) => Math.min(a + 1, shown.length - 1)); }
+          else if (e.key === 'ArrowUp') { e.preventDefault(); setAt((a) => Math.max(a - 1, 0)); }
+          else if (e.key === 'Enter' && open) { e.preventDefault(); pick(shown[at]); }
+          else if (e.key === 'Escape') setOpen(false);
+        }}
+      />
+      {open && (
+        <ul className="ui-combo-list" id={`${id}-list`} role="listbox" aria-label={label}>
+          {shown.length ? shown.map((o, i) => (
+            <li key={o.value} id={`${id}-o${i}`} role="option" aria-selected={i === at} className="ui-combo-option"
+              onMouseDown={(e) => e.preventDefault()} onMouseEnter={() => setAt(i)} onClick={() => pick(o)}>
+              <span>{o.label}</span>{o.sub && <small>{o.sub}</small>}
+            </li>
+          )) : <li className="ui-combo-none">No match</li>}
+        </ul>
+      )}
+    </div>
+  );
+}

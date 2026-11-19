@@ -2,12 +2,12 @@
 
 This repo is the website of the Bill Walsh '95 Elevated mod and its two apps, at https://genesis-cfb-toolkit.vercel.app:
 
-- **The site** (`/`): the mod's homepage, the [manual](#the-site) (`/manual`) and **Insights** (`/insights`), long reads on the mod and the game's code.
+- **The site** (`/`): the mod's homepage, the [manual](#the-site) (`/manual`), **Rosters** (`/rosters`: every team's roster card and a table of every player, for the 2026 and 1994 editions, the original game and the historic teams) and **Insights** (`/insights`), long reads on the mod and the game's code.
 - **The Mod Toolkit** (`/toolkit`) and **Dynasty** (`/dynasty`), described below.
 
 Browser-based modding tools for EA's college football games on the Sega Genesis: Bill Walsh College Football '95, College Football USA 96 and College Football USA 97.
 
-Everything runs in your browser. Your ROMs are opened on your own computer and are never uploaded anywhere. The apps contain no ROM data or artwork (the site's screenshots and clips of the mod aside); you bring your own ROMs. It does come with two tables for the College Football 27 roster conversion: how many players the original games have at each rating step, and EA's College Football 27 player ratings (2026 season, Week 9) for the built-in rosters. It also has the Elevated mod's 2026 Walsh Reports for every FBS team, which go with those rosters.
+Everything runs in your browser. Your ROMs are opened on your own computer and are never uploaded anywhere. The apps contain no ROM data or artwork (the site's screenshots and clips of the mod, and its Rosters section's rosters and logos, aside); you bring your own ROMs. It does come with two tables for the College Football 27 roster conversion: how many players the original games have at each rating step, and EA's College Football 27 player ratings (2026 season, Week 9) for the built-in rosters. It also has the Elevated mod's 2026 Walsh Reports for every FBS team, which go with those rosters.
 
 ## Tools
 
@@ -521,4 +521,4 @@ Created by JD637.
 
 The homepage, the manual and Insights (`src/site/`). Pages are React; the manual's chapters and the Insights posts are MDX files (`src/site/manual/NN-slug.mdx`, `src/site/insights/slug.mdx`), each with a `meta` export. `npm run build` writes every address as its own HTML file with its title and share picture (`cli/prerender.ts`), and `vercel.json` serves `/toolkit` and `/dynasty` from `app.html`. How to add a page, and the rules for screenshots and clips: `docs/site.md`.
 
-The site's screenshots, GIFs and clips (`public/media/`) are the one exception to "no game art in the repo": they're captured from the mod's test ROMs to show the mod. No ROMs or ROM data are in the repo.
+The site's screenshots, GIFs and clips (`public/media/`) are an exception to "no game art in the repo": they're captured from the mod's test ROMs to show the mod. The Rosters section is the other (owner, 2026-11-19): `public/data/rosters/*.json` (every team's 32 as Team Rosters shows them) and `public/media/rosters/` (each edition's logo sheet, the EA Sports logo and the Bill Walsh seal), made from the ROMs by `npm run site:rosters -- ELEVATED_2026 ELEVATED_1994 BW95 HISTORIC_2026` (the last: a 2026 ROM with the historic teams). Run it again on each new mainline (for now the site follows the test ROMs; later only public releases). No ROMs are in the repo.

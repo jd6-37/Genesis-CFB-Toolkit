@@ -1,6 +1,6 @@
 # The site
 
-The Bill Walsh '95 Elevated website: the homepage (`/`), the manual (`/manual`) and Insights (`/insights`). The Mod Toolkit and Dynasty are at `/toolkit` and `/dynasty` (`app.html`; `vercel.json` rewrites both to `/app`, not `/app.html`: with `cleanUrls` on, a rewrite to `/app.html` answers 404).
+The Bill Walsh '95 Elevated website: the homepage (`/`), the manual (`/manual`), Rosters (`/rosters`) and Insights (`/insights`). The Mod Toolkit and Dynasty are at `/toolkit` and `/dynasty` (`app.html`; `vercel.json` rewrites both to `/app`, not `/app.html`: with `cleanUrls` on, a rewrite to `/app.html` answers 404).
 
 ## How it's built
 
@@ -11,6 +11,7 @@ The Bill Walsh '95 Elevated website: the homepage (`/`), the manual (`/manual`) 
 | Homepage | `src/site/Home.tsx` |
 | Manual pages | `src/site/Manual.tsx`; chapters `src/site/manual/NN-slug.mdx` |
 | Insights pages | `src/site/Insights.tsx`; posts `src/site/insights/slug.mdx` |
+| Rosters pages | `src/site/rosters/` (addresses and page data `pages.ts`, the card `Card.tsx`, the pages `Rosters.tsx`); data `public/data/rosters/`, logos `public/media/rosters/` |
 | What MDX files can use, and how their Markdown is drawn | `src/site/mdx.tsx` |
 | Styles | `src/site/site.css` (tokens only: `npm run lint:design`) |
 | Screenshots and clips | `public/media/` (`public/media/manual/` for the manual) |
@@ -24,6 +25,15 @@ Old addresses keep working: `/#rosters` and the other tab hashes go to `/toolkit
 ## Keeping it up to date
 
 The site describes the mod's latest features: the homepage, the manual and any Insights post they touch. After the launch, update it when a public GitHub release comes out. Until the site is announced, it follows the latest mainline test ROMs (owner, 2026-11-16). The unreleased changelog in the project notes lists what each test added.
+
+## Rosters
+
+User, 2026-11-19: a Rosters page for every team of the game (2026, 1994, the original game's 36, the 32 historic teams), as cards and as one table of every player, with a team search; the 1993 game's roster cards rebuilt in HTML. Approved on the design canvas "Rosters section mockups".
+
+- **Addresses:** `/rosters` (the 2026 cards), `/rosters/<edition>` (`2026`, `1994`, `original`, `historic`), `/rosters/<edition>/table`, `/rosters/<edition>/<team>` (the team's id: its name in lower case, `alabama-78` for a historic team). The build writes every one (322 pages).
+- **Data:** `npm run site:rosters -- ELEVATED_2026 ELEVATED_1994 BW95 HISTORIC_2026` reads the ROMs (`cli/siterosters.ts`): each team's 32 in slot order, with the labels, jersey numbers, names and classes (the names table the game reads; none in the original game), the numbers Team Rosters shows (0-99 from the fine values on v8 ROMs; the original's 16 steps as 0-100), weight in pounds (+25 on the line where the ROM has the OL weight patch), OVR (the Dynasty app's formulas), the team's OFF / DEF and conference, its color, the stripe color and the logo. Run it on each new mainline: the site follows the latest test ROMs for now, later only public releases (owner, 2026-11-19). The data and logos are an exception to "no ROM data in the repo" (owner, 2026-11-19: "yes, exception"; logos: "Yes, another exception").
+- **Page data:** each built page carries what it shows in `<script type="application/json" id="page-data">` (`Route.data`; `src/site/server.tsx`), and the browser takes it over from there (`main.tsx`), so the pages render the same on both. The team list of an edition comes with every page (the search); the table's players load in the browser from `/data/rosters/<edition>.json`. On the dev server (no built pages) a Rosters page fetches its edition's file.
+- **The card:** title "SCHOOL 'YY" in the team color (the home uniform's team color; a light one gives way to the helmet's or a dark gray), the logo (from the ROM's mascot art, 1.5× and 2× on wide cards), the Bill Walsh seal top right, a stripe in the secondary color (the first uniform color clearly unlike the jersey that isn't white; light gray when only white is left; user: "The color bars should be the shool's secondary color", "if the school's secondary color is white, make it a light gray"), the EA Sports logo bottom right, "Offense / Defense / conference" in place of the original's "Bill's pick" (user: "yeah that's fine"). The groups' columns use Team Rosters' labels (SPEED, QUICK, INTEL, HANDS, POWER or PWR on the line, RANGE, TACKLE, BLOCK, WT. on the line; short labels on a phone). Names read "R. Bush", the full name on hover (user). The card is the Dynasty brand's paper on the indigo page; its layout follows the room it has (container queries).
 
 ## Writing the copy
 

@@ -259,3 +259,94 @@ body { margin: 0; background: var(--surface); color: var(--text); font: 400 var(
   .post-rail { display: block; position: sticky; top: 96px; align-self: start; }
   .post-more { padding: 0 var(--sp-5) var(--sp-7); }
 }
+
+/* Rosters (user, 2026-11-19): the edition and view switches, the team search, then the cards grid, a team's card or
+   the players table. Tiles and cards are the Dynasty brand's paper (data-brand="dynasty"), on the indigo page. */
+.rosters { max-width: 1200px; margin: 0 auto; padding: var(--sp-5) var(--sp-4) var(--sp-7); }
+.rosters-head p { margin: var(--sp-3) 0 0; max-width: 40em; color: var(--text-muted); }
+.rosters-controls { display: flex; flex-wrap: wrap; align-items: end; gap: var(--sp-3) var(--sp-4); margin-top: var(--sp-5); }
+.rosters-pick { flex: 1 1 240px; max-width: 420px; }
+.rosters-wait { color: var(--text-muted); }
+.rosters-back { margin: var(--sp-5) 0 var(--sp-3); }
+.rosters-source { margin: var(--sp-4) 0 0; max-width: 46em; color: var(--text-muted); font-size: var(--fs-2); }
+
+.rosters-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); margin: var(--sp-5) 0 0; padding: 0; list-style: none; }
+.site a.rosters-tile {
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto 14px; align-items: start; min-height: 100%;
+  background: var(--surface); color: var(--text); text-decoration: none; box-shadow: var(--shadow-hard);
+}
+.site a.rosters-tile:hover, .site a.rosters-tile:focus-visible { outline: 3px solid var(--bar-on); outline-offset: 0; }
+.rosters-tile-body { display: grid; gap: var(--sp-2); padding: var(--sp-3) var(--sp-2) var(--sp-3) var(--sp-3); }
+.rosters-tile-title { font: 800 var(--fs-6)/0.95 var(--font-display); color: var(--team); text-transform: uppercase; overflow-wrap: anywhere; }
+.rosters-tile-nick { font: 600 var(--fs-3)/1.3 var(--font-body); }
+.rosters-tile-meta { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-3); font: 700 var(--fs-2)/1.2 var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+.rosters-tile-meta b { color: var(--text); font-size: var(--fs-3); }
+.rosters-tile .rc-logo { --z: 1; margin: var(--sp-3) var(--sp-2) 0 0; }
+.rosters-tile-stripe { align-self: stretch; background: var(--stripe); }
+@media (min-width: 560px) { .rosters-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 960px) { .rosters-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* A team's logo from its edition's sheet (one cell per team), at --z times the game's size. */
+.rc-logo {
+  --z: 1.5; flex: none; display: block; width: calc(var(--cw) * var(--z)); height: calc(var(--ch) * var(--z));
+  background-repeat: no-repeat; image-rendering: pixelated;
+  background-size: calc(var(--sw) * var(--z)) calc(var(--sh) * var(--z));
+  background-position: calc(var(--lx) * -1 * var(--z)) calc(var(--ly) * -1 * var(--z));
+}
+
+/* The card: phone first, then the room the card itself has (container queries). */
+.rc-wrap { margin-top: var(--sp-3); box-shadow: var(--shadow-hard); container-type: inline-size; }
+.rc { position: relative; padding: 0 var(--sp-3) var(--sp-4); background: var(--surface); color: var(--text); }
+.rc-grid { display: grid; grid-template-columns: minmax(0, 1fr) 14px; grid-template-rows: auto auto auto; column-gap: 6px; }
+.rc-top { grid-column: 1; grid-row: 1; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-4); padding: var(--sp-3) 64px var(--sp-3) 0; min-height: 80px; }
+.rc-title { margin: 0; font: 800 clamp(var(--fs-6), 7cqi, calc(var(--fs-8) * 1.6))/0.9 var(--font-display); color: var(--team); text-transform: uppercase; overflow-wrap: anywhere; }
+.rc-stripe { grid-column: 2; grid-row: 1 / 3; margin-top: 10px; background: var(--stripe); }
+.rc-box { grid-column: 1; grid-row: 2; min-width: 0; padding: var(--sp-2) var(--sp-2) var(--sp-3); border: 3px solid var(--rule-strong); }
+.rc-ea { grid-column: 1 / 3; grid-row: 3; display: flex; justify-content: flex-end; margin-top: var(--sp-2); }
+.rc-ea img { width: 64px; height: auto; }
+.rc-seal { position: absolute; right: var(--sp-1); top: var(--sp-2); width: 72px; height: auto; }
+.rc-line { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-4); margin: 0 0 var(--sp-3); font: 800 var(--fs-4)/1.1 var(--font-display); text-transform: uppercase; }
+.rc-cols { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); }
+.rc-col { display: grid; gap: var(--sp-4); align-content: start; min-width: 0; }
+.rc-group { width: 100%; border-collapse: collapse; table-layout: fixed; font: 500 var(--fs-1)/1.2 var(--font-body); }
+.rc-group th, .rc-group td { border: var(--rule-w) solid var(--rule-strong); padding: var(--sp-1) 2px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.rc-bar th { background: var(--bar); color: var(--on-bar); font: 800 var(--fs-4)/1 var(--font-display); text-transform: uppercase; letter-spacing: 0.03em; padding: 6px var(--sp-1); }
+.rc-head th { font: 700 var(--fs-1)/1.1 var(--font-display); text-transform: uppercase; letter-spacing: 0.02em; }
+.rc-head abbr { text-decoration: none; }
+.rc-group th.rc-pos { font: 800 var(--fs-3)/1 var(--font-display); text-align: left; padding-left: var(--sp-1); }
+.rc-group td.rc-name, .rc-group th.rc-left { text-align: left; padding-left: var(--sp-1); }
+.rc-group td.rc-name { cursor: default; }
+.rc-c-pos { width: 36px; } .rc-c-no { width: 24px; } .rc-c-r { width: 30px; }
+.rc-long { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.rc-nonames .rc-c-r { width: auto; }
+.rc-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@container (min-width: 640px) {
+  .rc-grid { grid-template-columns: minmax(0, 1fr) 64px; column-gap: 14px; }
+  .rc-top { padding-right: 120px; }
+  .rc-seal { width: 120px; right: 30px; top: 10px; }
+  .rc-c-pos { width: 38px; } .rc-c-no { width: 26px; } .rc-c-r { width: 11%; }
+  .rc-long { position: static; width: auto; height: auto; overflow: visible; clip: auto; } .rc-short { display: none; }
+  .rc-group { font-size: var(--fs-2); }
+}
+@container (min-width: 960px) {
+  .rc { padding: 0 26px 22px; }
+  .rc-top { padding: var(--sp-5) 150px var(--sp-4) 0; }
+  .rc-stripe { margin-top: 18px; }
+  .rc-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 22px; }
+  .rc-grid { grid-template-columns: minmax(0, 1fr) 104px; column-gap: var(--sp-4); }
+  .rc-seal { width: 150px; right: 66px; top: 14px; }
+  .rc-ea img { width: 92px; }
+  .rc-logo { --z: 2; }
+}
+
+/* The players table. */
+.rosters-table { margin-top: var(--sp-5); }
+.rosters-filters { display: flex; flex-wrap: wrap; gap: var(--sp-3) var(--sp-4); margin-bottom: var(--sp-4); }
+.rosters-players { min-width: 1000px; }
+.rosters-sort { all: unset; cursor: pointer; white-space: nowrap; }
+.rosters-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.rosters-players td.rosters-name { font-weight: 600; white-space: nowrap; }
+.site a.rosters-teamlink { color: var(--text); text-decoration: none; border-left: 10px solid var(--team); padding-left: var(--sp-2); white-space: nowrap; }
+.site a.rosters-teamlink:hover { text-decoration: underline; }
+.rosters-players td.rosters-none { color: var(--text-muted); }
+.rosters-pager { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); margin-top: var(--sp-4); color: var(--text-muted); }

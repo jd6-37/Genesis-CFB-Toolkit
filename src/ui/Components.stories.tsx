@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
-import { Button, Check, Field, FileButton, DataTable, Empty, Masthead, Meter, Modal, NavBar, Note, Num, PageHead, Row, Select, Stat, Steps, SubHead, Table, Tabs, ThemeToggle } from './index';
+import { Button, Check, Combobox, Field, LinkSwitch, FileButton, DataTable, Empty, Masthead, Meter, Modal, NavBar, Note, Num, PageHead, Row, Select, Stat, Steps, SubHead, Table, Tabs, ThemeToggle } from './index';
 
 const meta: Meta = { title: 'Components' };
 export default meta;
@@ -241,5 +241,28 @@ export const MastheadAndNav: Story = {
         { label: 'Teams', href: '#teams' }, { label: 'Offseason', href: '#offseason', off: true }, { label: 'Manage', href: '#manage' },
       ]} />
     </Masthead>
+  ),
+};
+
+/** Linked choices in one box (the site's roster editions and views): each choice is its own page. */
+export const LinkSwitchStory: Story = {
+  name: 'LinkSwitch',
+  render: () => (
+    <LinkSwitch label="Edition" items={[
+      { label: '2026', href: '#2026', current: true }, { label: '1994', href: '#1994' }, { label: '1994 original', href: '#original' }, { label: 'Historic', href: '#historic' },
+    ]} />
+  ),
+};
+
+/** A field that filters a list to pick from (a team among 138). */
+export const ComboboxStory: Story = {
+  name: 'Combobox',
+  render: () => (
+    <div style={{ maxWidth: 360, minHeight: 360 }}>
+      <Combobox label="Go to a team" placeholder="Type a school" onPick={() => {}} options={[
+        { value: 'byu', label: 'BYU', sub: 'Cougars, Provo' }, { value: 'alabama', label: 'Alabama', sub: 'Crimson Tide, Tuscaloosa' },
+        { value: 'army', label: 'Army', sub: 'Black Knights, West Point' }, { value: 'auburn', label: 'Auburn', sub: 'Tigers, Auburn' },
+      ]} />
+    </div>
   ),
 };

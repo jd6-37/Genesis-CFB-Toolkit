@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "site:rosters": "tsx cli/siterosters.ts",
     "build": "tsc --noEmit && vite build && vite build --ssr src/site/server.tsx --outDir dist-ssr && tsx cli/prerender.ts",
     "preview": "vite preview",
     "cli": "tsx cli/build.ts",
