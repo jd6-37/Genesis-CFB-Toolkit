@@ -30,7 +30,7 @@ const mod: Ld = {
   applicationCategory: 'GameApplication', applicationSubCategory: 'Game mod (ROM patch)',
   operatingSystem: 'Sega Genesis / Mega Drive (emulator or flash cartridge)',
   description:
-    "A free, fan-made mod for the Sega Genesis game Bill Walsh College Football '95. It fixes the fatigue bug and adds new formations and plays, harder CPU difficulty levels, 6-button controls, 32 historic teams and full seasons. Two editions: the 107 Division I-A teams of 1994, or the 138 FBS teams of 2026. The game is not included.",
+    "A free, fan-made mod for the Sega Genesis game Bill Walsh College Football '95. It fixes the fatigue bug and adds new formations and plays, harder CPU difficulty levels, 6-button controls, 32 historic teams, a new postseason and multi-year dynasties. Two editions: the 107 Division I-A teams of 1994, or the 138 FBS teams of 2026. The game is not included.",
   offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }, isAccessibleForFree: true,
   downloadUrl: `${REPO_URL}/releases`, softwareHelp: abs('/manual'), author: AUTHOR, isBasedOn: GAME,
 };

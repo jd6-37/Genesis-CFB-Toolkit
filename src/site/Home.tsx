@@ -25,7 +25,7 @@ function Hero() {
         </h1>
         <p className="home-lede">
           A free mod for the Sega Genesis game Bill Walsh College Football '95. It fixes the fatigue bug and adds new formations and plays, harder
-          CPU difficulty levels, and full seasons with bowls or a playoff. There are two editions: the 107 Division I-A teams of 1994, or the 138 FBS
+          CPU difficulty levels, a new postseason with real bowls or a playoff, and multi-year dynasties with the Dynasty app. There are two editions: the 107 Division I-A teams of 1994, or the 138 FBS
           teams of 2026.
         </p>
         <div className="home-actions">
@@ -236,11 +236,11 @@ const FEATURES: { title: string; body: ReactNode; controls?: [KeyStep[], string]
     media: { src: M('historic-setup.png'), alt: "Game Setup with USC '04 as the home team against Miami" },
   },
   {
-    title: 'Full seasons with bowls or a playoff',
+    title: 'A new postseason, and dynasties',
     body: (
       <>
-        1994 edition: an 11-week season in the 1994 conferences or the real 1994 schedule, starting from the real 1994 preseason AP poll, then the SEC Championship Game and the 19 bowl games of that year. 2026 edition: a random schedule or the real 2026 schedule, conference title games, then a 12-team playoff. You can also pick a 24- or 4-team playoff, a BCS title game, or no postseason. In both editions, simulated games score and end close to real seasons, and home teams win more often.{' '}
-        Multi-year dynasties are now possible too: our companion <Button variant="link" href="/dynasty">Dynasty app</Button> carries
+        The original game's season ends in four bowl games. 1994 edition: an 11-week season in the 1994 conferences or the real 1994 schedule, starting from the real 1994 preseason AP poll, then the SEC Championship Game and the 19 bowl games of that year. 2026 edition: a random schedule or the real 2026 schedule, conference title games, then a 12-team playoff. You can also pick a 24- or 4-team playoff, a BCS title game, or no postseason. In both editions, simulated games score and end close to real seasons, and home teams win more often.{' '}
+        Multi-year dynasties are new too: our companion <Button variant="link" href="/dynasty">Dynasty app</Button> carries
         each season into the next one, for as many seasons as you like, with recruiting, player progression and coaches.
       </>
     ),

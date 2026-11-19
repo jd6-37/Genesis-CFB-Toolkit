@@ -31,7 +31,7 @@ export const routes: Route[] = [
     path: '/',
     title: `${SITE_NAME}: a free fan mod for Bill Walsh College Football '95`,
     description:
-      "A free, fan-made mod for the Sega Genesis game Bill Walsh College Football '95. It fixes the fatigue bug and adds new formations and plays, harder CPU difficulty levels, 6-button controls and full seasons. Two editions: the 107 Division I-A teams of 1994, or the 138 FBS teams of 2026. The game is not included.",
+      "A free, fan-made mod for the Sega Genesis game Bill Walsh College Football '95. It fixes the fatigue bug and adds new formations and plays, harder CPU difficulty levels, 6-button controls, a new postseason and multi-year dynasties. Two editions: the 107 Division I-A teams of 1994, or the 138 FBS teams of 2026. The game is not included.",
     section: 'home',
     render: () => <Home />,
   },
