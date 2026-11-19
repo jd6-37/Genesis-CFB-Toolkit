@@ -174,8 +174,8 @@ const FEATURES: { title: string; body: ReactNode; controls?: [KeyStep[], string]
   },
   {
     title: 'Ratings from 0 to 99',
-    body: "The original game stores every rating in 16 steps, so a player's speed jumps from 90 to 96 with nothing between. Elevated adds 16 levels inside each step, and Team Rosters shows them from 0 to 99. Players one or two points apart now play differently, so two fast backs aren't the same back. In the Dynasty app, players improve a little each offseason instead of jumping a whole step at a time.",
-    media: { src: M('fine-ratings.png'), alt: 'Team Rosters for North Dakota State: speed 77, quickness 73, INTEL 67 and other ratings between the original steps' },
+    body: "The original game rates players in 16 big steps, so a player's speed jumps from 90 to 96 with nothing between. Elevated rates them in single points, and Team Rosters shows them from 0 to 99, like today's college football games. Players one or two points apart now play differently, so two fast backs aren't the same back. The 2026 ratings come from a reworked College Football 27 conversion. In the Dynasty app, players improve a little each offseason instead of jumping a whole step at a time.",
+    media: { src: M('fine-ratings.png'), alt: 'Team Rosters for Indiana in v2.1.0: quarterback #10 with speed 77, quickness 79 and INTEL 90, and the backs and receivers with ratings between the original steps' },
   },
   {
     title: 'Impact players',
