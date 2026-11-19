@@ -46,13 +46,28 @@ function Rosters({ d }: { d: RosterPageData }) {
       {d.kind === 'cards' && <Grid d={d} />}
       {d.kind === 'team' && d.team && (
         <div className="rosters-team">
-          <p className="rosters-back"><a href={rostersHref(d.edition)}>All {ed.label === 'Historic' ? 'historic' : ed.label} teams</a></p>
+          <TeamSteps d={d} label="Teams" />
           <RosterCard team={d.team} edition={d.edition} sheet={d.sheet} />
+          <TeamSteps d={d} label="Teams, after the card" />
           <p className="rosters-source">{source(d)}</p>
         </div>
       )}
       {d.kind === 'table' && <PlayerTable d={d} />}
     </div>
+  );
+}
+
+/** Previous and next team in the edition (A-Z, around the end; user, 2026-11-19), and the way back to the grid. */
+function TeamSteps({ d, label }: { d: RosterPageData; label: string }) {
+  const i = d.teams.findIndex((t) => t.id === d.team!.id);
+  const prev = d.teams[(i - 1 + d.teams.length) % d.teams.length], next = d.teams[(i + 1) % d.teams.length];
+  const ed = editionInfo(d.edition);
+  return (
+    <nav className="rosters-steps" aria-label={label}>
+      <Button variant="quiet" href={rostersHref(d.edition, prev.id)} label={`Previous team: ${prev.school}`}>← {prev.school}</Button>
+      <a className="rosters-all" href={rostersHref(d.edition)}>All {ed.id === 'historic' ? 'historic' : ed.label} teams</a>
+      <Button variant="quiet" href={rostersHref(d.edition, next.id)} label={`Next team: ${next.school}`}>{next.school} →</Button>
+    </nav>
   );
 }
 

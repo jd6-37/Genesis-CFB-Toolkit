@@ -18,8 +18,13 @@ export const RATING_LABELS: Record<RatingKey, [string, string]> = {
   spd: ['SPEED', 'Speed'], qck: ['QUICK', 'Quickness'], int: ['INTEL', 'Intelligence'], hnd: ['HANDS', 'Hands'], pwr: ['POWER', 'Power'],
   rng: ['RANGE', 'Range'], acc: ['ACCURACY', 'Accuracy'], tck: ['TACKLE', 'Tackling'], blk: ['BLOCK', 'Blocking'], wt: ['WT.', 'Weight in pounds'],
 };
-/** Linemen's power is PWR on Team Rosters, the ball carriers' POWER. */
-export const ratingLabel = (k: RatingKey, g: GroupId): [string, string] => (k === 'pwr' && (g === 'OL' || g === 'DL') ? ['PWR', 'Power'] : RATING_LABELS[k]);
+/** Linemen's power is PWR on Team Rosters, the ball carriers' POWER; a kicker's QUICK is his leg strength (user, 2026-11-19: "QUICK (KPOW)"). */
+export function ratingLabel(k: RatingKey, g: GroupId): [string, string] {
+  if (k === 'pwr' && (g === 'OL' || g === 'DL')) return ['PWR', 'Power'];
+  if (k === 'qck' && g === 'KP') return ['QUICK (KPOW)', 'Quickness: kick power (how far he kicks)'];
+  return RATING_LABELS[k];
+}
+const shortLabel = (k: RatingKey, g: GroupId) => (k === 'qck' && g === 'KP' ? 'KPOW' : SHORT[k]);
 const TITLES: Record<GroupId, string> = {
   QB: 'Quarterbacks', RB: 'Running backs', REC: 'Receivers', OL: 'Offensive line', KP: 'Special teams',
   DL: 'Defensive line', LB: 'Linebackers', DB: 'Defensive backs',
@@ -59,18 +64,18 @@ export function RosterCard({ team, edition, sheet }: { team: TeamRoster; edition
               {SIDES.map((side, i) => (
                 <div className="rc-col" key={i}>
                   {side.filter((g) => groups.has(g)).map((g) => (
-                    <table className={names ? 'rc-group' : 'rc-group rc-nonames'} key={g}>
+                    <table className={['rc-group', names ? '' : 'rc-nonames', g === 'KP' ? 'rc-kp' : ''].filter(Boolean).join(' ')} key={g}>
                       <colgroup>
-                        <col className="rc-c-pos" /><col className="rc-c-no" />{names && <col className="rc-c-name" />}
+                        <col className="rc-c-pos" /><col className="rc-c-no" />{names && <><col className="rc-c-name" /><col className="rc-c-ovr" /></>}
                         {COLS[g].map((k) => <col className="rc-c-r" key={k} />)}
                       </colgroup>
                       <thead>
-                        <tr className="rc-bar"><th colSpan={COLS[g].length + (names ? 3 : 2)} scope="colgroup">{TITLES[g]}</th></tr>
+                        <tr className="rc-bar"><th colSpan={COLS[g].length + (names ? 4 : 2)} scope="colgroup">{TITLES[g]}</th></tr>
                         <tr className="rc-head">
                           <th scope="col"><span className="rc-sr">Position</span></th>
                           <th scope="col">No.</th>
-                          {names && <th scope="col" className="rc-left">Name</th>}
-                          {COLS[g].map((k) => { const [l, full] = ratingLabel(k, g); return <th scope="col" key={k}><abbr title={full}><span className="rc-long">{l}</span><span className="rc-short" aria-hidden="true">{SHORT[k]}</span></abbr></th>; })}
+                          {names && <><th scope="col" className="rc-left">Name</th><th scope="col" className="rc-ovr"><abbr title="Overall at his position">OVR</abbr></th></>}
+                          {COLS[g].map((k) => { const [l, full] = ratingLabel(k, g); return <th scope="col" key={k}><abbr title={full}><span className="rc-long">{l}</span><span className="rc-short" aria-hidden="true">{shortLabel(k, g)}</span></abbr></th>; })}
                         </tr>
                       </thead>
                       <tbody>
@@ -78,7 +83,7 @@ export function RosterCard({ team, edition, sheet }: { team: TeamRoster; edition
                           <tr key={p[0]}>
                             <th scope="row" className="rc-pos">{p[0]}</th>
                             <td>{p[1] ?? ''}</td>
-                            {names && <td className="rc-name" title={`${p[2]} ${p[3]}`.trim() || 'Name not in the game'}>{shortName(p[2], p[3]) || '–'}</td>}
+                            {names && <><td className="rc-name" title={`${p[2]} ${p[3]}`.trim() || 'Name not in the game'}>{shortName(p[2], p[3]) || '–'}</td><td className="rc-ovr">{p[5]}</td></>}
                             {COLS[g].map((k) => <td key={k}>{p[7][k] ?? ''}</td>)}
                           </tr>
                         ))}
