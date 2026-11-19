@@ -74,8 +74,8 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
         <section>
           <h1>Load your ROM</h1>
           <p>
-            A dynasty needs Bill Walsh '95 Elevated: the {EDITIONS['2026'].name} (v2.0.1-test9 or later) or the {EDITIONS['1994'].name} (v2.0.1-test29
-            or later). The ROM stays in this browser. Nothing is uploaded.
+            A dynasty needs Bill Walsh '95 Elevated v2.1.0 or later: the {EDITIONS['2026'].name} or the {EDITIONS['1994'].name}. The ROM stays in this
+            browser. Nothing is uploaded.
           </p>
           {!dyn ? (
             <div className="dy-start-drop">

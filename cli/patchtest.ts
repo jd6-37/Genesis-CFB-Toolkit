@@ -7,6 +7,7 @@ import { basename, join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { strict as assert } from 'node:assert';
 import { identifyRom, isWideBw95, openRom, KNOWN } from '../src/core/romfile';
+import { seasonTeamCount } from '../src/core/wide';
 import { applyBps, bpsInfo, BpsError } from '../src/core/bps';
 import { crc32 } from '../src/core/bytes';
 import {
@@ -133,11 +134,11 @@ for (const p of offered(list)) {
   const changed = file.slice();
   changed[10] ^= 1;
   await assert.rejects(checkPatchFile(p, changed), /doesn't match the patch list/);
-  // The 138-team 2026 Season Edition (v2.0.0 on, 4 MB) is recognized and kept out of the 36-team tools.
+  // The 4 MB Season Editions (2026 from v2.0.0, 1994 from v2.1.0) are recognized and kept out of the 36-team tools.
   const known = identifyRom(out.data, out.sha1);
   if (out.data.length > 0x200000) {
     assert.ok(known?.kind === 'bw95' && known.wide && isWideBw95(out.data));
-    ok(`${p.name}: applies to the original ROM, SHA-1 ${p.rom.slice(0, 8)}…, the 138-team edition (the 36-team tools don't open it)`);
+    ok(`${p.name}: applies to the original ROM, SHA-1 ${p.rom.slice(0, 8)}…, a 4 MB Season Edition with ${seasonTeamCount(out.data)} teams (the 36-team tools don't open it)`);
     continue;
   }
   assert.ok(known?.kind === 'bw95' && !known.wide);
