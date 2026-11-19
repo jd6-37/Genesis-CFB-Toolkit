@@ -7,6 +7,7 @@ const NAV: { label: string; href: string; section?: Section }[] = [
   { label: 'Features', href: '/#features' },
   { label: 'Editions', href: '/#editions' },
   { label: 'Manual', href: '/manual', section: 'manual' },
+  { label: 'Rosters', href: '/rosters', section: 'rosters' },
   { label: 'Insights', href: '/insights', section: 'insights' },
 ];
 
@@ -63,6 +64,7 @@ export function SiteFooter() {
           <a href="/#features">Features</a>
           <a href="/#editions">Editions</a>
           <a href="/manual">Manual</a>
+          <a href="/rosters">Rosters</a>
           <a href="/insights">Insights</a>
         </nav>
         <nav aria-label="Apps">

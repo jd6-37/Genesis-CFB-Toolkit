@@ -2,6 +2,10 @@ import type { Meta, StoryObj } from '@storybook/react';
 import '../site/site.css';
 import { SiteFooter, SiteHeader } from './Site';
 import { mdxComponents } from './mdx';
+import { RosterCard } from './rosters/Card';
+import type { EditionData } from './rosters/types';
+import r2026 from '../../public/data/rosters/2026.json';
+import rOriginal from '../../public/data/rosters/original.json';
 
 // The site is the Mod Toolkit brand; pick it in the toolbar. The manual parts sit on the Dynasty brand's paper.
 const meta: Meta = { title: 'Site', parameters: { layout: 'fullscreen' } };
@@ -26,4 +30,17 @@ export const ManualParts: Story = {
       </div>
     </div>
   ),
+};
+
+/** A team's roster card (src/site/rosters/Card.tsx): BYU in the 2026 edition, and Washington State in the original game (no names). */
+export const RosterCards: Story = {
+  render: () => {
+    const a = r2026 as EditionData, o = rOriginal as EditionData;
+    return (
+      <div className="site" data-brand="toolkit" style={{ padding: 24, display: 'grid', gap: 32 }}>
+        <RosterCard team={a.teams.find((t) => t.id === 'byu')!} edition="2026" sheet={a.sheet} />
+        <div style={{ maxWidth: 390 }}><RosterCard team={o.teams.find((t) => t.id === 'washington-state')!} edition="original" sheet={o.sheet} /></div>
+      </div>
+    );
+  },
 };
