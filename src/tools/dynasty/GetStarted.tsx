@@ -9,6 +9,7 @@ import { weekName } from '../../core/dynasty/derive';
 import { seasonDone } from '../../core/dynasty/offseason';
 import { Button, Check, Field, FileButton, Note, Select, Steps, SubHead, Table } from '../../ui';
 import { Ctx, href } from './ui';
+import { SAMPLE_PATH } from '../../core/dynasty/snapshotId';
 
 /** A dynasty made from the user's ROM but not saved yet (Get started's step 1), with what goes into the browser with it. */
 export interface Prepared {
@@ -63,6 +64,7 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
   const off = busy || !!working;
 
   return (
+    <div className="dy-start-wrap">
     <div className="dy-start">
       <Steps label="Start a dynasty" steps={STEPS.map((label) => ({ label }))} current={step} />
       {working && <Note>{working}</Note>}
@@ -181,6 +183,29 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
         </section>
       )}
     </div>
+    {step === 0 && <SamplePeek />}
+    </div>
+  );
+}
+
+/**
+ * A look at a loaded dynasty beside the first step (user, 2026-11-19: "add something to the /dynasty#start page that
+ * teases what a loaded dynasty could look like"; mockup option A picked): the sample dynasty's Home page as a picture,
+ * with a link to browse it. Beside the steps on wide screens, under them on a phone.
+ */
+function SamplePeek() {
+  return (
+    <aside className="dy-peek" aria-labelledby="dy-peek-h">
+      <p className="dy-peek-bar">Sample dynasty: Tulane, 2026, Week 4</p>
+      <a href={SAMPLE_PATH} className="dy-peek-shot">
+        <img src="/media/dynasty-sample.jpg" width={720} height={397} alt="The sample dynasty's Home page: the week's scores, the lead story and the headlines" />
+      </a>
+      <div className="dy-peek-body">
+        <h2 id="dy-peek-h">What your dynasty will look like</h2>
+        <p>Import your save after a week and you get scores, headlines, the Top 25, standings, stats and every roster, season after season.</p>
+        <Button href={SAMPLE_PATH}>Browse a sample dynasty</Button>
+      </div>
+    </aside>
   );
 }
 

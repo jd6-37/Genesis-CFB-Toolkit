@@ -13,6 +13,10 @@
     {
       "source": "/dynasty/s/:id",
       "destination": "/app"
+    },
+    {
+      "source": "/dynasty/sample",
+      "destination": "/app"
     }
   ],
   "crons": [
