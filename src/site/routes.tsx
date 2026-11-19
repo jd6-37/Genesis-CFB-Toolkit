@@ -9,7 +9,7 @@ import { NotFound } from './NotFound';
 import { RostersPage } from './rosters/Rosters';
 import { editionInfo, parseRosterPath, type RosterPageData } from './rosters/pages';
 
-export const SITE_URL = 'https://genesis-cfb-toolkit.vercel.app';
+export const SITE_URL = 'https://bw95mod.com';
 export const SITE_NAME = "Bill Walsh '95 Elevated";
 export const REPO_URL = 'https://github.com/jd6-37/Bill-Walsh-CFB-95-Elevated';
 

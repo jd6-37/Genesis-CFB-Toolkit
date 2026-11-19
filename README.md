@@ -1,6 +1,6 @@
 # Genesis CFB Toolkit
 
-This repo is the website of the Bill Walsh '95 Elevated mod and its two apps, at https://genesis-cfb-toolkit.vercel.app:
+This repo is the website of the Bill Walsh '95 Elevated mod and its two apps, at https://bw95mod.com:
 
 - **The site** (`/`): the mod's homepage, the [manual](#the-site) (`/manual`), **Rosters** (`/rosters`: every team's roster card and a table of every player, for the 2026 and 1994 editions, the original game and the historic teams) and **Insights** (`/insights`), long reads on the mod and the game's code.
 - **The Mod Toolkit** (`/toolkit`) and **Dynasty** (`/dynasty`), described below.
