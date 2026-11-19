@@ -3,6 +3,7 @@ import { renderToString } from 'react-dom/server';
 import { Site } from './Site';
 import { notFound, rosterRoute, routes, SITE_NAME, SITE_URL, type Route } from './routes';
 import { pageData, rosterPaths } from './rosters/pages';
+import { jsonLd, llmsTxt, sitemapXml } from './seo';
 import type { EditionData } from './rosters/types';
 import r2026 from '../../public/data/rosters/2026.json';
 import r1994 from '../../public/data/rosters/1994.json';
@@ -14,17 +15,24 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').repl
 function head(r: Route) {
   const url = SITE_URL + (r.path === '/404' ? '/' : r.path);
   const image = SITE_URL + (r.image ?? '/media/share.png');
+  const ld = jsonLd(r);
   return [
     `<title>${esc(r.title)}</title>`,
     `<meta name="description" content="${esc(r.description)}" />`,
-    r.path !== '/404' ? `<link rel="canonical" href="${url}" />` : '',
+    r.path !== '/404' ? `<link rel="canonical" href="${url}" />` : '<meta name="robots" content="noindex" />',
+    `<meta property="og:locale" content="en_US" />`,
     `<meta property="og:type" content="${r.section === 'insights' && r.path !== '/insights' ? 'article' : 'website'}" />`,
     `<meta property="og:site_name" content="${esc(SITE_NAME)}" />`,
     `<meta property="og:title" content="${esc(r.title)}" />`,
     `<meta property="og:description" content="${esc(r.description)}" />`,
     `<meta property="og:url" content="${url}" />`,
     `<meta property="og:image" content="${image}" />`,
+    `<meta property="og:image:alt" content="${esc(r.title)}" />`,
     `<meta name="twitter:card" content="summary_large_image" />`,
+    `<meta name="twitter:title" content="${esc(r.title)}" />`,
+    `<meta name="twitter:description" content="${esc(r.description)}" />`,
+    `<meta name="twitter:image" content="${image}" />`,
+    ld ? `<script type="application/ld+json">${JSON.stringify(ld).replace(/</g, '\\u003c')}</script>` : '',
     r.data ? `<script type="application/json" id="page-data">${JSON.stringify(r.data).replace(/</g, '\\u003c')}</script>` : '',
   ].filter(Boolean).join('\n    ');
 }
@@ -44,3 +52,9 @@ export const pages = [...routes, ...rosterRoutes, notFound].map((r) => ({
   head: head(r),
   html: () => renderToString(<Site route={r} />),
 }));
+
+/** Written next to the pages by cli/prerender.ts. */
+export const extraFiles = [
+  { path: 'sitemap.xml', text: () => sitemapXml(pages.map((p) => p.path)) },
+  { path: 'llms.txt', text: llmsTxt },
+];

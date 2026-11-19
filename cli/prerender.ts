@@ -7,11 +7,15 @@ import { pathToFileURL } from 'node:url';
 
 const template = readFileSync('dist/index.html', 'utf8');
 if (!template.includes('<!--head-->') || !template.includes('<!--app-->')) throw new Error('dist/index.html has lost its <!--head--> or <!--app--> mark');
-const { pages } = (await import(pathToFileURL(resolve('dist-ssr/server.js')).href)) as { pages: { path: string; head: string; html: () => string }[] };
+const { pages, extraFiles } = (await import(pathToFileURL(resolve('dist-ssr/server.js')).href)) as {
+  pages: { path: string; head: string; html: () => string }[];
+  extraFiles: { path: string; text: () => string }[];
+};
 for (const p of pages) {
   const out = p.path === '/' ? 'dist/index.html' : p.path === '/404' ? 'dist/404.html' : `dist${p.path}/index.html`;
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, template.replace('<!--head-->', p.head).replace('<!--app-->', p.html()));
 }
+for (const f of extraFiles) writeFileSync(`dist/${f.path}`, f.text());
 rmSync('dist-ssr', { recursive: true, force: true });
-console.log(`${pages.length} pages written.`);
+console.log(`${pages.length} pages written, and ${extraFiles.map((f) => f.path).join(', ')}.`);

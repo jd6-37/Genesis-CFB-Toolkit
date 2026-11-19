@@ -1,0 +1,8 @@
+# Bill Walsh '95 Elevated (https://bw95mod.com)
+User-agent: *
+Allow: /
+# The snapshot upload API, and shared dynasty snapshots (players' own, and they expire)
+Disallow: /api/
+Disallow: /dynasty/s/
+
+Sitemap: https://bw95mod.com/sitemap.xml

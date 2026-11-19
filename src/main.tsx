@@ -12,6 +12,7 @@ import './styles.css';
 import App from './App';
 import { isDynastyPath, legacyAppUrl, NAV_EVENT } from './appNav';
 import { snapshotIdFromPath } from './core/dynasty/snapshotId';
+import { registerServiceWorker } from './registerSw';
 
 // An old address (/#rosters, /#dynasty/…, /app.html) goes to the same place under /toolkit or /dynasty.
 const fixed = legacyAppUrl(window.location.pathname.replace(/\/$/, '') || '/', window.location.hash);
@@ -58,3 +59,5 @@ createRoot(document.getElementById('root')!).render(
     <Root />
   </StrictMode>,
 );
+
+registerServiceWorker();

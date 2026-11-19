@@ -5,6 +5,8 @@ This repo is the website of the Bill Walsh '95 Elevated mod and its two apps, at
 - **The site** (`/`): the mod's homepage, the [manual](#the-site) (`/manual`), **Rosters** (`/rosters`: every team's roster card and a table of every player, for the 2026 and 1994 editions, the original game and the historic teams) and **Insights** (`/insights`), long reads on the mod and the game's code.
 - **The Mod Toolkit** (`/toolkit`) and **Dynasty** (`/dynasty`), described below.
 
+The site can be installed as an app from the browser (Add to Home Screen), and pages you have opened still load offline. Search engines and AI agents get a sitemap (`/sitemap.xml`), `/llms.txt` and structured data on every page (`docs/site.md`).
+
 Browser-based modding tools for EA's college football games on the Sega Genesis: Bill Walsh College Football '95, College Football USA 96 and College Football USA 97.
 
 Everything runs in your browser. Your ROMs are opened on your own computer and are never uploaded anywhere. The apps contain no ROM data or artwork (the site's screenshots and clips of the mod, and its Rosters section's rosters and logos, aside); you bring your own ROMs. It does come with two tables for the College Football 27 roster conversion: how many players the original games have at each rating step, and EA's College Football 27 player ratings (2026 season, Week 9) for the built-in rosters. It also has the Elevated mod's 2026 Walsh Reports for every FBS team, which go with those rosters.
