@@ -6,6 +6,8 @@
 // - Other sheets (CFB-Walsh.exe's rules): rows are grouped by team, each slot takes the best
 //   unused player of its position (by "Overall Rating"), ratings 0-99 and weights in lb are
 //   bucketed into the game's 0-F scale.
+import { romIsV8, setShownOfSlot } from './rosterV8';
+import type { Attr } from './rosterLayouts';
 import {
   GROUP_ATTRS, rosterLayout, sheetColumn, ratingToNibble, weightToNibble, type SlotDef,
 } from './rosterLayouts';
@@ -261,8 +263,10 @@ export function importSheet(rom: RosterRom, sheet: Sheet): ImportReport {
   // offense) is replaced once the team is done, unless it is the number the slot already had: a sheet exported
   // from a ROM comes back unchanged.
   let pendingNumbers: { def: SlotDef; from: number }[] = [];
+  const v8 = romIsV8(rom);
   const apply = (team: number, def: SlotDef, r: string[]) => {
     const p = readPlayer(rom, team, def.slot);
+    const v8Values: [Attr, number][] = [];
     const n = cNumber === undefined ? NaN : cellNumber(r[cNumber]);
     if (Number.isFinite(n) && !numberAllowed(def.pool[0], n) && jerseyNumber(p.numberByte) !== n) pendingNumbers.push({ def, from: n });
     if (Number.isFinite(n)) p.numberByte = jerseyByte(n);
@@ -270,9 +274,12 @@ export function importSheet(rom: RosterRom, sheet: Sheet): ImportReport {
       const ci = c(sheetColumn(def.group, attr));
       const v = ci === undefined ? NaN : cellNumber(r[ci]);
       if (!Number.isFinite(v)) return;
+      if (v8 && attr !== 'Weight') { v8Values.push([attr, v]); return; }
       setRating(p, def, attr, attr === 'Weight' ? weightToNibble(v - shownWeightOffset(rom, def)) : ratingToNibble(v));
     });
     writePlayer(rom, team, def.slot, p);
+    // v8 ROMs: a sheet's numbers are the game's shown numbers (0-99), set through the curves (step + fine offset).
+    for (const [attr, v] of v8Values) setShownOfSlot(rom, team, def, attr, v);
   };
   const label = (r: string[], i: number) => {
     const name = playerName(r);

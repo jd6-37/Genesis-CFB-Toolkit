@@ -4,6 +4,7 @@
 // weight 140 + 16 lb per step), which land in the same step when re-imported. With BW95's OL weight
 // display tweak installed, OL weights include its 25 lb, as on the roster screen (the import takes
 // them off again).
+import { romIsV8, shownOfSlot } from './rosterV8';
 import { GROUP_ATTRS, nibbleToRating, nibbleToWeight, sheetColumn } from './rosterLayouts';
 import { jerseyNumber, readPlayer, teamLayout, teamName, type RosterRom } from './rosterRom';
 import { toCsv } from './rosterSheet';
@@ -16,6 +17,7 @@ export const EXPORT_COLUMNS = [
 
 export function exportRostersCsv(rom: RosterRom, teams?: number[]): string {
   const rows: (string | number)[][] = [];
+  const v8 = romIsV8(rom);
   for (const t of teams ?? rom.teams.map((x) => x.index)) {
     for (const def of teamLayout(rom, t)) {
       const p = readPlayer(rom, t, def.slot);
@@ -27,7 +29,9 @@ export function exportRostersCsv(rom: RosterRom, teams?: number[]): string {
       row[3] = n === null ? '' : n;
       GROUP_ATTRS[def.group].forEach((attr, i) => {
         const ci = EXPORT_COLUMNS.indexOf(sheetColumn(def.group, attr));
-        row[ci] = attr === 'Weight' ? nibbleToWeight(p.ratings[i]) + shownWeightOffset(rom, def) : nibbleToRating(p.ratings[i]);
+        // v8 ROMs: the number the game shows (0-99); others: the step's value.
+        row[ci] = attr === 'Weight' ? nibbleToWeight(p.ratings[i]) + shownWeightOffset(rom, def)
+          : v8 ? shownOfSlot(rom, t, def, attr) ?? nibbleToRating(p.ratings[i]) : nibbleToRating(p.ratings[i]);
       });
       rows.push(row);
     }

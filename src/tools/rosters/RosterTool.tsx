@@ -23,6 +23,8 @@ import { CFB27_LATEST, fetchCfb27Latest } from '../../core/cfb27Latest';
 import { ratingProblems, writeRating } from '../../core/teamRatings';
 import { fetchWalsh2026, reportsForSlots, type WalshData } from '../../core/walsh2026';
 import { writeReports } from '../../core/walshReports';
+import { romIsV8, setShownOfSlot, shownOfSlot } from '../../core/rosterV8';
+import { FINE_TABLE } from '../../core/dynasty/fine';
 import './rosters.css';
 
 export type { TeamSwapSource };
@@ -72,8 +74,11 @@ export function RosterTool({ api, teamSwap }: { api: WorkApi; teamSwap: TeamSwap
     if (!loaded) return [];
     const { rom, baseline } = loaded;
     const len = rom.info.players * rom.info.stride;
+    const v8 = romIsV8(rom);
     return rom.teams.filter((t) => {
       for (let k = t.rosterOffset; k < t.rosterOffset + len; k++) if (rom.data[k] !== baseline[k]) return true;
+      // v8 ROMs: a rating can change by its fine offset alone.
+      if (v8) for (let k = FINE_TABLE + 96 * t.index; k < FINE_TABLE + 96 * (t.index + 1); k++) if (rom.data[k] !== baseline[k]) return true;
       return false;
     }).map((t) => t.index);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -148,6 +153,9 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
   const layout = useMemo(() => teamLayout(rom, team), [rom, team, t.threeFour]);
   const recLen = rom.info.players * rom.info.stride;
   const isChanged = (i: number) => changed.includes(i);
+  const v8 = romIsV8(rom);
+  // The loaded bytes as a ROM, for each v8 cell's "changed" mark (cached per baseline).
+  const baseRom = useMemo(() => (v8 ? openRosterRom(baseline, true) : null), [v8, baseline]);
   const base = (slot: number): Player => {
     const o = t.rosterOffset + slot * rom.info.stride;
     const b = baseline;
@@ -157,6 +165,7 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
     for (const i of which) {
       const o = rom.teams[i].rosterOffset;
       rom.data.set(baseline.subarray(o, o + recLen), o);
+      if (v8) rom.data.set(baseline.subarray(FINE_TABLE + 96 * i, FINE_TABLE + 96 * (i + 1)), FINE_TABLE + 96 * i);
     }
     // Back to the loaded rosters everywhere: take the OL weight tweak out again if this session added it.
     const anyLeft = rom.teams.some((x) => {
@@ -387,7 +396,7 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
                     </thead>
                     <tbody>
                       {slots.map((d) => (
-                        <PlayerRow key={d.slot} rom={rom} team={team} def={d} base={base(d.slot)} onEdit={bump} />
+                        <PlayerRow key={d.slot} rom={rom} team={team} def={d} base={base(d.slot)} baseRom={v8 ? baseRom : null} onEdit={bump} />
                       ))}
                     </tbody>
                 </Table>
@@ -396,18 +405,27 @@ function RosterEditor({ loaded, changed, onChange }: { loaded: Loaded; changed: 
           );
         })}
       </div>
+      {v8 ? (
+        <p className="hint ros-scale">
+          Ratings are the numbers the game's Team Rosters shows (0-99), on CFB 27's scale: a number means the same at
+          every position. Type one in; a number below what a rating can be goes to its lowest. Weight goes in 16 lb steps
+          (140 … 380{hasOlPatch(rom) ? '; offensive linemen 165 … 405' : ''}). A spreadsheet's ratings are read the same
+          way. Players have names in this edition's Team Rosters, but not in this table.
+        </p>
+      ) : (
       <p className="hint ros-scale">
         Values are what the game's roster screen shows: each rating has 16 steps (0, 6, 13 … 93, 100), weight goes in
         16 lb steps (140 … 380{hasOlPatch(rom) ? '; offensive linemen 165 … 405, see "OL weights +25 lb"' : ''}). A
         spreadsheet value goes to the step at or below it (88 → 86, 245 lb → 236). Players have no names in these
         games, only numbers.
       </p>
+      )}
       <SheetHelp />
     </section>
   );
 }
 
-function PlayerRow({ rom, team, def, base, onEdit }: { rom: RosterRom; team: number; def: SlotDef; base: Player; onEdit: () => void }) {
+function PlayerRow({ rom, team, def, base, baseRom, onEdit }: { rom: RosterRom; team: number; def: SlotDef; base: Player; baseRom: RosterRom | null; onEdit: () => void }) {
   const p = readPlayer(rom, team, def.slot);
   const num = jerseyNumber(p.numberByte);
   const [text, setText] = useState(num === null ? '' : String(num));
@@ -435,6 +453,20 @@ function PlayerRow({ rom, team, def, base, onEdit }: { rom: RosterRom; team: num
       {GROUP_COLUMNS[def.group].map((a) => {
         const v = getRating(p, def, a)!;
         const weight = a === 'Weight';
+        // v8 ROMs (H-039): the 0-99 number the game's Team Rosters shows, typed in.
+        if (baseRom && !weight) {
+          const shown = shownOfSlot(rom, team, def, a);
+          if (shown !== null) {
+            return (
+              <td key={a}>
+                <V8Rating
+                  label={`${def.label} ${a}`} value={shown} changed={shown !== shownOfSlot(baseRom, team, def, a)}
+                  onCommit={(n) => { setShownOfSlot(rom, team, def, a, n); onEdit(); }}
+                />
+              </td>
+            );
+          }
+        }
         const plus = weight ? shownWeightOffset(rom, def) : 0;
         return (
           <td key={a}>
@@ -449,6 +481,24 @@ function PlayerRow({ rom, team, def, base, onEdit }: { rom: RosterRom; team: num
         );
       })}
     </tr>
+  );
+}
+
+/** A v8 rating cell: the shown number, typed in; set on blur (a number below the rating's lowest goes to the lowest). */
+function V8Rating({ label, value, changed, onCommit }: { label: string; value: number; changed: boolean; onCommit: (n: number) => void }) {
+  const [text, setText] = useState(String(value));
+  useEffect(() => setText(String(value)), [value]);
+  return (
+    <Field
+      label={label} hideLabel compact digits maxLength={2} value={text} changed={changed}
+      onChange={(v) => setText(v.replace(/\D/g, ''))}
+      onBlur={() => {
+        if (text === '') return setText(String(value));
+        const n = Math.min(99, parseInt(text, 10));
+        if (n !== value) onCommit(n);
+        setText(String(value));
+      }}
+    />
   );
 }
 

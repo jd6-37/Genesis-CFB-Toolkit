@@ -10,7 +10,10 @@ import { openRosterRom, readPlayer, teamLayout } from '../src/core/rosterRom';
 import { readSheet } from '../src/core/rosterSheet';
 import { applyCfb27, convertCfb27 } from '../src/core/rosterCfb27';
 import { BONUS_AT, fineFromShown, hasV8, shownV8, V8_SLOT_POOLS } from '../src/core/ratingsV8';
-import { readFineOffsets } from '../src/core/dynasty/fine';
+import { FINE_TABLE, readFineOffsets } from '../src/core/dynasty/fine';
+import { setShownOfSlot, shownOfSlot } from '../src/core/rosterV8';
+import { exportRostersCsv } from '../src/core/rosterExport';
+import { importSheet } from '../src/core/rosterImport';
 import { GROUP_ATTRS, type Attr } from '../src/core/rosterLayouts';
 import V8 from '../src/core/ratingsV8.json';
 
@@ -93,6 +96,22 @@ for (const k of V8.keys) {
 }
 check('every number from a pool\'s lowest up can be set', rt > 0 && rtOk === rt, `${rtOk}/${rt}`);
 check('every pool appears in the slot pools', V8.keys.every((k) => V8_SLOT_POOLS.some((s) => s.includes(k))));
+
+// The Rosters tab (rosterV8.ts): a typed number shows as typed; a CSV exported from a v8 ROM imports back to the same bytes.
+{
+  const r = await open();
+  const def = teamLayout(r, 0).find((d) => d.group === 'REC')!;
+  setShownOfSlot(r, 0, def, 'Speed', 91);
+  check('a typed number is what the game shows', shownOfSlot(r, 0, def, 'Speed') === 91);
+  const before = r.data.slice();
+  const csv = exportRostersCsv(r);
+  const again = await open();
+  importSheet(again, await readSheet('x.csv', new TextEncoder().encode(csv)));
+  let diff = 0;
+  for (let k = FINE_TABLE; k < FINE_TABLE + 96 * r.teams.length; k++) if (again.data[k] !== before[k]) diff++;
+  for (const t of r.teams) for (let k = t.rosterOffset; k < t.rosterOffset + r.info.players * r.info.stride; k++) if (again.data[k] !== before[k]) diff++;
+  check('export then import gives the same records and fine offsets', diff === 0, `${diff} bytes differ`);
+}
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed ? 1 : 0);

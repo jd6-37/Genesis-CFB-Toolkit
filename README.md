@@ -278,7 +278,7 @@ Load a Bill Walsh College Football '95, College Football USA 96 or College Footb
 
 For a Bill Walsh '95 team, the bar above the roster also has the team's offense and defense [styles](#styles).
 
-Players in these games have no names, only numbers. Each rating is a step from 0 to 15, which the game's roster screen shows as 0, 6, 13 … 93, 100; weight goes in 16 lb steps from 140 to 380. The editor shows the same numbers as the game. A kicker's or punter's Quick is his kick distance in the game, so the editor labels it that way.
+Players in these games have no names, only numbers. Each rating is a step from 0 to 15, which the game's roster screen shows as 0, 6, 13 … 93, 100; weight goes in 16 lb steps from 140 to 380. The editor shows the same numbers as the game. On the Elevated Season Editions with the new ratings (2026 test60 and 1994 test61 on), ratings are the 0-99 numbers the game's Team Rosters shows, on CFB 27's scale (a number means the same at every position); you type the number in, and spreadsheets are read and written in the same numbers. A kicker's or punter's Quick is his kick distance in the game, so the editor labels it that way.
 
 ### Importing a file
 
