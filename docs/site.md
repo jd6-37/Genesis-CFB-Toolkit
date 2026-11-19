@@ -1,6 +1,6 @@
 # The site
 
-The Bill Walsh '95 Elevated website: the homepage (`/`), the manual (`/manual`), Rosters (`/rosters`) and Insights (`/insights`). The Mod Toolkit and Dynasty are at `/toolkit` and `/dynasty` (`app.html`; `vercel.json` rewrites both to `/app`, not `/app.html`: with `cleanUrls` on, a rewrite to `/app.html` answers 404).
+The Bill Walsh '95 Elevated website, at https://bw95mod.com (owner, 2026-11-19: Cloudflare DNS, records not proxied, pointing at Vercel; `SITE_URL` in `src/site/routes.tsx` is the address in every page's canonical, `og:url` and `og:image`; the project's vercel.app address still serves the same deployment): the homepage (`/`), the manual (`/manual`), Rosters (`/rosters`) and Insights (`/insights`). The Mod Toolkit and Dynasty are at `/toolkit` and `/dynasty` (`app.html`; `vercel.json` rewrites both to `/app`, not `/app.html`: with `cleanUrls` on, a rewrite to `/app.html` answers 404).
 
 ## How it's built
 

@@ -1,6 +1,6 @@
 # Working on this repo
 
-Read this before changing anything. More than one person or Claude session may be working on this repo at the same time, and `main` deploys straight to the live site, https://genesis-cfb-toolkit.vercel.app. These rules keep work from colliding and keep the site working.
+Read this before changing anything. More than one person or Claude session may be working on this repo at the same time, and `main` deploys straight to the live site, https://bw95mod.com. These rules keep work from colliding and keep the site working.
 
 ## One working copy per session
 
