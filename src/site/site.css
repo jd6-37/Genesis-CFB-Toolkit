@@ -267,7 +267,15 @@ body { margin: 0; background: var(--surface); color: var(--text); font: 400 var(
 .rosters-controls { display: flex; flex-wrap: wrap; align-items: end; gap: var(--sp-3) var(--sp-4); margin-top: var(--sp-5); }
 .rosters-pick { flex: 1 1 240px; max-width: 420px; }
 .rosters-wait { color: var(--text-muted); }
-.rosters-back { margin: var(--sp-5) 0 var(--sp-3); }
+.rosters-steps { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: var(--sp-2) var(--sp-3); margin: var(--sp-5) 0 var(--sp-3); }
+.rosters-steps > :first-child { justify-self: start; } .rosters-steps > :last-child { justify-self: end; }
+.rosters-steps .ui-button { max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rosters-steps .rosters-all { grid-column: 1 / 3; grid-row: 2; text-align: center; font-size: var(--fs-2); }
+@media (min-width: 640px) {
+  .rosters-steps { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+  .rosters-steps .rosters-all { grid-column: 2; grid-row: 1; }
+}
+.rc-wrap + .rosters-steps { margin-top: var(--sp-5); }
 .rosters-source { margin: var(--sp-4) 0 0; max-width: 46em; color: var(--text-muted); font-size: var(--fs-2); }
 
 .rosters-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); margin: var(--sp-5) 0 0; padding: 0; list-style: none; }
@@ -321,12 +329,14 @@ body { margin: 0; background: var(--surface); color: var(--text); font: 400 var(
 .rc-group td.rc-ovr { font: 800 var(--fs-3)/1 var(--font-display); }
 .rc-long { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .rc-nonames .rc-c-r { width: auto; }
+.rc-kp .rc-c-r { width: 44px; }
 .rc-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 @container (min-width: 640px) {
   .rc-grid { grid-template-columns: minmax(0, 1fr) 64px; column-gap: 14px; }
   .rc-top { padding-right: 120px; }
   .rc-seal { width: 120px; right: 30px; top: 10px; }
   .rc-c-pos { width: 38px; } .rc-c-no { width: 26px; } .rc-c-r { width: 10%; } .rc-c-ovr { width: 40px; }
+  .rc-kp .rc-c-r { width: 22%; }
   .rc-long { position: static; width: auto; height: auto; overflow: visible; clip: auto; } .rc-short { display: none; }
   .rc-group { font-size: var(--fs-2); }
 }
