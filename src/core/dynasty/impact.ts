@@ -21,6 +21,7 @@ import { GROUP_ATTRS } from '../rosterLayouts';
 import type { BwSlot, DSeason, Dynasty } from './model';
 import { bwSlotOf } from './ratings';
 import { SLOT_DEFS, spotLabel } from './lineup';
+import { editionOf } from './edition';
 
 const SLOT_DEF = SLOT_DEFS.reduce<Record<number, (typeof SLOT_DEFS)[number]>>((m, x) => ((m[x.slot] = x), m), {});
 
@@ -28,23 +29,29 @@ const SLOT_DEF = SLOT_DEFS.reduce<Record<number, (typeof SLOT_DEFS)[number]>>((m
  * linemen), 2 speed, 3 INTEL, 4 hands / range, 5 power / tackle. */
 type Fine = number[];
 
-// name: rating bits over nibbles 1-5 (bit 0 = nibble 1), base. impact.py GROUPS (impact-test6 on).
-const GROUPS = {
-  QB: { mask: 0b01110, base: 27 },
-  RB: { mask: 0b10111, base: 42 },
-  WR: { mask: 0b01111, base: 44 },
-  TE: { mask: 0b01111, base: 28 },
-  DL: { mask: 0b10111, base: 41 },
-  LB: { mask: 0b10110, base: 37 },
-  DB: { mask: 0b11110, base: 45 },
-} as const;
-type ImpactGroup = keyof typeof GROUPS;
+// H-044 (user, 2026-11-19: "the dynasty app should follow suit"; the ROM since 2026 test64 / 1994 test65, reference
+// the ROM lane's finepick.py): DE and DT are separate groups (both on the DL ratings) with penalties of 3 and 6 steps
+// ("penalize DT more than DE"); each group's base is per edition, in fine units (the mean of each team's best starter's
+// rating sum, fitted on 2026 test63 / 1994 test64); a second pick of the first offensive pick's group scores less (RB
+// and TE 6 steps, WR 3: "two HBs or two TEs … difficult. 2x WR is slightly more acceptable"); and a second defensive
+// lineman is never picked ("Definitely never two dline"). The H-031 formula (one DL group, DLP 1, DL2P 5) is gone.
+// Group name: rating bits over nibbles 1-5 (bit 0 = nibble 1).
+const MASKS = { QB: 0b01110, RB: 0b10111, WR: 0b01111, TE: 0b01111, DE: 0b10111, DT: 0b10111, LB: 0b10110, DB: 0b11110 } as const;
+type ImpactGroup = keyof typeof MASKS;
+/** Per edition and group, the base in fine units (16 = one step). */
+export const IMPACT_BASES: Record<'2026' | '1994', Record<ImpactGroup, number>> = {
+  2026: { QB: 483, RB: 688, WR: 714, TE: 539, DE: 682, DT: 622, LB: 557, DB: 650 },
+  1994: { QB: 430, RB: 643, WR: 673, TE: 410, DE: 598, DT: 592, LB: 557, DB: 687 },
+};
 const SLOTG: Record<number, ImpactGroup> = {
   0: 'QB', 1: 'RB', 2: 'RB', 3: 'RB', 9: 'WR', 10: 'WR', 11: 'WR', 12: 'WR', 13: 'TE', 14: 'TE',
-  16: 'DL', 17: 'DL', 18: 'DL', 19: 'LB', 20: 'LB', 21: 'DL', 22: 'LB', 23: 'LB',
+  16: 'DE', 17: 'DT', 18: 'DE', 19: 'LB', 20: 'LB', 21: 'DT', 22: 'LB', 23: 'LB',
   24: 'DB', 25: 'DB', 26: 'DB', 27: 'DB', 28: 'DB', 29: 'DB', 30: 'DB',
 };
-const QBB = -3, DLP = 1, FBP = 10, DL2P = 5;
+const QBB = -3, FBP = 10;
+/** Group penalties and the same-group penalty, in steps. */
+const PEN: Partial<Record<ImpactGroup, number>> = { DE: 3, DT: 6 };
+const SAMEP: Partial<Record<ImpactGroup, number>> = { RB: 6, TE: 6, WR: 3 };
 const OFF = [0, 1, 2, 3, 9, 10, 11, 12, 13, 14];
 const DEF = [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30];
 
@@ -52,32 +59,35 @@ const DEF = [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30];
  * The three impact slots of a roster (offense, defense, the third), from each slot's ROM nibbles (null = empty).
  * `fourThree`: slot 21 is a defensive lineman (every team of both Elevated editions is 4-3 by the ROM's bit table).
  */
-export function impactSlots(nib: (Fine | null)[], fourThree = true): number[] {
+export function impactSlots(nib: (Fine | null)[], edition: '2026' | '1994', fourThree = true): number[] {
+  const groupOf = (s: number): ImpactGroup => (s === 21 && !fourThree ? 'LB' : SLOTG[s]);
   const isDl = (s: number) => s === 16 || s === 17 || s === 18 || (s === 21 && fourThree);
+  const bases = IMPACT_BASES[edition];
   const score = (s: number): number | null => {
     const n = nib[s];
     if (!n) return null;
-    const g = s === 21 && !fourThree ? GROUPS.LB : GROUPS[SLOTG[s]];
+    const g = groupOf(s);
     let sum = 0;
-    for (let i = 0; i < 5; i++) if ((g.mask >> i) & 1) sum += n[i + 1];
-    return 2 * (sum - 16 * g.base) + 16 * ((s === 0 ? QBB : 0) - (s === 3 ? FBP : 0) - (isDl(s) ? DLP : 0));
+    for (let i = 0; i < 5; i++) if ((MASKS[g] >> i) & 1) sum += n[i + 1];
+    return 2 * (sum - bases[g]) + 16 * ((s === 0 ? QBB : 0) - (s === 3 ? FBP : 0) - (PEN[g] ?? 0));
   };
-  const best = (list: number[], except: number, noFb: boolean, secondDl: boolean): [number, number] => {
+  const best = (list: number[], except: number, noFb: boolean): [number, number] => {
     let b = -1, bv = -Infinity;
     for (const s of list) {
       if (s === except || (s === 3 && noFb)) continue;
+      if (except >= 0 && isDl(except) && isDl(s)) continue; // never a second defensive lineman
       const v0 = score(s);
       if (v0 === null) continue;
-      const v = v0 - (secondDl && isDl(s) ? 16 * DL2P : 0);
+      const v = v0 - (except >= 0 && SLOTG[except] && groupOf(except) === groupOf(s) ? 16 * (SAMEP[groupOf(s)] ?? 0) : 0);
       if (v > bv) { b = s; bv = v; }
     }
     return [b, bv];
   };
   for (const noFb of [true, false]) {
-    const [o1] = best(OFF, -1, noFb, false);
-    const [d1] = best(DEF, -1, noFb, false);
-    const [o2, vo] = best(OFF, o1, noFb, false);
-    const [d2, vd] = best(DEF, d1, noFb, isDl(d1));
+    const [o1] = best(OFF, -1, noFb);
+    const [d1] = best(DEF, -1, noFb);
+    const [o2, vo] = best(OFF, o1, noFb);
+    const [d2, vd] = best(DEF, d1, noFb);
     const third = vd > vo ? d2 : o2;
     if (!noFb || o1 === 1 || o1 === 2 || third === 1 || third === 2) return [o1, d1, third].filter((s) => s >= 0);
   }
@@ -97,14 +107,14 @@ export function fineOf(b: BwSlot): Fine {
 
 /** The game's own pick for a team (player ids in pick order), from the season ROM's slot records (`bw`), or, where a
  * season has none (the first season, played on the user's own ROM), from the players' ratings the same way. */
-export function gameImpact(d: Pick<Dynasty, 'players'>, s: Pick<DSeason, 'slots' | 'bw'>, team: number): number[] {
+export function gameImpact(d: Pick<Dynasty, 'players' | 'edition'>, s: Pick<DSeason, 'slots' | 'bw'>, team: number): number[] {
   const ids = s.slots[team] ?? [];
   const nib = ids.map((id, slot) => {
     if (!id) return null;
     const b = s.bw?.[team]?.[slot] ?? (SLOT_DEF[slot] ? bwSlotOf(d.players[id - 1], SLOT_DEF[slot]!) : null);
     return b ? fineOf(b) : null;
   });
-  return impactSlots(nib).map((slot) => ids[slot]).filter((id): id is number => !!id);
+  return impactSlots(nib, editionOf(d).id).map((slot) => ids[slot]).filter((id): id is number => !!id);
 }
 
 /** The roster slots a player may be picked from (QB, HB1, HB2, FB, WR, TE, every defender; no linemen, K or P). */
@@ -136,7 +146,7 @@ export function impactPicksProblem(s: Pick<DSeason, 'slots'>, team: number, ids:
  * A season's impact players of a team, as player ids: the user's three if he picked and they still qualify (a later
  * lineup change can move one out; then the team gets the game's pick again), else the game's pick.
  */
-export function teamImpact(d: Pick<Dynasty, 'players'>, s: Pick<DSeason, 'slots' | 'bw' | 'impact'>, team: number): number[] {
+export function teamImpact(d: Pick<Dynasty, 'players' | 'edition'>, s: Pick<DSeason, 'slots' | 'bw' | 'impact'>, team: number): number[] {
   const own = s.impact?.[team];
   if (own && !impactPicksProblem(s, team, own)) return own.slice();
   return gameImpact(d, s, team);

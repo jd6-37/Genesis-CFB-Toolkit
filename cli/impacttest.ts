@@ -36,8 +36,11 @@ for (const path of process.argv.slice(2)) {
     return fineValue(st, o);
   });
   const FT = 0x2e0000;
-  const fromRom = rr.teams.map((t) => impactSlots(Array.from({ length: 32 }, (_, s) => fineFrom(readPlayer(rr, t.index, s).ratings, rom.subarray(FT + 96 * t.index + 3 * s, FT + 96 * t.index + 3 * s + 3)))));
+  const ed = editionOfRom(rom)?.id === '1994' ? '1994' : '2026';
+  const fromRom = rr.teams.map((t) => impactSlots(Array.from({ length: 32 }, (_, s) => fineFrom(readPlayer(rr, t.index, s).ratings, rom.subarray(FT + 96 * t.index + 3 * s, FT + 96 * t.index + 3 * s + 3))), ed));
+  const isDl = (s: number) => s === 16 || s === 17 || s === 18 || s === 21;
   for (const picks of fromRom) {
+    assert.ok(picks.filter(isDl).length <= 1, 'never two defensive linemen (H-044)');
     assert.equal(picks.length, 3);
     assert.equal(new Set(picks).size, 3);
     assert.ok(OFF.has(picks[0]) && !OFF.has(picks[1]), 'offense first, then defense');
@@ -104,7 +107,7 @@ for (const path of process.argv.slice(2)) {
       const o = frc + 4 + (32 * t.index + k) * 3;
       return fineFrom([r[1] >> 4, r[1] & 15, r[2] >> 4, r[2] & 15, r[3] >> 4, r[3] & 15], out.subarray(o, o + 3));
     });
-    assert.deepEqual([...got].sort((a, b) => a - b), impactSlots(nib).sort((a, b) => a - b), `${t.school}: the table is the ROM's own pick (fine values from FRC1)`);
+    assert.deepEqual([...got].sort((a, b) => a - b), impactSlots(nib, ed).sort((a, b) => a - b), `${t.school}: the table is the ROM's own pick (fine values from FRC1)`);
     same++;
   }
   // Back to the game's pick.
