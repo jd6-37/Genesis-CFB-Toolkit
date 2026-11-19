@@ -208,10 +208,10 @@ const FEATURES: { title: string; body: ReactNode; controls?: [KeyStep[], string]
     media: { src: M('recap.png'), video: M('recap.mp4'), alt: 'A 75-yard touchdown pass, then the recap "Pass to #1 Derrick Mayes for 75 yards" and a "75+ Yard Catch" milestone banner' },
   },
   {
-    title: 'Real rosters for both seasons',
+    title: 'Named rosters for both seasons',
     body: (
       <>
-        The original game has 36 teams and no player names. Both editions have every team of their season, with real players.
+        The original game has 36 teams and no player names. Both editions have every team of their season, with player names.
         The 2026 rosters were the easy part, thanks to the hard work of the EA Sports team on College Football 27: all 138 FBS teams,
         every player named, with ratings converted from CFB 27's (Week 9 update) to this game's scale. The 1994 rosters took our own
         research: all 107 Division I-A teams, and 2,962 of 3,424 players with their real 1994 names, matched by team, jersey number
@@ -227,7 +227,7 @@ const FEATURES: { title: string; body: ReactNode; controls?: [KeyStep[], string]
     title: '32 historic teams',
     body: (
       <>
-        Exhibition games can use 32 great teams from past seasons: the 18 of the 1993 Bill Walsh College Football, from Alabama '78 to Washington '91,
+        Exhibition games can use 32 great teams from past seasons: 18 from the original Bill Walsh College Football game, from Alabama '78 to Washington '91,
         and 14 more, from Miami '87 and Florida State '93 to LSU '19 and Indiana '25. Each has its era's logo, helmet and uniforms, its real roster with
         names, and its own Walsh Report. On Game Setup they follow the last team. Both editions.{' '}
         <Button variant="link" href="/rosters/historic">See their rosters</Button>
