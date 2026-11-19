@@ -184,7 +184,7 @@ const FEATURES: { title: string; body: ReactNode; controls?: [KeyStep[], string]
   },
   {
     title: 'Alternate uniforms',
-    body: 'Press Y under a team on the controller screen to pick its helmet, jersey and pants before kickoff. The player beside the menu changes as you go. Most teams have their real alternates: in the 2026 edition an extra helmet and pants, often a second colored jersey, and blackouts for the teams that wear them; in the 1994 edition mostly a second pair of pants. The CPU picks for its own teams, and the Mod Toolkit edits every team\'s choices. Both editions.',
+    body: 'Press Y under a team on the controller screen to pick its helmet, jersey and pants before kickoff. The player beside the menu changes as you go. Most teams have their real alternates: in the 2026 edition an extra helmet and pants, often a second colored jersey, and blackouts for the teams that wear them; in the 1994 edition mostly a second pair of pants. CPU teams wear their regular home and away uniforms unless you pick for them, and the Mod Toolkit edits every team\'s choices. Both editions.',
     controls: [[['Y'], 'Open or close the uniform menu'], [['dpad'], 'Up and down: helmet, jersey or pants. Left and right: change it']],
     media: { src: M('uniforms.png'), video: M('uniforms.mp4'), alt: 'The controller screen with the uniform menu open for Utah: helmet, jersey and pants change on the player beside it' },
   },
