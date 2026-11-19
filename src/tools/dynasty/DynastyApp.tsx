@@ -406,10 +406,10 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       setNote({
         kind: 'ok',
         text: first
-          ? `Downloaded ${zipName(name)}: your ROM with this dynasty's uniforms. Unzip it and put the ROM in place of the one you play the ${year} season on, with that ROM's file name, so the game finds your save.`
+          ? `Downloaded ${zipName(name)}: your ROM with this dynasty's uniforms. Put it in place of the ROM you play the ${year} season on, with that ROM's file name, so the game finds your save.`
           : again
-            ? `Downloaded ${zipName(name)} again. Unzip it and put ${name} in place of the one you have (same file name, so the game finds your save), then keep playing.`
-            : `Downloaded ${zipName(name)}, with ${name} inside. Start a New Season with it in the game: Season mode plays the dynasty's rosters, Exhibition keeps the ROM's own.`,
+            ? `Downloaded ${zipName(name)} again. Put it in place of the one you have (same file name, so the game finds your save) and keep playing.`
+            : `Downloaded ${zipName(name)}. Start a New Season with it in the game: Season mode plays the dynasty's rosters, Exhibition keeps the ROM's own.`,
       });
     }),
   };
@@ -496,10 +496,10 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
             >
               <p>You changed {stale.what} after {stale.first ? `you started the ${s.year} season` : `downloading the ${s.year} ROM`}. The ROM you play on doesn't have {stale.what === 'the uniforms' ? 'them' : 'that'} yet.</p>
               <ol className="dy-steps">
-                <li>Download the ROM and unzip it.</li>
+                <li>Download the ROM.</li>
                 {stale.first
                   ? <li>Put it in place of the ROM you play the {s.year} season on and give it <b>that ROM's file name</b>, so the game finds your save.</li>
-                  : <li>Put it in place of the one you have. Its name must stay <b>{s.romId ? name : 'the same'}</b>{s.romId ? '' : ' as the ROM you have'}, the name it has inside the zip. Then the game finds your save.</li>}
+                  : <li>Put it in place of the one you have. Its name must stay <b>{s.romId ? zipName(name) : 'the same'}</b>{s.romId ? '' : ' as the ROM you have'}: if your browser saved it as "… (1).zip", rename it. Then the game finds your save.</li>}
                 <li>{stale.uniformsOnly ? 'Keep playing: your season goes on, the save keeps no uniform.' : `Load your save with it and play on${s.imports.length ? '' : ` (or start the New Season with it if you haven't yet)`}.`}</li>
               </ol>
             </Modal>

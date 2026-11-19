@@ -169,7 +169,7 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
                     <p>Your first season is played on this ROM. Later seasons get their own ROM from the app at the end of each offseason.</p>
                     <div className="dy-row">
                       <Button onClick={() => actions.downloadRom(prep!.fileName, prep!.rom)}>Download patched ROM</Button>
-                      <span className="dy-small dy-dim dy-start-file">{zipName(prep!.fileName)}: unzip it to get {prep!.fileName}</span>
+                      <span className="dy-small dy-dim dy-start-file">{zipName(prep!.fileName)}</span>
                     </div>
                   </div>
                 </>
@@ -382,7 +382,7 @@ export function SeasonGuide({ year, first, patched, backup }: {
       <li>
         <h2>Play the {year} season{first ? ' on your ROM' : ` on the ${year} ROM`}</h2>
         <p>
-          {first ? (patched ? `Play it on the patched ROM you downloaded in step 1 (${patched}). ` : 'Play it as it is: the first season needs no download. ') : `The offseason gave you the ${year} ROM. `}
+          {first ? (patched ? `Play it on the patched ROM you downloaded in step 1 (${zipName(patched)}). ` : 'Play it as it is: the first season needs no download. ') : `The offseason gave you the ${year} ROM. `}
           Use RetroArch's Genesis Plus GX core, start a new season in Season mode and choose your teams.
         </p>
       </li>
