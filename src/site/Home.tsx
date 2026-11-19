@@ -288,6 +288,7 @@ const MORE: [string, string][] = [
   ['Swap your receivers', 'SWAP WR1/2 on the play-call screen trades your two starting receivers for the whole game.'],
   ['Rosters on Game Setup', "Press Z on Game Setup to see any team's roster, with player names."],
   ['Menu music off', 'Press X on a menu to turn the music off. The game remembers the setting.'],
+  ['Skin tones', 'Every team now has players with a medium skin tone, between the original light and dark.'],
 ];
 
 function More() {

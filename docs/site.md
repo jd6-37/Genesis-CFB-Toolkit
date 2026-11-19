@@ -31,7 +31,7 @@ Old addresses keep working: `/#rosters` and the other tab hashes go to `/toolkit
 
 ## Keeping it up to date
 
-The site describes the mod's latest features: the homepage, the manual and any Insights post they touch. After the launch, update it when a public GitHub release comes out. Until the site is announced, it follows the latest mainline test ROMs (owner, 2026-11-16). The unreleased changelog in the project notes lists what each test added.
+The site describes the mod's latest features: the homepage, the manual and any Insights post they touch. The site went public with the v2.1.0 release (2026-11-19): from now on, update it when a public GitHub release comes out, not for test ROMs (owner, 2026-11-16). The Rosters section's data comes from the release ROMs too (`npm run site:rosters` with the release's two editions).
 
 ## Rosters
 
