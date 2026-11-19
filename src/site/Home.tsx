@@ -224,6 +224,18 @@ const FEATURES: { title: string; body: ReactNode; controls?: [KeyStep[], string]
     media: { src: M('rosters-1994.png'), alt: 'Team Rosters, names view, for Kansas: each player\'s number, position, class and name' },
   },
   {
+    title: '32 historic teams',
+    body: (
+      <>
+        Exhibition games can use 32 great teams from past seasons: the 18 of the 1993 Bill Walsh College Football, from Alabama '78 to Washington '91,
+        and 14 more, from Miami '87 and Florida State '93 to LSU '19 and Indiana '25. Each has its era's logo, helmet and uniforms, its real roster with
+        names, and its own Walsh Report. On Game Setup they follow the last team. Both editions.{' '}
+        <Button variant="link" href="/rosters/historic">See their rosters</Button>
+      </>
+    ),
+    media: { src: M('historic-setup.png'), alt: "Game Setup with USC '04 as the home team against Miami" },
+  },
+  {
     title: 'Full seasons with bowls or a playoff',
     body: (
       <>
@@ -270,6 +282,10 @@ const MORE: [string, string][] = [
   ['Faster deep passes', 'Long, high passes spend less time in the air.'],
   ['Onside kicks', 'The kicking team recovers them less often.'],
   ['Faster kickoff setup', 'About 5 seconds from a score to the kickoff instead of 13.'],
+  ['Fewer kickoff fumbles', 'A hit on a kickoff returner makes him fumble at most 1 time in 20.'],
+  ['No drop-back safeties', 'Near his own goal line, the quarterback\'s drop-back stops before the end line.'],
+  ['Ranks in the score box', 'A ranked team always shows its rank, with a short name when the full one is too wide ("#22 FSU").'],
+  ['Swap your receivers', 'SWAP WR1/2 on the play-call screen trades your two starting receivers for the whole game.'],
   ['Rosters on Game Setup', "Press Z on Game Setup to see any team's roster, with player names."],
   ['Menu music off', 'Press X on a menu to turn the music off. The game remembers the setting.'],
 ];

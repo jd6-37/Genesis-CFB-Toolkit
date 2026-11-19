@@ -45,6 +45,22 @@ export function wideLayoutProblems(d: Uint8Array): string[] {
   return [];
 }
 
+/**
+ * The season teams (138 / 107): since 2026 test72 / 1994 test73 the team table also lists the 32 historic teams
+ * (Exhibition only, after the season teams; H-045), so the season count is KTAB's ("KIT1" at 0x2B6000, a word at
+ * +4), which the manifest's season-team count also gives. Without KTAB, the team table's count.
+ */
+export function seasonTeamCount(d: Uint8Array): number {
+  const n = wideTeamCount(d);
+  if (String.fromCharCode(...d.subarray(KTAB, KTAB + 4)) !== 'KIT1') return n;
+  const k = (d[KTAB + 4] << 8) | d[KTAB + 5];
+  return k > 36 && k <= n ? k : n;
+}
+const KTAB = 0x2b6000;
+
+/** Every team Game Setup offers (season teams, then the historic teams): the team table's count. */
+export const setupTeamsOf = (d: Uint8Array) => (isWide(d) ? wideTeamCount(d) : 36);
+
 // The tools ask this for every team and bit, and no tool rewrites the team table or the tables checked
 // above, so the answer is kept per buffer.
 const known = new WeakMap<Uint8Array, number>();
@@ -53,7 +69,7 @@ const known = new WeakMap<Uint8Array, number>();
 function count(d: Uint8Array): number {
   let n = known.get(d);
   if (n === undefined) {
-    n = !isWideBw95(d) ? 36 : wideLayoutProblems(d).length ? 0 : wideTeamCount(d);
+    n = !isWideBw95(d) ? 36 : wideLayoutProblems(d).length ? 0 : seasonTeamCount(d);
     known.set(d, n);
   }
   return n;
@@ -62,5 +78,8 @@ function count(d: Uint8Array): number {
 /** True for a wide ROM with the known layout. */
 export const isWide = (d: Uint8Array) => count(d) > 36;
 
-/** How many teams a BW95 ROM has: 36, or the wide ROM's count. */
+/**
+ * How many season teams a BW95 ROM has: 36, or the wide ROM's season count (138 / 107). Every tool and the Dynasty
+ * app work on these; the historic teams after them are never written (H-045). `setupTeamsOf` counts them too.
+ */
 export const teamsOf = (d: Uint8Array) => (isWide(d) ? count(d) : 36);
