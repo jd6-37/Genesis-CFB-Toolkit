@@ -204,7 +204,7 @@ const FEATURES: { title: string; body: ReactNode; controls?: [KeyStep[], string]
   },
   {
     title: 'Play recaps and milestones',
-    body: 'Player names have been added alongside jersey numbers in the post-play recaps. Banners appear for game milestones, such as a catch of 75 yards or more, a 100-yard rusher or a third touchdown pass, and in Season mode for season milestones, such as a player's 1,000th yard of the season. Each banner names the player and shows his team's helmet. Ranked teams show their Top 25 rank in the score box.',
+    body: "Player names have been added alongside jersey numbers in the post-play recaps. Banners appear for game milestones, such as a catch of 75 yards or more, a 100-yard rusher or a third touchdown pass, and in Season mode for season milestones, such as a 1,000-yard season. Each banner names the player and shows his team's helmet. Ranked teams show their Top 25 rank in the score box.",
     media: { src: M('recap.png'), video: M('recap.mp4'), alt: 'A 75-yard touchdown pass, then the recap "Pass to #1 Derrick Mayes for 75 yards" and a "75+ Yard Catch" milestone banner' },
   },
   {
