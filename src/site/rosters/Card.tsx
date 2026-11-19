@@ -47,6 +47,8 @@ export function RosterCard({ team, edition, sheet }: { team: TeamRoster; edition
   const groups = new Map<GroupId, TeamRoster['players']>();
   for (const p of team.players) groups.set(p[8], [...(groups.get(p[8]) ?? []), p]);
   const style: Vars = { '--team': team.color, '--stripe': team.stripe };
+  // Impact players (user, 2026-11-19): a yellow dot after the name, as the game marks them on Team Rosters.
+  const impact = new Set((team.impact ?? []).map((i) => team.players[i]));
   return (
     <div className="rc-wrap">
       <article className="rc" data-brand="dynasty" style={style} aria-label={`${team.school} roster card`}>
@@ -57,8 +59,11 @@ export function RosterCard({ team, edition, sheet }: { team: TeamRoster; edition
           </header>
           <div className="rc-stripe" aria-hidden="true" />
           <div className="rc-box">
+            {/* The seal over the box's top right corner (user, 2026-11-19: "touching/covering the corner of the outer box"). */}
+            <img className="rc-seal" src="/media/rosters/bw-seal.png" alt="Bill Walsh College Football" width={150} height={121} />
             <p className="rc-line">
-              <span>Offense {team.off}</span><span>Defense {team.def}</span>{team.conf && <span>{team.conf}</span>}
+              <span>Offense <b>{team.off}</b></span><span>Defense <b>{team.def}</b></span>
+              {team.conf && <><span className="rc-sep" aria-hidden="true">•</span><i>{team.conf}</i></>}
             </p>
             <div className="rc-cols">
               {SIDES.map((side, i) => (
@@ -83,7 +88,7 @@ export function RosterCard({ team, edition, sheet }: { team: TeamRoster; edition
                           <tr key={p[0]}>
                             <th scope="row" className="rc-pos">{p[0]}</th>
                             <td>{p[1] ?? ''}</td>
-                            {names && <><td className="rc-name" title={`${p[2]} ${p[3]}`.trim() || 'Name not in the game'}>{shortName(p[2], p[3]) || '–'}</td><td className="rc-ovr">{p[5]}</td></>}
+                            {names && <><td className="rc-name" title={`${p[2]} ${p[3]}`.trim() || 'Name not in the game'}>{shortName(p[2], p[3]) || '–'}{impact.has(p) && <span className="rc-impact" role="img" aria-label="Impact player" title="Impact player" />}</td><td className="rc-ovr">{p[5]}</td></>}
                             {COLS[g].map((k) => <td key={k}>{p[7][k] ?? ''}</td>)}
                           </tr>
                         ))}
@@ -96,7 +101,6 @@ export function RosterCard({ team, edition, sheet }: { team: TeamRoster; edition
           </div>
           <div className="rc-ea"><img src="/media/rosters/ea-sports.png" alt="EA Sports" width={92} height={71} /></div>
         </div>
-        <img className="rc-seal" src="/media/rosters/bw-seal.png" alt="Bill Walsh College Football" width={150} height={121} />
       </article>
     </div>
   );

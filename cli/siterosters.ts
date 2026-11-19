@@ -26,6 +26,29 @@ import { ownUniforms } from '../src/core/kits';
 import { olPatchState, OL_PATCH } from '../src/core/rosterOlPatch';
 import type { EditionData, EditionId, RatingKey, RosterPlayer, TeamRoster } from '../src/site/rosters/types';
 import { encodePng } from './png';
+import { impactSlots, fineValue } from '../src/core/dynasty/impact';
+
+/** The historic teams' hand-picked impact slots (hist.py's table HIM, 3 bytes a team, 0xFF = none), found through the
+ * pick hook HPK's `mulu.w #3,d1 / lea HIM,a1`; null when the ROM has none. */
+function historicImpact(rom: Uint8Array): ((k: number) => number[] | null) {
+  const pat = [0xc2, 0xfc, 0x00, 0x03, 0x43, 0xf9];
+  for (let a = 0x2d9100; a < 0x2d9400; a++) {
+    if (pat.every((b, i) => rom[a + i] === b)) {
+      const him = (rom[a + 6] << 24 | rom[a + 7] << 16 | rom[a + 8] << 8 | rom[a + 9]) >>> 0;
+      return (k) => {
+        const s = [...rom.subarray(him + 3 * k, him + 3 * k + 3)].filter((x) => x !== 0xff && (x <= 3 || (x >= 9 && x <= 14) || (x >= 16 && x <= 30)));
+        return s.length ? s : null;
+      };
+    }
+  }
+  return () => null;
+}
+
+/** The 3-4 bit of a team (POSBITS, through the roster labels' `lea` at 0x06B0FE). */
+const fourThreeOf = (rom: Uint8Array, t: number) => {
+  const a = (rom[0x06b100] << 24 | rom[0x06b101] << 16 | rom[0x06b102] << 8 | rom[0x06b103]) >>> 0;
+  return ((rom[a + (t >> 3)] >> (t & 7)) & 1) === 0;
+};
 
 const KEY: Record<Attr, RatingKey> = {
   Speed: 'spd', Quickness: 'qck', Awareness: 'int', Hands: 'hnd', Power: 'pwr', Range: 'rng', Accuracy: 'acc', Tackling: 'tck', Blocking: 'blk', Weight: 'wt',
@@ -69,13 +92,18 @@ function edition(rom: Uint8Array, id: EditionId, from: number, to: number, build
   const season = id === '2026' || id === '1994' ? readWideSeason(rom) : null;
   const olPlus = olPatchState(rom) === 'installed' ? OL_PATCH.pounds : 0;
   const teams: TeamRoster[] = [];
+  const hist = id === 'historic' ? historicImpact(rom) : null;
   const sheetRows = Math.ceil((to - from) / SHEET_COLS);
   const sheet = new Uint8Array(SHEET_COLS * CELL[0] * sheetRows * CELL[1] * 4);
   for (let t = from; t < to; t++) {
     const rt = rr.teams[t];
-    const players: RosterPlayer[] = teamLayout(rr, t).map((def) => {
+    const nib: (number[] | null)[] = Array(32).fill(null);
+    const slotIndex: number[] = [];
+    const players: RosterPlayer[] = teamLayout(rr, t).map((def, idx) => {
       const pl = readPlayer(rr, t, def.slot);
       const offs = fine ? readFineOffsets(rom, t, def.slot) : [0, 0, 0, 0, 0, 0];
+      nib[def.slot] = GROUP_ATTRS[def.group].map((_, i) => fineValue(pl.ratings[i], offs[i] ?? 0));
+      slotIndex[def.slot] = idx;
       const r: Partial<Record<RatingKey, number>> = {};
       const values: Partial<Record<Attr, number>> = {};
       let wt = 0;
@@ -116,6 +144,7 @@ function edition(rom: Uint8Array, id: EditionId, from: number, to: number, build
     teams.push({
       id: slug(rt.school), school: rt.school, nickname: rt.nickname, city: rt.other, state: SCHOOL_STATE[HIST_SCHOOL[base] ?? base] ?? '',
       conf, off: readRating(rom, t).off, def: readRating(rom, t).def, color: hex(color), stripe, logo, players,
+      ...(fine ? { impact: (hist?.(t - from) ?? impactSlots(nib, id === '1994' ? '1994' : '2026', fourThreeOf(rom, t))).map((s) => slotIndex[s]).filter((i) => i !== undefined) } : {}),
     });
   }
   mkdirSync('public/media/rosters', { recursive: true });

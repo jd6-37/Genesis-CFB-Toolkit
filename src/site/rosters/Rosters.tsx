@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Button, Check, Combobox, Field, LinkSwitch, Select, Table } from '../../ui';
 import { RosterCard, TeamLogo, ratingLabel } from './Card';
 import { cardTitle, EDITIONS, editionInfo, pageData, parseRosterPath, rostersHref, shortName, type RosterPageData } from './pages';
-import type { EditionData, GroupId, RatingKey, RosterPlayer, TeamSummary } from './types';
+import type { EditionData, RatingKey, RosterPlayer, TeamSummary } from './types';
 
 /** The page for a /rosters address: its built data, or (dev server) fetched. */
 export function RostersPage({ path, data }: { path: string; data: RosterPageData | null }) {
@@ -98,11 +98,29 @@ function Grid({ d }: { d: RosterPageData }) {
   );
 }
 
-const POS: { value: '' | GroupId; label: string }[] = [
-  { value: '', label: 'All positions' }, { value: 'QB', label: 'Quarterbacks' }, { value: 'RB', label: 'Running backs' },
-  { value: 'REC', label: 'Receivers and tight ends' }, { value: 'OL', label: 'Offensive line' }, { value: 'DL', label: 'Defensive line' },
-  { value: 'LB', label: 'Linebackers' }, { value: 'DB', label: 'Defensive backs' }, { value: 'KP', label: 'Kickers and punters' },
+/** The table's position checkboxes (user, 2026-11-19: "a more advanced positions filter ... an array of checkboxes with
+ * select none/all"): each roster label goes to one position, the depth number and side dropped. */
+const POSITIONS: { id: string; side: 'Offense' | 'Defense' | 'Kicking' }[] = [
+  { id: 'QB', side: 'Offense' }, { id: 'HB', side: 'Offense' }, { id: 'FB', side: 'Offense' }, { id: 'WR', side: 'Offense' }, { id: 'TE', side: 'Offense' },
+  { id: 'OT', side: 'Offense' }, { id: 'OG', side: 'Offense' }, { id: 'C', side: 'Offense' },
+  { id: 'DE', side: 'Defense' }, { id: 'DT', side: 'Defense' }, { id: 'OLB', side: 'Defense' }, { id: 'MLB', side: 'Defense' }, { id: 'CB', side: 'Defense' }, { id: 'S', side: 'Defense' },
+  { id: 'K', side: 'Kicking' }, { id: 'P', side: 'Kicking' },
 ];
+const ALL_POSITIONS = POSITIONS.map((p) => p.id);
+function positionOf(label: string): string {
+  if (/^HB/.test(label)) return 'HB';
+  if (/^(SE|FL|WR)/.test(label)) return 'WR';
+  if (/^TE/.test(label)) return 'TE';
+  if (label === 'LT' || label === 'RT') return 'OT';
+  if (label === 'LG' || label === 'RG') return 'OG';
+  if (/DE$/.test(label)) return 'DE';
+  if (/^(DT|LDT|RDT|NT)/.test(label)) return 'DT';
+  if (/OLB$/.test(label)) return 'OLB';
+  if (/^(MLB|LILB|RILB|PLB)/.test(label)) return 'MLB';
+  if (/CB/.test(label)) return 'CB';
+  if (/^(FS|SS)/.test(label)) return 'S';
+  return label;
+}
 const TABLE_RATINGS: RatingKey[] = ['spd', 'qck', 'int', 'hnd', 'pwr', 'rng', 'acc', 'tck', 'blk'];
 type SortKey = 'name' | 'team' | 'pos' | 'no' | 'cls' | 'ovr' | 'wt' | RatingKey;
 const PAGE = 100;
@@ -124,7 +142,7 @@ const POWER: Partial<Record<string, string[]>> = {
 function PlayerTable({ d }: { d: RosterPageData }) {
   const [set, setSet] = useState<EditionData | null>(null);
   const [q, setQ] = useState('');
-  const [pos, setPos] = useState<'' | GroupId>('');
+  const [posSet, setPosSet] = useState<Set<string>>(() => new Set(ALL_POSITIONS));
   const [team, setTeam] = useState('');
   const [conf, setConf] = useState('');
   const [power, setPower] = useState(true);
@@ -152,7 +170,7 @@ function PlayerTable({ d }: { d: RosterPageData }) {
       if (conf && t.conf !== conf) continue;
       if (powerConfs && !(powerConfs.includes(t.conf ?? '') ? power : nonPower)) continue;
       for (const p of t.players) {
-        if (pos && p[8] !== pos) continue;
+        if (!posSet.has(positionOf(p[0]))) continue;
         const name = `${p[2]} ${p[3]}`.toLowerCase();
         if (words.length && !words.every((w) => name.includes(w))) continue;
         out.push({ t, p });
@@ -175,7 +193,7 @@ function PlayerTable({ d }: { d: RosterPageData }) {
       const c = typeof x === 'string' ? x.localeCompare(y as string) : x - (y as number);
       return (desc ? -c : c) || a.t.school.localeCompare(b.t.school);
     });
-  }, [set, d.edition, q, pos, team, conf, power, nonPower, sort, desc]);
+  }, [set, d.edition, q, posSet, team, conf, power, nonPower, sort, desc]);
   const pages = Math.max(1, Math.ceil(rows.length / PAGE));
   const at = Math.min(page, pages - 1);
   const head = (k: SortKey, label: string, title?: string, left?: boolean) => (
@@ -190,12 +208,28 @@ function PlayerTable({ d }: { d: RosterPageData }) {
     <div className="rosters-table">
       <div className="rosters-filters">
         {names && <Field label="Name" type="search" value={q} placeholder="Any player" onChange={(v) => { setQ(v); setPage(0); }} />}
-        <Select label="Position group" value={pos} options={POS} onChange={(v) => { setPos(v as '' | GroupId); setPage(0); }} />
         {confs.length > 0 && (
           <Select label="Conference" value={conf} options={[{ value: '', label: 'All conferences' }, ...confs.map((c) => ({ value: c, label: c }))]}
             onChange={(v) => { setConf(String(v)); setTeam(''); setPage(0); }} />
         )}
         <Select label="Team" value={team} options={[{ value: '', label: 'All teams' }, ...teamsShown.map((t) => ({ value: t.id, label: t.school }))]} onChange={(v) => { setTeam(String(v)); setPage(0); }} />
+        <fieldset className="rosters-pos">
+          <legend>Positions</legend>
+          <div className="rosters-pos-all">
+            <Button variant="quiet" onClick={() => { setPosSet(new Set(ALL_POSITIONS)); setPage(0); }}>All</Button>
+            <Button variant="quiet" onClick={() => { setPosSet(new Set()); setPage(0); }}>None</Button>
+          </div>
+          {(['Offense', 'Defense', 'Kicking'] as const).map((side) => (
+            <div className="rosters-pos-side" key={side} role="group" aria-label={side}>
+              {POSITIONS.filter((x) => x.side === side).map(({ id }) => (
+                <Check key={id} checked={posSet.has(id)} onChange={(v) => {
+                  setPosSet((s) => { const n = new Set(s); if (v) n.add(id); else n.delete(id); return n; });
+                  setPage(0);
+                }}>{id}</Check>
+              ))}
+            </div>
+          ))}
+        </fieldset>
         {POWER[d.edition] && (
           <fieldset className="rosters-power">
             <legend>Show teams in</legend>
