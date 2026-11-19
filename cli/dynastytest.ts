@@ -1375,7 +1375,21 @@ assert.ok(hasDynastyHooks(rom) && dynastyAreaProblem(rom) === null);
   assert.throws(() => importSave(d0, stampSave(rawSrm, id ^ 1, 1, 1)), /another dynasty/);
   assert.throws(() => importSave(d0, stampSave(rawSrm, id, 2, 1)), /another season's ROM, and the dynasty is in 2026/);
   assert.match(importSave({ ...d0, seasons: [{ ...d0.seasons[0], rosterVersion: 2 }] }, srm).warning ?? '', /earlier 2026 ROM/);
-  ok('save marks: this dynasty and season import, unmarked and other saves are refused, an older roster version warns');
+  // H-037 (save layout 2): the last-played ID decides. Started on version 1 and played on 2: no warning when 2 is
+  // the newest; played last on 1 while 3 is the newest: a warning that names version 1.
+  if (layoutOfSig(srm[editionOfSig(srm[1]) ? 1 : 0]) === 2) {
+    const lastPlayed = (file: Uint8Array, version: number) => {
+      const f = file.slice(), win = editionOfSig(f[1]) !== null;
+      const b = [0x44, 0x59, 0x4e, 0x31, id >>> 24, (id >>> 16) & 255, (id >>> 8) & 255, id & 255, 0, 1, version >> 8, version & 255, 0, 0, 0, 1];
+      b.forEach((x, k) => { f[win ? 0xe01 + 2 * (0x1360 + k) : 0x700 + 0x1360 + k] = x; });
+      return f;
+    };
+    const v2 = { ...d0, seasons: [{ ...d0.seasons[0], rosterVersion: 2 }] };
+    assert.equal(importSave(v2, lastPlayed(srm, 2)).warning, undefined);
+    const v3 = { ...d0, seasons: [{ ...d0.seasons[0], rosterVersion: 3 }] };
+    assert.match(importSave(v3, lastPlayed(srm, 1)).warning ?? '', /last played on version 1 .*newest is 3/);
+  }
+  ok('save marks: this dynasty and season import, unmarked and other saves are refused, an older roster version warns (layout 2: by the last-played ID)');
 }
 {
   const out = Off.seasonRom(d0, d0.seasons[0], rom, 1_800_000_000_000);
