@@ -1,25 +1,52 @@
 // The Rosters section (user, 2026-11-19; approved mockups "Rosters section mockups"): every team of the 2026 and 1994
 // editions, the original game and the historic teams, as cards (a grid, then each team's full card) or as one table of
 // every player. The rosters follow the latest test ROMs for now (`npm run site:rosters`).
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Button, Check, Combobox, Field, LinkSwitch, Select, Table } from '../../ui';
 import { RosterCard, TeamLogo, ratingLabel } from './Card';
 import { cardTitle, EDITIONS, editionInfo, pageData, parseRosterPath, rostersHref, shortName, type RosterPageData } from './pages';
 import type { EditionData, RatingKey, RosterPlayer, TeamSummary } from './types';
+import { rosterRoute } from '../routes';
 
 /** The page for a /rosters address: its built data, or (dev server) fetched. */
-export function RostersPage({ path, data }: { path: string; data: RosterPageData | null }) {
+export function RostersPage({ path: firstPath, data }: { path: string; data: RosterPageData | null }) {
   const [d, setD] = useState(data);
+  const [path, setPath] = useState(firstPath);
   const at = parseRosterPath(path);
+  // Previous / next between team pages without loading a new page, so the scroll position stays (user, 2026-11-19:
+  // "it's annoying it jumps back up to the top every time you visit next/prev"). The edition's file is fetched once.
+  const sets = useRef(new Map<string, Promise<EditionData>>());
+  const show = async (to: string) => {
+    const at2 = parseRosterPath(to);
+    if (!at2) return false;
+    if (!sets.current.has(at2.edition)) sets.current.set(at2.edition, fetch(`/data/rosters/${at2.edition}.json`).then((r) => r.json()));
+    const next = pageData(to, await sets.current.get(at2.edition)!);
+    if (!next) return false;
+    setD(next);
+    setPath(to);
+    const r = rosterRoute(to, next);
+    if (r) document.title = r.title;
+    return true;
+  };
+  const nav = async (href: string) => {
+    const u = new URL(href, window.location.href);
+    if (await show(u.pathname)) window.history.pushState(null, '', u.pathname + u.search);
+    else window.location.href = href;
+  };
+  useEffect(() => {
+    const back = () => { void show(window.location.pathname).then((ok) => { if (!ok) window.location.reload(); }); };
+    window.addEventListener('popstate', back);
+    return () => window.removeEventListener('popstate', back);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (d || !at) return;
     fetch(`/data/rosters/${at.edition}.json`).then((r) => r.json()).then((set: EditionData) => setD(pageData(path, set)));
   }, [d, path]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!d) return <div className="rosters"><p className="rosters-wait">Loading the rosters…</p></div>;
-  return <Rosters d={d} />;
+  return <Rosters d={d} nav={nav} />;
 }
 
-function Rosters({ d }: { d: RosterPageData }) {
+function Rosters({ d, nav }: { d: RosterPageData; nav: (href: string) => void }) {
   const ed = editionInfo(d.edition);
   const go = (id: string) => { window.location.href = rostersHref(d.edition, id); };
   return (
@@ -44,7 +71,7 @@ function Rosters({ d }: { d: RosterPageData }) {
         </div>
       </div>
       {d.kind === 'cards' && <Grid d={d} />}
-      {d.kind === 'team' && d.team && <TeamPage d={d} />}
+      {d.kind === 'team' && d.team && <TeamPage d={d} nav={nav} />}
       {d.kind === 'table' && <PlayerTable d={d} />}
     </div>
   );
@@ -52,7 +79,7 @@ function Rosters({ d }: { d: RosterPageData }) {
 
 /** Previous and next team in the edition (A-Z, around the end; user, 2026-11-19), and the way back to the grid. */
 /** Previous / next team (A-Z, wrapping), among the teams the filter keeps (the team shown may be outside it). */
-function TeamSteps({ d, label, keep = () => true, query = '' }: { d: RosterPageData; label: string; keep?: (t: { conf: string }) => boolean; query?: string }) {
+function TeamSteps({ d, label, keep = () => true, query = '', nav }: { d: RosterPageData; label: string; keep?: (t: { conf: string }) => boolean; query?: string; nav?: (href: string) => void }) {
   const n = d.teams.length;
   const i = d.teams.findIndex((t) => t.id === d.team!.id);
   const step = (dir: 1 | -1) => {
@@ -62,7 +89,13 @@ function TeamSteps({ d, label, keep = () => true, query = '' }: { d: RosterPageD
   const prev = step(-1), next = step(1);
   const ed = editionInfo(d.edition);
   return (
-    <nav className="rosters-steps" aria-label={label}>
+    <nav className="rosters-steps" aria-label={label} onClick={(e) => {
+      // previous / next in place (a plain link still works: new tab, no script)
+      const a = (e.target as Element).closest('a.ui-button') as HTMLAnchorElement | null;
+      if (!a || !nav || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+      e.preventDefault();
+      nav(a.href);
+    }}>
       {prev ? <Button variant="quiet" href={rostersHref(d.edition, prev.id) + query} label={`Previous team: ${prev.school}`}>← {prev.school}</Button> : <span />}
       <a className="rosters-all" href={rostersHref(d.edition) + query}>All {ed.id === 'historic' ? 'historic' : ed.label} teams</a>
       {next ? <Button variant="quiet" href={rostersHref(d.edition, next.id) + query} label={`Next team: ${next.school}`}>{next.school} →</Button> : <span />}
@@ -71,15 +104,15 @@ function TeamSteps({ d, label, keep = () => true, query = '' }: { d: RosterPageD
 }
 
 /** A team page: the conference filters (for previous / next), the steps, the card. */
-function TeamPage({ d }: { d: RosterPageData }) {
+function TeamPage({ d, nav }: { d: RosterPageData; nav: (href: string) => void }) {
   const f = useConfFilter(d, () => {});
   const hasFilters = POWER[d.edition] || d.teams.some((t) => t.conf);
   return (
     <div className="rosters-team">
       {hasFilters && <div className="rosters-filters rosters-grid-filters">{f.controls}</div>}
-      <TeamSteps d={d} label="Teams" keep={f.keep} query={f.query} />
+      <TeamSteps d={d} label="Teams" keep={f.keep} query={f.query} nav={nav} />
       <RosterCard team={d.team!} edition={d.edition} sheet={d.sheet} />
-      <TeamSteps d={d} label="Teams, after the card" keep={f.keep} query={f.query} />
+      <TeamSteps d={d} label="Teams, after the card" keep={f.keep} query={f.query} nav={nav} />
       <p className="rosters-source">{source(d)}</p>
     </div>
   );

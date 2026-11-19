@@ -52,7 +52,7 @@ function fullName(first: string, last: string) {
 
 /** On wide screens (1024 px on), shows a player's first name where the whole name fits in its cell (user, 2026-11-19:
  * "if there's enough browser width, we should show first names"); a name that doesn't fit stays "R. Bush". */
-function useFullNames(ref: React.RefObject<HTMLElement | null>) {
+function useFullNames(ref: React.RefObject<HTMLElement | null>, key: string) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -68,7 +68,7 @@ function useFullNames(ref: React.RefObject<HTMLElement | null>) {
     const ro = new ResizeObserver(fit);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [ref]);
+  }, [ref, key]);
 }
 
 export function RosterCard({ team, edition, sheet }: { team: TeamRoster; edition: EditionId; sheet: RosterPageData['sheet'] }) {
@@ -77,7 +77,7 @@ export function RosterCard({ team, edition, sheet }: { team: TeamRoster; edition
   for (const p of team.players) groups.set(p[8], [...(groups.get(p[8]) ?? []), p]);
   const style: Vars = { '--team': team.color, '--stripe': team.stripe };
   const cardRef = useRef<HTMLElement>(null);
-  useFullNames(cardRef);
+  useFullNames(cardRef, team.id);
   // Impact players (user, 2026-11-19): a yellow dot after the name, as the game marks them on Team Rosters.
   const impact = new Set((team.impact ?? []).map((i) => team.players[i]));
   return (
