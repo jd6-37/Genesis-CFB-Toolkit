@@ -34,6 +34,8 @@ export interface TeamSummary {
 
 export interface TeamRoster extends TeamSummary {
   players: RosterPlayer[];
+  /** The impact players, as indexes into `players`, as the game picks them at kickoff (none for the original game). */
+  impact?: number[];
 }
 
 export interface EditionData {
