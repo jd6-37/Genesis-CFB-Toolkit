@@ -10,6 +10,8 @@ import { seasonDone } from '../../core/dynasty/offseason';
 import { Button, Check, Field, FileButton, Note, Select, Steps, SubHead, Table } from '../../ui';
 import { Ctx, href } from './ui';
 import { SAMPLE_PATH } from '../../core/dynasty/snapshotId';
+import { KNOWN, openRom, type OpenedRom } from '../../core/romfile';
+import { applyListed, fetchPatchFile, fetchPatchList, offered, patchBase, refFromPage, romFileName, type Patch, type PatchList } from '../../core/patches';
 
 /** A dynasty made from the user's ROM but not saved yet (Get started's step 1), with what goes into the browser with it. */
 export interface Prepared {
@@ -21,8 +23,10 @@ export interface Prepared {
 }
 
 export interface StartActions {
-  /** Reads the ROM and makes the dynasty from it (throws with the reason when the ROM can't hold one). */
-  prepare: (rom: File) => Promise<Prepared>;
+  /** Makes the dynasty from the ROM (throws with the reason when the ROM can't hold one). */
+  prepare: (rom: { name: string; data: Uint8Array }) => Promise<Prepared>;
+  /** Downloads a ROM file (the original game, patched here). */
+  downloadRom: (name: string, data: Uint8Array) => void;
   /** Applies the choices, saves the dynasty and opens it. */
   finish: (p: Prepared, o: { name: string; teams: number[]; generated: boolean; coachSim: boolean; year: number }) => Promise<Dynasty>;
   /** Downloads the dynasty file (and remembers when). */
@@ -36,7 +40,15 @@ export const benchSource = (id: EditionId) =>
   id === '1994' ? 'real players from the 1994 rosters (their ratings are generated)' : 'the next-best real players (CFB 27)';
 
 /** "v2.0.1-test50" from a ROM file's name, if it has one. */
-const versionOf = (fileName: string) => fileName.match(/v\d+\.\d+\.\d+(?:-test\d+)?/)?.[0];
+const versionOf = (fileName: string) => {
+  const m = fileName.match(/v(\d+)[._](\d+)[._](\d+)(?:-test\d+)?/);
+  return m ? m[0].replace(/^v(\d+)[._](\d+)[._](\d+)/, 'v$1.$2.$3') : undefined;
+};
+
+/** The release patch that makes each edition (Elevated repo, patches.json: content ids; fatigue "fixed"). From v2.1.0
+ * on, "elevated" is the 1994 Season Edition (before, the 36-team edition, which can't hold a dynasty). */
+const PATCH_CONTENT: Record<EditionId, string> = { '2026': 'elevated-2026', '1994': 'elevated' };
+const ORIGINAL_SHA1 = Object.keys(KNOWN).find((k) => KNOWN[k].kind === 'bw95' && !KNOWN[k].rebalanced)!;
 
 export function GetStarted({ actions, busy }: { actions: StartActions; busy: boolean }) {
   const [step, setStep] = useState(0);
@@ -52,6 +64,46 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
   const yearN = Number(year);
   const yearOk = /^\d{4}$/.test(year) && yearN >= 1950 && yearN <= 2099;
   const [made, setMade] = useState<Dynasty | null>(null);
+  // The original game (user, 2026-11-19: "users should be able to load either an elevated rom or the base BW95 base
+  // game. If they upload the base game, they must then choose one of the two elevated patches"; mockups approved).
+  const [orig, setOrig] = useState<OpenedRom | null>(null);
+  const [list, setList] = useState<PatchList | null>(null);
+  const [pick, setPick] = useState<EditionId>('2026');
+  const [patched, setPatched] = useState<{ label: string } | null>(null);
+  const [patchError, setPatchError] = useState<string | null>(null);
+  const base = patchBase(refFromPage(typeof window === 'undefined' ? '' : window.location.search));
+  const patchFor = (id: EditionId): Patch | undefined =>
+    list ? offered(list).find((p) => p.content === PATCH_CONTENT[id] && p.fatigue === 'fixed') : undefined;
+  const release = list?.releases[0].version;
+  const reset = () => { setPrep(null); setOrig(null); setPatched(null); setPatchError(null); setTeams([]); setYear(''); };
+  const takeRom = async (rom: { name: string; data: Uint8Array }) => {
+    const p = await actions.prepare(rom);
+    setPrep(p);
+    setYear(String(p.dyn.startYear));
+  };
+  const openFile = async (f: File) => {
+    const rom = await openRom(f.name, new Uint8Array(await f.arrayBuffer()));
+    if (rom.sha1 !== ORIGINAL_SHA1) return takeRom(rom);
+    setOrig(rom);
+    setPatchError(null);
+    try {
+      setList(await fetchPatchList(base));
+    } catch (e) {
+      setPatchError(`The list of patches can't be read right now (${(e as Error).message}). Try again in a moment, or patch your ROM in the Mod Toolkit.`);
+    }
+  };
+  const patch = async (id: EditionId) => {
+    const p = patchFor(id);
+    if (!orig || !p) return;
+    setPatchError(null);
+    try {
+      const { data } = await applyListed(orig.data, p, await fetchPatchFile(base, p));
+      await takeRom({ name: romFileName(p.file!), data });
+      setPatched({ label: p.name.replace(/^Bill Walsh College Football '95 /, '') });
+    } catch (e) {
+      setPatchError((e as Error).message);
+    }
+  };
 
   const go = (n: number) => { setStep(n); window.scrollTo(0, 0); };
   const work = async (what: string, fn: () => Promise<void>) => {
@@ -74,25 +126,56 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
         <section>
           <h1>Load your ROM</h1>
           <p>
-            A dynasty needs Bill Walsh '95 Elevated v2.1.0 or later: the {EDITIONS['2026'].name} or the {EDITIONS['1994'].name}. The ROM stays in this
-            browser. Nothing is uploaded.
+            Load Bill Walsh '95 Elevated (v2.1.0 or later): the {EDITIONS['2026'].name} or the {EDITIONS['1994'].name}. Or load the original game and
+            the app patches it for you. The ROM stays in this browser. Nothing is uploaded.
           </p>
-          {!dyn ? (
+          {!dyn && !orig ? (
             <div className="dy-start-drop">
-              <FileButton label="Choose ROM" accept=".md,.bin,.gen,.zip" disabled={off} onFile={(f) => work('Reading the ROM…', async () => { const p = await actions.prepare(f); setPrep(p); setYear(String(p.dyn.startYear)); })} />
+              <FileButton label="Choose ROM" accept=".md,.bin,.gen,.zip" disabled={off} onFile={(f) => work('Reading the ROM…', () => openFile(f))} />
               <p className="dy-small dy-dim">.md, .bin, .gen or .zip</p>
             </div>
           ) : null}
-          {!dyn && (
+          {!dyn && !orig && (
             <p className="dy-small dy-start-alt">
               Already have a dynasty in another browser or on another computer? <Button variant="link" href={href('manage')}>Open its dynasty file in Manage</Button>.
             </p>
           )}
-          {!dyn ? null : (
+          {orig && !dyn && (
             <>
               <div className="dy-start-found">
+                <p><strong>Bill Walsh College Football '95, the original game</strong></p>
+                <p className="dy-small dy-dim">{orig.name}</p>
+                <p className="dy-small">
+                  A dynasty needs one of the two Elevated Season Editions. Pick one and the app patches your ROM
+                  {release ? ` with the ${release} release` : ''}, in your browser.
+                </p>
+              </div>
+              <EditionPick value={pick} onChange={setPick} />
+              {patchError && <Note kind="error">{patchError}</Note>}
+              <div className="dy-row dy-start-nav">
+                <Button disabled={off || !patchFor(pick)} onClick={() => work('Patching your ROM…', () => patch(pick))}>Patch with the {EDITIONS[pick].name}</Button>
+                <Button variant="quiet" onClick={reset}>Choose another ROM</Button>
+              </div>
+            </>
+          )}
+          {!dyn ? null : (
+            <>
+              {patched && (
+                <>
+                  <Note kind="ok"><strong>Patched:</strong> your ROM is now {patched.label} (checked against the release).</Note>
+                  <div className="dy-start-must">
+                    <h2>Download it: you'll play your first season on it</h2>
+                    <p>Your first season is played on this ROM. Later seasons get their own ROM from the app at the end of each offseason.</p>
+                    <div className="dy-row">
+                      <Button onClick={() => actions.downloadRom(prep!.fileName, prep!.rom)}>Download patched ROM</Button>
+                      <span className="dy-small dy-dim dy-start-file">{prep!.fileName}, 4 MB</span>
+                    </div>
+                  </div>
+                </>
+              )}
+              <div className="dy-start-found">
                 <p><strong>{edition!.name}{versionOf(prep!.fileName) ? `, ${versionOf(prep!.fileName)}` : ''}</strong></p>
-                <p className="dy-small dy-dim">{prep!.fileName}</p>
+                {!patched && <p className="dy-small dy-dim">{prep!.fileName}</p>}
                 <p className="dy-small">
                   {dyn.teams.length} teams, {dyn.players.length.toLocaleString('en-US')} players.{' '}
                   {edition!.id === '1994'
@@ -102,7 +185,9 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
               </div>
               <div className="dy-row">
                 <Button onClick={() => go(1)}>Next: name it</Button>
-                <Button variant="quiet" onClick={() => { setPrep(null); setTeams([]); setYear(''); }}>Choose another ROM</Button>
+                {patched
+                  ? <Button variant="quiet" onClick={() => { setPrep(null); setPatched(null); setTeams([]); setYear(''); }}>Back to the editions</Button>
+                  : <Button variant="quiet" onClick={reset}>Choose another ROM</Button>}
               </div>
             </>
           )}
@@ -175,7 +260,7 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
           <Note kind="ok"><strong>{made.name} is ready:</strong> {made.players.length.toLocaleString('en-US')} players on {made.teams.length} teams.</Note>
           <Renumbered d={made} />
           <h1>How a season works</h1>
-          <SeasonGuide year={made.seasons[0].year} first backup={<Button variant="quiet" onClick={() => actions.exportFile(made)}>Download dynasty file</Button>} />
+          <SeasonGuide year={made.seasons[0].year} first patched={patched ? prep?.fileName : undefined} backup={<Button variant="quiet" onClick={() => actions.exportFile(made)}>Download dynasty file</Button>} />
           <div className="dy-start-go">
             <Button href={href('home')} strong>Go to {made.name}</Button>
             <p className="dy-small dy-dim">This guide stays on Manage, under "How a season works".</p>
@@ -185,6 +270,48 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
     </div>
     {step === 0 && <SamplePeek />}
     </div>
+  );
+}
+
+/** One edition's differences, from the release notes (user, 2026-11-19: "point out the differences: no transfer portal in
+ * 94 rom, 1994 rosters to start, 107 teams vs 138, 1994 rules"). */
+const EDITION_ROWS: Record<EditionId, [string, string][]> = {
+  '1994': [
+    ['Teams', '107: every Division I-A team of 1994'],
+    ['Rosters', '1994 rosters to start, with real names for most players'],
+    ['Rules', '1994 rules: the original clock, no overtime (a game can end in a tie), no two-minute timeout'],
+    ['Postseason', 'The SEC Championship Game, then the 19 bowl games of 1994'],
+    ['Dynasty', 'No transfer portal'],
+  ],
+  '2026': [
+    ['Teams', '138: every FBS team of 2026'],
+    ['Rosters', '2026 rosters to start, rated from College Football 27'],
+    ['Rules', "Today's rules: the modern clock, the two-minute timeout and overtime"],
+    ['Postseason', 'Conference title games, then a 12-team playoff (or 24 or 4 teams, a BCS title game, or none)'],
+    ['Dynasty', 'With the transfer portal'],
+  ],
+};
+
+/** The two editions side by side, to patch the original game with one. */
+function EditionPick({ value, onChange }: { value: EditionId; onChange: (id: EditionId) => void }) {
+  return (
+    <fieldset className="dy-eds">
+      <legend>Pick an edition</legend>
+      <div className="dy-eds-grid">
+        {(['1994', '2026'] as EditionId[]).map((id) => (
+          <label key={id} className={`dy-ed${value === id ? ' is-on' : ''}`}>
+            <span className="dy-ed-top">
+              <input type="radio" name="dy-edition" checked={value === id} onChange={() => onChange(id)} />
+              <strong>{EDITIONS[id].name}</strong>
+            </span>
+            <dl>
+              {EDITION_ROWS[id].map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
+            </dl>
+          </label>
+        ))}
+      </div>
+      <p className="dy-small dy-dim">Both have every gameplay feature, the 32 historic teams for Exhibition games and alternate uniforms. You can't switch a dynasty to the other edition later.</p>
+    </fieldset>
   );
 }
 
@@ -241,13 +368,20 @@ export function Renumbered({ d }: { d: Dynasty }) {
 }
 
 /** How a season works, in five steps (Get started's last step and its own page from Manage). */
-export function SeasonGuide({ year, first, backup }: { year: number; /** The dynasty's first season (played on the user's own ROM). */ first?: boolean; backup?: ReactNode }) {
+export function SeasonGuide({ year, first, patched, backup }: {
+  year: number;
+  /** The dynasty's first season (played on the user's own ROM). */
+  first?: boolean;
+  /** The file name of the ROM patched in Get started, when the user loaded the original game. */
+  patched?: string;
+  backup?: ReactNode;
+}) {
   return (
     <ol className="dy-guide">
       <li>
         <h2>Play the {year} season{first ? ' on your ROM' : ` on the ${year} ROM`}</h2>
         <p>
-          {first ? 'Play it as it is: the first season needs no download. ' : `The offseason gave you the ${year} ROM. `}
+          {first ? (patched ? `Play it on the patched ROM you downloaded in step 1 (${patched}). ` : 'Play it as it is: the first season needs no download. ') : `The offseason gave you the ${year} ROM. `}
           Use RetroArch's Genesis Plus GX core, start a new season in Season mode and choose your teams.
         </p>
       </li>

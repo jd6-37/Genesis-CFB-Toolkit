@@ -346,10 +346,8 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
     return addCoaches(named.length ? { ...made, renumbered: named } : made).catch(() => made);
   };
   const startActions: StartActions = {
-    prepare: async (file) => {
-      const rom = (await openRom(file.name, await readFile(file))).data;
-      return { dyn: await build(rom), rom, pics: teamArt(rom), fileName: file.name };
-    },
+    prepare: async ({ name, data: rom }) => ({ dyn: await build(rom), rom, pics: teamArt(rom), fileName: name }),
+    downloadRom: (name, data) => download(name, data as Uint8Array<ArrayBuffer>, 'application/octet-stream'),
     finish: async (p, o) => {
       // Another starting year (user, 2026-11-17: "if someone wants to make a 2027 roster next year, they can ... start
       // their dynasty with year 2027"): made again from the same ROM, starting then.
