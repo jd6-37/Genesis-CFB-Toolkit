@@ -121,7 +121,7 @@ export function sitemapXml(paths: string[]): string {
     const prio = p === '/' ? '1.0' : /^\/(manual|insights|rosters)$/.test(p) ? '0.8' : p.startsWith('/rosters/') ? '0.4' : '0.6';
     return `  <url><loc>${abs(p)}</loc>${last ? `<lastmod>${last}</lastmod>` : ''}<priority>${prio}</priority></url>`;
   });
-  for (const p of ['/toolkit', '/dynasty']) urls.push(`  <url><loc>${abs(p)}</loc><priority>0.7</priority></url>`);
+  for (const p of ['/toolkit', '/dynasty', '/dynasty/sample']) urls.push(`  <url><loc>${abs(p)}</loc><priority>0.7</priority></url>`);
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.join('\n')}\n</urlset>\n`;
 }
 
@@ -139,6 +139,7 @@ export function llmsTxt(): string {
     `- [Releases on GitHub](${REPO_URL}/releases): the patches and release notes`,
     line('Mod Toolkit', '/toolkit', 'a web app that patches your ROM in the browser and edits rosters, teams, conferences, Walsh Reports and uniforms'),
     line('Dynasty', '/dynasty', 'a web app that runs a multi-season dynasty and writes each new season into your ROM'),
+    line('Sample dynasty', '/dynasty/sample', 'a read-only dynasty in the Dynasty app, four weeks into a 2026 season'),
     '',
     '## Manual',
     ...chapters.map((c) => line(c.title, `/manual/${c.slug}`, c.summary)),

@@ -5,7 +5,7 @@ import { setRatingScale } from '../../core/dynasty/ratings';
 import { useEffect, useMemo, useState } from 'react';
 import { seasonView, weekName } from '../../core/dynasty/derive';
 import { readSnapshot, type Snapshot } from '../../core/dynasty/snapshot';
-import { snapshotExpires, SNAPSHOT_DAYS } from '../../core/dynasty/snapshotId';
+import { SAMPLE_FILE, SAMPLE_ID, snapshotExpires, SNAPSHOT_DAYS } from '../../core/dynasty/snapshotId';
 import { Button, Masthead, NavBar, Note, ThemeToggle } from '../../ui';
 import { navClick } from '../../appNav';
 import { Ctx, href, TeamMark, type DynCtx } from './ui';
@@ -38,6 +38,11 @@ const parseHash = () => {
 type Load = { state: 'loading' } | { state: 'gone' } | { state: 'error'; message: string } | { state: 'ok'; snap: Snapshot };
 
 async function fetchSnapshot(id: string): Promise<Snapshot | null> {
+  if (id === SAMPLE_ID) {
+    const file = await fetch(SAMPLE_FILE);
+    if (!file.ok) throw new Error("The sample dynasty can't be loaded right now. Try again in a moment.");
+    return readSnapshot(new Uint8Array(await file.arrayBuffer()));
+  }
   const r = await fetch(`/api/snapshot?id=${encodeURIComponent(id)}`);
   if (r.status === 404 || r.status === 400) return null;
   if (!r.ok) throw new Error("The snapshot can't be loaded right now. Try again in a moment.");
@@ -68,6 +73,7 @@ export default function SnapshotApp({ id, toolkitHref }: { id: string; toolkitHr
   }, []);
   useEffect(() => { window.scrollTo(0, 0); }, [route.page, route.arg]);
 
+  const sample = id === SAMPLE_ID;
   const snap = load.state === 'ok' ? load.snap : null;
   const d = snap?.dynasty ?? null;
   // The v8 numbers for a dynasty made on a v8 ROM (ratings.ts), set before any page renders a rating.
@@ -84,8 +90,8 @@ export default function SnapshotApp({ id, toolkitHref }: { id: string; toolkitHr
   );
 
   useEffect(() => {
-    document.title = d ? `${d.name}: a dynasty snapshot` : 'Dynasty snapshot';
-  }, [d]);
+    document.title = sample ? 'A sample dynasty' : d ? `${d.name}: a dynasty snapshot` : 'Dynasty snapshot';
+  }, [d, sample]);
 
   const { page, arg } = route;
   const num = arg !== undefined && /^\d+$/.test(arg) ? Number(arg) : undefined;
@@ -117,7 +123,9 @@ export default function SnapshotApp({ id, toolkitHref }: { id: string; toolkitHr
     <div className="dy" data-brand="dynasty" data-theme={dark ? 'dark' : 'light'}>
       {snap && d && (
         <div className="dy-snapbar">
-          <p><span className="dy-snaptag">Snapshot</span>{d.name} with {d.teams[snap.team]?.school}, {snap.label}. Shared {shared}, link works until {until}. Read-only: it doesn't change.</p>
+          {sample
+            ? <p><span className="dy-snaptag">Sample</span>A sample dynasty with {d.teams[snap.team]?.school}, {snap.label}. Read-only: browse it to see what yours will look like.</p>
+            : <p><span className="dy-snaptag">Snapshot</span>{d.name} with {d.teams[snap.team]?.school}, {snap.label}. Shared {shared}, link works until {until}. Read-only: it doesn't change.</p>}
           <a href="/dynasty">Start your own dynasty</a>
         </div>
       )}

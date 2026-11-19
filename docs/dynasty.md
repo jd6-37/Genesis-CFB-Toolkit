@@ -446,6 +446,16 @@ User, 2026-11-17: "a link that can be shared publicly so other people can browse
 - **The upload token** (2026-11-18): reading the store works with the project's connection alone, but approving a browser upload (`handleUpload`) needs `BLOB_READ_WRITE_TOKEN` in the project's environment variables. Without it the function answers "No read-write token found" and Share fails. `/api/snapshot?status=1` reports it: `{ storage: "connected", uploads: "ready" }`, or `uploads: "missing BLOB_READ_WRITE_TOKEN"` with status 500.
 - **Expiry** (user, 2026-11-18: "we should probably set an expiration date for snapshots so we don't accumulate garbage. 90 days?"): `SNAPSHOT_DAYS` = 90 (`snapshotId.ts`). From the blob's upload time, `GET ?id` answers 404 "expired" after 90 days; the visitor sees the gone page, which names expiry as a reason. Manage → Share drops expired snapshots from the list and the 5-snapshot count, and shows "Works until <date>" per snapshot; the snapshot bar says "link works until <date>". The files are deleted by a daily Vercel cron (`vercel.json` `crons`: `/api/snapshot?cleanup=1` at 04:17 UTC), which lists `s/` and deletes everything older than 90 days. It runs only with `CRON_SECRET` set in the project (Vercel sends it as `Authorization: Bearer …`; without it the cleanup answers 500, with a wrong one 401). `?status=1` reports `expiry: "ready"` or `"missing CRON_SECRET"`. `test:snapshot` checks the 90 days and the cleanup's guard.
 
+
+### The sample dynasty
+
+User, 2026-11-19: "add something to the /dynasty#start page that teases what a loaded dynasty could look like", from his snapshot `yd0HQuFy4W3B` (My Dynasty, Tulane, 2026, after Week 4); option A of the canvas "Dynasty Get started: sample dynasty mockups"; "copy the snapshot to sample to hold it forever" (an owner exception to the no-ROM-data rule, in CLAUDE.md).
+
+- The file: `public/data/sample-dynasty.snap`, the snapshot JSON gzipped (`gzip -9 -n`). The `.snap` name keeps hosts from serving it with a gzip Content-Encoding. Snapshots never hold delete keys.
+- The address: `/dynasty/sample` (`SAMPLE_PATH`, `snapshotIdFromPath` answers `sample`; `vercel.json`, `vite.config.ts`, `appNav.ts`). `SnapshotApp` loads the file instead of asking `/api/snapshot`; the yellow bar says "Sample" with no share date or expiry.
+- Get started (`GetStarted.tsx` `SamplePeek`): on the first step, the picture `public/media/dynasty-sample.jpg` (the sample's Home page), a line and **Browse a sample dynasty**. Beside the steps from 1100 px, under them on a phone.
+- To replace the sample: share a new snapshot, save its file from the Blob store (the browser may save it already unzipped as `.json`; gzip it), put it at `public/data/sample-dynasty.snap`, update the picture and the bar's team in `SamplePeek`.
+
 ## Starting year
 
 User, 2026-11-17: "let the user define a starting year when creating a new dynasty. Default to 2026 for the 2026 rom and 1994 for the 94 rom. The idea here is that if i abandon the mod and someone wants to make a 2027 roster next year, they can use that roster/rom and start their dynasty with year 2027".

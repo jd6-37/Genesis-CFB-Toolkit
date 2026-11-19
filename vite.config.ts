@@ -8,7 +8,7 @@ import remarkGfm from 'remark-gfm';
 //   its own HTML file (cli/prerender.ts).
 // - app.html: the Mod Toolkit and Dynasty, served at /toolkit and /dynasty (vercel.json does the same on
 //   the live site).
-const APP_PATHS = /^\/(toolkit|dynasty)\/?(\?.*)?$/;
+const APP_PATHS = /^\/(toolkit|dynasty(\/s\/[A-Za-z0-9_-]{12}|\/sample)?)\/?(\?.*)?$/;
 
 /** The dev server's version of vercel.json's rewrites. */
 function devRoutes(): Plugin {

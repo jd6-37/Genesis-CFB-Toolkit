@@ -37,8 +37,18 @@ export async function snapshotIdOf(key: string): Promise<string> {
 
 /** The address of a snapshot on the site. */
 export const snapshotUrl = (origin: string, id: string) => `${origin}/dynasty/s/${id}`;
-/** The id in a snapshot address (/dynasty/s/<id>), if it is one. */
+/**
+ * The sample dynasty (user, 2026-11-19: "copy the snapshot to sample to hold it forever"): one shared snapshot kept
+ * in the repo (public/data/sample-dynasty.snap, the gzip file as the Blob store had it), shown at /dynasty/sample with
+ * the snapshot pages. It never expires. Get started links to it.
+ */
+export const SAMPLE_ID = 'sample';
+export const SAMPLE_PATH = '/dynasty/sample';
+export const SAMPLE_FILE = '/data/sample-dynasty.snap';
+
+/** The id in a snapshot address (/dynasty/s/<id>, or the sample's /dynasty/sample), if it is one. */
 export function snapshotIdFromPath(pathname: string): string | null {
+  if (/^\/dynasty\/sample\/?$/.test(pathname)) return SAMPLE_ID;
   const m = /^\/dynasty\/s\/([A-Za-z0-9_-]{12})\/?$/.exec(pathname);
   return m ? m[1] : null;
 }
