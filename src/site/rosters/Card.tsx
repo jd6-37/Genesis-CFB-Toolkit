@@ -2,7 +2,7 @@
 // attached examples should be rebuilt in HTML, not static images ... mobile-friendly"): the title in the team color,
 // the Bill Walsh seal top right, a stripe in the team's secondary color, the EA Sports logo bottom right; inside the
 // box the groups as Team Rosters labels them. Offense, defense and conference take the original's "Bill's pick" line.
-import type { CSSProperties } from 'react';
+import { useEffect, useRef, type CSSProperties } from 'react';
 import type { EditionId, GroupId, RatingKey, TeamRoster } from './types';
 import { cardTitle, shortName, type RosterPageData } from './pages';
 
@@ -42,16 +42,47 @@ export function TeamLogo({ team, edition, sheet }: { team: TeamRoster | RosterPa
   return <span className="rc-logo" style={style} role="img" aria-label={`${team.school} logo`} />;
 }
 
+/** A name cell's two forms: "R. Bush" (phones, tablets) and "Reggie Bush" (wide screens, when it fits; useFullNames). */
+function fullName(first: string, last: string) {
+  const short = shortName(first, last);
+  if (!short) return '–';
+  const full = `${first} ${last}`.trim();
+  return full === short ? short : <><span className="rc-n-short">{short}</span><span className="rc-n-full">{full}</span></>;
+}
+
+/** On wide screens (1024 px on), shows a player's first name where the whole name fits in its cell (user, 2026-11-19:
+ * "if there's enough browser width, we should show first names"); a name that doesn't fit stays "R. Bush". */
+function useFullNames(ref: React.RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const wide = window.matchMedia('(min-width: 1024px)');
+    const fit = () => {
+      for (const td of el.querySelectorAll<HTMLElement>('td.rc-name')) {
+        if (!td.querySelector('.rc-n-full')) continue;
+        td.classList.add('is-full');
+        if (!wide.matches || td.scrollWidth > td.clientWidth) td.classList.remove('is-full');
+      }
+    };
+    fit();
+    const ro = new ResizeObserver(fit);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [ref]);
+}
+
 export function RosterCard({ team, edition, sheet }: { team: TeamRoster; edition: EditionId; sheet: RosterPageData['sheet'] }) {
   const names = edition !== 'original';
   const groups = new Map<GroupId, TeamRoster['players']>();
   for (const p of team.players) groups.set(p[8], [...(groups.get(p[8]) ?? []), p]);
   const style: Vars = { '--team': team.color, '--stripe': team.stripe };
+  const cardRef = useRef<HTMLElement>(null);
+  useFullNames(cardRef);
   // Impact players (user, 2026-11-19): a yellow dot after the name, as the game marks them on Team Rosters.
   const impact = new Set((team.impact ?? []).map((i) => team.players[i]));
   return (
     <div className="rc-wrap">
-      <article className="rc" data-brand="dynasty" style={style} aria-label={`${team.school} roster card`}>
+      <article ref={cardRef} className="rc" data-brand="dynasty" style={style} aria-label={`${team.school} roster card`}>
         <div className="rc-grid">
           <header className="rc-top">
             <TeamLogo team={team} edition={edition} sheet={sheet} />
@@ -88,7 +119,7 @@ export function RosterCard({ team, edition, sheet }: { team: TeamRoster; edition
                           <tr key={p[0]}>
                             <th scope="row" className="rc-pos">{p[0]}</th>
                             <td>{p[1] ?? ''}</td>
-                            {names && <><td className="rc-name" title={`${p[2]} ${p[3]}`.trim() || 'Name not in the game'}>{shortName(p[2], p[3]) || '–'}{impact.has(p) && <span className="rc-impact" role="img" aria-label="Impact player" title="Impact player" />}</td><td className="rc-ovr">{p[5]}</td></>}
+                            {names && <><td className="rc-name" title={`${p[2]} ${p[3]}`.trim() || 'Name not in the game'}>{fullName(p[2], p[3])}{impact.has(p) && <span className="rc-impact" role="img" aria-label="Impact player" title="Impact player" />}</td><td className="rc-ovr">{p[5]}</td></>}
                             {COLS[g].map((k) => <td key={k}>{p[7][k] ?? ''}</td>)}
                           </tr>
                         ))}

@@ -255,7 +255,7 @@ function PlayerTable({ d }: { d: RosterPageData }) {
             <tbody>
               {rows.slice(at * PAGE, at * PAGE + PAGE).map(({ t, p }) => (
                 <tr key={`${t.id}-${p[0]}`}>
-                  {names && <td className="ui-left rosters-name" title={`${p[2]} ${p[3]}`.trim() || undefined}>{shortName(p[2], p[3]) || '–'}</td>}
+                  {names && <td className="ui-left rosters-name" title={`${p[2]} ${p[3]}`.trim() || undefined}><span className="rosters-n-short">{shortName(p[2], p[3]) || '–'}</span><span className="rosters-n-full">{`${p[2]} ${p[3]}`.trim() || '–'}</span></td>}
                   <td className="ui-left"><a href={rostersHref(d.edition, t.id)} className="rosters-teamlink" style={{ '--team': t.color } as CSSProperties}>{t.school}</a></td>
                   <td className="ui-left">{p[0]}</td>
                   <td>{p[1] ?? ''}</td>
