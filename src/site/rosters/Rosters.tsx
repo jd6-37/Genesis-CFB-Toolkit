@@ -2,7 +2,7 @@
 // editions, the original game and the historic teams, as cards (a grid, then each team's full card) or as one table of
 // every player. The rosters follow the latest test ROMs for now (`npm run site:rosters`).
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
-import { Button, Combobox, Field, LinkSwitch, Select, Table } from '../../ui';
+import { Button, Check, Combobox, Field, LinkSwitch, Select, Table } from '../../ui';
 import { RosterCard, TeamLogo, ratingLabel } from './Card';
 import { cardTitle, EDITIONS, editionInfo, pageData, parseRosterPath, rostersHref, shortName, type RosterPageData } from './pages';
 import type { EditionData, GroupId, RatingKey, RosterPlayer, TeamSummary } from './types';
@@ -110,11 +110,25 @@ const CLASS_ORDER: Record<string, number> = { FR: 0, SO: 1, JR: 2, SR: 3, 'SR+':
 
 interface Row { t: TeamSummary; p: RosterPlayer }
 
+/**
+ * The power conferences, for the table's Power / Non-power filters (user, 2026-11-19: "find the fastest HB in the SEC.
+ * Or best QB on a non-P4 team"). 2026: the four the user named. 1994: the seven major conferences of the day, the
+ * Bowl Coalition's five (SEC, ACC, Big East, Big Eight, Southwest) plus the Rose Bowl's Big Ten and Pac-10.
+ * Independents (Notre Dame too) count as non-power.
+ */
+const POWER: Partial<Record<string, string[]>> = {
+  '2026': ['SEC', 'Big Ten', 'ACC', 'Big 12'],
+  '1994': ['SEC', 'Big Ten', 'ACC', 'Big Eight', 'Southwest', 'Pac-10', 'Big East'],
+};
+
 function PlayerTable({ d }: { d: RosterPageData }) {
   const [set, setSet] = useState<EditionData | null>(null);
   const [q, setQ] = useState('');
   const [pos, setPos] = useState<'' | GroupId>('');
   const [team, setTeam] = useState('');
+  const [conf, setConf] = useState('');
+  const [power, setPower] = useState(true);
+  const [nonPower, setNonPower] = useState(true);
   const [sort, setSort] = useState<SortKey>('ovr');
   const [desc, setDesc] = useState(true);
   const [page, setPage] = useState(0);
@@ -122,12 +136,21 @@ function PlayerTable({ d }: { d: RosterPageData }) {
     fetch(`/data/rosters/${d.edition}.json`).then((r) => r.json()).then(setSet);
   }, [d.edition]);
   const names = d.edition !== 'original';
+  const confs = useMemo(() => [...new Set(d.teams.map((t) => t.conf).filter((c): c is string => !!c))].sort((a, b) => a.localeCompare(b)), [d.teams]);
+  const teamsShown = d.teams.filter((t) => {
+    if (conf && t.conf !== conf) return false;
+    const pc = POWER[d.edition];
+    return !pc || (pc.includes(t.conf ?? '') ? power : nonPower);
+  });
   const rows = useMemo(() => {
     if (!set) return [];
     const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
     const out: Row[] = [];
+    const powerConfs = POWER[d.edition];
     for (const t of set.teams) {
       if (team && t.id !== team) continue;
+      if (conf && t.conf !== conf) continue;
+      if (powerConfs && !(powerConfs.includes(t.conf ?? '') ? power : nonPower)) continue;
       for (const p of t.players) {
         if (pos && p[8] !== pos) continue;
         const name = `${p[2]} ${p[3]}`.toLowerCase();
@@ -152,7 +175,7 @@ function PlayerTable({ d }: { d: RosterPageData }) {
       const c = typeof x === 'string' ? x.localeCompare(y as string) : x - (y as number);
       return (desc ? -c : c) || a.t.school.localeCompare(b.t.school);
     });
-  }, [set, q, pos, team, sort, desc]);
+  }, [set, d.edition, q, pos, team, conf, power, nonPower, sort, desc]);
   const pages = Math.max(1, Math.ceil(rows.length / PAGE));
   const at = Math.min(page, pages - 1);
   const head = (k: SortKey, label: string, title?: string, left?: boolean) => (
@@ -168,7 +191,18 @@ function PlayerTable({ d }: { d: RosterPageData }) {
       <div className="rosters-filters">
         {names && <Field label="Name" type="search" value={q} placeholder="Any player" onChange={(v) => { setQ(v); setPage(0); }} />}
         <Select label="Position group" value={pos} options={POS} onChange={(v) => { setPos(v as '' | GroupId); setPage(0); }} />
-        <Select label="Team" value={team} options={[{ value: '', label: 'All teams' }, ...d.teams.map((t) => ({ value: t.id, label: t.school }))]} onChange={(v) => { setTeam(String(v)); setPage(0); }} />
+        {confs.length > 0 && (
+          <Select label="Conference" value={conf} options={[{ value: '', label: 'All conferences' }, ...confs.map((c) => ({ value: c, label: c }))]}
+            onChange={(v) => { setConf(String(v)); setTeam(''); setPage(0); }} />
+        )}
+        <Select label="Team" value={team} options={[{ value: '', label: 'All teams' }, ...teamsShown.map((t) => ({ value: t.id, label: t.school }))]} onChange={(v) => { setTeam(String(v)); setPage(0); }} />
+        {POWER[d.edition] && (
+          <fieldset className="rosters-power">
+            <legend>Show teams in</legend>
+            <Check checked={power} onChange={(v) => { setPower(v); setTeam(''); setPage(0); }}>Power conf.</Check>
+            <Check checked={nonPower} onChange={(v) => { setNonPower(v); setTeam(''); setPage(0); }}>Non-power conf.</Check>
+          </fieldset>
+        )}
       </div>
       {!set ? <p className="rosters-wait">Loading the players…</p> : (
         <>
