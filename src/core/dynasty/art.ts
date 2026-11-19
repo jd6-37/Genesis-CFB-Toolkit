@@ -5,8 +5,9 @@ import { renderSprites } from '../render';
 import { teamsOf } from '../wide';
 import type { TeamArt } from './storage';
 
-export function teamArt(rom: Uint8Array): TeamArt[] {
-  return parseBw95(rom, teamsOf(rom)).map((t) => {
+/** Team art of the season teams, or of the first `count` teams (the website's historic teams). */
+export function teamArt(rom: Uint8Array, count = teamsOf(rom)): TeamArt[] {
+  return parseBw95(rom, count).map((t) => {
     const pal = t.mascot.palette;
     const pic = (tiles: Uint8Array, groups: (typeof t.mascot.groups)[number] | undefined) => {
       if (!pal || !groups || !groups.length) return null;

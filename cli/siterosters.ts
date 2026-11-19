@@ -3,9 +3,9 @@
 // releases"), so this runs again on each new mainline. Writes public/data/rosters/<edition>.json and
 // public/media/rosters/logos-<edition>.png (owner's exceptions to "no ROM data in the repo", 2026-11-19).
 //
-//   npm run site:rosters -- ELEVATED_2026 ELEVATED_1994 BW95 HISTORIC_2026
+//   npm run site:rosters -- ELEVATED_2026 ELEVATED_1994 BW95
 //
-// HISTORIC_2026 is a 2026 ROM with the historic teams (Exhibition teams after the 138 season teams).
+// The historic teams come from the 2026 ROM (Exhibition teams after the 138 season teams; mainline since test72).
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { openRom } from '../src/core/romfile';
 import { jerseyNumber, openRosterRom, readPlayer, teamLayout } from '../src/core/rosterRom';
@@ -21,7 +21,7 @@ import { readRating } from '../src/core/teamRatings';
 import { readWideSeason } from '../src/core/seasonWide';
 import { readManifest } from '../src/core/manifest';
 import { parseBw95 } from '../src/core/bw95';
-import { teamsOf } from '../src/core/wide';
+import { setupTeamsOf, teamsOf } from '../src/core/wide';
 import { ownUniforms } from '../src/core/kits';
 import { olPatchState, OL_PATCH } from '../src/core/rosterOlPatch';
 import type { EditionData, EditionId, RatingKey, RosterPlayer, TeamRoster } from '../src/site/rosters/types';
@@ -58,12 +58,12 @@ function namesAt(d: Uint8Array): number {
 const HIST_SCHOOL: Record<string, string> = { 'Boston Col.': 'Boston College', FSU: 'Florida State' };
 
 function edition(rom: Uint8Array, id: EditionId, from: number, to: number, build: string): EditionData {
-  const rr = openRosterRom(rom);
+  const rr = openRosterRom(rom, false, id === 'historic');
   const v8 = hasV8(rom);
   setRatingScale(v8);
-  const n = teamsOf(rom);
+  const n = setupTeamsOf(rom);
   const blocks = parseBw95(rom, n);
-  const art = teamArt(rom);
+  const art = teamArt(rom, n);
   const names = id === 'original' ? null : readNamesTable(rom, n, namesAt(rom));
   const fine = id !== 'original';
   const season = id === '2026' || id === '1994' ? readWideSeason(rom) : null;
@@ -125,15 +125,16 @@ function edition(rom: Uint8Array, id: EditionId, from: number, to: number, build
   return { edition: id, build, sheet: { width: SHEET_COLS * CELL[0], height: sheetRows * CELL[1], cell: CELL }, teams };
 }
 
-const [p26, p94, pStock, pHist] = process.argv.slice(2);
-if (!pHist) throw new Error('Usage: npm run site:rosters -- ELEVATED_2026 ELEVATED_1994 BW95 HISTORIC_2026');
-const r26 = await load(p26), r94 = await load(p94), rStock = await load(pStock), rHist = await load(pHist);
+const [p26, p94, pStock] = process.argv.slice(2);
+if (!pStock) throw new Error('Usage: npm run site:rosters -- ELEVATED_2026 ELEVATED_1994 BW95');
+const r26 = await load(p26), r94 = await load(p94), rStock = await load(pStock), rHist = r26;
+if (setupTeamsOf(rHist) <= teamsOf(rHist)) throw new Error('This 2026 ROM has no historic teams (2026 v2.0.1-test72 on).');
 const buildOf = (d: Uint8Array) => readManifest(d)?.name ?? 'unknown build';
 const sets = [
   edition(r26, '2026', 0, 138, buildOf(r26)),
   edition(r94, '1994', 0, 107, buildOf(r94)),
   edition(rStock, 'original', 0, 36, 'the original game'),
-  edition(rHist, 'historic', 138, teamsOf(rHist), `${buildOf(rHist)} with the historic teams`),
+  edition(rHist, 'historic', teamsOf(rHist), setupTeamsOf(rHist), buildOf(rHist)),
 ];
 mkdirSync('public/data/rosters', { recursive: true });
 for (const s of sets) {

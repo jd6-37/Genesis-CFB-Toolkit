@@ -5,7 +5,7 @@ import {
   type Attr, type Game, type GameInfo, type SlotDef,
 } from './rosterLayouts';
 import { isWideBw95 } from './romfile';
-import { wideLayoutProblems, wideTeamCount } from './wide';
+import { seasonTeamCount, wideLayoutProblems, wideTeamCount } from './wide';
 
 export interface Player {
   /** Jersey number byte as stored (BCD). Use jerseyNumber() to read it. */
@@ -75,7 +75,11 @@ function readStrings(d: Uint8Array, p: number, n: number): string[] {
 
 /** Opens a ROM for roster editing: on a copy, or with `inPlace` on the bytes given (the shared
  *  working ROM). Throws with a readable message. */
-export function openRosterRom(input: Uint8Array, inPlace = false): RosterRom {
+/**
+ * A ROM's rosters. On a wide ROM only the season teams (H-045: the historic teams after them are Exhibition only and
+ * the tools don't edit them); `allTeams` reads the historic teams too (the website's Rosters data, read only).
+ */
+export function openRosterRom(input: Uint8Array, inPlace = false, allTeams = false): RosterRom {
   const game = detectGame(input);
   if (!game) {
     throw new Error("Not a Bill Walsh College Football '95, College Football USA '96 or '97 ROM.");
@@ -88,7 +92,7 @@ export function openRosterRom(input: Uint8Array, inPlace = false): RosterRom {
     const p = wideLayoutProblems(data);
     if (p.length) throw new Error(`This 4 MB Bill Walsh '95 ROM isn't laid out like the 2026 or 1994 Season Edition: ${p.join('; ')}.`);
   }
-  const count = wide ? wideTeamCount(data) : info.teamCount;
+  const count = wide ? (allTeams ? wideTeamCount(data) : seasonTeamCount(data)) : info.teamCount;
   for (let i = 0; i < count; i++) {
     const block = u32(data, info.teamTable + 4 * i);
     if (block < 0x200 || block + 0x20 > data.length) throw new Error(`Team table entry ${i} is invalid.`);
