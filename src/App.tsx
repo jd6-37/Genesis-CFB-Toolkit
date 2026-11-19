@@ -1,4 +1,5 @@
 import { isDynastyPath, navClick, NAV_EVENT } from './appNav';
+import { downloadRom } from './tools/shared/downloadRom';
 import { Button, Field, FileButton, Note, PageHead, Select, SubHead } from './ui';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BwTeam, parseBw95 } from './core/bw95';
@@ -204,7 +205,7 @@ export default function App() {
     if (!bw || !cf) return;
     try {
       const res = buildRom(bw.rom.data, bw.teams, cf.teams, swapped);
-      download(outName(bw.rom), res.rom as Uint8Array<ArrayBuffer>, 'application/octet-stream');
+      void downloadRom(outName(bw.rom), res.rom);
       setNote({ kind: 'ok', text: `Built a ROM with ${swapped.length} team${swapped.length === 1 ? '' : 's'} swapped.` });
     } catch (e) {
       setNote({ kind: 'error', text: (e as Error).message });

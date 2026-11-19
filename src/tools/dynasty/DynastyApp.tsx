@@ -1,5 +1,7 @@
 // The Dynasty section (/dynasty): a news site for the user's dynasty, kept in the browser, with its
 // own pages. Spec: docs/dynasty.md.
+import { downloadRom } from '../shared/downloadRom';
+import { zipName } from '../../core/zip';
 import { setRatingScale } from '../../core/dynasty/ratings';
 import { TrainingResults } from './TrainingPage';
 import { Rules } from './RulesPage';
@@ -347,7 +349,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
   };
   const startActions: StartActions = {
     prepare: async ({ name, data: rom }) => ({ dyn: await build(rom), rom, pics: teamArt(rom), fileName: name }),
-    downloadRom: (name, data) => download(name, data as Uint8Array<ArrayBuffer>, 'application/octet-stream'),
+    downloadRom: (name, data) => void downloadRom(name, data),
     finish: async (p, o) => {
       // Another starting year (user, 2026-11-17: "if someone wants to make a 2027 roster next year, they can ... start
       // their dynasty with year 2027"): made again from the same ROM, starting then.
@@ -399,15 +401,15 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
         ? { ...season, ...build, romId: season.romId ?? newRomId(), kitsEdited: false } // the first season's lineup never goes into a ROM
         : { ...season, ...build, romId: season.romId ?? newRomId(), lineupEdited: false, kitsEdited: false, romDownloaded: true };
       const name = seasonRomName(d, done);
-      download(name, (first ? uniformRom(d, rom) : seasonRom(d, done, rom)) as Uint8Array<ArrayBuffer>, 'application/octet-stream');
+      await downloadRom(name, first ? uniformRom(d, rom) : seasonRom(d, done, rom));
       await commit({ ...d, seasons: d.seasons.map((x) => (x === season ? done : x)) });
       setNote({
         kind: 'ok',
         text: first
-          ? `Downloaded ${name}: your ROM with this dynasty's uniforms. Put it in place of the ROM you play the ${year} season on, with that ROM's file name, so the game finds your save.`
+          ? `Downloaded ${zipName(name)}: your ROM with this dynasty's uniforms. Put it in place of the ROM you play the ${year} season on, with that ROM's file name, so the game finds your save.`
           : again
-            ? `Downloaded ${name} again. Put it in place of the one you have (same file name, so the game finds your save) and keep playing.`
-            : `Downloaded ${name}. Start a New Season with it in the game: Season mode plays the dynasty's rosters, Exhibition keeps the ROM's own.`,
+            ? `Downloaded ${zipName(name)} again. Put it in place of the one you have (same file name, so the game finds your save) and keep playing.`
+            : `Downloaded ${zipName(name)}. Start a New Season with it in the game: Season mode plays the dynasty's rosters, Exhibition keeps the ROM's own.`,
       });
     }),
   };
@@ -497,7 +499,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
                 <li>Download the ROM.</li>
                 {stale.first
                   ? <li>Put it in place of the ROM you play the {s.year} season on and give it <b>that ROM's file name</b>, so the game finds your save.</li>
-                  : <li>Put it in place of the one you have. Its name must stay <b>{s.romId ? name : 'the same'}</b>{s.romId ? '' : ' as the ROM you have'}: if your browser saved it as "… (1).md", rename it. Then the game finds your save.</li>}
+                  : <li>Put it in place of the one you have. Its name must stay <b>{s.romId ? zipName(name) : 'the same'}</b>{s.romId ? '' : ' as the ROM you have'}: if your browser saved it as "… (1).zip", rename it. Then the game finds your save.</li>}
                 <li>{stale.uniformsOnly ? 'Keep playing: your season goes on, the save keeps no uniform.' : `Load your save with it and play on${s.imports.length ? '' : ` (or start the New Season with it if you haven't yet)`}.`}</li>
               </ol>
             </Modal>
