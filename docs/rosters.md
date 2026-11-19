@@ -49,6 +49,7 @@ The game is identified by its first 16 bytes, not by SHA-1, so modified ROMs wor
 
 - CF96/97 byte 4: meaning unknown (varies per player). Never written.
 - What the BW95 roster screen shows for step n (checked in the game): ratings ⌊n·100/15⌋ = 0, 6, 13, 20, 26, 33, 40, 46, 53, 60, 66, 73, 80, 86, 93, 100; weight 140 + 16n lb. The screen calls Awareness "INTEL". The editor and the CSV export use these values. The CF96/97 roster screens weren't checked; the editor uses the same scale for them.
+- **v8 ROMs** (H-039; 2026 test60 / 1994 test61 on, `romIsV8` in `src/core/rosterV8.ts`; user, 2026-11-19: "fine ratings for Elevated and the 15 steps for the stock bw95 rom"): every rating but weight is the 0-99 number the game's Team Rosters shows, from the fine value (record step × 16 + the fine table's offset at 0x2E0000) through the v8 display table of the slot's pool. The editor takes a typed number and stores the fine value its curve gives (`setShownOfSlot`: the step in the record, the offset in the table); a number below a rating's lowest goes to its lowest, and the same number again leaves the rating as it is (a number covers 2-3 fine values). The CSV export writes these numbers and the import reads them, so an exported sheet imports back to the same bytes. Edit tracking, Undo and carrying edits to another ROM include each team's fine offsets (and the boost word). The stock game and Elevated v1.1.0 keep the 16 steps.
 
 ## Slots
 

@@ -8,6 +8,8 @@
 // game: a new Team Swap result, or another build.
 
 import { detectGame, openRosterRom } from './rosterRom';
+import { BONUS_AT, hasV8 } from './ratingsV8';
+import { FINE_TABLE } from './dynasty/fine';
 import { installOlPatch, olPatchState, OL_PATCH } from './rosterOlPatch';
 import { dealMode, LOCK_TABLE_SIZE, readSeason, SEASON_AREAS, SLOTS, WEEKS, writeSeason } from './season';
 import { readStyle, styleChanges, styleProblems, styleRanges, writeStyle } from './styles';
@@ -75,6 +77,8 @@ export function editsSince(base: Uint8Array, data: Uint8Array, game: Game): Edit
   const len = rom.info.players * rom.info.stride;
   const rosterRanges: [number, number][] = rom.teams.map((t) => [t.rosterOffset, t.rosterOffset + len]);
   if (game === 'bw95') rosterRanges.push([OL_PATCH.site, OL_PATCH.site + 8], [OL_PATCH.hook, OL_PATCH.hook + OL_PATCH.hookCode.length]);
+  // v8 ROMs (H-039): a rating is the record's step plus the fine table's offset; a CFB 27 import also sets the boost word.
+  if (hasV8(base)) rosterRanges.push([FINE_TABLE, FINE_TABLE + rom.teams.length * 96], [BONUS_AT, BONUS_AT + 2]);
   return {
     season: game === 'bw95' && differs(base, data, rom.wide ? wideSeasonRanges(base) : seasonRanges(base)),
     teams:
@@ -139,6 +143,11 @@ export function carryEdits(from: Uint8Array, to: Uint8Array, fromBase?: Uint8Arr
   for (let i = 0; i < a.teams.length; i++) {
     const s = a.teams[i].rosterOffset;
     to.set(from.subarray(s, s + len), b.teams[i].rosterOffset);
+  }
+  // v8 ROMs: each team's fine offsets go with its roster, and the boost word with the rosters.
+  if (hasV8(from) && hasV8(to)) {
+    for (let i = 0; i < a.teams.length; i++) to.set(from.subarray(FINE_TABLE + 96 * i, FINE_TABLE + 96 * (i + 1)), FINE_TABLE + 96 * i);
+    to.set(from.subarray(BONUS_AT, BONUS_AT + 2), BONUS_AT);
   }
   const res: CarryResult = { rosters: a.teams.length, olTweak: false, season: false, teams: 0, skipped: [] };
   if (a.game !== 'bw95') return res;
