@@ -363,6 +363,7 @@ body { margin: 0; background: var(--surface); color: var(--text); font: 400 var(
 /* The players table. */
 .rosters-table { margin-top: var(--sp-5); }
 .rosters-filters { display: flex; flex-wrap: wrap; gap: var(--sp-3) var(--sp-4); margin-bottom: var(--sp-4); }
+.rosters-grid-filters { margin-top: var(--sp-5); }
 .rosters-pos { flex: 1 1 100%; border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-3); min-width: 0; }
 .rosters-pos legend { float: left; width: 100%; padding: 0; margin-bottom: var(--sp-1); font: 700 var(--fs-2)/1.2 var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
 /* One flowing row of small targets (user: "Tighten it up"): the sides don't break the line. */

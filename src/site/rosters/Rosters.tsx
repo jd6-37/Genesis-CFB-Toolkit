@@ -76,10 +76,42 @@ const source = (d: RosterPageData) =>
     ? "From the original Bill Walsh College Football '95. Ratings are the game's 16 steps, shown 0 to 100; the original rosters have no names."
     : `From Elevated ${d.build}. Ratings are the 0-99 numbers Team Rosters shows.`;
 
+/** The conference filters both views share: a conference, and power / non-power (user, 2026-11-19: the cards too). */
+function useConfFilter(d: RosterPageData, onChange: () => void) {
+  const [conf, setConf] = useState('');
+  const [power, setPower] = useState(true);
+  const [nonPower, setNonPower] = useState(true);
+  const confs = useMemo(() => [...new Set(d.teams.map((t) => t.conf).filter((c): c is string => !!c))].sort((a, b) => a.localeCompare(b)), [d.teams]);
+  const pc = POWER[d.edition];
+  const keep = (t: { conf: string }) => (!conf || t.conf === conf) && (!pc || (pc.includes(t.conf ?? '') ? power : nonPower));
+  const controls = (
+    <>
+      {confs.length > 0 && (
+        <Select label="Conference" value={conf} options={[{ value: '', label: 'All conferences' }, ...confs.map((c) => ({ value: c, label: c }))]}
+          onChange={(v) => { setConf(String(v)); onChange(); }} />
+      )}
+      {pc && (
+        <fieldset className="rosters-power">
+          <legend>Show teams in</legend>
+          <Check checked={power} onChange={(v) => { setPower(v); onChange(); }}>Power conf.</Check>
+          <Check checked={nonPower} onChange={(v) => { setNonPower(v); onChange(); }}>Non-power conf.</Check>
+        </fieldset>
+      )}
+    </>
+  );
+  return { keep, controls, deps: [conf, power, nonPower] as const };
+}
+
 function Grid({ d }: { d: RosterPageData }) {
+  const f = useConfFilter(d, () => {});
+  const teams = d.teams.filter(f.keep);
+  const hasFilters = POWER[d.edition] || d.teams.some((t) => t.conf);
   return (
+    <>
+    {hasFilters && <div className="rosters-filters rosters-grid-filters">{f.controls}</div>}
+    {teams.length === 0 && <p className="rosters-wait">No teams match.</p>}
     <ul className="rosters-grid">
-      {d.teams.map((t) => (
+      {teams.map((t) => (
         <li key={t.id}>
           <a className="rosters-tile" data-brand="dynasty" href={rostersHref(d.edition, t.id)} style={{ '--team': t.color, '--stripe': t.stripe } as CSSProperties}>
             <span className="rosters-tile-body">
@@ -95,6 +127,7 @@ function Grid({ d }: { d: RosterPageData }) {
         </li>
       ))}
     </ul>
+    </>
   );
 }
 
@@ -143,9 +176,7 @@ function PlayerTable({ d }: { d: RosterPageData }) {
   const [q, setQ] = useState('');
   const [posSet, setPosSet] = useState<Set<string>>(() => new Set(ALL_POSITIONS));
   const [team, setTeam] = useState('');
-  const [conf, setConf] = useState('');
-  const [power, setPower] = useState(true);
-  const [nonPower, setNonPower] = useState(true);
+  const f = useConfFilter(d, () => { setTeam(''); setPage(0); });
   const [sort, setSort] = useState<SortKey>('ovr');
   const [desc, setDesc] = useState(true);
   const [page, setPage] = useState(0);
@@ -153,21 +184,14 @@ function PlayerTable({ d }: { d: RosterPageData }) {
     fetch(`/data/rosters/${d.edition}.json`).then((r) => r.json()).then(setSet);
   }, [d.edition]);
   const names = d.edition !== 'original';
-  const confs = useMemo(() => [...new Set(d.teams.map((t) => t.conf).filter((c): c is string => !!c))].sort((a, b) => a.localeCompare(b)), [d.teams]);
-  const teamsShown = d.teams.filter((t) => {
-    if (conf && t.conf !== conf) return false;
-    const pc = POWER[d.edition];
-    return !pc || (pc.includes(t.conf ?? '') ? power : nonPower);
-  });
+  const teamsShown = d.teams.filter(f.keep);
   const rows = useMemo(() => {
     if (!set) return [];
     const words = q.trim().toLowerCase().split(/\s+/).filter(Boolean);
     const out: Row[] = [];
-    const powerConfs = POWER[d.edition];
     for (const t of set.teams) {
       if (team && t.id !== team) continue;
-      if (conf && t.conf !== conf) continue;
-      if (powerConfs && !(powerConfs.includes(t.conf ?? '') ? power : nonPower)) continue;
+      if (!f.keep(t)) continue;
       for (const p of t.players) {
         if (!posSet.has(positionOf(p[0]))) continue;
         const name = `${p[2]} ${p[3]}`.toLowerCase();
@@ -192,7 +216,8 @@ function PlayerTable({ d }: { d: RosterPageData }) {
       const c = typeof x === 'string' ? x.localeCompare(y as string) : x - (y as number);
       return (desc ? -c : c) || a.t.school.localeCompare(b.t.school);
     });
-  }, [set, d.edition, q, posSet, team, conf, power, nonPower, sort, desc]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [set, q, posSet, team, ...f.deps, sort, desc]);
   const pages = Math.max(1, Math.ceil(rows.length / PAGE));
   const at = Math.min(page, pages - 1);
   const head = (k: SortKey, label: string, title?: string, left?: boolean) => (
@@ -207,10 +232,7 @@ function PlayerTable({ d }: { d: RosterPageData }) {
     <div className="rosters-table">
       <div className="rosters-filters">
         {names && <Field label="Name" type="search" value={q} placeholder="Any player" onChange={(v) => { setQ(v); setPage(0); }} />}
-        {confs.length > 0 && (
-          <Select label="Conference" value={conf} options={[{ value: '', label: 'All conferences' }, ...confs.map((c) => ({ value: c, label: c }))]}
-            onChange={(v) => { setConf(String(v)); setTeam(''); setPage(0); }} />
-        )}
+        {f.controls}
         <Select label="Team" value={team} options={[{ value: '', label: 'All teams' }, ...teamsShown.map((t) => ({ value: t.id, label: t.school }))]} onChange={(v) => { setTeam(String(v)); setPage(0); }} />
         <fieldset className="rosters-pos">
           <legend>Positions</legend>
@@ -229,13 +251,6 @@ function PlayerTable({ d }: { d: RosterPageData }) {
             </div>
           ))}
         </fieldset>
-        {POWER[d.edition] && (
-          <fieldset className="rosters-power">
-            <legend>Show teams in</legend>
-            <Check checked={power} onChange={(v) => { setPower(v); setTeam(''); setPage(0); }}>Power conf.</Check>
-            <Check checked={nonPower} onChange={(v) => { setNonPower(v); setTeam(''); setPage(0); }}>Non-power conf.</Check>
-          </fieldset>
-        )}
       </div>
       {!set ? <p className="rosters-wait">Loading the players…</p> : (
         <>
