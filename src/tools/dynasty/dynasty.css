@@ -682,6 +682,26 @@
 .dy-start-choice label { display: flex; align-items: flex-start; gap: var(--sp-2); min-height: 44px; cursor: pointer; }
 .dy-start-choice input { width: 20px; height: 20px; margin: 2px 0 0; flex: none; accent-color: var(--accent); }
 .dy-start-hint { margin-left: 28px !important; }
+.dy-start-must { background: var(--highlight); border: 2px solid var(--rule-strong); padding: var(--sp-3) var(--sp-4); margin: 0 0 var(--sp-4); }
+.dy-start .dy-start-must h2 { margin: 0 0 var(--sp-1); }
+.dy-start-must p { margin: 0 0 var(--sp-3); }
+.dy-start-file { overflow-wrap: anywhere; }
+/* Get started with the original game: the two editions to patch it with. */
+.dy-eds { border: 0; margin: 0 0 var(--sp-4); padding: 0; }
+.dy-eds legend { font-family: var(--display); font-weight: 700; font-size: var(--fs-5); padding: 0; margin-bottom: var(--sp-2); }
+.dy-eds-grid { display: grid; gap: var(--sp-3); margin-bottom: var(--sp-3); }
+.dy-ed { display: block; border: 2px solid var(--rule); background: var(--surface); cursor: pointer; }
+.dy-ed.is-on { border-color: var(--rule-strong); box-shadow: var(--shadow-hard); }
+.dy-ed:focus-within { outline: 2px solid var(--text); outline-offset: 2px; }
+.dy-ed-top { display: flex; align-items: center; gap: var(--sp-2); min-height: 44px; padding: var(--sp-2) var(--sp-3); border-bottom: 1px solid var(--rule); }
+.dy-ed.is-on .dy-ed-top { background: var(--highlight); }
+.dy-ed-top input { width: 20px; height: 20px; margin: 0; flex: none; accent-color: var(--accent); }
+.dy-ed-top strong { font-family: var(--display); font-weight: 700; font-size: var(--fs-5); line-height: 1; }
+.dy-ed dl { margin: 0; padding: var(--sp-2) var(--sp-3) var(--sp-3); display: grid; gap: var(--sp-1); font-size: var(--fs-2); }
+.dy-ed dl div { display: grid; grid-template-columns: 88px 1fr; gap: var(--sp-2); }
+.dy-ed dt { font-weight: 600; color: var(--text-muted); }
+.dy-ed dd { margin: 0; }
+@media (min-width: 640px) { .dy-eds-grid { grid-template-columns: 1fr 1fr; } }
 .dy-start-go { display: flex; flex-direction: column; align-items: flex-start; gap: var(--sp-2); margin-top: var(--sp-5); }
 .dy-renum { margin: var(--sp-3) 0; padding: var(--sp-3) var(--sp-4); background: var(--surface-sunken); border-left: var(--rule-w-strong) solid var(--rule); }
 .dy-renum p { margin: 0 0 var(--sp-2); font-size: var(--fs-2); }
