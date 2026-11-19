@@ -5,6 +5,7 @@
 // played; the test puts its dynasty's mark (the ID block New Season copies) into it.
 import { hasV8 } from '../src/core/ratingsV8';
 import { fromScale, toScale } from '../src/core/dynasty/ratings';
+import { editionOfSig, layoutOfSig } from '../src/core/dynasty/edition';
 import { rewriteWalshReport, seasonReports, setWalshReport, teamReport, walshLock } from '../src/core/dynasty/walshStore';
 import { readReports, reportProblems } from '../src/core/walshReports';
 import { walshReports } from '../src/core/dynasty/walshGen';
@@ -74,7 +75,7 @@ const rom = (await openRom(basename(romPath), new Uint8Array(readFileSync(romPat
 const stampSave = (file: Uint8Array, id: number, season: number, version: number) => {
   const f = file.slice();
   const b = [0x44, 0x59, 0x4e, 0x31, id >>> 24, (id >>> 16) & 255, (id >>> 8) & 255, id & 255, season >> 8, season & 255, version >> 8, version & 255, 0, 0, 0, 1];
-  const window = f[1] === 0x6f;
+  const window = editionOfSig(f[1]) !== null; // layout 1 or 2 (0x6F / 0xE6)
   b.forEach((x, k) => { f[window ? 0xe01 + 2 * (0x1330 + k) : 0x700 + 0x1330 + k] = x; });
   return f;
 };
@@ -412,7 +413,9 @@ assert.ok(Off.projectedProblems(o1, team1, [...chart.slice(0, 31), 999999]).leng
   assert.equal(Depth.SLOT_DEF[31].label, 'P');
   assert.ok(lay.every((def) => Depth.SLOT_DEF[def.slot].label === def.label), 'every spot is found by its slot number');
   const punter = full[31] !== null ? o1.players[full[31]! - 1].pos : '';
-  assert.ok(punter === 'P' || punter === 'K', `slot 31 holds the punter (${punter})`);
+  // Before signing day a team can have no kicker or punter left (both graduated); walk-ons fill that later.
+  const kickers = act(o1).filter((p) => p.team === team1 && (p.pos === 'P' || p.pos === 'K')).length;
+  assert.ok(!kickers || punter === 'P' || punter === 'K', `slot 31 holds the punter (${punter})`);
 }
 const o1p = Off.confirmDepth(o1);
 assert.equal(o1p.offseason!.step, 'portal');
@@ -1097,17 +1100,27 @@ ok('a new season refuses the last season\'s save');
   // The save before the last week: its results cleared, its stats at 60% (fields the stories use).
   const lastWeek = Math.max(...save.season!.games.filter((g) => g.vs !== null).map((g) => g.week));
   const before = srm.slice();
-  const win = before[1] === 0x6f;
+  const win = editionOfSig(before[1]) !== null;
   const at = (o: number) => (win ? o : o >> 1); // window offset → file offset
   for (const g of save.season!.games) if (g.week === lastWeek) for (const k of [0, 2]) before[at(0xe01 + 2 * (0x200 + 4 * g.index + k))] = 0xff;
   const scaleWord = (o: number) => { const raw = (before[at(o)] << 8) | before[at(o + 2)]; const v = Math.trunc((((raw << 16) >> 16)) * 0.6) & 0xffff; before[at(o)] = v >> 8; before[at(o + 2)] = v & 255; };
   const scaleByte = (o: number) => { before[at(o)] = Math.floor(before[at(o)] * 0.6); };
+  // Stats records: layout 1 0xB8 bytes with 4-byte defenders; layout 2 169 bytes with 3-byte packed defenders
+  // (tackles below 256 here, so scaling the low byte and the sacks bits is enough).
+  const lay2 = layoutOfSig(before[win ? 1 : 0]) === 2;
   for (let t = 0; t < 138; t++) {
-    const base = 0x3951 + 2 * 0xb8 * t, b = (j: number) => base + 2 * j;
+    const base = 0x3951 + 2 * (lay2 ? 169 : 0xb8) * t, b = (j: number) => base + 2 * j;
     scaleWord(b(4)); scaleByte(b(6)); scaleByte(b(7));
     for (let k = 0; k < 4; k++) { scaleWord(b(8 + 8 * k)); scaleWord(b(8 + 8 * k + 2)); scaleByte(b(8 + 8 * k + 7)); }
     for (let k = 0; k < 9; k++) { scaleWord(b(40 + 8 * k)); scaleWord(b(40 + 8 * k + 2)); scaleByte(b(40 + 8 * k + 7)); }
-    for (let k = 0; k < 15; k++) { scaleWord(b(124 + 4 * k)); scaleByte(b(124 + 4 * k + 2)); scaleByte(b(124 + 4 * k + 3)); }
+    for (let k = 0; k < 15; k++) {
+      if (lay2) {
+        const o = b(124 + 3 * k);
+        scaleByte(o);
+        const x = before[at(o + 2)]; before[at(o + 2)] = (x & 0xc0) | Math.floor((x & 63) * 0.6);
+        scaleByte(o + 4);
+      } else { scaleWord(b(124 + 4 * k)); scaleByte(b(124 + 4 * k + 2)); scaleByte(b(124 + 4 * k + 3)); }
+    }
   }
   const w1 = importSave(d0, before).dynasty;
   const w2 = importSave(w1, srm).dynasty;
