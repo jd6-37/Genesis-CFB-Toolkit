@@ -1,6 +1,7 @@
 // The Patch tab, the first step: load a BW95 ROM; if it's the original game, add one of the mod's
 // released patches (read from the Elevated repo's patches.json) or a .bps file; then take the ROM on
 // to Team Swap, or to Season, Teams and Rosters.
+import { downloadRom } from '../shared/downloadRom';
 import { Button, FileButton, Note, PageHead, SubHead } from '../../ui';
 import { useEffect, useMemo, useState } from 'react';
 import { applyBps, BpsError } from '../../core/bps';
@@ -26,17 +27,6 @@ type Msg = { kind: 'error' | 'ok'; text: string } | null;
 type ListState = { state: 'loading' } | { state: 'ok'; list: PatchList } | { state: 'error'; text: string };
 
 const STOCK_SHA1 = Object.keys(KNOWN).find((k) => KNOWN[k].kind === 'bw95' && !KNOWN[k].rebalanced)!;
-
-function download(name: string, data: Uint8Array) {
-  const url = URL.createObjectURL(new Blob([data as Uint8Array<ArrayBuffer>], { type: 'application/octet-stream' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
 
 /** The ROM with its label from the patch list, when the list knows it. */
 function withLabel(r: OpenedRom, list: PatchList | null): OpenedRom {
@@ -299,7 +289,7 @@ export function PatchTool({
                   : 'Team Swap now uses this patched ROM. Season, Teams and Rosters have changes in another ROM, so they ask before opening it.'}
               </p>
               <div className="pat-done-actions">
-                <Button variant="quiet" onClick={() => download(rom.name, rom.data)}>
+                <Button variant="quiet" onClick={() => downloadRom(rom.name, rom.data)}>
                   Download patched ROM
                 </Button>
                 <Button variant="quiet" onClick={api.undo}>

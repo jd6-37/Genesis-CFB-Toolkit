@@ -1,5 +1,6 @@
 // The working ROM shared by the Season, Teams and Rosters tabs: one buffer they all edit in place,
 // loaded from a file or from the Team Swap tab, downloaded from any of them with all edits in it.
+import { downloadRom } from './downloadRom';
 import { Button, Note } from '../../ui';
 import { useCallback, useMemo, useState } from 'react';
 import { isWideBw95, openRom } from '../../core/romfile';
@@ -54,17 +55,6 @@ function makeWork(inc: Incoming): WorkRom {
     base: new Uint8Array(inc.data),
     checkOff: !!c && inc.data[c.bneAt] === 0x4e && inc.data[c.bneAt + 1] === 0x71,
   };
-}
-
-function download(name: string, data: BlobPart) {
-  const url = URL.createObjectURL(new Blob([data], { type: 'application/octet-stream' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export interface WorkApi {
@@ -168,7 +158,7 @@ export function useWorkRom(): WorkApi {
     const out = new Uint8Array(work.data);
     const res = fixChecksums(out, work.game);
     const name = workFileName(work.name, edits);
-    download(name, out as Uint8Array<ArrayBuffer>);
+    void downloadRom(name, out);
     const parts = [edits.season && 'season', edits.teams && 'team', edits.rosters && 'roster'].filter(Boolean) as string[];
     const what = parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts[0];
     return {

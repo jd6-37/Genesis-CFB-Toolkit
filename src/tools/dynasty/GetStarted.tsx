@@ -11,6 +11,7 @@ import { Button, Check, Field, FileButton, Note, Select, Steps, SubHead, Table }
 import { Ctx, href } from './ui';
 import { SAMPLE_PATH } from '../../core/dynasty/snapshotId';
 import { KNOWN, openRom, type OpenedRom } from '../../core/romfile';
+import { zipName } from '../../core/zip';
 import { applyListed, fetchPatchFile, fetchPatchList, offered, patchBase, refFromPage, romFileName, type Patch, type PatchList } from '../../core/patches';
 
 /** A dynasty made from the user's ROM but not saved yet (Get started's step 1), with what goes into the browser with it. */
@@ -168,7 +169,7 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
                     <p>Your first season is played on this ROM. Later seasons get their own ROM from the app at the end of each offseason.</p>
                     <div className="dy-row">
                       <Button onClick={() => actions.downloadRom(prep!.fileName, prep!.rom)}>Download patched ROM</Button>
-                      <span className="dy-small dy-dim dy-start-file">{prep!.fileName}, 4 MB</span>
+                      <span className="dy-small dy-dim dy-start-file">{zipName(prep!.fileName)}: unzip it to get {prep!.fileName}</span>
                     </div>
                   </div>
                 </>
