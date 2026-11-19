@@ -7,7 +7,7 @@ import { AGE_LABELS, AGES, BEARD_LABELS, BEARD_STYLES, EYE_COLOR_LABELS, HAIR_CO
 import { SKIN_TONES } from '../../core/dynasty/appearance';
 import { CLASSES, type ClassYear, type DPlayer } from '../../core/dynasty/model';
 import { makeRecruit, POSITIONS, recruitTemplates } from '../../core/dynasty/offseason';
-import { GROUP_OF_ROLE, RATINGS, roleOfPos, shownOf, type Ratings } from '../../core/dynasty/ratings';
+import { GROUP_OF_ROLE, RATINGS, ratingScaleIsV8, roleOfPos, shownAt, shownOf, valueOfShown, type Ratings } from '../../core/dynasty/ratings';
 import { GROUP_COLUMNS } from '../../core/rosterLayouts';
 import { rng } from '../../core/dynasty/model';
 import { Headshot, useDyn } from './ui';
@@ -37,6 +37,10 @@ export function EditPlayer({ p }: { p: DPlayer }) {
     }
   };
   // The ratings his position uses, and any others he has (the related group's, for position changes).
+  const v8 = ratingScaleIsV8();
+  // v8: what's typed in each rating box, so a number in progress ("8" on the way to "85") isn't replaced.
+  const [typed, setTyped] = useState<Partial<Record<keyof Ratings, string>>>({});
+  const role = roleOfPos(String(val('pos')));
   const uses = new Set(GROUP_COLUMNS[GROUP_OF_ROLE[roleOfPos(String(val('pos')))]] ?? []);
   if (!open) return <Button variant="quiet" onClick={() => setOpen(true)}>Edit player</Button>;
   const text = (k: 'first' | 'last' | 'hometown' | 'state', label: string) => (
@@ -66,11 +70,24 @@ export function EditPlayer({ p }: { p: DPlayer }) {
         />
       </div>
       <SubHead>Ratings</SubHead>
-      <p className="dy-dim dy-small">As the game's Team Rosters shows them. Every point counts in games (the fine-ratings mod); the game shows whole numbers up to 99.</p>
+      <p className="dy-dim dy-small">{v8
+        ? "As the game's Team Rosters shows them, on CFB 27's scale: a number means the same at every position."
+        : "As the game's Team Rosters shows them. Every point counts in games (the fine-ratings mod); the game shows whole numbers up to 99."}</p>
       <div className="dy-edit-grid">
         {RATINGS.filter((a) => uses.has(a) || p.ratings[a] !== undefined).map((a) => {
           const v = rating(a);
           const weight = a === 'Weight';
+          if (v8 && !weight) {
+            // v8: edit the shown number; it's stored as the fine value the curve gives that number (ratingsV8.ts).
+            return (
+              <Field
+                key={a} label={LABEL[a] ?? a} type="number" min={0} max={99}
+                value={typed[a] ?? (v === undefined ? '' : String(shownAt(v, a, role)))}
+                onChange={(x) => { setTyped({ ...typed, [a]: x }); if (x.trim() !== '' && Number.isFinite(Number(x))) setRating(a, valueOfShown(Number(x), a, role)); }}
+                note={typed[a] !== undefined && v !== undefined && String(shownAt(v, a, role)) !== typed[a] ? `The game shows ${shownAt(v, a, role)} (the lowest or highest this rating can be)` : undefined}
+              />
+            );
+          }
           return (
             <Field
               key={a} label={LABEL[a] ?? a} type="number" min={weight ? 140 : 0} max={weight ? 380 : 100}

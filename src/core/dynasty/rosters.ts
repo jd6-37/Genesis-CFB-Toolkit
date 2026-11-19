@@ -9,6 +9,7 @@ import { hasOlPatch, OL_PATCH } from '../rosterOlPatch';
 import type { RosterRom } from '../rosterRom';
 import type { Sheet } from '../rosterSheet';
 import type { BwSlot } from './model';
+import { stepAndOffset } from '../ratingsV8';
 
 export const SLOTS = 32;
 /** Players a dynasty team keeps: the 32 in the game and one backup for each. */
@@ -27,13 +28,17 @@ export interface RosterBuild {
   extra: Map<number, Partial<Record<Attr, number>>>;
   /** Per sheet row, the number given in place of one the player's position can't wear (rosterCfb27.ts). */
   numbers: Map<number, { from: number; to: number }>;
+  /** Converted with the v8 curves (H-039): slots carry the fine values' offsets, and `extraFine` holds fine values. */
+  v8: boolean;
+  /** v8: per sheet row, the fine values (0-247) of the related group's ratings (in place of `extra`'s steps). */
+  extraFine: Map<number, Partial<Record<Attr, number>>>;
 }
 
 /** The role a player of a role may move to with a different rating group (lineup.ts MOVES: DE/OLB). */
 const ALT: Record<string, { role: string; group: Group }> = { DE: { role: 'LB', group: 'LB' }, DT: { role: 'LB', group: 'LB' }, LB: { role: 'DE', group: 'DL' } };
 
 /** The extra steps of every fill (see RosterBuild.extra); `rowOf` maps a fill's player row to the sheet's. */
-function extras(plan: Cfb27Plan, fills: Cfb27Fill[], rowOf: (row: number) => number, out: RosterBuild['extra']) {
+function extras(plan: Cfb27Plan, fills: Cfb27Fill[], rowOf: (row: number) => number, out: RosterBuild['extra'], outFine: RosterBuild['extraFine']) {
   const clones = fills.filter((f) => ALT[f.role]).map((f) => ({ ...f, role: ALT[f.role].role, group: ALT[f.role].group, steps: {} }));
   rateAgainst(plan, clones);
   for (const c of clones) {
@@ -41,23 +46,30 @@ function extras(plan: Cfb27Plan, fills: Cfb27Fill[], rowOf: (row: number) => num
     const add: Partial<Record<Attr, number>> = {};
     for (const [a, v] of Object.entries(c.steps) as [Attr, number][]) if (!own.has(a)) add[a] = v;
     out.set(rowOf(c.player.row), { ...out.get(rowOf(c.player.row)), ...add });
+    if (c.fine) {
+      const fine: Partial<Record<Attr, number>> = {};
+      for (const [a, v] of Object.entries(c.fine) as [Attr, number][]) if (!own.has(a)) fine[a] = v;
+      outFine.set(rowOf(c.player.row), { ...outFine.get(rowOf(c.player.row)), ...fine });
+    }
   }
 }
 
 const slotOf = (f: Cfb27Fill, olPlus: number): BwSlot => {
   const attrs = GROUP_COLUMNS[f.group];
-  return { label: f.label, group: f.group, attrs, steps: attrs.map((a) => f.steps[a] ?? 0), offs: attrs.map(() => 0), weightPlus: f.group === 'OL' ? olPlus : 0 };
+  const off = (a: Attr) => (f.fine?.[a] === undefined ? 0 : stepAndOffset(f.fine[a]!).off);
+  return { label: f.label, group: f.group, attrs, steps: attrs.map((a) => f.steps[a] ?? 0), offs: attrs.map(off), weightPlus: f.group === 'OL' ? olPlus : 0 };
 };
 
 /** The 32 and the bench of every team the sheet has, with their game ratings. */
 export function buildRosters(rom: RosterRom, sheet: Sheet): RosterBuild {
   const n = rom.teams.length;
   const empty = <T>() => Array.from({ length: n }, () => new Array<T | null>(SLOTS).fill(null));
-  const out: RosterBuild = { slots: empty(), bench: empty(), bw: empty(), benchBw: empty(), extra: new Map(), numbers: new Map() };
+  const out: RosterBuild = { slots: empty(), bench: empty(), bw: empty(), benchBw: empty(), extra: new Map(), numbers: new Map(), v8: false, extraFine: new Map() };
   const olPlus = hasOlPatch(rom) ? OL_PATCH.pounds : 0;
 
   const first = convertCfb27(rom, sheet);
   out.numbers = first.numbers;
+  out.v8 = first.v8;
   const used = new Set<number>();
   for (const t of first.teams) {
     for (const f of t.fills) {
@@ -75,7 +87,7 @@ export function buildRosters(rom: RosterRom, sheet: Sheet): RosterBuild {
     out.bench[f.team][f.slot] = rest[f.player.row];
     out.benchBw[f.team][f.slot] = slotOf(f, olPlus);
   }
-  extras(first, first.teams.flatMap((t) => t.fills), (row) => row, out.extra);
-  extras(first, fills, (row) => rest[row], out.extra);
+  extras(first, first.teams.flatMap((t) => t.fills), (row) => row, out.extra, out.extraFine);
+  extras(first, fills, (row) => rest[row], out.extra, out.extraFine);
   return out;
 }

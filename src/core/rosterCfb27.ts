@@ -23,6 +23,8 @@ import { jerseyByte, readPlayer, setRating, teamLayout, teamName, writePlayer, t
 import { teamMatcher } from './rosterImport';
 import { cellNumber, type Sheet } from './rosterSheet';
 import STOCK from './rosterStockDists.json';
+import { BONUS_AT, BONUS_CFB27, cfbValue, fineFromCfb, hasV8, stepAndOffset, V8_COLUMNS, v8Key } from './ratingsV8';
+import { FINE_TABLE } from './dynasty/fine';
 
 interface StockRole { group: string; slots: number; ratings: Record<string, number[]> }
 const STOCK_ROLES = (game: 'bw95' | 'cf96' | 'cf97') => STOCK.games[game].roles as Record<string, StockRole>;
@@ -92,6 +94,8 @@ interface Cfb27Player {
   jerseyWas?: number;
   v: (c: Column) => number;
 }
+/** A player's value for any CFB 27 column, also those outside CFB27_COLUMNS (the v8 conversion's). */
+const anyValue = (p: Cfb27Player) => p.v as unknown as (c: string) => number;
 
 export interface Cfb27Fill {
   team: number;
@@ -103,6 +107,8 @@ export interface Cfb27Fill {
   how: 'position' | 'fallback';
   /** Converted steps (0-15) for the slot group's six ratings. */
   steps: Partial<Record<Attr, number>>;
+  /** v8 ROMs (hasV8): the game's fine values (0-247) behind the steps; the step and the fine table's offset come from these. */
+  fine?: Partial<Record<Attr, number>>;
 }
 
 export interface Cfb27Team {
@@ -127,6 +133,8 @@ export interface Cfb27Plan {
   blankCells: number;
   /** Sheet row → the number in the file and the one given instead, for every player whose position can't wear his. */
   numbers: Map<number, { from: number; to: number }>;
+  /** Converted with the v8 curves (H-039): the ROM shows ratings through the v8 tables. */
+  v8: boolean;
 }
 
 const byOvr = (a: Cfb27Player, b: Cfb27Player) => b.ovr - a.ovr || a.id - b.id || a.row - b.row;
@@ -194,7 +202,8 @@ export function convertCfb27(rom: RosterRom, sheet: Sheet): Cfb27Plan {
   if (rom.game !== 'bw95') {
     throw new Error("CFB 27 ratings can be converted for Bill Walsh College Football '95 so far, not for this game.");
   }
-  const missing = missingCfb27Columns(sheet);
+  const v8 = hasV8(rom.data);
+  const missing = [...missingCfb27Columns(sheet), ...(v8 ? V8_COLUMNS.filter((c) => columns(sheet)(c) === undefined) : [])];
   if (missing.length) throw new Error(`This looks like CFB 27 data, but these columns are missing: ${missing.join(', ')}.`);
   const col = columns(sheet);
   const C = Object.fromEntries(CFB27_COLUMNS.map((n) => [n, col(n)!])) as Record<Column, number>;
@@ -214,13 +223,19 @@ export function convertCfb27(rom: RosterRom, sheet: Sheet): Cfb27Plan {
       blankCells++;
       return 0;
     };
-    const cache = new Map<Column, number>();
+    const cache = new Map<string, number>();
+    const any = (c: string) => {
+      if (C[c as Column] !== undefined) return num(c as Column);
+      const i = col(c);
+      const x = i === undefined ? NaN : cellNumber(r[i]);
+      return Number.isFinite(x) ? x : 0;
+    };
     players.push({
       row, team, name: r[C.Name] ?? '', pos,
       id: Number.isFinite(cellNumber(r[C['EA Player ID']])) ? cellNumber(r[C['EA Player ID']]) : 0,
       ovr: Number.isFinite(cellNumber(r[C.Overall])) ? cellNumber(r[C.Overall]) : 0,
       jersey: cellNumber(r[C['Jersey Number']]),
-      v: (c) => cache.get(c) ?? cache.set(c, num(c)).get(c)!,
+      v: (c) => cache.get(c) ?? cache.set(c, any(c)).get(c)!,
     });
   });
   // Numbers a position can't wear in the game (a tight end in the 50s, a guard in the 90s) are replaced, school by
@@ -309,6 +324,9 @@ export function convertCfb27(rom: RosterRom, sheet: Sheet): Cfb27Plan {
     }
   }
 
+  // v8 (H-039): every rating but weight from its fixed curve; weight stays as matched above.
+  if (v8) for (const f of fills) rateV8(f);
+
   const list = (m: Map<string, number>) => [...m].map(([position, rows]) => ({ position, rows })).sort((a, b) => b.rows - a.rows);
   return {
     teams,
@@ -317,7 +335,21 @@ export function convertCfb27(rom: RosterRom, sheet: Sheet): Cfb27Plan {
     unknownPositions: list(unknownPositions),
     blankCells,
     numbers,
+    v8,
   };
+}
+
+/** Sets a fill's v8 fine values and the steps that go with them (weight keeps its matched step). */
+function rateV8(f: Cfb27Fill): void {
+  f.fine = {};
+  for (const attr of GROUP_ATTRS[f.group]) {
+    if (attr === 'Weight') continue;
+    const k = v8Key(f.role, f.group, attr);
+    if (!k) continue;
+    const fine = fineFromCfb(k, cfbValue(f.role, f.group, attr, anyValue(f.player)));
+    f.fine[attr] = fine;
+    f.steps[attr] = stepAndOffset(fine).step;
+  }
 }
 
 /** Writes the converted rosters of the chosen teams (all by default). */
@@ -336,10 +368,19 @@ export function applyCfb27(rom: RosterRom, plan: Cfb27Plan, only?: Iterable<numb
         if (step !== undefined) setRating(p, def, attr, step);
       }
       writePlayer(rom, t.team, f.slot, p);
+      if (plan.v8 && f.fine) writeOffsets(rom, t.team, f.slot, def.group, f.fine);
       written++;
     }
   }
+  // CFB 27-converted rosters play with the 2026 rusher speed boost (H-039 addendum), in either edition.
+  if (plan.v8 && written && rom.data.length > BONUS_AT + 1) { rom.data[BONUS_AT] = BONUS_CFB27 >> 8; rom.data[BONUS_AT + 1] = BONUS_CFB27 & 255; }
   return written;
+}
+
+/** Writes a slot's fine-table offsets (weight's keeps 0). */
+function writeOffsets(rom: RosterRom, team: number, slot: number, group: Group, fine: Partial<Record<Attr, number>>): void {
+  const n = GROUP_ATTRS[group].map((a) => (fine[a] === undefined ? 0 : stepAndOffset(fine[a]!).off) & 15);
+  rom.data.set([(n[0] << 4) | n[1], (n[2] << 4) | n[3], (n[4] << 4) | n[5]], FINE_TABLE + (team * 32 + slot) * 3);
 }
 
 /**
@@ -348,6 +389,16 @@ export function applyCfb27(rom: RosterRom, plan: Cfb27Plan, only?: Iterable<numb
  * closest below his (the lowest step if he is below them all). Nothing in `plan` changes.
  */
 export function rateAgainst(plan: Cfb27Plan, extra: Cfb27Fill[]): void {
+  if (plan.v8) {
+    // Fixed curves: a player outside the conversion is rated the same way as those in it (weight still by rank).
+    rateAgainstMatched(plan, extra);
+    for (const e of extra) rateV8(e);
+    return;
+  }
+  rateAgainstMatched(plan, extra);
+}
+
+function rateAgainstMatched(plan: Cfb27Plan, extra: Cfb27Fill[]): void {
   const fills = plan.teams.flatMap((t) => t.fills);
   const table = new Map<string, [number, number][]>(); // role|attr -> [score, step], low to high
   for (const f of fills) {

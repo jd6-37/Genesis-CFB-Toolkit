@@ -31,9 +31,9 @@ import { CLASSES, rng, type ClassYear, type DPlayer, type DSeason, type Dynasty,
 import { playerLines, seasonView } from './derive';
 import { NO_NUMBER, assignNumbers } from './numbers';
 import { fixChecksums, jerseyByte, openRosterRom, readPlayer, setRating, teamLayout } from '../rosterRom';
-import { GROUP_ATTRS } from '../rosterLayouts';
+import { GROUP_ATTRS, type Attr } from '../rosterLayouts';
 import { MAX_PRESTIGE, nextPrestige, seasonPrestige } from './prestige';
-import { OVR_FORMULAS } from './ovr';
+import { OVR_FORMULAS, OVR_FORMULAS_V8 } from './ovr';
 import { readRating } from '../teamRatings';
 import { DYNASTY_EDITION, dynastyAreaProblem, dynastyRomId, writeDynastyArea, type DynastyName } from './dynastyArea';
 import { TEAM_SIZE } from './rosters';
@@ -43,7 +43,7 @@ import { roleOfSlot } from './ovr';
 import { recordYear } from './career';
 import { DEFAULT_RULES, growthRate, rulesOf, type OffseasonRules } from './rules';
 import { areaOf, EVEN_TRAINING, trainingFactor, trainingOf, weightGain, type Training } from './training';
-import { ovrOf, roleOfPos, type Ratings } from './ratings';
+import { fromScale, ovrOf, ratingScaleIsV8, roleOfPos, toScale, type Ratings } from './ratings';
 import { blackShare, firstOdds, lastOdds, MAX_FIRST, MAX_LAST, namePool, pickName, skinFor, type NamePool } from './appearance';
 
 /** A team is 64 players: the 32 in the game and one backup for each (rosters.ts). */
@@ -200,7 +200,10 @@ export function capOf(R: OffseasonRules, a: string, t: Training = EVEN_TRAINING)
  */
 export function develop(p: DPlayer, gain: number, r: Rand, R: OffseasonRules = DEFAULT_RULES, t: Training = EVEN_TRAINING): DPlayer {
   const role = roleOfPos(p.pos);
-  const f = OVR_FORMULAS[role];
+  // v8 dynasties (H-039): the v8 OVR formulas, and the ratings move in shown points (toScale), so +1 is the same at
+  // every position; older dynasties move the stored numbers as before.
+  const v8 = ratingScaleIsV8();
+  const f = (v8 ? OVR_FORMULAS_V8 : OVR_FORMULAS)[role];
   if (!f) return p;
   if (Math.abs(gain) < 0.25) { // no rating moves, but he still puts on weight
     const lbs0 = weightGain(R, role, p.weight, t, r());
@@ -210,30 +213,33 @@ export function develop(p: DPlayer, gain: number, r: Rand, R: OffseasonRules = D
   const ws = (Object.entries(f.weights) as [keyof Ratings, number][]).filter(([, w]) => w > 0);
   const norm = ws.reduce((s, [a, w]) => s + w * paceOf(R, a, t), 0) / ws.reduce((s, [, w]) => s + w, 0) || 1; // the weighted average pace
   const ratings: Ratings = { ...p.ratings };
+  const cur: Ratings = Object.fromEntries(ws.map(([a]) => [a, toScale(p.ratings[a] ?? 0, a as Attr, role)]));
+  const top = v8 ? 99 : 100;
   // Each rating's share, at most its yearly cap (user, 2026-11-12: "+30 AWR? Doesn't that seem like A LOT?
   // … yeah cap them"); a rating at its cap, 0 or 100 passes what it can't take to the others (by weight ×
   // pace), and whatever none of them can take is lost.
-  const start = new Map(ws.map(([a]) => [a, ratings[a] ?? 0] as const));
+  const start = new Map(ws.map(([a]) => [a, cur[a] ?? 0] as const));
   const lo = (a: keyof Ratings) => Math.max(0, start.get(a)! - capOf(R, a, t));
-  const hi = (a: keyof Ratings) => Math.min(100, start.get(a)! + capOf(R, a, t));
+  const hi = (a: keyof Ratings) => Math.min(top, start.get(a)! + capOf(R, a, t));
   let want = new Map(ws.map(([a]) => [a, per * (paceOf(R, a, t) / norm) * between(r, 0.6, 1.4)] as const));
   for (let round = 0; round < 5 && want.size; round++) {
     let left = 0;
     const open: [keyof Ratings, number][] = [];
     for (const [a, step] of want) {
-      const was = ratings[a] ?? 0, to = clamp(was + step, lo(a), hi(a));
-      ratings[a] = Math.round(to * 10) / 10;
+      const was = cur[a] ?? 0, to = clamp(was + step, lo(a), hi(a));
+      cur[a] = v8 ? to : Math.round(to * 10) / 10;
       const w = ws.find(([x]) => x === a)![1];
       left += (step - (to - was)) * w;
     }
     for (const [a, w] of ws) {
-      const v = ratings[a] ?? 0;
+      const v = cur[a] ?? 0;
       if (left > 0 ? v < hi(a) - 0.05 : v > lo(a) + 0.05) open.push([a, w * paceOf(R, a, t)]);
     }
     const tot = open.reduce((s2, [, x]) => s2 + x, 0);
     if (Math.abs(left) < 0.01 || !tot) break;
     want = new Map(open.map(([a, x]) => [a, (left * x) / tot / ws.find(([y]) => y === a)![1]] as const));
   }
+  for (const [a] of ws) ratings[a] = v8 ? fromScale(cur[a] ?? 0, a as Attr, role) : cur[a];
   const lbs = weightGain(R, role, p.weight, t, r());
   ratings.Weight = clamp((ratings.Weight ?? 140) + lbs, 140, 380);
   const weight = clamp(p.weight + lbs, 150, 400);
@@ -554,7 +560,8 @@ export function makeRecruit(d: Dynasty, tpl: RecruitTemplates, r: Rand, id: numb
   const pool = (tpl.byPos[pos]?.length ?? 0) >= 5 ? tpl.byPos[pos] : tpl.byPos[pos === 'FB' ? 'TE' : 'WR'];
   const [lo, hi] = STAR_BAND[stars];
   const t = pool[Math.min(pool.length - 1, Math.floor(between(r, lo, hi) * pool.length))];
-  const f = OVR_FORMULAS[roleOfPos(pos)];
+  const role = roleOfPos(pos);
+  const f = (ratingScaleIsV8() ? OVR_FORMULAS_V8 : OVR_FORMULAS)[role];
   const R = rulesOf(d);
   const gap = between(r, R.freshmanGapMin, R.freshmanGapMax) / (f?.scale ?? 0.5);
   // He arrives at the weight his model arrived at (without the pounds put on since), so the league
@@ -564,7 +571,10 @@ export function makeRecruit(d: Dynasty, tpl: RecruitTemplates, r: Rand, id: numb
     if (a === 'Weight') { ratings.Weight = clamp(Math.round(v - t.gained + 8 * gauss(r)), 140, 380); continue; }
     const counts = !!f?.weights[a];
     const drop = counts ? gap * (a === 'Speed' ? 0.4 : 1) * between(r, 0.6, 1.4) : 0;
-    ratings[a] = clamp(Math.round((v - drop + 3 * gauss(r)) * 10) / 10, 0, 100); // fine ratings: every point plays
+    // On a v8 dynasty the drop and the spread are in shown points (toScale); fine ratings: every point plays.
+    ratings[a] = ratingScaleIsV8()
+      ? fromScale(clamp(toScale(v, a as Attr, role) - drop + 3 * gauss(r), 0, 99), a as Attr, role)
+      : clamp(Math.round((v - drop + 3 * gauss(r)) * 10) / 10, 0, 100);
   }
   const ovr = ovrOf({ pos, ratings });
   const [plo, phi] = stars === 0 && r() < R.diamondChance ? [R.diamondPotMin, R.diamondPotMax] : STAR_POT[stars];

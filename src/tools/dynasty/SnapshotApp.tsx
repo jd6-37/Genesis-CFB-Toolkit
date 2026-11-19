@@ -1,6 +1,7 @@
 // A shared dynasty snapshot (/dynasty/s/<id>; user, 2026-11-17): the dynasty's pages as they were when it was
 // shared, read-only. The active team heads it (its logo in the masthead, its news first) and everything else can
 // be browsed; Offseason and Manage aren't here, and editors are disabled with a line that says why (ui.tsx Locked).
+import { setRatingScale } from '../../core/dynasty/ratings';
 import { useEffect, useMemo, useState } from 'react';
 import { seasonView, weekName } from '../../core/dynasty/derive';
 import { readSnapshot, type Snapshot } from '../../core/dynasty/snapshot';
@@ -69,6 +70,8 @@ export default function SnapshotApp({ id, toolkitHref }: { id: string; toolkitHr
 
   const snap = load.state === 'ok' ? load.snap : null;
   const d = snap?.dynasty ?? null;
+  // The v8 numbers for a dynasty made on a v8 ROM (ratings.ts), set before any page renders a rating.
+  setRatingScale(d?.ratingsV === 8);
   const v = useMemo(() => (d ? seasonView(d, d.seasons[d.seasons.length - 1]) : null), [d]);
   const ctx: DynCtx | null = useMemo(
     () => (snap && d && v ? {

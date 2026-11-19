@@ -1,6 +1,8 @@
 // Roster engine tests against real ROMs (bring your own; .md/.bin/.gen or .zip):
 //   npx tsx cli/rostertest.ts BW95.md CF96.md CF97.md
 // The sheet fixtures in cli/fixtures/ are made-up players.
+import { hasV8 } from '../src/core/ratingsV8';
+import { readFineOffsets } from '../src/core/dynasty/fine';
 import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { strict as assert } from 'node:assert';
@@ -500,7 +502,19 @@ for (const widePath of widePaths) {
   assert.deepEqual(plan.unmatchedRomTeams, []);
   applyCfb27(again, plan);
   for (const t of plan.teams) writeRating(again.data, t.team, t.ovr);
-  assert.ok(again.data.every((b, i) => b === wide[i]), 'the conversion rebuilds the release byte for byte');
+  if (hasV8(wide)) {
+    // v8 (H-039): the release's ratings are the same conversion, but its build kept weight and the few players it
+    // couldn't match to CFB 27 from the older ROM, and rounds ±1; so most slots, not every byte, come out the same.
+    let slots = 0, same = 0;
+    for (const t of plan.teams) for (const f of t.fills) {
+      slots++;
+      const a = readPlayer(again, t.team, f.slot).ratings, b = readPlayer(rom, t.team, f.slot).ratings;
+      const fa = readFineOffsets(again.data, t.team, f.slot), fb = readFineOffsets(wide, t.team, f.slot);
+      if (a.every((x, i) => i === 0 || Math.abs(16 * x + fa[i] - (16 * b[i] + fb[i])) <= 1)) same++;
+    }
+    assert.ok(same / slots > 0.99, `the v8 conversion rebuilds the release's ratings (${same} of ${slots} slots within 1)`);
+    ok(`v8 conversion vs the release: ${same} of ${slots} slots within 1 fine point (weight not compared)`);
+  } else assert.ok(again.data.every((b, i) => b === wide[i]), 'the conversion rebuilds the release byte for byte');
   // An edit of the last team: only its roster changes; tracked as a roster edit; Sega checksum fixed, EA's unchanged.
   const ed = openRosterRom(wide);
   const last = ed.teams.length - 1;
