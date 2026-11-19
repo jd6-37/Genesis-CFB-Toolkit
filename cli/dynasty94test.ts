@@ -3,6 +3,7 @@
 // The ROM is the 107-team 1994 Season Edition (Elevated v2.0.1-test29 or later). The save is a Genesis Plus GX
 // (RetroArch) .srm of it with a season started and at least one week played (a whole season, bowls included,
 // also tests the champion and the bowl stories); the test puts its dynasty's mark into it.
+import { editionOfSig, layoutOfSig } from '../src/core/dynasty/edition';
 import { seasonReports } from '../src/core/dynasty/walshStore';
 import { readReports, reportProblems } from '../src/core/walshReports';
 import { pollSet, preseasonPoll } from '../src/core/dynasty/poll';
@@ -178,7 +179,7 @@ const stamp = (file: Uint8Array) => {
   const f = file.slice();
   const id = dynastyRomId('test94');
   const b = [0x44, 0x59, 0x4e, 0x31, id >>> 24, (id >>> 16) & 255, (id >>> 8) & 255, id & 255, 0, 1, 0, 1, 0, 0, 0, 1];
-  const window = f[1] === 0x94;
+  const window = editionOfSig(f[1]) !== null; // layout 1 or 2 (0x94 / 0xE4)
   b.forEach((x, k) => { f[window ? 0xe01 + 2 * (0x1330 + k) : 0x700 + 0x1330 + k] = x; });
   return f;
 };
@@ -188,7 +189,7 @@ assert.equal(save.teams, 107);
 assert.equal(save.stats.length, 107);
 assert.ok(save.season && (save.season.lastRegularWeek === 10 || (save.season.realSchedule && save.season.lastRegularWeek === 13)), 'an 11-week regular season (Random), or Weeks 0-13 (Real 1994, test30 on)');
 assert.ok(save.season!.games.every((g) => (g.visitor === null || g.visitor < 107) && (g.home === null || g.home < 107)));
-const other = srm.slice(); other[1] = 0x6f; // the 2026 signature: a save of the other edition
+const other = srm.slice(); other[1] = layoutOfSig(srm[1]) === 2 ? 0xe6 : 0x6f; // the 2026 signature of the same layout: a save of the other edition
 assert.throws(() => importSave(d0, other), /2026 Season Edition/);
 const imp = importSave(d0, srm);
 assert.equal(imp.warning, undefined);

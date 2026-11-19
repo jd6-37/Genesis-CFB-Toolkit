@@ -15,6 +15,7 @@
 // Pure functions: each returns a new dynasty. Randomness is seeded, so the same choices give the
 // same offseason. The players before the offseason are kept so it can be started over.
 
+import { newerRomMessage, readManifest } from '../manifest';
 import { impactTable } from './impact';
 import { writeDynastySim, writeDynastyStats } from './seasonSim';
 import { startCarousel } from './carousel';
@@ -885,6 +886,9 @@ export function seasonRom(d: Dynasty, season: DSeason, rom: Uint8Array, now = Da
   const problem = out.wide ? dynastyAreaProblem(out.data) : `This isn't ${DYNASTY_EDITION}.`;
   if (problem) throw new Error(problem);
   if (editionOfRom(out.data)?.id !== editionOf(d).id) throw new Error(`This dynasty is played in the ${editionOf(d).name}: use that ROM.`);
+  // H-033: a ROM whose manifest has a required entry this app doesn't know is newer than the app.
+  const newer = newerRomMessage(readManifest(rom));
+  if (newer) throw new Error(newer);
   const records: Uint8Array[] = [];
   const ovr: { off: number; def: number }[] = [];
   const nudges = simNudges(d, season.coach);

@@ -436,6 +436,8 @@ The save's season block and stats tables, the dynasty file and the plan for the 
 
 `npm run test:v8 -- ELEVATED_2026_138 ratings26_v8.json` (2026 test60 or later; the Rosters lane's reference file, the Mac folder's `rosters-2026/v8/`) converts the built-in week-9 file with the v8 curves and compares every player with the reference (±1), checks the written steps and offsets read back as the fine values, the boost word, the ROM's display tables against the app's, and that every number from a rating's lowest up can be typed in.
 
+`npm run test:manifest -- ELEVATED_ROM [SAVE.srm …]` (2026 test63 / 1994 test64 or later) reads the ROM's manifest and checks it against the app: every entry the app needs is there and known, the build is in the app's list of known builds, the addresses match; given saves made on that ROM, it reads them with save layout 2 (the build stamp, the last-played ID, the packed defense stats).
+
 `npm run test:dynasty94 -- ELEVATED_1994 SAVE.srm` (the 1994 Season Edition, v2.0.1-test29 or later; a save of any of its seasons, which the test marks for its dynasty) creates a 1994 dynasty and checks its ratings against the ROM's steps and fine offsets, its names and classes, its real backups, the season ROM (format `0x0001006B`, 107 teams), the save (bowls, the champion of the final poll, bowl stories), 11-week schedules with a bye each week and the 1994 rivalries, and an offseason into 1995.
 
 ## Development

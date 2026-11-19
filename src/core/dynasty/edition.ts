@@ -19,8 +19,10 @@ export interface Edition {
   teams: number;
   /** The first season of a new dynasty. */
   startYear: number;
-  /** The battery save's signature byte ($200001). */
+  /** The battery save's signature byte ($200001), save layout 1 (up to 2026 test62 / 1994 test63). */
   saveSig: number;
+  /** The signature of save layout 2 (H-033; 2026 test63 / 1994 test64 on). */
+  saveSigV2: number;
   /** Regular-season weeks of a Random schedule. */
   regWeeks: number;
   postseason: 'cfp' | 'bowls';
@@ -33,8 +35,8 @@ export interface Edition {
 }
 
 export const EDITIONS: Record<EditionId, Edition> = {
-  '2026': { id: '2026', name: '2026 Season Edition', teams: 138, startYear: 2026, saveSig: 0x6f, regWeeks: 12, postseason: 'cfp', confRules: RULES_2026, titleGames: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0], transfers: true },
-  '1994': { id: '1994', name: '1994 Season Edition', teams: 107, startYear: 1994, saveSig: 0x94, regWeeks: 11, postseason: 'bowls', confRules: { weeks: 11, titleGames: [0] }, titleGames: [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], transfers: false },
+  '2026': { id: '2026', name: '2026 Season Edition', teams: 138, startYear: 2026, saveSig: 0x6f, saveSigV2: 0xe6, regWeeks: 12, postseason: 'cfp', confRules: RULES_2026, titleGames: [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0], transfers: true },
+  '1994': { id: '1994', name: '1994 Season Edition', teams: 107, startYear: 1994, saveSig: 0x94, saveSigV2: 0xe4, regWeeks: 11, postseason: 'bowls', confRules: { weeks: 11, titleGames: [0] }, titleGames: [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], transfers: false },
 };
 
 /** The edition of a ROM by its team count, or null (not a dynasty edition). */
@@ -44,7 +46,11 @@ export function editionOfRom(d: Uint8Array): Edition | null {
 }
 
 /** The edition of a battery save by its signature byte, or null. */
-export const editionOfSig = (sig: number): Edition | null => Object.values(EDITIONS).find((e) => e.saveSig === sig) ?? null;
+export const editionOfSig = (sig: number): Edition | null =>
+  Object.values(EDITIONS).find((e) => e.saveSig === sig || e.saveSigV2 === sig) ?? null;
+/** The save layout a signature belongs to (1 or 2), or 0. */
+export const layoutOfSig = (sig: number): 0 | 1 | 2 =>
+  Object.values(EDITIONS).some((e) => e.saveSigV2 === sig) ? 2 : Object.values(EDITIONS).some((e) => e.saveSig === sig) ? 1 : 0;
 
 /** A dynasty's edition (dynasties made before the 1994 edition are 2026 ones). */
 export const editionOf = (d: { edition?: EditionId }): Edition => EDITIONS[d.edition ?? '2026'];

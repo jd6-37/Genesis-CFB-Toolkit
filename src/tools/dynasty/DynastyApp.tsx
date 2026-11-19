@@ -6,7 +6,7 @@ import { Rules } from './RulesPage';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { openRom } from '../../core/romfile';
 import { fetchCfb27Latest } from '../../core/cfb27Latest';
-import { createDynasty, DYNASTY_FILE, importSave, OLD_DYNASTY, type Dynasty, type DSeason } from '../../core/dynasty/model';
+import { createDynasty, DYNASTY_FILE, importSave, OLD_DYNASTY, romBuildOf, type Dynasty, type DSeason } from '../../core/dynasty/model';
 import { createDynasty1994 } from '../../core/dynasty/create1994';
 import { editionOf, editionOfRom } from '../../core/dynasty/edition';
 import { fetchRosters1994 } from '../../core/dynasty/rosters1994';
@@ -394,9 +394,12 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       // The first season is played on the user's own ROM: only its uniforms change. Later seasons: the season ROM.
       const first = season.index === 0;
       const again = !!season.romDownloaded;
+      // H-033: the base ROM's build, for the mid-season check at import.
+      const romBuild = romBuildOf(rom);
+      const build = romBuild ? { romBuild } : {};
       const done: DSeason = first
-        ? { ...season, romId: season.romId ?? newRomId(), kitsEdited: false } // the first season's lineup never goes into a ROM
-        : { ...season, romId: season.romId ?? newRomId(), lineupEdited: false, kitsEdited: false, romDownloaded: true };
+        ? { ...season, ...build, romId: season.romId ?? newRomId(), kitsEdited: false } // the first season's lineup never goes into a ROM
+        : { ...season, ...build, romId: season.romId ?? newRomId(), lineupEdited: false, kitsEdited: false, romDownloaded: true };
       const name = seasonRomName(d, done);
       download(name, (first ? uniformRom(d, rom) : seasonRom(d, done, rom)) as Uint8Array<ArrayBuffer>, 'application/octet-stream');
       await commit({ ...d, seasons: d.seasons.map((x) => (x === season ? done : x)) });
