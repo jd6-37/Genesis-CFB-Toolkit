@@ -22,6 +22,13 @@ The Bill Walsh '95 Elevated website, at https://bw95mod.com (owner, 2026-11-19: 
 
 Old addresses keep working: `/#rosters` and the other tab hashes go to `/toolkit#…`, `/#dynasty/…` to `/dynasty#…` (the script in `index.html`, and `legacyAppUrl` in `src/appNav.ts` for `app.html`).
 
+## Search, agents and the installable site
+
+- Every page's `<head>` (`src/site/server.tsx`) has its title, description, canonical address, Open Graph and Twitter tags, and schema.org JSON-LD from `src/site/seo.ts`: `WebSite` on every page; the mod (`SoftwareApplication`, free, based on the original game) and the two web apps on the homepage; `TechArticle` for manual chapters, `BlogPosting` for Insights posts, `SportsTeam` with its players for roster pages, and a `BreadcrumbList` below the homepage. `/404` is `noindex`.
+- The build also writes `dist/sitemap.xml` (every page, the Insights posts with their dates) and `dist/llms.txt` (what the site is and a link to every chapter, post and roster section, for language models and agents). Both come from the routes, so a new chapter or post appears in them on its own.
+- `public/robots.txt` allows everything but `/api/` and the shared dynasty snapshots (`/dynasty/s/`), and points to the sitemap.
+- The site installs as an app (PWA): `public/manifest.webmanifest`, the icons in `public/icons/` and a service worker, `public/sw.js`, registered in production builds by `src/registerSw.ts` (site and `/toolkit`, `/dynasty`). Pages are fetched from the network first and kept for offline use; the hashed build files are cached; pictures and roster data are served from the cache and refreshed in the background; `/api/` and videos are never cached. When `sw.js` changes in a way that should drop old caches, bump its `VERSION`. `vercel.json` serves `sw.js` with `no-cache` so a new one is picked up at once.
+
 ## Keeping it up to date
 
 The site describes the mod's latest features: the homepage, the manual and any Insights post they touch. After the launch, update it when a public GitHub release comes out. Until the site is announced, it follows the latest mainline test ROMs (owner, 2026-11-16). The unreleased changelog in the project notes lists what each test added.
