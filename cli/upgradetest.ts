@@ -16,6 +16,8 @@ import { openRom } from '../src/core/romfile';
 import { sha1Hex } from '../src/core/bytes';
 import { readManifest } from '../src/core/manifest';
 import { createDynasty, importSave } from '../src/core/dynasty/model';
+import { assetRomProblem, refreshRomAssets, teamColorsOf } from '../src/core/dynasty/assets';
+import { CFB27_LATEST } from '../src/core/cfb27Latest';
 import { applyUpgrade, findUpgrade, pendingUpgrade, upgradeRomProblem, upgradeTiming } from '../src/core/dynasty/upgrade';
 import type { PatchList } from '../src/core/patches';
 
@@ -82,4 +84,21 @@ assert.equal(r2.upgraded, mNew.name, 'a save from the new ROM ends the upgrade')
 assert.equal(pendingUpgrade(r2.dynasty), null);
 assert.doesNotMatch(r2.warning ?? '', /still from|isn't safe/);
 ok(`mid-season upgrade ${mOld.name} → ${mNew.name}: waits, warns on an old-ROM save, done on a new-ROM save`);
+// Assets (user, 2026-11-20): an upgrade or Manage's update reads the logos' colors and the uniforms again; the user's
+// uniform changes stay; another version or team count is refused for Manage's update (that's an upgrade).
+{
+  const base = createDynasty(oldRom, readFileSync(new URL(`../public/${CFB27_LATEST.file}`, import.meta.url), 'utf8'), { name: 'a', seed: 1, id: 'assets' });
+  const same = refreshRomAssets(base, oldRom);
+  assert.deepEqual(same.teams.map((t) => t.colors), base.teams.map((t) => t.colors), 'the same ROM: the same colors');
+  assert.deepEqual(same.romUniforms, base.romUniforms, 'the same ROM: the same uniforms');
+  const blk = teamColorsOf(oldRom)[0];
+  const changed = refreshRomAssets({ ...base, ownEdits: { 0: base.romUniforms!.own[0] } }, newRom);
+  assert.equal(changed.teams.length, base.teams.length);
+  assert.deepEqual(changed.ownEdits?.[0], base.romUniforms!.own[0], "the user's own uniform change stays");
+  assert.equal(blk.length, 4, 'four colors a team');
+  assert.equal(assetRomProblem(base, oldRom, oldRom), null, 'the same version is fine');
+  assert.match(assetRomProblem(base, oldRom, newRom) ?? '', /use Upgrade/, 'another version is an upgrade');
+  if (path94) assert.match(assetRomProblem(base, oldRom, await rom(path94)) ?? '', /teams; the dynasty has/, 'another edition: refused');
+  ok('assets: an upgrade or update reads colors and uniforms again, keeps the user\'s uniform changes; another version or edition refused for the update');
+}
 console.log(`${n} passed`);

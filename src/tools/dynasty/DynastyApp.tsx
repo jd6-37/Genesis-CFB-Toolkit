@@ -15,6 +15,7 @@ import { fetchRosters1994 } from '../../core/dynasty/rosters1994';
 import { applyEdits, editLock, playersCsv, readPlayersCsv, type CsvImport } from '../../core/dynasty/edit';
 import { seasonView, weekName } from '../../core/dynasty/derive';
 import { teamArt } from '../../core/dynasty/art';
+import { assetRomProblem, refreshRomAssets } from '../../core/dynasty/assets';
 import {
   deleteDynasty, dynastyFileName, dynastyFileText, listDynasties, loadArt, loadDynasty, loadRom, readDynastyFile, saveArt, saveDynasty, saveRom,
   type DynastySummary, type TeamArt,
@@ -236,7 +237,15 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
   const romRef = useRef<() => Promise<Uint8Array | null>>(async () => null);
   const v = useMemo(() => (d ? seasonView(d, d.seasons[d.seasons.length - 1]) : null), [d]);
   // A newer Elevated version for the dynasty (Upgrade.tsx; user, 2026-11-20).
-  const up = useUpgrade(d, commit, (y) => dlRef.current(y));
+  // A ROM's logos and helmets for this dynasty (an upgrade, Manage's update).
+  const refreshArt = useCallback(async (rom: Uint8Array) => {
+    if (!d) return;
+    const pics = teamArt(rom);
+    if (pics.length !== d.teams.length) return;
+    await saveArt(d.id, pics);
+    setArt(pics);
+  }, [d]);
+  const up = useUpgrade(d, commit, (y) => dlRef.current(y), refreshArt);
   const upLine = d ? upgradeLine(d, up.info) : null;
   // Light or dark: the reader's choice, kept in this browser (it's a preference, not part of a dynasty).
   const [dark, setDarkState] = useState(() => { try { return localStorage.getItem(THEME_KEY) === 'dark'; } catch { return false; } });
@@ -293,15 +302,19 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       });
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }),
-    addArt: (romFile) => run('Reading team art…', async () => {
+    // Logos, helmets, colors and uniforms from a ROM (user, 2026-11-20): the dynasty's own version, maybe with art the
+    // user changed; it becomes the ROM the dynasty builds its seasons on. Another version is an upgrade.
+    addArt: (romFile) => run('Reading the ROM…', async () => {
       if (!d) return;
       const rom = (await openRom(romFile.name, await readFile(romFile))).data;
+      const problem = assetRomProblem(d, await loadRom(d.id).catch(() => null), rom);
+      if (problem) throw new Error(problem);
       const pics = teamArt(rom);
-      if (pics.length !== d.teams.length) throw new Error(`This ROM has ${pics.length} teams; the dynasty has ${d.teams.length}.`);
       await saveArt(d.id, pics);
       await saveRom(d.id, rom);
       setArt(pics);
-      setNote({ kind: 'ok', text: 'Team logos added.' });
+      await commit(refreshRomAssets(d, rom));
+      setNote({ kind: 'ok', text: `Logos, helmets, colors and uniforms updated from ${romFile.name}. They reach the game with the next ROM you download from the app.` });
     }),
     exportFile: () => { if (d) void backupRef.current(d); },
     importFile: (f) => run('Opening the dynasty file…', async () => {
@@ -756,15 +769,13 @@ function Manage({ d, art, list, busy, note, actions, focus, ctx, up }: {
               <Button onClick={actions.exportFile}>Download dynasty file</Button>
               <span className="dy-small dy-dim">{d.backedUp ? `Last download: ${when(d.backedUp)}` : 'Not downloaded yet.'}</span>
             </div>
-            <h3>Team logos</h3>
+            <h3>Team logos and uniforms</h3>
             {art ? (
-              <p>Team logos come from your ROM and stay in this browser. They aren't in the dynasty file.</p>
+              <p>Team logos, helmets, colors and uniforms come from your ROM; the logos stay in this browser (they aren't in the dynasty file). An upgrade to a new Elevated version updates them. If you changed them in your ROM (the same version), load it here: the app builds your next season ROMs on it.</p>
             ) : (
-              <>
-                <p>This browser doesn't have the team logos yet (a dynasty file doesn't carry them). Load your ROM to add them.</p>
-                <FileButton label="Load ROM for logos" accept=".md,.bin,.gen,.zip" disabled={!!busy} onFile={actions.addArt} />
-              </>
+              <p>This browser doesn't have the team logos yet (a dynasty file doesn't carry them). Load your ROM to add them.</p>
             )}
+            <FileButton label={art ? 'Update logos and uniforms from a ROM' : 'Load ROM for logos'} accept=".md,.bin,.gen,.zip" disabled={!!busy} onFile={actions.addArt} />
             <h3>Name and delete</h3>
             <div className="dy-row">
               {rename === null ? (
