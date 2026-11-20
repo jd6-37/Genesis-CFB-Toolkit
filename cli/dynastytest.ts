@@ -524,7 +524,10 @@ ok(`walk-ons: ${diamonds.length} of ${walkons.length} are diamonds in the rough;
   const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
   const real = Num.assignNumbers(o4.players, o4.offseason!.year, o4.userTeams, rnd).changes;
   const realUps = real.filter((c) => c.why === 'upgrade');
-  assert.ok(realUps.length < 138 * Num.UPGRADE_CHANCE, `single-digit moves are rare (${realUps.length} on 138 teams)`);
+  // At most one a team, each with UPGRADE_CHANCE: at most the mean of 138 tries plus three standard deviations (a
+  // count just over the mean comes up with some saves: 23 with the v2.1.1-test4 emulator save).
+  const mean = 138 * Num.UPGRADE_CHANCE, sd = Math.sqrt(mean * (1 - Num.UPGRADE_CHANCE));
+  assert.ok(realUps.length <= mean + 3 * sd, `single-digit moves are rare (${realUps.length} on 138 teams)`);
   // The best new players get the single digits: among new skill players, the top quarter by OVR against the bottom.
   const newSkill = real.filter((c) => c.why === 'new').map((c) => ({ c, p: before.get(c.player)! })).filter(({ p }) => ['QB', 'HB', 'WR', 'CB', 'FS', 'SS'].includes(p.pos)).sort((a, b) => b.p.ovr - a.p.ovr);
   const q = Math.floor(newSkill.length / 4), share = (xs: typeof newSkill) => xs.filter((x) => x.c.to < 10).length / xs.length;
