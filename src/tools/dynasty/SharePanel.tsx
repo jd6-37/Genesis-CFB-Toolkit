@@ -45,7 +45,8 @@ export function SharePanel({ d, art, focus, commit, ctx }: {
   // Expired snapshots (SNAPSHOT_DAYS) leave the list and the count; the server deletes their files.
   const list = (d.snapshots ?? []).filter((x) => !snapshotExpired(x.sharedAt));
   const team = firstTeam(d, focus);
-  const school = d.teams[team].school;
+  // A dynasty with no team of the user's yet (user, 2026-11-20: Manage was blank): a snapshot follows one, so it waits.
+  const school = team === undefined ? undefined : d.teams[team]?.school;
   const oldest = list[list.length - 1];
   const link = (id: string) => snapshotUrl(window.location.origin, id);
   const when = (iso: string) => new Date(iso).toLocaleDateString('en-US', { dateStyle: 'medium' });
@@ -105,6 +106,14 @@ export function SharePanel({ d, art, focus, commit, ctx }: {
     }
   };
 
+  if (school === undefined) {
+    return (
+      <section className="dy-panel" id="dy-m-share">
+        <h2>Share</h2>
+        <p>A snapshot follows one of your teams. Add your team under Your teams (or import a save that marks it), then share it here.</p>
+      </section>
+    );
+  }
   return (
     <section className="dy-panel" id="dy-m-share">
       <h2>Share</h2>
