@@ -25,7 +25,7 @@ import { seasonReports } from './walshStore';
 import { writeReports } from '../walshReports';
 import { fineSetBytes, putFineOffsets } from './fine';
 import { applyKits } from './kit';
-import { lastGames, makeSchedule, RELEASE_CONF_WEEKS, rivalriesOf, scheduleSet } from './schedule';
+import { lastGames, makeSchedule, RELEASE_CONF_WEEKS, rivalriesOf, scheduleSet, seasonDivisions } from './schedule';
 import { writeConferences } from './conferences';
 import { editionOf, editionOfRom, hasTransfers } from './edition';
 import { CLASSES, rng, type ClassYear, type DPlayer, type DSeason, type Dynasty, type OffseasonEvent } from './model';
@@ -826,6 +826,7 @@ export function finishOffseason(d: Dynasty): Dynasty {
     confNames: prev.confNames.slice(),
     confWeeks,
     ...(prev.titleGames ? { titleGames: prev.titleGames.slice() } : {}),
+    ...(prev.secEast !== undefined ? { secEast: prev.secEast && prev.secEast.slice() } : {}),
     // The next season's schedule (user, 2026-11-12: "Generate each year, and then the user can edit").
     schedule: makeSchedule({
       schools: d.teams.map((t) => t.school),
@@ -836,6 +837,7 @@ export function finishOffseason(d: Dynasty): Dynasty {
       weeks: editionOf(d).regWeeks,
       edition: editionOf(d).id,
       rivalries: rivalriesOf(d),
+      divisions: seasonDivisions(d, prev),
     }),
     ...depthChart(withNumbers),
     prestige: st.prestige ?? seasonPrestige(d, prev),

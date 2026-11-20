@@ -4,7 +4,7 @@
 import type { Dynasty, DSeason } from './model';
 import type { DCoach } from './coaches';
 import { coachOvr } from './coaches';
-import { makeSchedule, readRealSchedule, realScheduleFor, RELEASE_CONF_WEEKS, rivalriesOf, type DSchedule } from './schedule';
+import { makeSchedule, readRealSchedule, realScheduleFor, RELEASE_CONF_WEEKS, rivalriesOf, seasonDivisions, type DSchedule } from './schedule';
 import { editionOf } from './edition';
 import { readWideSeason, wideSeasonProblems } from '../seasonWide';
 
@@ -128,6 +128,7 @@ export function setupSchedule(d: Dynasty, rom: Uint8Array, kind: 'real' | 'new',
     weeks: editionOf(d).regWeeks,
     edition: editionOf(d).id,
     rivalries: rivalriesOf(d),
+    divisions: seasonDivisions(d, s),
   });
   return withSeason(d, () => ({ schedule: sched }));
 }

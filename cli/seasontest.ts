@@ -12,7 +12,7 @@ import { teamsOf } from '../src/core/wide';
 import { EDITIONS } from '../src/core/dynasty/edition';
 import {
   confSizes, playedGames, readWideSeason, restoreWideSeason, wideSeasonIssues, wideSeasonProblems, wideSeasonRanges,
-  wideSeasonTables, writeWideSeason, readScheduleRow,
+  wideSeasonTables, writeWideSeason, readScheduleRow, eastNow, divisionsOf, EAST_AT, CTG_AT,
 } from '../src/core/seasonWide';
 import { eaChecksumOk, fixChecksums, openRosterRom } from '../src/core/rosterRom';
 import { parseBw95 } from '../src/core/bw95';
@@ -403,6 +403,33 @@ for (const wide of wides94) {
   assert.match(wideSeasonIssues(x, R).join(' '), /run past week 11/);
   assert.throws(() => writeWideSeason(wide.slice(), x, R));
   ok('107-team 1994 Season Edition: conferences, members, weeks (11) and title game switches read, written in place, tracked, carried, undone; a season past week 11 refused');
+  if (s.east) {
+    // The 1994 SEC divisions (H-011 answer, 2026-11-20): the East list, a swap, a count change.
+    const east0 = ['Florida', 'Georgia', 'Kentucky', 'South Carolina', 'Tennessee', 'Vanderbilt'].map(W);
+    assert.deepEqual(s.east, east0, 'the East list as released');
+    assert.deepEqual([...wide.subarray(EAST_AT, EAST_AT + 7)], [0x0a, 0x0c, 0x3b, 0x56, 0x1b, 0x65, 0xff]);
+    assert.deepEqual(eastNow(s.conf, s.east, s.conf, tn), [...east0].sort((a, b) => a - b), 'unchanged: the same East');
+    const sw = s.conf.slice();
+    sw[W('Tulane')] = 0; sw[W('Kentucky')] = s.conf[W('Tulane')];
+    const e2 = eastNow(s.conf, s.east, sw, tn)!;
+    assert.ok(e2.includes(W('Tulane')) && !e2.includes(W('Kentucky')) && e2.length === 6, 'Tulane takes Kentucky\'s place in the East');
+    const dv = divisionsOf(sw, s.titleGames, e2)!;
+    assert.ok(dv && dv.conf === 0 && dv.east.length === 6 && dv.west.length === 6 && !dv.west.includes(W('Tulane')));
+    const r2 = wide.slice();
+    writeWideSeason(r2, { ...s, conf: sw, east: e2 }, R);
+    assert.deepEqual(readWideSeason(r2).east, e2);
+    assert.equal(r2[EAST_AT + 6], 0xff);
+    assert.equal(r2[CTG_AT + 5], 3, 'the SEC keeps its divisions');
+    const one = s.conf.slice();
+    one[W('Tulane')] = 0;
+    assert.equal(eastNow(s.conf, s.east, one, tn), null, '13 teams: divisions off');
+    const r3 = wide.slice();
+    writeWideSeason(r3, { ...s, conf: one, east: null }, R);
+    assert.equal(r3[CTG_AT + 5], 1, 'off: the title game without divisions');
+    assert.deepEqual([...r3.subarray(EAST_AT, EAST_AT + 16)], [...wide.subarray(EAST_AT, EAST_AT + 16)], 'off: the list is kept');
+    assert.deepEqual(eastNow(s.conf, null, s.conf, tn), [...east0].sort((a, b) => a - b), 'no list: the 1994 East schools');
+    ok('1994 SEC divisions: the East list read; a swap puts the arriving team in the leaving team\'s division; another number of teams turns them off (title game kept, list kept)');
+  }
 }
 
 // The season sim settings (H-016; 2026 test33 / 1994 test36 on): read, written in their 6 bytes, refused when out of range.

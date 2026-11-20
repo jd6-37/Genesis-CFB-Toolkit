@@ -51,6 +51,58 @@ export const TG_SEC94 = 2;
 /** The 1994 SEC divisions' East, by team (ctg.py's list). */
 export const SEC_EAST_1994 = ['Florida', 'Georgia', 'Kentucky', 'South Carolina', 'Tennessee', 'Vanderbilt'];
 
+/**
+ * The East list (CTG1 +0x30, 0x2D5230-0x2D523F): the teams `ctg.py`'s EASTQ counts as East in a conference with bit 1;
+ * the rest of that conference is the West. Up to 15 team numbers, FF-terminated, the rest FF. The ROM lane (H-011,
+ * "Answer (ROM lane, 2026-11-20)"): the apps may rewrite it; only EASTQ reads it; uneven divisions are fine for the ROM.
+ * 1994 as released: 0a 0c 3b 56 1b 65 (Florida, Georgia, Kentucky, South Carolina, Tennessee, Vanderbilt).
+ */
+export const EAST_AT = CTG_AT + 0x30;
+export const EAST_MAX = 15;
+
+/** The ROM's East list (team numbers), or null on a ROM without the title game switches. */
+export function readEast(d: Uint8Array): number[] | null {
+  if (!readTitleGames(d)) return null;
+  const out: number[] = [];
+  for (let k = 0; k < EAST_MAX && d[EAST_AT + k] !== 0xff; k++) out.push(d[EAST_AT + k]);
+  return out;
+}
+
+/**
+ * The divisions after teams moved (user, 2026-11-20: a swap puts the arriving team in the leaving team's division;
+ * a change in the conference's number of teams turns the divisions off). `was` / `wasEast`: the conferences and East
+ * list as loaded; `conf`: now. Teams that arrive in conference `c` take, in team order, the places of the teams that
+ * left it (as the real schedule's swapPlan pairs them). Null when `c`'s number of teams changed. Without a list as
+ * loaded (divisions turned off before), the 1994 East schools in `c`, if they are half of it.
+ */
+export function eastNow(was: number[], wasEast: number[] | null, conf: number[], schools: string[], c = 0): number[] | null {
+  const leave = was.map((x, t) => (x === c && conf[t] !== c ? t : -1)).filter((t) => t >= 0);
+  const arrive = conf.map((x, t) => (x === c && was[t] !== c ? t : -1)).filter((t) => t >= 0);
+  if (leave.length !== arrive.length) return null;
+  if (!wasEast) {
+    const members = conf.filter((x) => x === c).length;
+    const east = conf.map((x, t) => (x === c && SEC_EAST_1994.includes(schools[t]) ? t : -1)).filter((t) => t >= 0);
+    return east.length * 2 === members ? east : null;
+  }
+  const inEast = new Set(wasEast);
+  const out = wasEast.filter((t) => conf[t] === c);
+  leave.forEach((t, i) => { if (inEast.has(t)) out.push(arrive[i]); });
+  return out.sort((a, b) => a - b);
+}
+
+/**
+ * The divisions a season's schedule should follow: the conference with the 1994 SEC divisions switched on (bit 1 with
+ * its title game) and its East and West, when both have the same, even number of teams; else null.
+ */
+export function divisionsOf(conf: number[], titleGames: number[] | undefined, east: number[] | null | undefined): { conf: number; east: number[]; west: number[] } | null {
+  if (!titleGames || !east) return null;
+  const c = titleGames.findIndex((f, k) => k < INDEPENDENT && (f & (TG_ON | TG_SEC94)) === (TG_ON | TG_SEC94));
+  if (c < 0) return null;
+  const e = conf.map((x, t) => (x === c && east.includes(t) ? t : -1)).filter((t) => t >= 0);
+  const w = conf.map((x, t) => (x === c && !east.includes(t) ? t : -1)).filter((t) => t >= 0);
+  return e.length === w.length && e.length >= 2 && e.length % 2 === 0 ? { conf: c, east: e, west: w } : null;
+}
+
 /** The ROM's title game switches (11 flag bytes), or null on a ROM without the table. */
 export function readTitleGames(d: Uint8Array): number[] | null {
   if (d.length < CTG_AT + 16 || String.fromCharCode(...d.subarray(CTG_AT, CTG_AT + 4)) !== 'CTG1' || d[CTG_AT + 4] !== CONFS) return null;
@@ -82,6 +134,11 @@ export interface WideSeason {
   games: number[];
   /** Title game switches per conference 0-10 (TG_ON, TG_SEC94), on ROMs that have them. */
   titleGames?: number[];
+  /**
+   * The East list (team numbers), on ROMs with the switches. Null: the divisions are off because the conference's
+   * number of teams changed (written as bit 1 cleared, the ROM's list kept).
+   */
+  east?: number[] | null;
 }
 
 /** Target of a `lea d16(pc),An` at `at`, or -1 if there's none. */
@@ -124,12 +181,14 @@ export function readWideSeason(d: Uint8Array): WideSeason {
   if (p.length) throw new Error(`This ROM's season can't be read: ${p.join('; ')}.`);
   const t = tables(d);
   const tg = readTitleGames(d);
+  const east = readEast(d);
   return {
     names: Array.from({ length: CONFS }, (_, c) => readName(d, t.names, c + 1)),
     conf: Array.from({ length: teamsOf(d) }, (_, team) => rw(d, groupAt(d, team) + 6)),
     start: Array.from({ length: INDEPENDENT }, (_, c) => d[t.cws + c]),
     games: Array.from({ length: INDEPENDENT }, (_, c) => d[t.cwn + c]),
     ...(tg ? { titleGames: tg } : {}),
+    ...(east ? { east } : {}),
   };
 }
 
@@ -160,6 +219,7 @@ export function wideSeasonIssues(s: WideSeason, rules: ConfRules = RULES_2026): 
   if (s.titleGames && (s.titleGames.length !== CONFS || s.titleGames.some((f, c) => (f & ~(TG_ON | TG_SEC94)) !== 0 || (c === INDEPENDENT && f !== 0)))) {
     out.push('The title game switches are not valid.');
   }
+  if (s.east && (s.east.length > EAST_MAX || s.east.some((t) => !(t >= 0 && t < s.conf.length && t < 0xff)))) out.push('The East division list is not valid.');
   for (let c = 0; c < INDEPENDENT; c++) {
     const label = s.names[c].trim() || `Conference ${c + 1}`;
     if (titled.includes(c) && sizes[c] < 2) out.push(`${label} needs at least 2 teams for its title game.`);
@@ -194,7 +254,12 @@ export function writeWideSeason(d: Uint8Array, s: WideSeason, rules: ConfRules =
   }
   if (s.titleGames) {
     if (!readTitleGames(d)) throw new Error("This ROM has no title game switches (they came with the 2026 Season Edition's test31 and the 1994 Season Edition's test33).");
-    d.set(s.titleGames, CTG_AT + 5);
+    // Divisions off (east null): bit 1 cleared where it was set; the list stays.
+    d.set(s.east === null ? s.titleGames.map((f) => f & ~TG_SEC94) : s.titleGames, CTG_AT + 5);
+    if (s.east) {
+      d.fill(0xff, EAST_AT, EAST_AT + EAST_MAX + 1);
+      d.set(s.east, EAST_AT);
+    }
   }
   if (base) markRealSchedule(d, s, base);
 }
@@ -254,7 +319,7 @@ export function wideSeasonRanges(d: Uint8Array): [number, number][] {
     const g = groupAt(d, team) + 6;
     r.push([g, g + 2]);
   }
-  if (readTitleGames(d)) r.push([CTG_AT + 5, CTG_AT + 5 + CONFS]);
+  if (readTitleGames(d)) r.push([CTG_AT + 5, CTG_AT + 5 + CONFS], [EAST_AT, EAST_AT + EAST_MAX + 1]);
   if (hasScheduleRow(d)) r.push([SCHEDULE_DEFAULT_AT, SCHEDULE_DEFAULT_AT + 2], [SCHEDULE_RANGE_AT, SCHEDULE_RANGE_AT + RANGE_LEN]);
   return r;
 }

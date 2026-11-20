@@ -152,6 +152,11 @@ export interface DSeason {
   confWeeks?: ConfWeeks;
   /** Title game switches per conference (seasonWide.ts, CTG1); absent: the edition's defaults (conferences.ts). */
   titleGames?: number[];
+  /**
+   * The 1994 SEC divisions' East (team numbers; seasonWide.ts `east`), written into the season ROM's CTG1 list. Null:
+   * off (the conference's number of teams changed). Absent: the ROM's list (the 1994 East schools).
+   */
+  secEast?: number[] | null;
   /** From the second season: the dynasty's schedule (schedule.ts), written into the season ROM. */
   schedule?: DSchedule;
   /** Each team's head coach this season (coaches.ts: a coach's id; null = none). Absent before the dynasty had coaches. */
@@ -436,7 +441,7 @@ export function createDynasty(rom: Uint8Array, csvText: string, opt: CreateOptio
     whiteHome: whiteHomeOf(rom),
     romUniforms: romUniformsOf(rom, teams.length),
     players: recordYear(players, startYear),
-    seasons: [{ index: 0, year: startYear, ...(romBuild ? { romBuild } : {}), conf: season.conf, confNames: season.names, confWeeks: { start: season.start, games: season.games }, ...(season.titleGames ? { titleGames: season.titleGames } : {}), slots, bw, bench, benchBw, teamOvr, prestige: startingPrestige(teams.map((t) => t.school), teamOvr), imports: [] }],
+    seasons: [{ index: 0, year: startYear, ...(romBuild ? { romBuild } : {}), conf: season.conf, confNames: season.names, confWeeks: { start: season.start, games: season.games }, ...(season.titleGames ? { titleGames: season.titleGames } : {}), ...(season.east ? { secEast: season.east } : {}), slots, bw, bench, benchBw, teamOvr, prestige: startingPrestige(teams.map((t) => t.school), teamOvr), imports: [] }],
   };
 }
 
