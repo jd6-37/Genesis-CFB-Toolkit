@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { Button, Check, Combobox, Field, LinkSwitch, Select, Table } from '../../ui';
 import { RosterCard, TeamLogo, ratingLabel } from './Card';
 import { cardTitle, EDITIONS, editionInfo, pageData, parseRosterPath, rostersHref, shortName, type RosterPageData } from './pages';
-import type { EditionData, RatingKey, RosterPlayer, TeamSummary } from './types';
+import type { EditionData, RatingKey, RosterPlayer, TeamRoster, TeamSummary } from './types';
 import { rosterRoute } from '../routes';
 
 /** The page for a /rosters address: its built data, or (dev server) fetched. */
@@ -124,7 +124,7 @@ const source = (d: RosterPageData) =>
     : `From Elevated ${d.build}. Ratings are the 0-99 numbers Team Rosters shows.`;
 
 /** The conference filters both views share: a conference, and power / non-power (user, 2026-11-19: the cards too). */
-function useConfFilter(d: RosterPageData, onChange: () => void) {
+function useConfFilter(d: RosterPageData, onChange: () => void, extra: string | null = '') {
   const [conf, setConf] = useState('');
   const [power, setPower] = useState(true);
   const [nonPower, setNonPower] = useState(true);
@@ -144,10 +144,15 @@ function useConfFilter(d: RosterPageData, onChange: () => void) {
     const s = q.toString();
     return s ? `?${s}` : '';
   })();
+  // Not on the first render: the address is read first (here and by the table), then written as the state changes.
+  const loaded = useRef(false);
   useEffect(() => {
-    const url = window.location.pathname + query + window.location.hash;
-    if (url !== window.location.pathname + window.location.search + window.location.hash) window.history.replaceState(null, '', url);
-  }, [query]);
+    if (!loaded.current) { loaded.current = true; return; }
+    if (extra === null) return;
+    const all = [query.slice(1), extra].filter(Boolean).join('&');
+    const url = window.location.pathname + (all ? `?${all}` : '') + window.location.hash;
+    if (url !== window.location.pathname + window.location.search + window.location.hash) window.history.replaceState(window.history.state, '', url);
+  }, [query, extra]);
   const confs = useMemo(() => [...new Set(d.teams.map((t) => t.conf).filter((c): c is string => !!c))].sort((a, b) => a.localeCompare(b)), [d.teams]);
   const pc = POWER[d.edition];
   const keep = (t: { conf: string }) => (!conf || t.conf === conf) && (!pc || (pc.includes(t.conf ?? '') ? power : nonPower));
@@ -225,7 +230,7 @@ type SortKey = 'name' | 'team' | 'pos' | 'no' | 'cls' | 'ovr' | 'wt' | RatingKey
 const PAGE = 100;
 const CLASS_ORDER: Record<string, number> = { FR: 0, SO: 1, JR: 2, SR: 3, 'SR+': 4 };
 
-interface Row { t: TeamSummary; p: RosterPlayer }
+interface Row { t: TeamRoster; p: RosterPlayer }
 
 /**
  * The power conferences, for the table's Power / Non-power filters (user, 2026-11-19: "find the fastest HB in the SEC.
@@ -238,19 +243,105 @@ const POWER: Partial<Record<string, string[]>> = {
   '1994': ['SEC', 'Big Ten', 'ACC', 'Big Eight', 'Southwest', 'Pac-10', 'Big East'],
 };
 
+/** The hover card of a school name in the table: logo, school, OFF / DEF and the impact players, one row each:
+ * position, number, name, OVR, in the game's pick order (ROM lane's suggestion, 2026-11-19). */
+function TeamPeek({ t, d, x, y }: { t: TeamRoster; d: RosterPageData; x: number; y: number }) {
+  const imp = (t.impact ?? []).map((i) => t.players[i]).filter(Boolean);
+  const top = y + 8 + 260 > window.innerHeight ? Math.max(8, y - 300) : y + 8;
+  return (
+    <div className="rosters-peek" data-brand="dynasty" role="tooltip" style={{ left: Math.min(x, window.innerWidth - 380), top, '--team': t.color, '--stripe': t.stripe } as CSSProperties}>
+      <div className="rosters-peek-head">
+        <TeamLogo team={t} edition={d.edition} sheet={d.sheet} />
+        <div>
+          <p className="rosters-peek-school">{t.school}</p>
+          <p className="rosters-peek-sub">{t.nickname}{t.conf ? ` • ${t.conf}` : ''}</p>
+        </div>
+      </div>
+      <p className="rosters-peek-ovr">Offense <b>{t.off}</b> Defense <b>{t.def}</b></p>
+      {imp.length > 0 && (
+        <>
+          <p className="rosters-peek-h">Impact players</p>
+          <table className="rosters-peek-imp">
+            <tbody>
+              {imp.map((p) => (
+                <tr key={p[0]}>
+                  <td>{p[0]}</td><td>#{p[1] ?? '–'}</td><td className="rosters-peek-name">{`${p[2]} ${p[3]}`.trim() || '–'}</td><td><b>{p[5]}</b></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** A column's first sort direction: text A-Z, numbers high to low. */
+const DEFAULT_DESC = (k: SortKey) => !['name', 'team', 'pos'].includes(k);
+
 function PlayerTable({ d }: { d: RosterPageData }) {
   const [set, setSet] = useState<EditionData | null>(null);
   const [q, setQ] = useState('');
   const [posSet, setPosSet] = useState<Set<string>>(() => new Set(ALL_POSITIONS));
   const [team, setTeam] = useState('');
-  const f = useConfFilter(d, () => { setTeam(''); setPage(0); });
   const [sort, setSort] = useState<SortKey>('ovr');
   const [desc, setDesc] = useState(true);
   const [page, setPage] = useState(0);
+  // Every filter, the sort and the page in the address (user, 2026-11-20: clicking a team and then Back returns to the
+  // same list): ?q=&pos=QB,HB&team=&sort=spd&dir=asc&page=2, plus useConfFilter's conf / show. Defaults are left out.
+  const [ready, setReady] = useState(false);
+  const extra = (() => {
+    const u = new URLSearchParams();
+    if (q.trim()) u.set('q', q.trim());
+    if (posSet.size !== ALL_POSITIONS.length) u.set('pos', ALL_POSITIONS.filter((x) => posSet.has(x)).join(',') || 'none');
+    if (team) u.set('team', team);
+    if (sort !== 'ovr') u.set('sort', sort);
+    if (desc !== DEFAULT_DESC(sort)) u.set('dir', desc ? 'desc' : 'asc');
+    if (page) u.set('page', String(page + 1));
+    return u.toString();
+  })();
+  const f = useConfFilter(d, () => { setTeam(''); setPage(0); }, ready ? extra : null);
+  useEffect(() => {
+    const u = new URLSearchParams(window.location.search);
+    const s = u.get('sort') as SortKey | null;
+    const sk = s && (['name', 'team', 'pos', 'no', 'cls', 'ovr', 'wt', ...TABLE_RATINGS] as string[]).includes(s) ? s : 'ovr';
+    setQ(u.get('q') ?? '');
+    const pos = u.get('pos');
+    if (pos) setPosSet(new Set(pos === 'none' ? [] : pos.split(',').filter((x) => ALL_POSITIONS.includes(x))));
+    if (u.get('team') && d.teams.some((t) => t.id === u.get('team'))) setTeam(u.get('team')!);
+    setSort(sk);
+    setDesc(u.get('dir') ? u.get('dir') === 'desc' : DEFAULT_DESC(sk));
+    setPage(Math.max(0, Number(u.get('page') ?? 1) - 1) || 0);
+    setReady(true);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetch(`/data/rosters/${d.edition}.json`).then((r) => r.json()).then(setSet);
   }, [d.edition]);
+  // Back to the table: its rows come after the page has loaded, so the browser can't keep the scroll position; it is
+  // saved when leaving and put back once the rows are there.
+  const scrollKey = `rosters-scroll:${d.edition}`;
+  useEffect(() => {
+    if ('scrollRestoration' in window.history) window.history.scrollRestoration = 'manual';
+    const save = () => { try { sessionStorage.setItem(scrollKey, `${window.location.search}|${window.scrollY}`); } catch { /* private mode */ } };
+    window.addEventListener('pagehide', save);
+    return () => window.removeEventListener('pagehide', save);
+  }, [scrollKey]);
+  useEffect(() => {
+    if (!set || !ready) return;
+    try {
+      const [search, y] = (sessionStorage.getItem(scrollKey) ?? '').split('|');
+      if (y && search === window.location.search) setTimeout(() => window.scrollTo({ top: Number(y), behavior: 'instant' }), 0);
+      sessionStorage.removeItem(scrollKey);
+    } catch { /* private mode */ }
+  }, [set, ready]); // eslint-disable-line react-hooks/exhaustive-deps
   const names = d.edition !== 'original';
+  // A school name's hover card (user, 2026-11-20; desktop only): OFF / DEF and the three impact players.
+  const [peekAt, setPeekAt] = useState<{ t: TeamRoster; x: number; y: number } | null>(null);
+  const peek = (t: TeamRoster, el: HTMLElement) => {
+    if (!window.matchMedia('(hover: hover) and (min-width: 1024px)').matches) return;
+    const b = el.getBoundingClientRect();
+    setPeekAt({ t, x: b.left, y: b.bottom });
+  };
   const teamsShown = d.teams.filter(f.keep);
   const rows = useMemo(() => {
     if (!set) return [];
@@ -290,7 +381,7 @@ function PlayerTable({ d }: { d: RosterPageData }) {
   const head = (k: SortKey, label: string, title?: string, left?: boolean) => (
     <th key={k} className={left ? 'ui-left' : undefined} aria-sort={sort === k ? (desc ? 'descending' : 'ascending') : 'none'}>
       <button type="button" className="rosters-sort" title={title} onClick={() => {
-        if (sort === k) setDesc(!desc); else { setSort(k); setDesc(!['name', 'team', 'pos'].includes(k)); }
+        if (sort === k) setDesc(!desc); else { setSort(k); setDesc(DEFAULT_DESC(k)); }
         setPage(0);
       }}>{label}{sort === k ? (desc ? ' ↓' : ' ↑') : ''}</button>
     </th>
@@ -338,7 +429,8 @@ function PlayerTable({ d }: { d: RosterPageData }) {
               {rows.slice(at * PAGE, at * PAGE + PAGE).map(({ t, p }) => (
                 <tr key={`${t.id}-${p[0]}`}>
                   {names && <td className="ui-left rosters-name" title={`${p[2]} ${p[3]}`.trim() || undefined}><span className="rosters-n-short">{shortName(p[2], p[3]) || '–'}</span><span className="rosters-n-full">{`${p[2]} ${p[3]}`.trim() || '–'}</span></td>}
-                  <td className="ui-left"><a href={rostersHref(d.edition, t.id)} className="rosters-teamlink" style={{ '--team': t.color } as CSSProperties}>{t.school}</a></td>
+                  <td className="ui-left"><a href={rostersHref(d.edition, t.id)} className="rosters-teamlink" style={{ '--team': t.color } as CSSProperties}
+                    onMouseEnter={(e) => peek(t, e.currentTarget)} onMouseLeave={() => setPeekAt(null)} onFocus={(e) => peek(t, e.currentTarget)} onBlur={() => setPeekAt(null)}>{t.school}</a></td>
                   <td className="ui-left">{p[0]}</td>
                   <td>{p[1] ?? ''}</td>
                   {names && <td className="ui-left">{p[4]}</td>}
@@ -349,6 +441,7 @@ function PlayerTable({ d }: { d: RosterPageData }) {
               ))}
             </tbody>
           </Table>
+          {peekAt && <TeamPeek t={peekAt.t} d={d} x={peekAt.x} y={peekAt.y} />}
           <div className="rosters-pager">
             <Button variant="quiet" disabled={at === 0} onClick={() => setPage(at - 1)}>Previous</Button>
             <span>{rows.length ? `${at * PAGE + 1}-${Math.min(rows.length, at * PAGE + PAGE)} of ${rows.length} players` : 'No players match'}</span>
