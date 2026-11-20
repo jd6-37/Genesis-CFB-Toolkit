@@ -20,7 +20,7 @@ import type { Game } from './rosterLayouts';
 import { isWideBw95 } from './romfile';
 import { hasKits, kitsDiffer, ownChanges, ownUniforms, readKits, writeKits, writeOwnUniforms } from './kits';
 import { teamsOf } from './wide';
-import { readWideSeason, wideSeasonProblems, wideSeasonRanges, writeWideSeason } from './seasonWide';
+import { copyScheduleRow, readWideSeason, wideSeasonProblems, wideSeasonRanges, writeWideSeason } from './seasonWide';
 
 export interface CarryResult {
   rosters: number;
@@ -156,6 +156,7 @@ export function carryEdits(from: Uint8Array, to: Uint8Array, fromBase?: Uint8Arr
     try {
       if (!wideSeasonProblems(from).length && differs(fromBase ?? to, from, wideSeasonRanges(from))) {
         writeWideSeason(to, readWideSeason(from));
+        copyScheduleRow(to, from);
         res.season = true;
       }
     } catch (e) {

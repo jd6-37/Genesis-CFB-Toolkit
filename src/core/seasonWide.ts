@@ -173,7 +173,7 @@ export function wideSeasonIssues(s: WideSeason, rules: ConfRules = RULES_2026): 
 }
 
 /** Writes the settings in place (checksums are fixed when the ROM is saved). */
-export function writeWideSeason(d: Uint8Array, s: WideSeason, rules: ConfRules = RULES_2026): void {
+export function writeWideSeason(d: Uint8Array, s: WideSeason, rules: ConfRules = RULES_2026, base?: Uint8Array): void {
   const p = wideSeasonProblems(d);
   if (p.length) throw new Error(`This ROM's season can't be changed: ${p.join('; ')}.`);
   const issues = wideSeasonIssues(s, rules);
@@ -196,6 +196,50 @@ export function writeWideSeason(d: Uint8Array, s: WideSeason, rules: ConfRules =
     if (!readTitleGames(d)) throw new Error("This ROM has no title game switches (they came with the 2026 Season Edition's test31 and the 1994 Season Edition's test33).");
     d.set(s.titleGames, CTG_AT + 5);
   }
+  if (base) markRealSchedule(d, s, base);
+}
+
+/**
+ * Game Setup's Schedule row (H-046, 2026 / 1994 v2.1.1-test1 on): its default (word at 0x0786EA in
+ * `move.w #n,$E5D6`; 0 Random, 1 Real) and its range (0x078432 `moveq #max,d0 / cmpi.w #max,d0`, max 1: Random or
+ * Real; ROM lane: nothing else reads it). User (2026-11-20): when conferences are edited the real schedule no longer
+ * fits them, so the row offers Random only: default 0 and max 0. Conferences back as loaded: the ROM's own bytes.
+ */
+export const SCHEDULE_DEFAULT_AT = 0x0786ea;
+export const SCHEDULE_RANGE_AT = 0x078432;
+const RANGE_LEN = 6;
+const hasScheduleRow = (d: Uint8Array) =>
+  d[SCHEDULE_DEFAULT_AT - 2] === 0x31 && d[SCHEDULE_DEFAULT_AT - 1] === 0xfc && d[SCHEDULE_DEFAULT_AT + 2] === 0xe5 && d[SCHEDULE_DEFAULT_AT + 3] === 0xd6 &&
+  d[SCHEDULE_RANGE_AT] === 0x70 && d[SCHEDULE_RANGE_AT + 2] === 0xb0 && d[SCHEDULE_RANGE_AT + 3] === 0x7c && d[SCHEDULE_RANGE_AT + 4] === 0 &&
+  d[SCHEDULE_RANGE_AT + 1] === d[SCHEDULE_RANGE_AT + 5] && d[SCHEDULE_RANGE_AT + 1] <= 1;
+
+/** After a conference edit: Random only when the teams' conferences differ from `base`'s; else `base`'s own bytes (an
+ * edit undone puts the Real schedule and the ROM's default back). ROMs before v2.1.1 are left alone. */
+function markRealSchedule(d: Uint8Array, s: WideSeason, base: Uint8Array): void {
+  if (!hasScheduleRow(d) || !hasScheduleRow(base)) return;
+  const was = readWideSeason(base).conf;
+  if (s.conf.some((c, t) => c !== was[t])) {
+    d[SCHEDULE_DEFAULT_AT] = 0;
+    d[SCHEDULE_DEFAULT_AT + 1] = 0;
+    d[SCHEDULE_RANGE_AT + 1] = 0;
+    d[SCHEDULE_RANGE_AT + 5] = 0;
+  } else {
+    d.set(base.subarray(SCHEDULE_DEFAULT_AT, SCHEDULE_DEFAULT_AT + 2), SCHEDULE_DEFAULT_AT);
+    d.set(base.subarray(SCHEDULE_RANGE_AT, SCHEDULE_RANGE_AT + RANGE_LEN), SCHEDULE_RANGE_AT);
+  }
+}
+
+/** The Schedule row (v2.1.1 on): its default (0 Random, 1 Real) and whether Real can be picked; null on older ROMs. */
+export function readScheduleRow(d: Uint8Array): { def: number; real: boolean } | null {
+  if (!hasScheduleRow(d)) return null;
+  return { def: (d[SCHEDULE_DEFAULT_AT] << 8) | d[SCHEDULE_DEFAULT_AT + 1], real: d[SCHEDULE_RANGE_AT + 1] === 1 };
+}
+
+/** Copies the Schedule row's default and range from `from` (carrying edits to a newer ROM). */
+export function copyScheduleRow(to: Uint8Array, from: Uint8Array): void {
+  if (!hasScheduleRow(to) || !hasScheduleRow(from)) return;
+  to.set(from.subarray(SCHEDULE_DEFAULT_AT, SCHEDULE_DEFAULT_AT + 2), SCHEDULE_DEFAULT_AT);
+  to.set(from.subarray(SCHEDULE_RANGE_AT, SCHEDULE_RANGE_AT + RANGE_LEN), SCHEDULE_RANGE_AT);
 }
 
 /** The bytes a season edit can change, as [start, end) ranges. */
@@ -211,6 +255,7 @@ export function wideSeasonRanges(d: Uint8Array): [number, number][] {
     r.push([g, g + 2]);
   }
   if (readTitleGames(d)) r.push([CTG_AT + 5, CTG_AT + 5 + CONFS]);
+  if (hasScheduleRow(d)) r.push([SCHEDULE_DEFAULT_AT, SCHEDULE_DEFAULT_AT + 2], [SCHEDULE_RANGE_AT, SCHEDULE_RANGE_AT + RANGE_LEN]);
   return r;
 }
 

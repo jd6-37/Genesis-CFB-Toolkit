@@ -130,7 +130,7 @@ export function SeasonTool({
       return;
     }
     try {
-      writeWideSeason(work.data, s, rules);
+      writeWideSeason(work.data, s, rules, work.base);
       api.setBlocker(null);
       api.edited();
     } catch (e) {
