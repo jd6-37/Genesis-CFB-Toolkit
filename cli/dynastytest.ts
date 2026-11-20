@@ -142,14 +142,16 @@ const d0 = createDynasty(rom, csv, { name: 'Test', seed: 1, id: 'test', created:
 const took = Date.now() - t0;
 assert.equal(d0.teams.length, 138);
 {
-  // Numbers a position can't wear in the game (the file has tight ends in the 50s) are replaced at the start.
-  assert.ok(renumbered.length > 0 && d0.players.every((p) => Num.numberAllowed(p.pos, p.jersey)), 'every starting number is one the position may wear');
+  // Numbers a position can't wear in the game are replaced at the start. The built-in file has none left since
+  // 2026-11-20 (user: "Fix their numbers in whatever source they're coming from!"); other files still get the fix.
+  assert.ok(d0.players.every((p) => Num.numberAllowed(p.pos, p.jersey)), 'every starting number is one the position may wear');
+  assert.equal(renumbered.length, 0, 'the built-in file has only numbers the game allows');
   for (const n of renumbered) {
     const p = d0.players[n.player - 1];
     assert.ok(p.jersey === n.to && !Num.numberAllowed(p.pos, n.from));
     assert.equal(d0.players.filter((q) => q.team === p.team && q.jersey === p.jersey && Num.sideOf(q.pos) === Num.sideOf(p.pos)).length, 1, 'a replaced number is nobody else\'s on his side');
   }
-  ok(`starting numbers: ${renumbered.length} replaced (a position can't wear them in the game)`);
+  ok(`starting numbers: every one allowed at its position (${renumbered.length} replaced)`);
 }
 assert.ok(d0.players.length > 8000 && d0.players.length <= 138 * 64, 'players: the 32 and the bench of every team');
 assert.ok(d0.players.every((p) => first0Has(p.id)), 'every player is in the game or on the bench');
