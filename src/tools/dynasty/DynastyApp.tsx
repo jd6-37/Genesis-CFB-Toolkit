@@ -35,6 +35,7 @@ import { canReplaceBench, randomBench } from '../../core/dynasty/bench';
 import { Button, Check, Field, FileButton, Masthead, Modal, NavBar, Note, Select, Table, ThemeToggle } from '../../ui';
 import { navClick } from '../../appNav';
 import { benchSource, GetStarted, Renumbered, SeasonGuide, type StartActions } from './GetStarted';
+import { UpgradeCard, upgradeLine, useUpgrade, VersionRows, type Upgrader } from './Upgrade';
 import './dynasty.css';
 
 const THEME_KEY = 'dynasty-theme';
@@ -232,6 +233,9 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
   const backupRef = useRef<(dyn: Dynasty) => Promise<void>>(async () => {});
   const romRef = useRef<() => Promise<Uint8Array | null>>(async () => null);
   const v = useMemo(() => (d ? seasonView(d, d.seasons[d.seasons.length - 1]) : null), [d]);
+  // A newer Elevated version for the dynasty (Upgrade.tsx; user, 2026-11-20).
+  const up = useUpgrade(d, commit, (y) => dlRef.current(y));
+  const upLine = d ? upgradeLine(d, up.info) : null;
   // Light or dark: the reader's choice, kept in this browser (it's a preference, not part of a dynasty).
   const [dark, setDarkState] = useState(() => { try { return localStorage.getItem(THEME_KEY) === 'dark'; } catch { return false; } });
   const setDark = (on: boolean) => { setDarkState(on); try { localStorage.setItem(THEME_KEY, on ? 'dark' : 'light'); } catch { /* private mode: the choice lasts for this visit */ } };
@@ -243,8 +247,8 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
   }, [d?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const setFocus = (t: number) => { setFocusState(t); try { if (d) localStorage.setItem(`dynasty.focus.${d.id}`, String(t)); } catch { /* private mode */ } };
   const ctx: DynCtx | null = useMemo(
-    () => (d && v ? { d, v, art, go: (p: string) => (window.location.hash = href(p)), commit, downloadRom: (y: number) => dlRef.current(y), dark, focus, backup: () => void backupRef.current(d), getRom: () => romRef.current() } : null),
-    [d, v, art, commit, dark, focus],
+    () => (d && v ? { d, v, art, go: (p: string) => (window.location.hash = href(p)), commit, downloadRom: (y: number) => dlRef.current(y), dark, focus, backup: () => void backupRef.current(d), getRom: () => romRef.current(), upgradeLine: upLine } : null),
+    [d, v, art, commit, dark, focus, upLine],
   );
 
   const run = async (what: string, fn: () => Promise<void>) => {
@@ -270,7 +274,8 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
         kind: 'ok',
         text: `Imported: ${r.played} games played${r.newGames > 0 ? ` (${r.newGames} new)` : ''}, next up ${nv.currentWeek < nv.weeks ? weekName(nv, nv.currentWeek) : 'nothing (the season is over)'}.` +
           (added.length ? ` Your ${added.length > 1 ? 'teams' : 'team'}: ${added.join(', ')}.` : '') +
-          (r.warning ? ` ${r.warning}` : ''),
+          (r.warning ? ` ${r.warning}` : '') +
+          (r.upgraded ? ` This save is from ${r.upgraded}: your upgrade is done.` : ''),
         // User, 2026-11-17: "After importing a save, there should be a big CTA to continue to the Home/news headlines".
         action: <Button href={href('home')}>{seasonDone(r.dynasty) ? 'Continue to Home' : 'See the headlines'}</Button>,
       });
@@ -385,6 +390,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
     },
     getRom,
     run,
+    upgrade: up,
     downloadRom: (year) => void run('Writing the ROM…', async () => {
       if (!d) return;
       const season = d.seasons.find((s) => s.year === year);
@@ -400,6 +406,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       const done: DSeason = first
         ? { ...season, ...build, romId: season.romId ?? newRomId(), kitsEdited: false } // the first season's lineup never goes into a ROM
         : { ...season, ...build, romId: season.romId ?? newRomId(), lineupEdited: false, kitsEdited: false, romDownloaded: true };
+      if (done.upgrade) done.upgrade = { ...done.upgrade, downloaded: true };
       const name = seasonRomName(d, done);
       await downloadRom(name, first ? uniformRom(d, rom) : seasonRom(d, done, rom));
       await commit({ ...d, seasons: d.seasons.map((x) => (x === season ? done : x)) });
@@ -420,7 +427,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
   const num = arg !== undefined && /^\d+$/.test(arg) ? Number(arg) : undefined;
   const body = (() => {
     if (page === 'start') return <GetStarted actions={startActions} busy={!!busy} />;
-    if (page === 'manage' || !ctx) return <Manage d={d} art={art} list={list} busy={busy} note={note} actions={actions} focus={focus} ctx={ctx} />;
+    if (page === 'manage' || !ctx) return <Manage d={d} art={art} list={list} busy={busy} note={note} actions={actions} focus={focus} ctx={ctx} up={up} />;
     switch (page) {
       case 'scores': return <Scores week={num} />;
       case 'standings': return <Standings />;
@@ -463,6 +470,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       <main className="dy-main">
         {note && page !== 'manage' && <Note kind={note.kind}>{note.text}</Note>}
         <Ctx.Provider value={ctx}>{body}</Ctx.Provider>
+        {up.modal}
         {d && !d.offseason && d.seasons.length > 1 && (() => {
           // The new season's ROM (user, 2026-11-12: the download "needs to be VERY obvious, like a modal window"):
           // asks until it's downloaded or the season's first save is imported; "Later" hides it until the next visit.
@@ -516,9 +524,11 @@ function romStale(d: Dynasty): { key: string; what: string; first: boolean; unif
   const s = d.seasons[d.seasons.length - 1];
   const lineup = !!(s.romDownloaded && s.lineupEdited);
   const kits = !!s.kitsEdited;
-  if (!lineup && !kits) return null;
-  const what = lineup && kits ? 'the uniforms and the lineup, schedule, conferences or impact players' : lineup ? 'the lineup, schedule, conferences or impact players' : 'the uniforms';
-  return { key: `${s.year}/${lineup}/${kits}/${s.rosterVersion ?? 1}`, what, first: s.index === 0, uniformsOnly: !lineup };
+  // A mid-season upgrade (Upgrade.tsx) whose ROM isn't downloaded yet.
+  const version = !!(s.upgrade && !s.upgrade.downloaded);
+  if (!lineup && !kits && !version) return null;
+  const what = [version && `the game version (to ${s.upgrade!.to.name})`, kits && 'the uniforms', lineup && 'the lineup, schedule, conferences or impact players'].filter(Boolean).join(' and ');
+  return { key: `${s.year}/${lineup}/${kits}/${version}/${s.rosterVersion ?? 1}`, what, first: s.index === 0, uniformsOnly: !lineup && !version };
 }
 
 // ---- Manage
@@ -589,7 +599,9 @@ const MANAGE_SECTIONS = [
   { id: 'dy-m-others', label: 'Other dynasties' },
 ];
 
-function Manage({ d, art, list, busy, note, actions, focus, ctx }: {
+function Manage({ d, art, list, busy, note, actions, focus, ctx, up }: {
+  /** A newer Elevated version (Upgrade.tsx). */
+  up: Upgrader;
   /** The masthead's active team (Share follows it). */
   focus?: number;
   ctx: DynCtx | null;
@@ -618,6 +630,7 @@ function Manage({ d, art, list, busy, note, actions, focus, ctx }: {
 
       {d && season && (
         <>
+          <UpgradeCard d={d} up={up} />
           <div className="dy-manage-head">
             <h1>{d.name}</h1>
             <p className="dy-dim">Started {new Date(d.created).toLocaleDateString('en-US', { dateStyle: 'medium' })} with the {d.startYear} rosters.</p>
@@ -655,8 +668,16 @@ function Manage({ d, art, list, busy, note, actions, focus, ctx }: {
               </Table>
             )}
             <Renumbered d={d} />
+            <VersionRows d={d} up={up} busy={!!busy} />
             <h3>Season ROM</h3>
-            {!d.offseason && d.seasons.length > 1 ? (
+            {!d.offseason && season.index === 0 && (season.upgrade || season.kitsEdited) ? (
+              <>
+                <p>
+                  Your ROM with this dynasty's {season.upgrade ? `game version (${season.upgrade.to.name})` : 'uniforms'}: put it in place of the ROM you play the {season.year} season on, with that ROM's file name, so the game finds your save.
+                </p>
+                <Button disabled={!!busy} onClick={() => actions.downloadRom(season.year)}>Download the {season.year} ROM</Button>
+              </>
+            ) : !d.offseason && d.seasons.length > 1 ? (
               <>
                 <p>
                   The {season.year} rosters and team OVRs in your ROM's dynasty area: Season mode plays them, Exhibition keeps the ROM's own

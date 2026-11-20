@@ -29,6 +29,8 @@ export interface DynCtx {
   readOnly?: boolean;
   /** The user's ROM (kept in the browser, else he picks it); null when he doesn't. */
   getRom?: () => Promise<Uint8Array | null>;
+  /** A newer Elevated version that can be taken now, for the What's next card (Upgrade.tsx). */
+  upgradeLine?: string | null;
 }
 
 /** The user team a page starts on: the one picked in the masthead's menu, else the first. */

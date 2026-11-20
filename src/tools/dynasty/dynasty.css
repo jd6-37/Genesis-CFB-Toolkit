@@ -828,3 +828,13 @@
 .dy-leaders li > div { min-width: 0; }
 .dy-leader-stat { display: block; font-size: var(--fs-2); color: var(--text-muted); }
 .dy-leader-stat strong { color: var(--text); }
+
+/* Upgrading to a newer Elevated version (Upgrade.tsx; user, 2026-11-20, mockups approved). */
+.dy-upgrade { border: 2px solid var(--rule-strong); box-shadow: var(--shadow-hard); background: var(--surface); max-width: 720px; margin: 0 0 var(--sp-5); }
+.dy-upgrade-bar { display: flex; justify-content: space-between; gap: var(--sp-3); margin: 0; padding: var(--sp-1) var(--sp-3); background: var(--highlight); border-bottom: 2px solid var(--rule-strong); font-family: var(--display); font-weight: 700; font-size: var(--fs-2); text-transform: uppercase; letter-spacing: 0.04em; }
+.dy-upgrade-body { padding: var(--sp-3) var(--sp-4) var(--sp-4); }
+.dy-upgrade-body h2 { font-family: var(--display); font-weight: 800; font-style: italic; font-size: var(--fs-5); line-height: 1.05; margin: 0 0 var(--sp-2); }
+.dy-upgrade-body p { margin: 0 0 var(--sp-3); }
+.dy-upgrade-safe { padding: var(--sp-2) var(--sp-3); background: var(--surface-sunken); border-left: 4px solid var(--rule-strong); }
+.dy-upgrade-tag { display: inline-block; padding: 0 var(--sp-1); background: var(--highlight); font-family: var(--display); font-weight: 700; font-size: var(--fs-1); text-transform: uppercase; letter-spacing: 0.04em; }
+.dy-ed-text { margin: 0; padding: var(--sp-2) var(--sp-3); }
