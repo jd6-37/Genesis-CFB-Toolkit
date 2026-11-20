@@ -179,6 +179,7 @@ export function createDynasty1994(rom: Uint8Array, rostersText: string, opt: Cre
     seasons: [{
       index: 0, year: startYear, ...(romBuild ? { romBuild } : {}), conf: season.conf, confNames: season.names, confWeeks: { start: season.start, games: season.games },
       ...(season.titleGames ? { titleGames: season.titleGames } : {}),
+      ...(season.east ? { secEast: season.east } : {}),
       slots, bw, bench: teams.map(() => new Array(32).fill(null)), benchBw: teams.map(() => new Array(32).fill(null)), teamOvr,
       prestige: startingPrestige1994(teams.map((t) => t.school), teamOvr), imports: [],
     }],

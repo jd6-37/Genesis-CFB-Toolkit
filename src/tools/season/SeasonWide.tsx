@@ -5,8 +5,8 @@
 import { Check, Field, Note, Select, SubHead } from '../../ui';
 import { useMemo, useState, type ReactNode } from 'react';
 import {
-  CONFS, INDEPENDENT, MAX_CONF_TEAMS, NAME_CHARS, NAME_LEN, POWER4, RULES_2026, SEC_EAST_1994, TG_ON, TG_SEC94, confSizes, playedGames,
-  roundRobin, wideSeasonIssues, type ConfRules, type WideSeason,
+  CONFS, INDEPENDENT, MAX_CONF_TEAMS, NAME_CHARS, NAME_LEN, POWER4, RULES_2026, TG_ON, TG_SEC94, confSizes, playedGames,
+  eastNow, roundRobin, wideSeasonIssues, type ConfRules, type WideSeason,
 } from '../../core/seasonWide';
 import { EDITIONS } from '../../core/dynasty/edition';
 import { BOWL_TIES_1994 } from '../../core/dynasty/conferences';
@@ -81,9 +81,14 @@ export function SeasonWide({
   );
   const label = (c: number) => season.names[c].trim() || `Conference ${c + 1}`;
   const issues = wideSeasonIssues(season, rules);
+  // 1994 SEC divisions (user, 2026-11-20): the first conference's card only, its teams in East and West; a swap puts
+  // the arriving team in the leaving team's division; a change in its number of teams turns them off until it's back.
+  const divisions = edition === '1994' && !!season.titleGames && loaded.east !== undefined;
+  const divOn = divisions && season.east != null && ((season.titleGames?.[0] ?? 0) & (TG_ON | TG_SEC94)) === (TG_ON | TG_SEC94);
   const edit = (f: (s: WideSeason) => void) => {
     const s: WideSeason = { ...season, names: [...season.names], conf: [...season.conf], start: [...season.start], games: [...season.games], ...(season.titleGames ? { titleGames: [...season.titleGames] } : {}) };
     f(s);
+    if (divisions) s.east = eastNow(loaded.conf, loaded.east ?? null, s.conf, teams, 0);
     onChange(s);
   };
   const move = (t: number, c: number) => {
@@ -114,8 +119,9 @@ export function SeasonWide({
             <>
               A conference with a <b>Title game</b> plays one the week after the regular season, its leader at home against the
               next team, and needs at least 2 teams; without one, its standings leader is the champion.
-              {edition === '1994' && <> With <b>1994 SEC divisions</b> the leader plays the best team of the other division
-              (East: {SEC_EAST_1994.join(', ')}; West: the conference's other teams).</>}{' '}
+              {divisions && <> With <b>1994 SEC divisions</b> (the first conference) the leader plays the best team of the other
+              division. A team that takes another's place in it also takes its division; with another number of teams the
+              divisions are off.</>}{' '}
             </>
           )}
           Names can have up to {NAME_LEN} characters: {NAME_CHARS}.
@@ -139,7 +145,8 @@ export function SeasonWide({
             season.names[c] !== loaded.names[c] ||
             season.conf.some((x, t) => (x === c) !== (loaded.conf[t] === c)) ||
             (c < INDEPENDENT && (season.start[c] !== loaded.start[c] || season.games[c] !== loaded.games[c])) ||
-            (!!season.titleGames && season.titleGames[c] !== loaded.titleGames?.[c]);
+            (!!season.titleGames && season.titleGames[c] !== loaded.titleGames?.[c]) ||
+            (divisions && c === 0 && String(season.east) !== String(loaded.east));
           const max = c < INDEPENDENT ? Math.min(roundRobin(sizes[c]), MAX_CONF_TEAMS, REG_WEEKS - season.start[c]) : 0;
           return (
             <div className={`sea-conf${changed ? ' sea-conf-changed' : ''}`} key={c}>
@@ -160,13 +167,19 @@ export function SeasonWide({
                   </Check>
                   {/* 1994 only (user, 2026-11-20: "remove the divisions checkbox from the 2026 rom conferences. I don't
                       think any conferences have divisions anymore"). A 2026 ROM that has the bit keeps it. */}
-                  {edition === '1994' && <Check
-                    checked={(season.titleGames[c] & TG_SEC94) !== 0} disabled={disabled || (season.titleGames[c] & TG_ON) === 0}
+                  {divisions && c === 0 && <Check
+                    checked={divOn} disabled={disabled || (season.titleGames[c] & TG_ON) === 0 || season.east === null}
                     onChange={(on) => edit((s) => (s.titleGames![c] = on ? s.titleGames![c] | TG_SEC94 : s.titleGames![c] & ~TG_SEC94))}
                   >
                     1994 SEC divisions
                   </Check>}
                 </div>
+              )}
+              {divisions && c === 0 && season.east === null && (
+                <p className="sea-div-note">
+                  Divisions need {loaded.conf.filter((x) => x === 0).length} teams here (it has {sizes[0]}). Move a team{' '}
+                  {sizes[0] > loaded.conf.filter((x) => x === 0).length ? 'out' : 'in'} and they come back.
+                </p>
               )}
               {c < INDEPENDENT && (
                 <div className="sea-cweeks">
@@ -185,18 +198,26 @@ export function SeasonWide({
                   )}
                 </div>
               )}
-              <ul>
-                {list.map(({ n, t }) => (
-                  <li key={t}>
-                    <span className={`sea-team-name${loaded.conf[t] !== c ? ' on' : ''}`}>{n}</span>
-                    <Select
-                      label={`Move ${n} to another conference`} hideLabel compact disabled={disabled} value="" placeholder="Move"
-                      options={season.names.map((_, k) => ({ value: k, label: label(k) })).filter((o) => o.value !== c)}
-                      onChange={(v) => move(t, +v)}
-                    />
-                  </li>
-                ))}
-              </ul>
+              {(divOn && c === 0
+                ? [['East', list.filter(({ t }) => season.east!.includes(t))], ['West', list.filter(({ t }) => !season.east!.includes(t))]] as const
+                : [[null, list]] as const
+              ).map(([div, rows]) => (
+                <div key={div ?? 'all'}>
+                  {div && <p className="sea-div-h"><span>{div}</span><span>{rows.length}</span></p>}
+                  <ul aria-label={div ? `${label(c)} ${div}` : undefined}>
+                    {rows.map(({ n, t }) => (
+                      <li key={t}>
+                        <span className={`sea-team-name${loaded.conf[t] !== c ? ' on' : ''}`}>{n}</span>
+                        <Select
+                          label={`Move ${n} to another conference`} hideLabel compact disabled={disabled} value="" placeholder="Move"
+                          options={season.names.map((_, k) => ({ value: k, label: label(k) })).filter((o) => o.value !== c)}
+                          onChange={(v) => move(t, +v)}
+                        />
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
             </div>
           );
         })}

@@ -50,6 +50,11 @@ export interface ScheduleInput {
   edition?: EditionId;
   /** The dynasty's own rivalries (default: the edition's built-in list). */
   rivalries?: Rivalry[];
+  /**
+   * A conference played in divisions (the 1994 SEC divisions, `divisionsOf`): every team plays its whole division,
+   * then the other division's teams for the rest of its conference games (user, 2026-11-20).
+   */
+  divisions?: { conf: number; east: number[]; west: number[] } | null;
 }
 
 const key = (a: number, b: number) => (a < b ? a * 1000 + b : b * 1000 + a);
@@ -106,6 +111,17 @@ function rounds(teams: number[]): [number, number][][] {
   return out;
 }
 
+/**
+ * A divided conference's rounds: first the division rounds (both divisions' round robins side by side), then the
+ * cross rounds (each East team against a different West team every round). Together they hold every pair once.
+ */
+function divisionRounds(east: number[], west: number[]): { rs: [number, number][][]; forced: number[] } {
+  const re = rounds(east), rw = rounds(west);
+  const div = re.map((rd, i) => [...rd, ...rw[i]]);
+  const cross = west.map((_, k) => east.map((e, i) => [e, west[(i + k) % west.length]] as [number, number]));
+  return { rs: [...div, ...cross], forced: div.map((_, i) => i) };
+}
+
 /** The working grid: opponent of each team in each week (-1 = none yet). */
 class Grid {
   opp: Int16Array[];
@@ -144,12 +160,20 @@ export function makeSchedule(inp: ScheduleInput): DSchedule {
     const games = Math.max(0, Math.min(inp.confWeeks.games[c] ?? 8, all, WEEKS - start));
     if (!games) continue;
     const mine = prot.filter((p) => inp.conf[p.a] === c && inp.conf[p.b] === c);
+    const div = inp.divisions && inp.divisions.conf === c ? inp.divisions : null;
+    const make = () => div
+      ? divisionRounds(shuffle(div.east.slice(), r), shuffle(div.west.slice(), r))
+      : { rs: rounds(shuffle(teams.slice(), r)), forced: [] as number[] };
     let best: { order: [number, number][][]; score: number } | null = null;
     for (let tries = 0; tries < 400 && (!best || best.score > 0); tries++) {
-      const rs = rounds(shuffle(teams.slice(), r));
+      const { rs, forced } = make();
       const roundOf = (p: { a: number; b: number }) => rs.findIndex((rd) => rd.some(([x, y]) => key(x, y) === key(p.a, p.b)));
-      const need = [...new Set(mine.map(roundOf))];
-      if (need.length > games) continue;
+      // Division rounds first (the whole division), then the rounds that hold protected games.
+      let need = [...new Set([...forced, ...mine.map(roundOf)])];
+      if (need.length > games) {
+        if (!div) continue;
+        need = need.slice(0, games);
+      }
       const others = shuffle(rs.map((_, i) => i).filter((i) => !need.includes(i)), r).slice(0, games - need.length);
       const pick = shuffle([...need, ...others], r);
       // The finale's round goes last (the one with the most finales).
@@ -160,7 +184,8 @@ export function makeSchedule(inp: ScheduleInput): DSchedule {
     }
     if (!best) {
       // No order holds every protected game: plain rounds (the missing ones are placed below where they fit).
-      best = { order: rounds(shuffle(teams.slice(), r)).slice(0, games), score: 0 };
+      const { rs } = make();
+      best = { order: rs.slice(0, games), score: 0 };
     }
     best.order.forEach((rd, i) => rd.forEach(([a, b]) => g.add(start + i, a, b)));
   }
@@ -443,6 +468,15 @@ export function scheduleSet(s: DSchedule): Uint8Array {
 
 import type { DSeason, Dynasty } from './model';
 import { editionOf } from './edition';
+import { divisionsOf, SEC_EAST_1994 } from '../seasonWide';
+
+/** A season's East list: its own, else the 1994 East schools (the ROM's list as released). */
+export const seasonEast = (d: Dynasty, s: Pick<DSeason, 'secEast'>): number[] | null =>
+  s.secEast !== undefined ? s.secEast : d.teams.filter((t) => SEC_EAST_1994.includes(t.school)).map((t) => t.index);
+
+/** The divisions a season's schedule follows (1994 SEC divisions switched on, even halves), or null. */
+export const seasonDivisions = (d: Dynasty, s: Pick<DSeason, 'conf' | 'titleGames' | 'secEast'>) =>
+  editionOf(d).id === '1994' ? divisionsOf(s.conf, s.titleGames ?? editionOf(d).titleGames, seasonEast(d, s)) : null;
 
 /** Why the season's schedule can't be changed now, or null. */
 export function scheduleLock(s: DSeason): string | null {
@@ -486,6 +520,7 @@ export function remakeSchedule(d: Dynasty, seed: number): Dynasty {
     weeks: editionOf(d).regWeeks,
     edition: editionOf(d).id,
     rivalries,
+    divisions: seasonDivisions(d, s),
   }));
 }
 

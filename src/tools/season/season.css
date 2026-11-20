@@ -89,3 +89,5 @@
 @media (min-width: 760px) {
   .sim-box-fields { grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
 }
+.sea-div-h { display: flex; justify-content: space-between; margin: 8px 0 2px; font: 700 var(--fs-1) var(--font-display); text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.sea-div-note { margin: -2px 0 6px; font-size: var(--fs-1); color: var(--muted); }

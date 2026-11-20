@@ -30,7 +30,7 @@ import { seasonView, weekName, bowlOf, bowlWeek, BOWLS_1994, champions, playerNa
 import { stories } from '../src/core/dynasty/news';
 import { playoffSize } from '../src/core/dynasty/outlook';
 import { checkSchedule, makeSchedule, protectedPairs, setOpponent, teamSchedule, scheduleSet, weeksOf } from '../src/core/dynasty/schedule';
-import { readTitleGames, readWideSeason, TG_ON } from '../src/core/seasonWide';
+import { eastNow, readTitleGames, readWideSeason, TG_ON } from '../src/core/seasonWide';
 import * as Conf from '../src/core/dynasty/conferences';
 import { rivalriesOf, setRivalries } from '../src/core/dynasty/schedule';
 import { numberAllowed, NO_NUMBER } from '../src/core/dynasty/numbers';
@@ -292,6 +292,42 @@ assert.equal(readStamp(out2.subarray(DYN_AREA, DYN_AREA + 16))!.season, 2);
   ok('no transfer portal: no entries, no moves, no portal prospects');
 }
 ok(`offseason: ${d2.players.filter((p) => p.status === 'active').length} players in 1995, an 11-week schedule in the 1995 ROM`);
+
+// ---- the 1994 SEC divisions in the dynasty's schedules (user, 2026-11-20)
+{
+  const T = (n: string) => schoolList.indexOf(n);
+  const divPlay = (dd: typeof d2, east: number[]) => {
+    const s = dd.seasons[1];
+    const west = s.conf.map((c, t) => (c === 0 && !east.includes(t) ? t : -1)).filter((t) => t >= 0);
+    for (const side of [east, west]) for (const t of side) {
+      const opps = new Set(teamSchedule(s.schedule!, t).filter((x) => x).map((x) => x!.opp));
+      const missing = side.filter((u) => u !== t && !opps.has(u));
+      assert.deepEqual(missing.map((u) => schoolList[u]), [], `${schoolList[t]} plays its whole division`);
+    }
+    return west.length;
+  };
+  const east0 = ['Florida', 'Georgia', 'Kentucky', 'South Carolina', 'Tennessee', 'Vanderbilt'].map(T);
+  assert.equal(divPlay(d2, east0), 6);
+  // Tulane and Kentucky trade conferences: Tulane takes Kentucky's place in the East, the new schedule follows it.
+  const cs = Conf.confSetupOf(d2, d2.seasons[1]);
+  assert.deepEqual(cs.east!.slice().sort((x, y) => x - y), east0.slice().sort((x, y) => x - y));
+  const conf = cs.conf.slice();
+  conf[T('Tulane')] = 0; conf[T('Kentucky')] = cs.conf[T('Tulane')];
+  const east = eastNow(cs.conf, cs.east!, conf, schoolList)!;
+  const d3 = Conf.setConferences(d2, { ...cs, conf, east });
+  assert.ok(d3.seasons[1].secEast!.includes(T('Tulane')) && !d3.seasons[1].secEast!.includes(T('Kentucky')));
+  divPlay(d3, east);
+  const out3 = Off.seasonRom(d3, d3.seasons[1], rom, 1_800_000_200_000);
+  assert.deepEqual(readWideSeason(out3).east, east, 'the season ROM has the new East list');
+  assert.equal(readTitleGames(out3)![0], 3);
+  // Another number of teams: divisions off (the title game stays), and the schedule doesn't follow divisions.
+  const conf4 = cs.conf.slice();
+  conf4[T('Tulane')] = 0;
+  const d4 = Conf.setConferences(d2, { ...cs, conf: conf4, east: eastNow(cs.conf, cs.east!, conf4, schoolList) });
+  assert.equal(d4.seasons[1].secEast, null);
+  assert.equal(readTitleGames(Off.seasonRom(d4, d4.seasons[1], rom, 1_800_000_300_000))![0], 1);
+  ok('1994 SEC divisions: every SEC team plays its whole division; Tulane for Kentucky goes to the East in the schedule and the ROM; 13 teams turn them off');
+}
 
 // ---- user-defined rivalries in 1995 (user, 2026-11-16)
 {

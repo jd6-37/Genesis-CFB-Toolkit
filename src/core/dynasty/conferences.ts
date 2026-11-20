@@ -11,7 +11,7 @@ import { readWideSeason, wideSeasonIssues, wideSeasonProblems, writeWideSeason, 
 export { SEC_EAST_1994 } from '../seasonWide';
 import { editionOf } from './edition';
 import type { DSeason, Dynasty } from './model';
-import { lastGames, makeSchedule, moveTeams, RELEASE_CONF_WEEKS, rivalriesOf, swapPlan } from './schedule';
+import { lastGames, makeSchedule, moveTeams, RELEASE_CONF_WEEKS, rivalriesOf, seasonDivisions, seasonEast, swapPlan } from './schedule';
 
 /**
  * A season's conferences: names (11, the last the Independents), each team's conference, the conference weeks and
@@ -31,6 +31,8 @@ export function confSetupOf(d: Dynasty, s: DSeason): ConfSetup {
   return {
     names: s.confNames.slice(), conf: s.conf.slice(), start: w.start.slice(), games: w.games.slice(),
     titleGames: (s.titleGames ?? editionOf(d).titleGames).slice(),
+    // The 1994 SEC divisions' East (1994 only: the 2026 editor has no divisions).
+    ...(editionOf(d).id === '1994' ? { east: seasonEast(d, s)?.slice() ?? null } : {}),
   };
 }
 
@@ -42,7 +44,8 @@ export const alignmentChanged = (a: WideSeason, b: WideSeason) => !same(a.conf, 
 /** Anything differs (names compared as saved: trimmed; switches only when both have them). */
 export const confChanged = (a: WideSeason, b: WideSeason) =>
   alignmentChanged(a, b) || !same(a.names.map((n) => n.trim()), b.names.map((n) => n.trim())) ||
-  (!!a.titleGames && !!b.titleGames && !same(a.titleGames, b.titleGames));
+  (!!a.titleGames && !!b.titleGames && !same(a.titleGames, b.titleGames)) ||
+  (a.east !== undefined && b.east !== undefined && (a.east === null || b.east === null ? a.east !== b.east : !same(a.east, b.east)));
 
 /** Why the newest season's conferences can't be changed now, or null. */
 export function confLock(d: Dynasty): string | null {
@@ -85,6 +88,7 @@ export function setConferences(d: Dynasty, next: ConfSetup): Dynasty {
     confNames: next.names.map((n) => n.trim()),
     confWeeks,
     titleGames: next.titleGames.slice(),
+    ...(next.east !== undefined ? { secEast: next.east && next.east.slice() } : {}),
     ...(s.romDownloaded ? { lineupEdited: true, rosterVersion: s.lineupEdited ? s.rosterVersion ?? 1 : (s.rosterVersion ?? 1) + 1 } : {}),
   };
   // The real schedule (setup): teams that trade places trade games; a change of team counts or conference weeks needs
@@ -102,6 +106,7 @@ export function setConferences(d: Dynasty, next: ConfSetup): Dynasty {
       weeks: editionOf(d).regWeeks,
       edition: editionOf(d).id,
       rivalries: rivalriesOf(d),
+      divisions: seasonDivisions(d, season),
     });
   }
   return { ...d, seasons: [...d.seasons.slice(0, -1), season] };
@@ -125,7 +130,7 @@ export function writeConferences(rom: Uint8Array, d: Dynasty, s: DSeason): void 
     if (!same(want.titleGames!, editionOf(d).titleGames)) {
       throw new Error(`The ${s.year} season has its own title games, and this ROM can't change them: use the ${editionOf(d).name}'s ${editionOf(d).id === '1994' ? 'test33' : 'test31'} or later.`);
     }
-    want = { ...want, titleGames: undefined };
+    want = { ...want, titleGames: undefined, east: undefined };
   }
   if (!confChanged(want, has)) return;
   writeWideSeason(rom, want, editionOf(d).confRules);
