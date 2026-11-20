@@ -1010,6 +1010,20 @@ ok('season rosters written to the dynasty area and read back');
     assert.deepEqual(reportProblems(x.report), [], o5.teams[t].school);
     if (process.env.SHORT && x.report.offense.length + x.report.defense.length < 420) console.log(o5.teams[t].school, x.report);
     assert.ok(x.report.offense.length > 100 && x.report.defense.length > 80, `${o5.teams[t].school} has a full report`);
+    // H-035: no theme closers; a position (or "transfer") before every jersey number; each paragraph ends on a verdict.
+    const both = `${x.report.offense} ${x.report.defense}`;
+    for (const closer of ['The arrow is pointing up', 'Patience will be needed', 'A bowl game is a fair target', 'There will be growing pains', 'built to win now', 'A winning record would be real progress']) {
+      assert.ok(!both.includes(closer), `${o5.teams[t].school}: closer "${closer}"`);
+    }
+    for (const m of both.matchAll(/(\S+) #\d/g)) {
+      assert.match(m[1], /^(QB|HB|FB|WR|TE|OT|OG|C|OL|DE|DT|DL|LB|CB|DB|S|K|P|transfer|quarterback|halfback|fullback|receiver|end|tackle|guard|center|lineman|linebacker|cornerback|back|safety|kicker|punter)$/, `${o5.teams[t].school}: "${m[0]}"`);
+    }
+    if (!x.edited) {
+      for (const para of [x.report.offense, x.report.defense]) {
+        const last = para.slice(para.lastIndexOf('. ', para.length - 2) + 2);
+        assert.match(last, /(strength|question|wins)/, `${o5.teams[t].school} ends on a strength or weakness: "${last}"`);
+      }
+    }
     assert.ok(x.report.offense.includes(o5.teams[t].school) || x.report.offense.includes(o5.teams[t].nickname), 'names the team');
   }
   assert.ok(all.filter((x) => /#\d+ [A-Z]/.test(x.report.offense)).length > 120, 'players named with their numbers');

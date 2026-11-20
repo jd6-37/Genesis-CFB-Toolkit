@@ -12,6 +12,12 @@
 // dynasty, the season, the team and a "variant" number picks the wordings, so the same inputs always give the same
 // report, and "Write it again" gives another.
 //
+// H-035 (2026-11-20, the style settled): the base game's way, as the 2026 edition's built-in preseason reports. No
+// theme closers: each paragraph ends on the side's clearest strength or weakness, with its fact (`verdict`). Team-level
+// facts (rank, last season, the conference favorite, a new coach, the dynasty era from year 4) open the offense
+// paragraph. A position before every jersey number ("WR #18 Cooper Barkate"); a transfer by his school ("Duke transfer
+// #10 Darian Mensah takes over at QB"); the app's preseason Heisman favorites as "early Heisman favorites".
+//
 // Writing rules (the project's Walsh Report rules and the user's review of the samples): Bill Walsh's scouting voice,
 // third person, plain and factual with a little opinion at the end; a current player's jersey number before his name
 // at his first mention, his last name after; former players without a number; no advice to the player; the game's
@@ -27,6 +33,7 @@ import { protectedPairs, rivalriesOf } from './schedule';
 import { RIVALRIES } from './rivalries';
 import { hotSeat, tenure } from './carousel';
 import { REPORT_LIMIT, type Report } from '../walsh';
+import { preseasonHeisman, type HeismanFavorite } from './heismanPre';
 
 /** The game's text limit for a report, both paragraphs (walsh.ts). */
 export const WALSH_LIMIT = REPORT_LIMIT;
@@ -48,6 +55,8 @@ const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['
 const WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
 const word = (n: number) => WORDS[n] ?? String(n);
 const plural = (n: number, one: string, many = `${one}s`) => `${word(n)} ${n === 1 ? one : many}`;
+/** "a 9-3" / "an 11-3" / "an 8-4". */
+const aRec = (w: number, l: number) => `${/^(8|11|18)/.test(String(w)) ? 'an' : 'a'} ${w}-${l}`;
 const list = (xs: string[]) => (xs.length <= 1 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`);
 
 type Rand = () => number;
@@ -78,6 +87,15 @@ const POS_NOUN: Record<string, string> = {
 };
 const CLASS_WORD: Record<string, string> = { FR: 'freshman', SO: 'sophomore', JR: 'junior', SR: 'senior', 'SR+': 'fifth-year senior' };
 const noun = (p: DPlayer) => POS_NOUN[p.pos] ?? POS_NOUN[p.pos.replace(/[0-9]/g, '')] ?? 'player';
+/** The short position before a jersey number, so "#18" is never read as a ranking (H-035): "WR #18 Cooper Barkate". */
+const ROLE: Record<string, string> = {
+  QB: 'QB', HB: 'HB', RB: 'HB', FB: 'FB', WR: 'WR', SE: 'WR', FL: 'WR', TE: 'TE',
+  LT: 'OT', RT: 'OT', OT: 'OT', T: 'OT', LG: 'OG', RG: 'OG', OG: 'OG', G: 'OG', C: 'C', OL: 'OL',
+  LE: 'DE', RE: 'DE', DE: 'DE', DT: 'DT', NT: 'DT', DL: 'DL',
+  LOLB: 'LB', ROLB: 'LB', OLB: 'LB', MLB: 'LB', ILB: 'LB', LB: 'LB',
+  CB: 'CB', DB: 'DB', S: 'S', FS: 'S', SS: 'S', K: 'K', P: 'P', KP: 'K',
+};
+const role = (p: DPlayer) => ROLE[p.pos] ?? ROLE[p.pos.replace(/[0-9]/g, '')] ?? '';
 
 /** A fine rating of a slot (16 × step + offset; Weight in pounds), or null. */
 function rating(b: BwSlot | null | undefined, attr: string): number | null {
@@ -144,6 +162,10 @@ export interface WalshLeague {
   /** Per team: starters lost in the offseason, and transfers who start (for "few teams lost more" lines). */
   lostStarters: number[];
   portalStarters: number[];
+  /** The app's preseason Heisman favorites (top 10). */
+  heisman: HeismanFavorite[];
+  /** Final poll places of every season played so far (from the dynasty's fourth season; else empty), 0 = unranked. */
+  eraRanks: number[][];
 }
 
 export function walshLeague(d: Dynasty, season: DSeason): WalshLeague | null {
@@ -167,8 +189,12 @@ export function walshLeague(d: Dynasty, season: DSeason): WalshLeague | null {
     if (e.kind === 'transfer' && starterOf(prev, e.from, e.player)) lostStarters[e.from]++;
     if (e.kind === 'transfer' && e.to !== null && starterOf(season, e.to, e.player)) portalStarters[e.to]++;
   }
+  const eraRanks = i >= 3
+    ? d.seasons.slice(0, i).filter((x) => x.imports.length).map((x) => (x === prev ? vPrev : seasonView(d, x)).rank.map((rk) => (rk && rk <= 25 ? rk : 0)))
+    : [];
   return {
-    d, season, prev, vPrev, imported, poll, lostStarters, portalStarters,
+    d, season, prev, vPrev, imported, poll, lostStarters, portalStarters, eraRanks,
+    heisman: preseasonHeisman(d, season, 10),
     pollRank: new Map((poll ?? []).map((p) => [p.team, p.rank])),
     awards: imported ? seasonAwards(d, prev) : null,
     lines: imported ? playerLines(vPrev) : [],
@@ -376,7 +402,11 @@ function themeOf(f: Facts, L: WalshLeague): Theme {
 class Names {
   private seen = new Set<number>();
   constructor(private d: Dynasty) {}
-  ref(p: DPlayer, withRole = false): string {
+  /**
+   * First mention "QB #9 Liam Szarka" (the position first, H-035), then "Szarka". `withRole` false when the sentence
+   * puts a role word right before it ("Duke transfer #10 Darian Mensah").
+   */
+  ref(p: DPlayer, withRole = true): string {
     const named = !!(p.first || p.last);
     const last = walshText(p.last || p.first);
     if (this.seen.has(p.id)) return named ? last : `the ${noun(p)}`;
@@ -385,7 +415,7 @@ class Names {
     if (!named) return `${CLASS_WORD[p.cls] ?? ''} ${noun(p)} ${no}`.replace(/\s+/g, ' ').trim();
     const full = walshText(`${p.first} ${p.last}`);
     const name = full.split(' ').some((w) => w.length > 18) ? last : full;
-    return `${withRole ? `${noun(p)} ` : ''}${no} ${name}`.trim();
+    return `${withRole && no ? `${role(p)} ` : ''}${no} ${name}`.trim();
   }
   /** A former player: no number. */
   former(p: DPlayer): string {
@@ -442,12 +472,12 @@ function opening(c: Ctx): string {
     ],
     rising: [
       `${T} is on the way up. After going ${rec} in ${LY}, the ${N} open ${Y} ranked ${rk}.`,
-      `The voters like what ${T} has coming back: ${rk} in the preseason poll after a ${rec} season.`,
+      `The voters like what ${T} has coming back: ${rk} in the preseason poll after ${aRec(f.w, f.l)} season.`,
       `${T} starts ${Y} ranked ${rk}, its best start in a while.`,
     ],
     falling: [
       `${T} finished ${LY} ranked No. ${f.lastFinal}, but the voters aren't as sure about ${Y}${rk ? `: ${rk} in the preseason poll` : ' and left the ' + N + ' out of the preseason Top 25'}.`,
-      `After a ${rec} season, ${T} starts ${Y} with a lot to replace${rk ? ` and a ${rk} ranking` : ', unranked'}.`,
+      `After ${aRec(f.w, f.l)} season, ${T} starts ${Y} with a lot to replace${rk ? ` and a ${rk} ranking` : ', unranked'}.`,
     ],
     rebuild: [
       ...(c.L.lostStarters[f.T] >= top(c.L.lostStarters, 0.1) ? [`Few teams lost more than ${T}.`, `${T} lost as many starters as anyone in the country.`] : []),
@@ -463,18 +493,18 @@ function opening(c: Ctx): string {
     ],
     steady: [
       `${T} went ${rec} in ${LY}${f.confPlace ? ` and finished ${ordinal(f.confPlace)} in the ${f.conf ?? 'conference'}` : ''}.`,
-      `${T} is coming off a ${rec} season${rk ? ` and starts ${Y} ranked ${rk}` : ''}.`,
-      `After a ${rec} season, ${T} returns ${plural(f.offRet + f.defRet, 'starter')}.`,
+      `${T} is coming off ${aRec(f.w, f.l)} season${rk ? ` and starts ${Y} ranked ${rk}` : ''}.`,
+      `After ${aRec(f.w, f.l)} season, ${T} returns ${plural(f.offRet + f.defRet, 'starter')}.`,
       `${T} brings back ${plural(f.offRet, 'starter')} on offense from a team that went ${rec}.`,
     ],
     longshot: f.w < f.l ? [
       `${T} went ${rec} in ${LY}, and the ${N} are trying to climb back.`,
       `It was a hard ${LY} for ${T} at ${rec}.`,
-      `${T} is looking for a breakthrough after a ${rec} season.`,
+      `${T} is looking for a breakthrough after ${aRec(f.w, f.l)} season.`,
     ] : [
       `${T} went ${rec} in ${LY} and starts ${Y} outside the Top 25.`,
-      `The voters left ${T} out of the preseason Top 25 after a ${rec} season.`,
-      `${T} is looking to build on a ${rec} season.`,
+      `The voters left ${T} out of the preseason Top 25 after ${aRec(f.w, f.l)} season.`,
+      `${T} is looking to build on ${aRec(f.w, f.l)} season.`,
     ],
   };
   const ok = (s: string) => !s.includes('null') && !(f.games === 0 && /\d+-\d+/.test(s));
@@ -493,6 +523,8 @@ const qbSay: Gen = (c) => {
   const tr = f.traits;
   const transfer = f.inTransfers.find((x) => x.p.id === qb.id);
   const recruit = f.recruits.find((x) => x.p.id === qb.id);
+  const snap = n.snapshot();
+  const seenBefore = n.isSeen(qb);
   const who = n.ref(qb);
   const style = tr.qbArm >= 0.85 && tr.qbLegs >= 0.85 ? pick(r, ['can beat you with his arm or his legs', 'is as dangerous running as he is throwing'])
     : tr.qbArm >= 0.85 ? pick(r, ['has a big arm', 'can make every throw', 'can stretch the field with his arm'])
@@ -501,29 +533,31 @@ const qbSay: Gen = (c) => {
     : tr.qbArm <= 0.15 ? pick(r, ["doesn't have the arm to stretch the field", 'works the short passing game'])
     : null;
   if (transfer) {
-    return pick(r, [
-      `${who} transferred in from ${c.L.d.teams[transfer.from].school} to take over at quarterback${style ? ` and ${style}` : ''}.`,
-      `The new quarterback is ${who}, a transfer from ${c.L.d.teams[transfer.from].school}${style ? ` who ${style}` : ''}.`,
-    ]);
+    // H-035: "Duke transfer #10 Darian Mensah takes over at QB".
+    n.restore(snap);
+    const as = n.ref(qb, false);
+    return `${walshText(c.L.d.teams[transfer.from].school)} transfer ${as} takes over at QB${style ? ` and ${style}` : ''}.`;
   }
-  if (recruit) return `${recruit.stars}-star freshman ${who} won the quarterback job${style ? ` and ${style}` : ''}.`;
+  if (recruit) return `${recruit.stars}-star freshman ${who} won the starting job${style ? ` and ${style}` : ''}.`;
   if (f.qbNew) {
     return pick(r, [
-      `${who} takes over at quarterback${style ? ` and ${style}` : ''}.`,
-      `There's a new quarterback: ${who}${style ? `, who ${style}` : ''}.`,
+      `${who} takes over as the starter${style ? ` and ${style}` : ''}.`,
+      `The new starter is ${who}${style ? `, who ${style}` : ''}.`,
       `Replacing the quarterback is the big job, and it falls to ${who}.`,
     ]);
   }
+  // Already named (a returning Heisman winner, say): only last season's numbers, no second "is back".
+  if (seenBefore) return st && st.yds >= 1500 ? `He threw for ${num(st.yds)} yards and ${st.td} touchdowns in ${f.lastYear}${style ? ` and ${style}` : ''}.` : null;
   if (st && st.yds >= 1500) {
     return pick(r, [
       `${who} is back at quarterback after throwing for ${num(st.yds)} yards and ${st.td} touchdowns in ${f.lastYear}.`,
-      `Quarterback ${who} returns. He threw ${st.td} touchdown passes in ${f.lastYear}${st.int <= 6 ? ` and only ${st.int} interceptions` : ''}.`,
+      `${who} returns. He threw ${st.td} touchdown passes in ${f.lastYear}${st.int <= 6 ? ` and only ${st.int} ${st.int === 1 ? 'interception' : 'interceptions'}` : ''}.`,
       `${who} threw for ${num(st.yds)} yards in ${f.lastYear} and ${style ?? 'is back to run the offense'}.`,
     ]);
   }
   return pick(r, [
-    `${who} returns at quarterback${style ? ` and ${style}` : ''}.`,
-    `${who} is the quarterback again${style ? `; he ${style}` : ''}.`,
+    `${who} returns as the starter${style ? ` and ${style}` : ''}.`,
+    `${who} is the starter again${style ? `; he ${style}` : ''}.`,
   ]);
 };
 
@@ -543,13 +577,13 @@ const runnerSay: Gen = (c) => {
     const who = n.ref(hb);
     return [
       `${who} ran for ${num(st.yds)} yards and ${st.td} touchdowns in ${f.lastYear}${style ? ` and ${style}` : ''}.`,
-      `Halfback ${who} is back after a ${num(st.yds)}-yard season.`,
+      `${who} is back after a ${num(st.yds)}-yard season.`,
       `The running game starts with ${who}, who had ${num(st.yds)} yards in ${f.lastYear}.`,
     ][k];
   }
   if (!style) return null;
   const who = n.ref(hb);
-  return pick(r, [`At halfback, ${who} ${style}.`, `${who} ${style} at halfback.`, `Halfback ${who} ${style}.`]);
+  return `${who} ${style}.`;
 };
 
 const receiverSay: Gen = (c) => {
@@ -584,8 +618,8 @@ const lineSay: Gen = (c) => {
   if (tr.olSize >= 0.85) return pick(r, ['The offensive line is big and heavy.', 'Up front, the line has plenty of size.']);
   if (tr.olBlock >= 0.85) return pick(r, ['The line opens holes and keeps the quarterback clean.', 'This is one of the best blocking lines around.']);
   if (olBack >= 5) return pick(r, ['All five starters are back on the line.', 'The whole offensive line returns.']);
-  if (olBack <= 1) return pick(r, ['The line is almost all new, and that is the question mark.', `${word(5 - olBack)} new starters on the line are the big question.`].map(cap));
-  if (tr.olBlock <= 0.15) return pick(r, ['The line has to get better at opening holes.', 'Pass protection is a question.']);
+  if (olBack <= 1) return pick(r, ['The line is almost all new.', `There are ${word(5 - olBack)} new starters on the line.`]);
+  if (tr.olBlock <= 0.15) return pick(r, ['The line has to get better at opening holes.', 'The line struggles to block.']);
   if (tr.olSize <= 0.15) return 'The line is undersized.';
   return null;
 };
@@ -632,8 +666,8 @@ const teSay: Gen = (c) => {
   const te = f.te;
   if (!te || n.isSeen(te)) return null;
   const st = f.statOf(te).rec;
-  if (st && st.yds >= 450) { const who = n.ref(te); return pick(r, [`Tight end ${who} caught ${st.rec} passes in ${f.lastYear}.`, `Tight end ${who} is a reliable target (${num(st.yds)} yards in ${f.lastYear}).`]); }
-  if (te.ovr >= 86) { const who = n.ref(te); return pick(r, [`Tight end ${who} is a matchup problem.`, `Tight end ${who} is one of the best in the country.`]); }
+  if (st && st.yds >= 450) { const who = n.ref(te); return pick(r, [`${who} caught ${st.rec} passes in ${f.lastYear}.`, `${who} is a reliable target (${num(st.yds)} yards in ${f.lastYear}).`]); }
+  if (te.ovr >= 86) { const who = n.ref(te); return pick(r, [`${who} is a matchup problem.`, `${who} is one of the best tight ends in the country.`]); }
   return null;
 };
 
@@ -696,15 +730,16 @@ function arrivalSay(side: 'off' | 'def'): Gen {
       const k = Math.floor(r() * 2);
       const a0 = tr[0].p, a1 = tr[1].p;
       if (k === 0) { const w0 = n.ref(a0), w1 = n.ref(a1); return `Transfers ${w0} and ${w1} step in as starters.`; }
-      return `${cap(word(tr.length))} transfers start, among them ${noun(a0)} ${n.ref(a0)}.`;
+      return `${cap(word(tr.length))} transfers start, among them ${n.ref(a0)}.`;
     }
     if (tr.length === 1) {
+      // H-035: by the school he came from, with position and number, once.
       const x = tr[0], from = walshText(c.L.d.teams[x.from].school), who = n.ref(x.p);
-      return pick(r, [`${cap(noun(x.p))} ${who} came over from ${from} and starts.`, `${who}, a transfer from ${from}, starts at ${noun(x.p)}.`]);
+      return pick(r, [`${from} transfer ${who} starts.`, `${from} transfer ${who} steps in as a starter.`]);
     }
     if (rc.length && rc[0].stars >= 4) {
       const x = rc[0], who = n.ref(x.p);
-      return pick(r, [`${x.stars}-star freshman ${who} starts right away at ${noun(x.p)}.`, `Watch for ${x.stars}-star freshman ${noun(x.p)} ${who}, a starter from day one.`]);
+      return pick(r, [`${x.stars}-star freshman ${who} starts right away.`, `Watch for ${x.stars}-star freshman ${who}, a starter from day one.`]);
     }
     return null;
   };
@@ -772,7 +807,7 @@ function honorSay(side: 'off' | 'def'): Gen {
     if (n.isSeen(h.p)) return h.heisman ? pick(r, [`He won the Heisman Trophy in ${f.lastYear}.`, `${walshText(h.p.last)} is the reigning Heisman winner.`]) : null;
     const who = n.ref(h.p);
     if (h.heisman) return pick(r, [`Heisman winner ${who} is back.`, `${who} won the Heisman Trophy in ${f.lastYear}, and he returns.`, `The reigning Heisman winner, ${who}, is back for another season.`]);
-    if (h.what === 'All-American') return pick(r, [`All-American ${noun(h.p)} ${who} returns.`, `${who}, an All-American in ${f.lastYear}, is back.`]);
+    if (h.what === 'All-American') return pick(r, [`All-American ${who} returns.`, `${who}, an All-American in ${f.lastYear}, is back.`]);
     return pick(r, [`${who} won ${h.what} in ${f.lastYear}.`, `${who} returns after winning ${h.what}.`]);
   };
 }
@@ -782,7 +817,9 @@ function honorSay(side: 'off' | 'def'): Gen {
 const defOpenSay: Gen = (c) => {
   const { f, r } = c;
   const ppg = f.games ? f.pa / f.games : 0;
-  if (f.games && r() < 0.6) {
+  // A defense ending on its returning starters (verdict) opens with points allowed instead.
+  if (c.said.has('verdictRetDef') && !f.games) return null;
+  if (f.games && (c.said.has('verdictRetDef') || r() < 0.6)) {
     const how = ppg <= 17 ? pick(r, ['one of the stingiest defenses in the country', 'a defense that was hard to score on']) : ppg >= 31 ? pick(r, ['a defense that struggled', 'a defense that gave up a lot of points']) : null;
     return pick(r, [
       `The ${f.nick} allowed ${Math.round(ppg)} points a game in ${f.lastYear}${how ? `, ${how}` : ''}.`,
@@ -801,14 +838,13 @@ const defStarSay: Gen = (c) => {
   const p = f.defStar;
   if (!p || n.isSeen(p)) return null;
   const st = f.statOf(p).def;
-  const role = noun(p);
   const ok = (st && (st.sacks >= 6 || st.int >= 4 || st.tkl >= 80)) || p.ovr >= 85;
   if (!ok) return null;
   const who = n.ref(p);
-  if (st && st.sacks >= 6) return pick(r, [`${cap(role)} ${who} had ${st.sacks} sacks in ${f.lastYear}.`, `${cap(role)} ${who} led the way with ${st.sacks} sacks.`]);
-  if (st && st.int >= 4) return pick(r, [`${cap(role)} ${who} picked off ${st.int} passes in ${f.lastYear}.`, `${cap(role)} ${who} had ${st.int} interceptions.`]);
-  if (st && st.tkl >= 80) return pick(r, [`${cap(role)} ${who} made ${st.tkl} tackles in ${f.lastYear}.`, `${cap(role)} ${who} is the leader, with ${st.tkl} tackles in ${f.lastYear}.`]);
-  return pick(r, [`The best player on the defense is ${role} ${who}.`, `Everything starts with ${role} ${who}.`, `${cap(role)} ${who} is the one to watch.`, `${cap(role)} ${who} anchors the defense.`, `The defense is built around ${role} ${who}.`]);
+  if (st && st.sacks >= 6) return pick(r, [`${who} had ${st.sacks} sacks in ${f.lastYear}.`, `${who} led the way with ${st.sacks} sacks.`]);
+  if (st && st.int >= 4) return pick(r, [`${who} picked off ${st.int} passes in ${f.lastYear}.`, `${who} had ${st.int} interceptions.`]);
+  if (st && st.tkl >= 80) return pick(r, [`${who} made ${st.tkl} tackles in ${f.lastYear}.`, `${who} is the leader, with ${st.tkl} tackles in ${f.lastYear}.`]);
+  return pick(r, [`The best player on the defense is ${who}.`, `Everything starts with ${who}.`, `${who} is the one to watch.`, `${who} anchors the defense.`, `The defense is built around ${who}.`]);
 };
 
 const frontSay: Gen = (c) => {
@@ -818,7 +854,7 @@ const frontSay: Gen = (c) => {
   if (t.dlRush >= 0.85) return pick(r, ['The ends get to the quarterback.', 'There is real speed off the edge.', 'The pass rush off the edge is a strength.']);
   if (t.dlPower >= 0.85) return pick(r, ['The line is hard to run on.', 'It is a stout front.']);
   if (t.dlPower <= 0.15) return pick(r, ['This team can be run on.', 'The front has to hold up better against the run.']);
-  if (t.dlRush <= 0.15) return pick(r, ['The pass rush is a question.', 'Pressure on the quarterback has to come from somewhere.']);
+  if (t.dlRush <= 0.15) return pick(r, ['The ends lack speed off the edge.', 'Pressure on the quarterback has to come from somewhere.']);
   return null;
 };
 
@@ -829,7 +865,7 @@ const backSay: Gen = (c) => {
   if (t.dbSpeed >= 0.85 && t.dbHands >= 0.7) return pick(r, ['The secondary is fast and takes the ball away.', 'It is a fast, ballhawking secondary.']);
   if (t.dbSpeed >= 0.85) return pick(r, ['The corners can run with anyone.', 'The secondary has plenty of speed.']);
   if (t.dbHands >= 0.85) return pick(r, ['The secondary has a nose for the football.', 'The defensive backs catch what comes their way.']);
-  if (t.dbSpeed <= 0.15) return pick(r, ["The secondary can't run with fast receivers.", 'Speed in the secondary is a concern.']);
+  if (t.dbSpeed <= 0.15) return pick(r, ["The secondary can't run with fast receivers.", 'The secondary lacks speed.']);
   if (t.lbTackle <= 0.15) return 'The linebackers miss too many tackles.';
   return null;
 };
@@ -865,31 +901,96 @@ const scheduleSay: Gen = (c) => {
   ]);
 };
 
-function closing(c: Ctx): string | null {
-  const { f, r } = c;
-  const ed = f.edition;
-  const big = ed === '1994' ? 'a New Year\'s Day bowl' : 'the playoff';
-  const by: Record<Theme, string[]> = {
-    champion: [`Repeating won't be easy, but ${f.school} has the talent to do it.`, `Everyone on the schedule will be ready for the champions.`],
-    contender: [`Anything short of ${big} will be a letdown in ${f.city}.`, `This is a team built to win now.`, `The talent is there for a run at the title.`],
-    rising: [`Another step forward would put ${f.school} in the conversation for ${big}.`, `The arrow is pointing up.`],
-    falling: [`It may take a year for the new starters to grow into their jobs.`, `How fast the new players grow up will decide the season.`],
-    rebuild: [`A winning season would be a good step.`, `There will be growing pains.`, `Patience will be needed.`],
-    portal: [`How quickly a roster this new learns to play together will decide the season.`, `A team this new needs time to come together.`],
-    steady: [`A bowl game is a fair target.`, `${f.school} should be in the mix in the ${f.conf ?? 'race'}.`, `If the questions get answered, this can be a good season.`],
-    longshot: [`A winning record would be real progress.`, `Every win will be hard to come by.`, `Better days take time.`],
+/**
+ * How a paragraph ends (H-035; the base game's way): on the side's clearest strength or weakness, with the fact behind
+ * it in the same sentence or one forced into the paragraph (`need`). No theme closers. A weakness wins over a strength
+ * when both are clear; nothing clear: no ending line.
+ */
+interface Verdict { text: string; /** The item whose fact this sentence repeats: left out. */ drop?: string; /** The item it rests on: always in. */ need?: string; /** It counts the returning starters. */ ret?: boolean }
+function verdict(c: Ctx, side: 'off' | 'def'): Verdict | null {
+  const { f, r, L } = c;
+  const t = f.traits;
+  const strong: { v: number; out: Verdict }[] = [], weak: { v: number; out: Verdict }[] = [];
+  if (side === 'off') {
+    const olBack = OL.filter((sl) => { const id = L.season.slots[f.T][sl]; return id !== null && L.prev.slots[f.T].includes(id); }).length;
+    if (f.offRet <= 4) weak.push({ v: 0.95, out: { text: pick(r, [`Only ${plural(f.offRet, 'starter')} return on offense, so experience is the question.`, `With ${plural(f.offRet, 'starter')} back, the offense is the question.`]), drop: 'ret', ret: true } });
+    if (olBack <= 1) weak.push({ v: 0.9, out: { text: `${cap(word(5 - olBack))} new starters on the line make it the question.`, drop: 'ol' } });
+    else if (t.olBlock <= 0.15) weak.push({ v: 1 - t.olBlock, out: { text: pick(r, ['The line has trouble opening holes, and that is the question.', 'Blocking up front is the question.']), drop: 'ol' } });
+    if (t.recSpeed <= 0.15) weak.push({ v: 1 - t.recSpeed, out: { text: 'Nobody at receiver can stretch the field, so a deep threat is the question.', drop: 'wr' } });
+    if (t.kLeg <= 0.1) weak.push({ v: 0.8, out: { text: 'Place kicking is the question.', drop: 'k' } });
+    if (t.olSize >= 0.85 || t.olBlock >= 0.85 || olBack >= 5) strong.push({ v: Math.max(t.olSize, t.olBlock, olBack >= 5 ? 0.86 : 0), out: { text: pick(r, ['The line is the strength.', 'Up front is where this offense wins.']), need: 'ol' } });
+    if (t.recSpeed >= 0.85 || t.recHands >= 0.85) strong.push({ v: Math.max(t.recSpeed, t.recHands), out: { text: pick(r, ['The receivers are the strength.', 'The passing game is the strength.']), need: 'wr' } });
+    if (t.rbSpeed >= 0.85 || t.rbPower >= 0.85) strong.push({ v: Math.max(t.rbSpeed, t.rbPower), out: { text: 'The running game is the strength.', need: 'hb' } });
+    if (f.qb && (t.qbArm >= 0.85 || t.qbLegs >= 0.85 || t.qbHead >= 0.85)) strong.push({ v: Math.max(t.qbArm, t.qbLegs, t.qbHead), out: { text: 'The quarterback is the strength.', need: 'qb' } });
+  } else {
+    if (f.defRet <= 4) weak.push({ v: 0.95, out: { text: pick(r, [`Only ${plural(f.defRet, 'starter')} return on defense, so this unit is the question.`, `With ${plural(f.defRet, 'starter')} back, the defense is the question.`]), ret: true } });
+    if (t.dlPower <= 0.15) weak.push({ v: 1 - t.dlPower, out: { text: 'The front can be run on, and that is the question.', drop: 'front' } });
+    else if (t.dlRush <= 0.15) weak.push({ v: 1 - t.dlRush, out: { text: 'The ends lack speed, so the pass rush is the question.', drop: 'front' } });
+    if (t.dbSpeed <= 0.15) weak.push({ v: 1 - t.dbSpeed, out: { text: "The secondary can't run with fast receivers, and that is the question.", drop: 'back' } });
+    else if (t.lbTackle <= 0.15) weak.push({ v: 1 - t.lbTackle, out: { text: 'The linebackers miss tackles, and that is the question.', drop: 'back' } });
+    if (t.dlRush >= 0.85 || t.dlPower >= 0.85) strong.push({ v: Math.max(t.dlRush, t.dlPower), out: { text: pick(r, ['The front is the strength.', 'The line up front is the strength.']), need: 'front' } });
+    if (t.lbSpeed >= 0.85) strong.push({ v: t.lbSpeed, out: { text: 'The linebackers are the strength.', need: 'back' } });
+    else if (t.dbSpeed >= 0.85 || t.dbHands >= 0.85) strong.push({ v: Math.max(t.dbSpeed, t.dbHands), out: { text: 'The secondary is the strength.', need: 'back' } });
+  }
+  const best = (xs: { v: number; out: Verdict }[]) => xs.sort((a, b) => b.v - a.v)[0]?.out ?? null;
+  const clear = best(weak) ?? best(strong);
+  if (clear) return clear;
+  // Nothing stands out: the side's experience, with the fact in the sentence.
+  const back = side === 'off' ? f.offRet : f.defRet, unit = side === 'off' ? 'offense' : 'defense';
+  return back >= 7
+    ? { text: pick(r, [`With ${plural(back, 'starter')} back, experience is the strength of this ${unit}.`, `${cap(plural(back, 'starter'))} return, so experience is the strength.`]), drop: side === 'off' ? 'ret' : undefined, ret: true }
+    : { text: `With ${plural(back, 'starter')} back, depth is the question.`, drop: side === 'off' ? 'ret' : undefined, ret: true };
+}
+
+// --- team-level lines for the opener, and the early Heisman favorites
+
+/** "Navy is the American favorite": the highest-ranked team of its conference in the app's preseason poll. */
+const favoriteSay: Gen = (c) => {
+  const { f, L } = c;
+  if (f.rank === null || !f.conf) return null;
+  const mine = L.season.conf[f.T];
+  const better = (L.poll ?? []).some((p) => p.rank < f.rank! && L.season.conf[p.team] === mine);
+  return better ? null : pick(c.r, [`${f.school} is the ${f.conf} favorite.`, `The ${f.nick} are the team to beat in the ${f.conf}.`]);
+};
+
+/**
+ * The dynasty era (user, 2026-11-18): only from the dynasty's fourth season, worded "this dynasty era (N years)", a
+ * team's rise, fall or continued dominance over the seasons played, and rarely (about one team in four of those with a
+ * clear pattern).
+ */
+const eraSay: Gen = (c) => {
+  const { f, L } = c;
+  const ranks = L.eraRanks.map((rk) => rk[f.T] || 99);
+  if (ranks.length < 3 || c.r() >= 0.25) return null;
+  const N = ranks.length, top10 = ranks.every((x) => x <= 10), first = ranks[0], last = ranks[N - 1];
+  const era = `this dynasty era (${N} years)`;
+  if (top10) return pick(c.r, [`${f.school} has finished in the top 10 every year of ${era}.`, `${f.school} continues its dominance of ${era}.`]);
+  if (first > 25 && last <= 15 && ranks[N - 2] >= last) return `${f.school} has climbed steadily over ${era}.`;
+  if (first <= 10 && last > 25) return `${f.school} has slipped over ${era}.`;
+  return null;
+};
+
+/** A player on the app's preseason Heisman favorites list (heismanPre.ts, top 10): "among the early Heisman favorites". */
+function heismanSay(side: 'off' | 'def'): Gen {
+  return (c) => {
+    const { f, r, n, L } = c;
+    const h = L.heisman.find((x) => x.team === f.T && (x.slot < 16) === (side === 'off'));
+    if (!h) return null;
+    const p = L.d.players[h.player - 1];
+    if (!p || n.isSeen(p)) return null;
+    const who = n.ref(p);
+    return pick(r, [`${who} is among the early Heisman favorites.`, `${who} starts the year as a Heisman contender.`]);
   };
-  return pick(r, by[f.theme]);
 }
 
 // ---------------------------------------------------------------- assembly
 
-/** Builds one paragraph: the must-have sentences, then the rest by weight while they fit. */
-function build(c: Ctx, first: (string | null)[], items: Item[], budget: number, last: string | null): string {
+/** Builds one paragraph: the must-have sentences, then the rest by weight while they fit, then its ending (verdict). */
+function build(c: Ctx, first: (string | null)[], items: Item[], budget: number, last: string | null, v: Verdict | null = null): string {
   const out: string[] = first.filter((s): s is string => !!s);
   const len = () => out.join(' ').length + (last ? last.length + 1 : 0);
-  // A little randomness in the order of facts of about the same weight.
-  const order = items.map((it) => ({ it, w: it.weight + c.r() * 1.5 })).sort((a, b) => b.w - a.w);
+  // A little randomness in the order of facts of about the same weight; the ending's fact first, its repeat left out.
+  const order = items.filter((it) => it.tag !== v?.drop).map((it) => ({ it, w: it.weight + c.r() * 1.5 + (it.tag === v?.need ? 100 : 0) })).sort((a, b) => b.w - a.w);
   for (const { it } of order) {
     const snap = c.n.snapshot();
     const s = S(it.say(c));
@@ -930,6 +1031,8 @@ export function walshReport(L: WalshLeague, team: number, variant = 0): Report {
     { side: 'off', weight: 2.5, say: scoringSay, tag: 'pts' },
     { side: 'off', weight: 3, say: teSay, tag: 'te' },
     { side: 'off', weight: f.theme === 'steady' || f.theme === 'longshot' ? 1 : 3, say: seasonSay, tag: 'season' },
+    { side: 'off', weight: f.theme === 'contender' || f.theme === 'champion' ? 3 : 4, say: classSay, tag: 'class' },
+    { side: 'off', weight: 8.5, say: heismanSay('off'), tag: 'heisman' },
   ];
   const defItems: Item[] = [
     { side: 'def', weight: 7, say: defStarSay, tag: 'star' },
@@ -938,23 +1041,28 @@ export function walshReport(L: WalshLeague, team: number, variant = 0): Report {
     { side: 'def', weight: 5, say: backSay, tag: 'back' },
     { side: 'def', weight: f.gone.some((g) => g.side === 'def' && g.starter && g.p.ovr >= 82) ? 7 : 4, say: goneSay('def'), tag: 'gone' },
     { side: 'def', weight: f.theme === 'portal' ? 7 : 4, say: arrivalSay('def'), tag: 'new' },
-    { side: 'def', weight: f.theme === 'contender' || f.theme === 'champion' ? 3 : 4, say: classSay, tag: 'class' },
+    { side: 'def', weight: 8, say: heismanSay('def'), tag: 'heisman' },
     { side: 'def', weight: 3, say: scheduleSay, tag: 'sched' },
   ];
 
-  const open = S(opening(c));
+  // Team-level facts in the opener (H-035): the conference favorite (the app's own poll) and, from the dynasty's
+  // fourth season, now and then a line about the dynasty era.
+  const open = [S(opening(c)), S(favoriteSay(c)), S(eraSay(c))].filter(Boolean).join(' ');
   // An opening that counts starters says it once.
   if (open && /starters? on offense/.test(open)) c.said.add('retOff');
   if (open && /returns? \w+ starters?(?! on)/.test(open)) { c.said.add('retOff'); c.said.add('retDef'); }
-  const offense = build(c, [open], offItems, OFF_BUDGET, null);
+  const vOff = verdict(c, 'off');
+  const offense = build(c, [open], offItems, OFF_BUDGET, vOff && S(vOff.text), vOff);
   const defBudget = WALSH_LIMIT - offense.length;
-  const close = S(closing(c));
-  let defense = build(c, [S(defOpenSay(c))], defItems, defBudget - 2, close);
+  const vDef = verdict(c, 'def');
+  if (vDef?.ret) c.said.add('verdictRetDef');
+  const close = vDef && S(vDef.text);
+  let defense = build(c, [S(defOpenSay(c))], defItems, defBudget - 2, close, vDef);
   // A defense with nothing that stands out (no star numbers, no strong traits) still gets its best player named.
   if (defense.length < 110) {
     const p = f.defStar;
     if (p && !n.isSeen(p)) {
-      const line = pick(r, [`${cap(noun(p))} ${n.ref(p)} leads the defense.`, `The defense counts on ${noun(p)} ${n.ref(p)}.`]);
+      const line = pick(r, [`${n.ref(p)} leads the defense.`, `The defense counts on ${n.ref(p)}.`]);
       const at = close && defense.endsWith(close) ? defense.length - close.length : defense.length;
       const next = `${defense.slice(0, at).trimEnd()} ${line} ${defense.slice(at)}`.replace(/\s+/g, ' ').trim();
       if (offense.length + next.length <= WALSH_LIMIT) defense = next;
