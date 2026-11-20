@@ -36,6 +36,8 @@ import { Button, Check, Field, FileButton, Masthead, Modal, NavBar, Note, Select
 import { navClick } from '../../appNav';
 import { benchSource, GetStarted, Renumbered, SeasonGuide, type StartActions } from './GetStarted';
 import { UpgradeCard, upgradeLine, useUpgrade, VersionRows, type Upgrader } from './Upgrade';
+import { SetupPage } from './SetupPage';
+import { SETUP_STEPS, startSetup, type SetupStep } from '../../core/dynasty/setup';
 import './dynasty.css';
 
 const THEME_KEY = 'dynasty-theme';
@@ -266,7 +268,17 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
   const actions: ManageActions = {
     importSave: (f, allowOlder) => run('Importing the save…', async () => {
       if (!d) return;
-      const r = importSave(d, await readFile(f), { allowOlder });
+      let r: ReturnType<typeof importSave>;
+      try {
+        r = importSave(d, await readFile(f), { allowOlder });
+      } catch (e) {
+        // A first season that wasn't started on the dynasty's ROM (setup): the way to that ROM (user, 2026-11-20).
+        if (d.seasonOneRom && d.seasons.length === 1 && !d.seasons[0].imports.length) {
+          setNote({ kind: 'error', text: (e as Error).message, action: <Button href={href('setup/download')}>Download the {d.seasons[0].year} ROM</Button> });
+          return;
+        }
+        throw e;
+      }
       await commit(r.dynasty);
       const nv = seasonView(r.dynasty, r.season);
       const added = r.newUserTeams.map((t) => r.dynasty.teams[t].school);
@@ -360,7 +372,9 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       // their dynasty with year 2027"): made again from the same ROM, starting then.
       const base = o.year !== p.dyn.startYear ? await build(p.rom, o.year) : p.dyn;
       let dyn: Dynasty = { ...base, name: o.name.trim() || base.name, userTeams: o.teams, ...(o.coachSim ? { coachSim: true } : {}) };
-      if (o.generated) dyn = randomBench(dyn);
+      if (o.generated) dyn = { ...randomBench(dyn), benchGenerated: true };
+      // Setup (user, 2026-11-20): the first season on a ROM the app builds, the real schedule to start.
+      dyn = startSetup(dyn, p.rom);
       await saveDynasty(dyn);
       await saveArt(dyn.id, p.pics as TeamArt[]);
       await saveRom(dyn.id, p.rom);
@@ -398,7 +412,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       const rom = await getRom();
       if (!rom) throw new Error('Choose your ROM to write the season into it.');
       // The first season is played on the user's own ROM: only its uniforms change. Later seasons: the season ROM.
-      const first = season.index === 0;
+      const first = season.index === 0 && !d.seasonOneRom;
       const again = !!season.romDownloaded;
       // H-033: the base ROM's build, for the mid-season check at import.
       const romBuild = romBuildOf(rom);
@@ -447,10 +461,14 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       case 'rules': return <Rules actions={offActions} busy={busy} />;
       case 'training': return <TrainingResults arg={arg} />;
       case 'guide': return <Guide />;
+      case 'setup': return <SetupPage step={(SETUP_STEPS as readonly string[]).includes(arg ?? '') ? (arg as SetupStep) : 'coaches'} busy={!!busy} actions={{
+        commit, downloadRom: offActions.downloadRom, getRom, exportFile: (x) => void backupRef.current(x),
+        playersCsv: <PlayersCsv d={d!} actions={actions} />,
+      }} />;
       default: return <Home />;
     }
   })();
-  const navPage = page === 'team' || page === 'player' || page === 'schedule' ? (page === 'player' ? 'stats' : 'teams') : page === 'rules' || page === 'guide' || page === 'start' ? 'manage' : page === 'training' ? 'offseason' : page === 'awards' || page === 'records' ? 'history' : page;
+  const navPage = page === 'team' || page === 'player' || page === 'schedule' ? (page === 'player' ? 'stats' : 'teams') : page === 'rules' || page === 'guide' || page === 'start' || page === 'setup' ? 'manage' : page === 'training' ? 'offseason' : page === 'awards' || page === 'records' ? 'history' : page;
   const week = d?.offseason ? 'Offseason' : v && v.save ? (v.currentWeek < v.weeks ? weekName(v, v.currentWeek) : 'Season complete') : d && d.seasons.length > 1 ? 'Preseason' : null;
 
   return (
@@ -471,7 +489,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
         {note && page !== 'manage' && <Note kind={note.kind}>{note.text}</Note>}
         <Ctx.Provider value={ctx}>{body}</Ctx.Provider>
         {up.modal}
-        {d && !d.offseason && d.seasons.length > 1 && (() => {
+        {d && !d.offseason && (d.seasons.length > 1 || d.seasonOneRom) && page !== 'setup' && (() => {
           // The new season's ROM (user, 2026-11-12: the download "needs to be VERY obvious, like a modal window"):
           // asks until it's downloaded or the season's first save is imported; "Later" hides it until the next visit.
           const s = d.seasons[d.seasons.length - 1];
@@ -482,16 +500,20 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
               title={`Download the ${s.year} ROM`}
               actions={<>
                 <Button disabled={!!busy} onClick={() => offActions.downloadRom(s.year)}>Download the {s.year} ROM</Button>
-                <Button variant="quiet" onClick={() => { location.hash = href('offseason/players'); }}>Players, depth chart and schedule first</Button>
+                {s.index === 0
+                  ? <Button variant="quiet" onClick={() => { location.hash = href('setup/coaches'); }}>Set up the season first</Button>
+                  : <Button variant="quiet" onClick={() => { location.hash = href('offseason/players'); }}>Players, depth chart and schedule first</Button>}
                 <Button variant="quiet" onClick={() => setRomLater(s.year)}>Later</Button>
               </>}
             >
-                <p>The {s.year} season is set up. Download its ROM and start a <b>New Season</b> in the game with it: it has the new rosters{s.schedule ? ' and schedule' : ''}, and the app can only import saves of seasons started with it.</p>
-                <p className="dy-small dy-dim">The offseason's last steps are your depth chart, your impact players{s.schedule ? ', your schedule' : ''} and this download. If you change any of them after downloading, download the ROM again.</p>
+                <p>The {s.year} season is set up. Download its ROM and start a <b>New Season</b> in the game with it: it has {s.index === 0 ? 'your coaches, rosters, conferences and schedule' : `the new rosters${s.schedule ? ' and schedule' : ''}`}, and the app can only import saves of seasons started with it.</p>
+                <p className="dy-small dy-dim">{s.index === 0
+                  ? 'You can change the setup (coaches, rosters, conferences, schedule) until your first import; download the ROM again if you do.'
+                  : <>The offseason's last steps are your depth chart, your impact players{s.schedule ? ', your schedule' : ''} and this download. If you change any of them after downloading, download the ROM again.</>}</p>
             </Modal>
           );
         })()}
-        {d && stale && staleAt !== null && staleAt !== here && staleLater !== stale.key && page !== 'offseason' && (() => {
+        {d && stale && staleAt !== null && staleAt !== here && staleLater !== stale.key && page !== 'offseason' && page !== 'setup' && (() => {
           const s = d.seasons[d.seasons.length - 1];
           const name = seasonRomName(d, { ...s, romId: s.romId ?? 'xxxxxx' });
           return (
@@ -528,7 +550,7 @@ function romStale(d: Dynasty): { key: string; what: string; first: boolean; unif
   const version = !!(s.upgrade && !s.upgrade.downloaded);
   if (!lineup && !kits && !version) return null;
   const what = [version && `the game version (to ${s.upgrade!.to.name})`, kits && 'the uniforms', lineup && 'the lineup, schedule, conferences or impact players'].filter(Boolean).join(' and ');
-  return { key: `${s.year}/${lineup}/${kits}/${version}/${s.rosterVersion ?? 1}`, what, first: s.index === 0, uniformsOnly: !lineup && !version };
+  return { key: `${s.year}/${lineup}/${kits}/${version}/${s.rosterVersion ?? 1}`, what, first: s.index === 0 && !d.seasonOneRom, uniformsOnly: !lineup && !version };
 }
 
 // ---- Manage
@@ -581,7 +603,8 @@ function Guide() {
       <h1>How a season works</h1>
       <SeasonGuide
         year={d.offseason ? d.offseason.year + 1 : s.year}
-        first={d.seasons.length === 1 && !d.offseason}
+        first={d.seasons.length === 1 && !d.offseason && !d.seasonOneRom}
+        setup={d.seasons.length === 1 && !d.offseason && !!d.seasonOneRom}
         backup={backup && <Button variant="quiet" onClick={backup}>Download dynasty file</Button>}
       />
     </div>
@@ -670,14 +693,14 @@ function Manage({ d, art, list, busy, note, actions, focus, ctx, up }: {
             <Renumbered d={d} />
             <VersionRows d={d} up={up} busy={!!busy} />
             <h3>Season ROM</h3>
-            {!d.offseason && season.index === 0 && (season.upgrade || season.kitsEdited) ? (
+            {!d.offseason && season.index === 0 && !d.seasonOneRom && (season.upgrade || season.kitsEdited) ? (
               <>
                 <p>
                   Your ROM with this dynasty's {season.upgrade ? `game version (${season.upgrade.to.name})` : 'uniforms'}: put it in place of the ROM you play the {season.year} season on, with that ROM's file name, so the game finds your save.
                 </p>
                 <Button disabled={!!busy} onClick={() => actions.downloadRom(season.year)}>Download the {season.year} ROM</Button>
               </>
-            ) : !d.offseason && d.seasons.length > 1 ? (
+            ) : !d.offseason && (d.seasons.length > 1 || d.seasonOneRom) ? (
               <>
                 <p>
                   The {season.year} rosters and team OVRs in your ROM's dynasty area: Season mode plays them, Exhibition keeps the ROM's own
@@ -808,7 +831,7 @@ function Manage({ d, art, list, busy, note, actions, focus, ctx, up }: {
 }
 
 /** Players CSV (edit.ts): download every player, import an edited file with a preview first. */
-function PlayersCsv({ d, actions }: { d: Dynasty; actions: ManageActions }) {
+export function PlayersCsv({ d, actions }: { d: Dynasty; actions: Pick<ManageActions, 'download' | 'commit'> }) {
   const [pending, setPending] = useState<CsvImport | null>(null);
   const [msg, setMsg] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const lock = editLock(d);

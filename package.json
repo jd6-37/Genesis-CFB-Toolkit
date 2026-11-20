@@ -19,6 +19,7 @@
     "test:walsh": "tsx cli/walshtest.ts",
     "test:dynasty": "tsx cli/dynastytest.ts",
     "heisman:pre": "tsx cli/heismanpre.ts",
+    "test:setup": "tsx cli/setuptest.ts",
     "test:upgrade": "tsx cli/upgradetest.ts",
     "test:impact": "tsx cli/impacttest.ts",
     "test:dynasty94": "tsx cli/dynasty94test.ts",

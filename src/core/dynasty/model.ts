@@ -243,6 +243,17 @@ export interface Dynasty {
   renumbered?: { pos: string; name: string; school: string; from: number; to: number }[];
   /** ISO time of the last dynasty file download (Manage, the home page's backup line). Absent = never. */
   backedUp?: string;
+  /**
+   * The first season is played on a ROM the app builds, like every later one (setup, user 2026-11-20), so its coaches,
+   * rosters, conferences and schedule set in Get started are in the game. Dynasties made before keep their first
+   * season on the user's own ROM.
+   */
+  seasonOneRom?: boolean;
+  /** Setup's starting point: each team's head coach (coach ids) and conference, for "Your changes" and the summary. */
+  setupCoaches?: (number | null)[];
+  setupConf?: number[];
+  /** The backups were generated (randomBench) instead of the real ones. */
+  benchGenerated?: boolean;
   /** "Not now" on the offer of this Elevated version (upgrade.ts): not offered again after an import. */
   upgradeLater?: string;
   /** Shared snapshots (Manage, Share), at most SNAPSHOT_LIMIT, newest first, with their delete keys. */
@@ -483,8 +494,11 @@ export function importSave(d: Dynasty, file: Uint8Array, opt: { at?: string; all
   // since that ROM has the same rosters as the app's first-season ROM, with a warning about lineup changes.
   const stamp = readStamp(save.stamp);
   let warning: string | undefined;
-  if (!stamp && d.seasons.length === 1) {
+  if (!stamp && d.seasons.length === 1 && !d.seasonOneRom) {
     warning = `This season was started with the plain ${season.year} ROM, not the one from this app. That's fine for the first season: it has the same rosters. If you changed a lineup in the app, the stats are counted for the app's lineup.`;
+  } else if (!stamp && d.seasons.length === 1) {
+    // A dynasty started with setup (user, 2026-11-20): only saves of a season started on its own ROM.
+    throw new Error(`This save isn't from your dynasty's ${season.year} ROM. Download it, start a New Season in the game with it and play your first season on it: only saves from that ROM can be imported.`);
   } else if (!stamp) {
     throw new Error(`This save's season wasn't started with a ROM from this app. Download the ${season.year} ROM (Manage, Season ROM), start a New Season in the game with it, play, then import.`);
   } else if (stamp.dynasty !== dynastyRomId(d.id)) throw new Error("This save's season was started with a ROM of another dynasty.");

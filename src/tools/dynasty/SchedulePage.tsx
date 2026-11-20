@@ -12,12 +12,13 @@ import {
 } from '../../core/dynasty/schedule';
 import { Empty, TeamLink, firstTeam, href, useDyn } from './ui';
 
-export function ScheduleEditor({ arg }: { arg?: string }) {
+export function ScheduleEditor({ arg, setup }: { arg?: string; /** In setup (SetupPage): the team picker stays on the page; no download or start-over here. */ setup?: boolean }) {
   const { d, commit, downloadRom, focus } = useDyn();
   const season = d.seasons[d.seasons.length - 1];
   const sched = season.schedule;
   const asked = Number(arg);
-  const team = Number.isInteger(asked) && d.userTeams.includes(asked) ? asked : firstTeam(d, focus);
+  const [picked, setPicked] = useState<number | undefined>(undefined);
+  const team = picked !== undefined && d.userTeams.includes(picked) ? picked : Number.isInteger(asked) && d.userTeams.includes(asked) ? asked : firstTeam(d, focus);
   const [note, setNote] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const [confirmNew, setConfirmNew] = useState(false);
   const schools = useMemo(() => d.teams.map((t) => t.school), [d]);
@@ -33,9 +34,10 @@ export function ScheduleEditor({ arg }: { arg?: string }) {
   const others = d.teams.filter((t) => t.index !== team).sort((a, b) => a.school.localeCompare(b.school));
   const confTeams = others.filter((t) => sameConf(team, t.index));
   const restTeams = others.filter((t) => !sameConf(team, t.index));
-  const myMissing = check.missing.filter(([a, b]) => a === team || b === team);
+  // The real schedule keeps the real games: protected rivalries apply only to schedules the app makes.
+  const myMissing = sched.real ? [] : check.missing.filter(([a, b]) => a === team || b === team);
   const myRepeats = check.repeats.filter(([a, b]) => a === team || b === team);
-  const myOffWeek = check.offWeek.filter(([a, b]) => a === team || b === team);
+  const myOffWeek = sched.real ? [] : check.offWeek.filter(([a, b]) => a === team || b === team);
   const isProtected = new Set(protectedPairs(schools, editionOf(d).id, rivalriesOf(d)).map((p) => `${Math.min(p.a, p.b)}-${Math.max(p.a, p.b)}`));
   const confTarget = conf[team] === INDEPENDENT ? 0 : season.confWeeks?.games[conf[team]];
 
@@ -78,10 +80,10 @@ export function ScheduleEditor({ arg }: { arg?: string }) {
     <section className="dy-sched">
       <PageHead
         title={`${season.year} schedule`}
-        actions={d.userTeams.length > 1 ? <Select label="Team" hideLabel value={team} options={d.userTeams.map((t) => ({ value: t, label: name(t) }))} onChange={(x) => { location.hash = href(`schedule/${x}`); }} /> : undefined}
+        actions={d.userTeams.length > 1 ? <Select label="Team" hideLabel value={team} options={d.userTeams.map((t) => ({ value: t, label: name(t) }))} onChange={(x) => { if (setup) setPicked(Number(x)); else location.hash = href(`schedule/${x}`); }} /> : undefined}
       />
       <p className="dy-small dy-dim">
-        Made with the game's rules for random schedules, with the traditional rivalries kept every season.
+        {sched.real ? `The real ${season.year} schedule: teams play 10 to 12 games in 14 weeks, with byes.` : 'Made with the game\'s rules for random schedules, with the traditional rivalries kept every season.'}
         {lock ? '' : ' Change an opponent, a week or home and away: the teams your change leaves without a game that week play each other, so everyone still plays every week.'}
       </p>
       {lock && <Note>{lock}</Note>}
@@ -159,7 +161,7 @@ export function ScheduleEditor({ arg }: { arg?: string }) {
           );
         })}
       </ol>
-      {!lock && (
+      {!lock && !setup && (
         <>
           <SubHead>When you're done</SubHead>
           <p>Your changes are saved as you make them: there is nothing to confirm here. Next, download the {season.year} ROM and start a New Season in the game with it.</p>

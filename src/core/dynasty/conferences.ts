@@ -11,7 +11,7 @@ import { readWideSeason, wideSeasonIssues, wideSeasonProblems, writeWideSeason, 
 export { SEC_EAST_1994 } from '../seasonWide';
 import { editionOf } from './edition';
 import type { DSeason, Dynasty } from './model';
-import { lastGames, makeSchedule, RELEASE_CONF_WEEKS, rivalriesOf } from './schedule';
+import { lastGames, makeSchedule, moveTeams, RELEASE_CONF_WEEKS, rivalriesOf, swapPlan } from './schedule';
 
 /**
  * A season's conferences: names (11, the last the Independents), each team's conference, the conference weeks and
@@ -47,7 +47,7 @@ export const confChanged = (a: WideSeason, b: WideSeason) =>
 /** Why the newest season's conferences can't be changed now, or null. */
 export function confLock(d: Dynasty): string | null {
   const s = d.seasons[d.seasons.length - 1];
-  if (s.index === 0) return "The first season's conferences are the ROM's. They can be changed in the offseason, before the next season.";
+  if (s.index === 0 && !d.seasonOneRom) return "The first season's conferences are the ROM's. They can be changed in the offseason, before the next season.";
   if (s.imports.length) return `The ${s.year} season has started: its conferences are set. They can be changed in the next offseason.`;
   return null;
 }
@@ -56,6 +56,14 @@ export function confLock(d: Dynasty): string | null {
 export function confIssues(d: Dynasty, s: ConfSetup): string[] {
   if (s.conf.length !== d.teams.length) return ['The conference list has the wrong number of teams.'];
   return wideSeasonIssues(s, editionOf(d).confRules);
+}
+
+/** Whether these conferences end the season's real schedule (a team count or conference weeks change; setup). */
+export function losesRealSchedule(d: Dynasty, next: ConfSetup): boolean {
+  const s = d.seasons[d.seasons.length - 1];
+  if (!s.schedule?.real) return false;
+  const cur = confSetupOf(d, s);
+  return !(same(cur.start, next.start) && same(cur.games, next.games) && swapPlan(cur.conf, next.conf));
 }
 
 /**
@@ -79,14 +87,18 @@ export function setConferences(d: Dynasty, next: ConfSetup): Dynasty {
     titleGames: next.titleGames.slice(),
     ...(s.romDownloaded ? { lineupEdited: true, rosterVersion: s.lineupEdited ? s.rosterVersion ?? 1 : (s.rosterVersion ?? 1) + 1 } : {}),
   };
-  if (s.schedule && alignmentChanged(cur, next)) {
+  // The real schedule (setup): teams that trade places trade games; a change of team counts or conference weeks needs
+  // a new schedule (the editor warns first).
+  const plan = s.schedule?.real && same(cur.start, next.start) && same(cur.games, next.games) ? swapPlan(cur.conf, next.conf) : null;
+  if (s.schedule && plan) season.schedule = moveTeams(s.schedule, plan);
+  else if (s.schedule && alignmentChanged(cur, next)) {
     const prev = d.seasons[d.seasons.length - 2];
     season.schedule = makeSchedule({
       schools: d.teams.map((t) => t.school),
       conf: season.conf,
       confWeeks,
       last: prev ? lastGames(d, prev) : undefined,
-      seed: s.schedule.seed,
+      seed: s.schedule.real ? 1 : s.schedule.seed,
       weeks: editionOf(d).regWeeks,
       edition: editionOf(d).id,
       rivalries: rivalriesOf(d),

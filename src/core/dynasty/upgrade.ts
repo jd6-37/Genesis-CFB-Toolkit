@@ -45,7 +45,7 @@ const running = (d: Dynasty): DSeason | null => (d.offseason ? null : d.seasons[
 /** Whether the newest season may have been started in the game (then a ROM change happens mid-season). */
 export function seasonStarted(d: Dynasty): boolean {
   const s = running(d);
-  return !!s && (s.index === 0 || !!s.romDownloaded || s.imports.length > 0);
+  return !!s && ((s.index === 0 && !d.seasonOneRom) || !!s.romDownloaded || s.imports.length > 0);
 }
 
 /** The build the running season was started on: from the last import's ELVB, else the ROM it was downloaded from. */
@@ -98,7 +98,7 @@ export function applyUpgrade(d: Dynasty, kept: Uint8Array | null, next: Uint8Arr
   const { upgradeLater: _, ...rest } = d;
   const s = running(d);
   if (!s || !seasonStarted(d)) {
-    return s ? { ...rest, seasons: [...d.seasons.slice(0, -1), { ...s, romBuild: to, ...(s.index > 0 ? { romDownloaded: false } : {}) }] } : rest;
+    return s ? { ...rest, seasons: [...d.seasons.slice(0, -1), { ...s, romBuild: to, ...(s.index > 0 || d.seasonOneRom ? { romDownloaded: false } : {}) }] } : rest;
   }
   const from = s.upgrade?.from ?? (kept ? romBuildOf(kept) : undefined) ?? s.romBuild;
   const next2: DSeason = { ...s, romBuild: to, ...(from ? { upgrade: { from, to } } : {}) };
