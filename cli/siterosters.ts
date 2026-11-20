@@ -65,6 +65,8 @@ const lum = (w: number) => {
 };
 const dist = (a: number, b: number) => rgb(a).reduce((s, c, i) => s + Math.abs(c - rgb(b)[i]), 0);
 const isWhite = (w: number) => Math.min(...rgb(w)) >= 6;
+/** One step darker on each channel (Genesis color word). */
+const darker = (w: number) => rgb(w).map((c) => Math.max(0, c - 1)).reduce((a, c, i) => a | (c << (1 + 4 * i)), 0);
 export const slug = (s: string) => s.toLowerCase().replace(/&/g, '').replace(/'/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 async function load(path: string) {
@@ -118,12 +120,24 @@ function edition(rom: Uint8Array, id: EditionId, from: number, to: number, build
       return [def.label, jerseyNumber(pl.numberByte), nm?.first ?? '', nm?.last ?? '', cls, ovrAt(values, roleOfPos(def.pool[0])), wt, r, def.group];
     });
     const home = blocks[t].home;
-    let color = home[3];
-    if (lum(color) > 0.35) color = lum(home[5]) <= 0.35 ? home[5] : 0x0444;
     const own = ownUniforms(rom, t);
+    // The school's two main colors (user, 2026-11-20: "The header color should be the dark primary color of a school.
+    // The side bar the lighter color"; before, a light main color fell back to dark gray: "why isn't Air Force header
+    // blue? And Hawaii green?"). The first: the team color, else the helmet's, else the colored jersey. The second: the
+    // first uniform color clearly different from it. The darker of the two is the header (darkened until it reads on
+    // the white card), the lighter one the side bar (light gray when a school has one color).
+    const colored = (w: number) => !isWhite(w) && (Math.max(...rgb(w)) - Math.min(...rgb(w)) >= 2 || lum(w) < 0.02);
+    const first = [home[3], home[5], own.home[9], own.away[9], own.home[10], own.away[10]].find(colored) ?? 0x0444;
     const cands = [own.home[11], own.home[9], own.home[5], own.home[7], own.home[14], own.home[3], own.away[11], own.away[9], own.away[5], own.away[7], own.away[14], own.away[3]];
-    const sec = cands.find((c) => dist(c, cands[0]) >= 4 && !isWhite(c));
-    const stripe = sec === undefined ? '#c8c8c8' : hex(sec);
+    const sec = cands.find((c) => dist(c, first) >= 4 && !isWhite(c));
+    // A gray or black trim color is the header only when the main color is too light (Purdue, UCF: black and gold),
+    // not over a dark main color (Western Kentucky's red); then the side bar is the next lighter color.
+    const gray = (w: number) => Math.max(...rgb(w)) - Math.min(...rgb(w)) <= 1;
+    const keep = sec !== undefined && gray(sec) && lum(first) <= 0.35;
+    let color = sec !== undefined && !keep && lum(sec) < lum(first) ? sec : first;
+    const light = keep ? cands.find((c) => dist(c, first) >= 4 && !isWhite(c) && lum(c) > lum(first)) : sec === undefined ? undefined : color === sec ? first : sec;
+    while (lum(color) > 0.35) color = darker(color);
+    const stripe = light === undefined ? '#c8c8c8' : hex(light);
     // The logo, centered in its sheet cell.
     let logo: [number, number] | null = null;
     const pic = art[t]?.logo;
