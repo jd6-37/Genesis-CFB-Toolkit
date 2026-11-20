@@ -118,6 +118,8 @@ for (const path of process.argv.slice(2)) {
   assert.throws(() => setImpactPicks(d2, (me + 1) % d.teams.length, gameImpact(d2, s2, (me + 1) % d.teams.length)), /your own teams/);
   const ol = s2.slots[me][5]!; // LG: not allowed
   assert.throws(() => setImpactPicks(d2, me, [offs[0].id, defs[0].id, ol]), /Active Roster/);
+  assert.ok(choices.every((c) => STARTERS.has(c.slot)), 'the user picks from the starters only (H-047)');
+  assert.throws(() => setImpactPicks(d2, me, [offs[0].id, defs[0].id, s2.slots[me][2]!]), /starters/, 'HB2 refused');
   const mine = [offs[offs.length - 1].id, defs[defs.length - 1].id, defs[defs.length - 2].id];
   d2 = setImpactPicks(d2, me, mine);
   assert.deepEqual(teamImpact(d2, d2.seasons[0], me), mine);

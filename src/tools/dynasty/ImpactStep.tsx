@@ -1,7 +1,7 @@
 // The offseason's Impact players step (H-028; user, 2026-11-18: "Add a step to the offseason where the user can, if
 // they choose, change the auto-selected impact players for their user-controlled teams. Max 2 per side of the
 // ball."): the app picks three for every team the way the game does; here the user may pick his own teams' three
-// from the Active Roster (QB, backs, receivers, tight ends, defenders). The season ROM carries every team's three.
+// from the Active Roster's starters (QB, HB1, FB, SE, FL, WR3, TE1, the starting defenders; H-047). The season ROM carries every team's three.
 import { useEffect, useMemo, useState } from 'react';
 import { Button, Note, Select, SubHead } from '../../ui';
 import {

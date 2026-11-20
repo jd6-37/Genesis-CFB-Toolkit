@@ -156,8 +156,9 @@ export function gameImpact(d: Pick<Dynasty, 'players' | 'edition'>, s: Pick<DSea
   return impactSlots(nib, editionOf(d).id).map((slot) => ids[slot]).filter((id): id is number => !!id);
 }
 
-/** The roster slots a player may be picked from (QB, HB1, HB2, FB, WR, TE, every defender; no linemen, K or P). */
-export const IMPACT_SLOTS = [0, 1, 2, 3, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30];
+/** The roster slots the user may pick from: the starters the game picks from (H-047; user, 2026-11-20: "Starters
+ * only"): QB, HB1, FB, SE, FL, WR3, TE1 and the starting defenders. No backups, linemen, K or P. */
+export const IMPACT_SLOTS = [0, 1, 3, 9, 10, 11, 13, ...DEF];
 /** At most this many of a team's three on one side of the ball (user, 2026-11-18). */
 export const IMPACT_SIDE_MAX = 2;
 const isDefense = (slot: number) => slot >= 16;
@@ -174,7 +175,7 @@ export function impactPicksProblem(s: Pick<DSeason, 'slots'>, team: number, ids:
   if (new Set(ids).size !== 3) return 'Pick three different players.';
   const choices = new Map(impactChoices(s, team).map((c) => [c.id, c]));
   const picked = ids.map((id) => choices.get(id));
-  if (picked.some((c) => !c)) return 'Impact players come from the Active Roster: a QB, a back, a receiver, a tight end or a defender.';
+  if (picked.some((c) => !c)) return 'Impact players are starters on the Active Roster: the QB, HB1, FB, SE, FL, WR3, TE1 or a starting defender.';
   const def = picked.filter((c) => c!.defense).length;
   if (def > IMPACT_SIDE_MAX) return `At most ${IMPACT_SIDE_MAX} of the three can be defenders.`;
   if (3 - def > IMPACT_SIDE_MAX) return `At most ${IMPACT_SIDE_MAX} of the three can be on offense.`;
