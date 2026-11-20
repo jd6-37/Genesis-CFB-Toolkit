@@ -12,7 +12,7 @@ import { teamsOf } from '../src/core/wide';
 import { EDITIONS } from '../src/core/dynasty/edition';
 import {
   confSizes, playedGames, readWideSeason, restoreWideSeason, wideSeasonIssues, wideSeasonProblems, wideSeasonRanges,
-  wideSeasonTables, writeWideSeason,
+  wideSeasonTables, writeWideSeason, readScheduleRow,
 } from '../src/core/seasonWide';
 import { eaChecksumOk, fixChecksums, openRosterRom } from '../src/core/rosterRom';
 import { parseBw95 } from '../src/core/bw95';
@@ -324,6 +324,25 @@ for (const wide of wides) {
   assert.ok(to.every((b, i) => b === d[i]), 'carried to a fresh copy = the same bytes');
   restoreWideSeason(d, wide);
   assert.ok(d.every((b, i) => b === wide[i]), 'undo puts every byte back');
+  // H-046 (v2.1.1 on): edited conferences turn the Schedule default to Random and the Real label to "Real old";
+  // conferences back as they were put the ROM's own back.
+  const row = readScheduleRow(wide);
+  if (row) {
+    const h = wide.slice();
+    writeWideSeason(h, e, undefined, wide);
+    assert.deepEqual(readScheduleRow(h), { def: 0, label: 'Real old' });
+    const h2 = wide.slice();
+    const renamed = readWideSeason(wide); renamed.names[0] = 'Southeastern';
+    writeWideSeason(h2, renamed, undefined, wide);
+    assert.deepEqual(readScheduleRow(h2), row, 'a rename alone keeps the Real schedule');
+    writeWideSeason(h, readWideSeason(wide), undefined, wide);
+    assert.deepEqual(readScheduleRow(h), row, "conferences back: the ROM's default and label");
+    const c = wide.slice();
+    writeWideSeason(d, e, undefined, wide);
+    carryEdits(d, c, wide);
+    assert.deepEqual(readScheduleRow(c), { def: 0, label: 'Real old' }, 'carried');
+    restoreWideSeason(d, wide);
+  }
   // Settings the engine can't play are refused, nothing written.
   const bad = (f: (x: typeof s) => void, re: RegExp) => {
     const x = readWideSeason(wide);
