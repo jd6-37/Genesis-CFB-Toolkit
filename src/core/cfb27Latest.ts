@@ -6,7 +6,7 @@ export const CFB27_LATEST = {
   week: 9,
   /** Served from public/data/, so the app fetches it only when it's used. */
   file: 'data/ea-cfb27-ratings-2026-week9.csv',
-  sha1: '1d6ba07950db747bf7c5809348b26f6d81f71414',
+  sha1: '942a1d283361094ad076e55a0d3185c111a5bd09',
   label: 'College Football 27 ratings, 2026 season, Week 9',
 } as const;
 
