@@ -71,7 +71,7 @@ export function kitOf(d: Dynasty, team: number): TeamKit | null {
  */
 function romOutdated(d: Dynasty): DSeason[] {
   const s = d.seasons[d.seasons.length - 1];
-  if (d.offseason || s.kitsEdited || (!s.romDownloaded && s.index > 0)) return d.seasons;
+  if (d.offseason || s.kitsEdited || (!s.romDownloaded && (s.index > 0 || !!d.seasonOneRom))) return d.seasons;
   return [...d.seasons.slice(0, -1), { ...s, kitsEdited: true }];
 }
 

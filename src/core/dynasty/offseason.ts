@@ -927,7 +927,7 @@ export function seasonRom(d: Dynasty, season: DSeason, rom: Uint8Array, now = Da
     names,
     fine,
     schedule: season.schedule ? scheduleSet(season.schedule) : undefined,
-    impact: season.index > 0 ? impactTable(d, season) : undefined, // the first season: the ROM's own pick
+    impact: season.index > 0 || d.seasonOneRom ? impactTable(d, season) : undefined, // a first season on the user's ROM: the ROM's own pick
     poll: (() => { const p = preseasonPoll(d, season); return p && !p[0]?.real ? pollSet(p) : undefined; })(), // the first season: the ROM's own
   });
   applyKits(out.data, d);

@@ -7,13 +7,14 @@ import type { Dynasty } from '../../core/dynasty/model';
 import { EDITIONS, editionOf, type EditionId } from '../../core/dynasty/edition';
 import { weekName } from '../../core/dynasty/derive';
 import { seasonDone } from '../../core/dynasty/offseason';
-import { Button, Check, Field, FileButton, Note, Select, Steps, SubHead, Table } from '../../ui';
+import { Button, Field, FileButton, Note, Select, Steps, SubHead, Table } from '../../ui';
 import { Ctx, href } from './ui';
 import { SAMPLE_PATH } from '../../core/dynasty/snapshotId';
 import { KNOWN, openRom, type OpenedRom } from '../../core/romfile';
 import { zipName } from '../../core/zip';
 import { PATCH_CONTENT } from '../../core/dynasty/upgrade';
 import { saveOriginal } from '../../core/dynasty/storage';
+import { SETUP_LABELS } from '../../core/dynasty/setup';
 import { applyListed, fetchPatchFile, fetchPatchList, offered, patchBase, refFromPage, romFileName, type Patch, type PatchList } from '../../core/patches';
 
 /** A dynasty made from the user's ROM but not saved yet (Get started's step 1), with what goes into the browser with it. */
@@ -36,7 +37,8 @@ export interface StartActions {
   exportFile: (d: Dynasty) => void;
 }
 
-const STEPS = ['ROM', 'Dynasty', 'Options', 'Play'];
+// Steps 3-7 are SetupPage's (user, 2026-11-20): the dynasty is made after step 2.
+const STEPS = SETUP_LABELS;
 
 /** Where the backups start, by edition (also on Manage). */
 export const benchSource = (id: EditionId) =>
@@ -58,12 +60,9 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
   const [name, setName] = useState('');
   const [teams, setTeams] = useState<number[]>([]);
   const [addTeam, setAddTeam] = useState('');
-  const [generated, setGenerated] = useState(false);
-  const [coachSim, setCoachSim] = useState(false);
   const [year, setYear] = useState('');
   const yearN = Number(year);
   const yearOk = /^\d{4}$/.test(year) && yearN >= 1950 && yearN <= 2099;
-  const [made, setMade] = useState<Dynasty | null>(null);
   // The original game (user, 2026-11-19: "users should be able to load either an elevated rom or the base BW95 base
   // game. If they upload the base game, they must then choose one of the two elevated patches"; mockups approved).
   const [orig, setOrig] = useState<OpenedRom | null>(null);
@@ -108,6 +107,12 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
   };
 
   const go = (n: number) => { setStep(n); window.scrollTo(0, 0); };
+  // Step 2 makes the dynasty (saved in the browser), then setup goes on with it (SetupPage).
+  const create = (to: 'coaches' | 'download') => work('Creating the dynasty…', async () => {
+    await actions.finish(prep!, { name, teams, generated: false, coachSim: false, year: yearN });
+    window.location.hash = href(`setup/${to}`);
+    window.scrollTo(0, 0);
+  });
   const work = async (what: string, fn: () => Promise<void>) => {
     setWorking(what);
     setError(null);
@@ -165,14 +170,7 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
               {patched && (
                 <>
                   <Note kind="ok"><strong>Patched:</strong> your ROM is now {patched.label} (checked against the release).</Note>
-                  <div className="dy-start-must">
-                    <h2>Download it: you'll play your first season on it</h2>
-                    <p>Your first season is played on this ROM. Later seasons get their own ROM from the app at the end of each offseason.</p>
-                    <div className="dy-row">
-                      <Button onClick={() => actions.downloadRom(prep!.fileName, prep!.rom)}>Download patched ROM</Button>
-                      <span className="dy-small dy-dim dy-start-file">{zipName(prep!.fileName)}</span>
-                    </div>
-                  </div>
+                  <p className="dy-small">No download yet: the last step gives you your first season's ROM, built on this one.</p>
                 </>
               )}
               <div className="dy-start-found">
@@ -229,46 +227,13 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
           </div>
           <div className="dy-row dy-start-nav">
             <Button variant="quiet" onClick={() => go(0)}>Back</Button>
-            <Button disabled={!yearOk} onClick={() => go(2)}>Next: options</Button>
+            <span className="dy-setup-gap" />
+            <Button variant="link" disabled={!yearOk || off} onClick={() => void create('download')}>Skip to the download</Button>
+            <Button disabled={!yearOk || off} onClick={() => void create('coaches')}>Next: coaches</Button>
           </div>
         </section>
       )}
 
-      {step === 2 && dyn && (
-        <section>
-          <h1>Options</h1>
-          <p className="dy-dim">All of these can be changed later on Manage.</p>
-          <fieldset className="dy-start-choice">
-            <legend>Backups</legend>
-            <p className="dy-small dy-dim">Every team has a backup for each of the 32 players on its Active Roster. A backup moves up when a spot opens.</p>
-            <label><input type="radio" name="dy-bench" checked={!generated} onChange={() => setGenerated(false)} /> <span><strong>Real players</strong><br /><span className="dy-small dy-dim">{benchSource(edition!.id).replace(/^./, (c) => c.toUpperCase())}.</span></span></label>
-            <label><input type="radio" name="dy-bench" checked={generated} onChange={() => setGenerated(true)} /> <span><strong>Generated players</strong><br /><span className="dy-small dy-dim">Made-up players instead of real ones.</span></span></label>
-          </fieldset>
-          <Check checked={coachSim} onChange={setCoachSim}><strong>Coaches affect the sim</strong></Check>
-          <p className="dy-small dy-dim dy-start-hint">In simulated games, a head coach better than the average adds 1 to his team's offense or defense OVR, a worse one takes 1 off. Off by default.</p>
-          <Note>More settings, for later: Offseason rules (spoilers) and the sim settings, both on Manage.</Note>
-          <div className="dy-row dy-start-nav">
-            <Button variant="quiet" onClick={() => go(1)}>Back</Button>
-            <Button disabled={off} onClick={() => work('Creating the dynasty…', async () => {
-              setMade(await actions.finish(prep!, { name, teams, generated, coachSim, year: yearN }));
-              go(3);
-            })}>Create dynasty</Button>
-          </div>
-        </section>
-      )}
-
-      {step === 3 && made && (
-        <section>
-          <Note kind="ok"><strong>{made.name} is ready:</strong> {made.players.length.toLocaleString('en-US')} players on {made.teams.length} teams.</Note>
-          <Renumbered d={made} />
-          <h1>How a season works</h1>
-          <SeasonGuide year={made.seasons[0].year} first patched={patched ? prep?.fileName : undefined} backup={<Button variant="quiet" onClick={() => actions.exportFile(made)}>Download dynasty file</Button>} />
-          <div className="dy-start-go">
-            <Button href={href('home')} strong>Go to {made.name}</Button>
-            <p className="dy-small dy-dim">This guide stays on Manage, under "How a season works".</p>
-          </div>
-        </section>
-      )}
     </div>
     {step === 0 && <SamplePeek />}
     </div>
@@ -370,8 +335,10 @@ export function Renumbered({ d }: { d: Dynasty }) {
 }
 
 /** How a season works, in five steps (Get started's last step and its own page from Manage). */
-export function SeasonGuide({ year, first, patched, backup }: {
+export function SeasonGuide({ year, first, patched, backup, setup }: {
   year: number;
+  /** The first season, on the ROM from setup's last step. */
+  setup?: boolean;
   /** The dynasty's first season (played on the user's own ROM). */
   first?: boolean;
   /** The file name of the ROM patched in Get started, when the user loaded the original game. */
@@ -383,7 +350,7 @@ export function SeasonGuide({ year, first, patched, backup }: {
       <li>
         <h2>Play the {year} season{first ? ' on your ROM' : ` on the ${year} ROM`}</h2>
         <p>
-          {first ? (patched ? `Play it on the patched ROM you downloaded in step 1 (${zipName(patched)}). ` : 'Play it as it is: the first season needs no download. ') : `The offseason gave you the ${year} ROM. `}
+          {setup ? `Play it on the ${year} ROM from the setup's last step (Manage, Season ROM, downloads it again). ` : first ? (patched ? `Play it on the patched ROM you downloaded in step 1 (${zipName(patched)}). ` : 'Play it as it is: the first season needs no download. ') : `The offseason gave you the ${year} ROM. `}
           Use RetroArch's Genesis Plus GX core, start a new season in Season mode and choose your teams.
         </p>
       </li>
@@ -486,15 +453,17 @@ export function WhatsNext() {
     title = 'Run the offseason';
     text = `Every game is in. The offseason goes one step at a time, with recruiting at its heart, and ends with the ${s.year + 1} ROM.`;
     action = <Button href={href('offseason')}>Start the offseason</Button>;
-  } else if (d.seasons.length > 1 && !s.romDownloaded && !s.imports.length) {
+  } else if ((d.seasons.length > 1 || d.seasonOneRom) && !s.romDownloaded && !s.imports.length) {
     label = `${s.year} season, ready to start`;
     title = `Download the ${s.year} ROM`;
     text = 'Load it in RetroArch and start a new season in Season mode. A save from a season started on another ROM can\'t be imported.';
-    action = <Button onClick={() => downloadRom(s.year)}>Download the {s.year} ROM</Button>;
+    action = d.seasons.length === 1
+      ? <><Button href={href('setup/download')}>Download the {s.year} ROM</Button><Button variant="quiet" href={href('setup/coaches')}>Set up the season</Button></>
+      : <Button onClick={() => downloadRom(s.year)}>Download the {s.year} ROM</Button>;
   } else if (!s.imports.length) {
     label = `${s.year} season`;
     title = `Play the ${s.year} season`;
-    text = `${d.seasons.length === 1 ? 'Play it on your ROM as it is.' : `Play it on the ${s.year} ROM.`} After just one week, played or simmed, you can import your save to start the headlines here and the stats.`;
+    text = `${d.seasons.length === 1 && !d.seasonOneRom ? 'Play it on your ROM as it is.' : `Play it on the ${s.year} ROM.`} After just one week, played or simmed, you can import your save to start the headlines here and the stats.`;
     more = finalSave;
     action = <Button href={href('manage')}>Import save</Button>;
   } else {

@@ -208,7 +208,7 @@ export function impactSet(d: Pick<Dynasty, 'players' | 'teams'>, s: Pick<DSeason
 /** Why the newest season's impact players can't be changed (null if they can). */
 export function impactLock(d: Dynasty): string | null {
   const s = d.seasons[d.seasons.length - 1];
-  if (s.index === 0) return "The first season is played on your own ROM, so it keeps the game's picks. You can pick your teams' impact players in the offseason, for the next season.";
+  if (s.index === 0 && !d.seasonOneRom) return "The first season is played on your own ROM, so it keeps the game's picks. You can pick your teams' impact players in the offseason, for the next season.";
   if (s.imports.length) return `The ${s.year} season has started: its impact players are in the ROM you played. Pick them again in the next offseason.`;
   return null;
 }

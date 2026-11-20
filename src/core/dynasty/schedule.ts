@@ -28,6 +28,8 @@ export interface DSchedule {
   seed: number;
   /** A user changed it (any team's games). */
   edited?: boolean;
+  /** The ROM's real schedule (REALTAB; setup, user 2026-11-20), teams moved with conference swaps: weeks 14, byes. */
+  real?: boolean;
 }
 
 /** Per conference 0-9: first conference week (0-based) and conference games, as the ROM's CWS/CWN tables. */
@@ -349,7 +351,8 @@ export function checkSchedule(s: DSchedule, schools: string[], conf: number[], e
       if (count[w][t] > 1) broken.push(`${schools[t]} has ${count[w][t]} games in week ${w + 1}`);
       else if (!count[w][t]) free.push(t);
     }
-    if (free.length > n % 2) for (const t of free) broken.push(`${schools[t]} has no game in week ${w + 1}`);
+    // The real schedule has byes (teams play 10-12 games in 14 weeks).
+    if (!s.real && free.length > n % 2) for (const t of free) broken.push(`${schools[t]} has no game in week ${w + 1}`);
   }
   const repeats = [...met].filter(([, c]) => c > 1).map(([k]) => [Math.floor(k / 1000), k % 1000] as [number, number]);
   const prot = protectedPairs(schools, edition, rivalries);
@@ -358,6 +361,65 @@ export function checkSchedule(s: DSchedule, schools: string[], conf: number[], e
     .filter((p) => p.week !== null && p.week < weeksOf(s) && met.has(key(p.a, p.b)) && !s.games.some((x) => x.week === p.week && key(x.visitor, x.home) === key(p.a, p.b)))
     .map((p) => [p.a, p.b, p.week!] as [number, number, number]);
   return { broken, repeats, missing, offWeek, confGames, homeGames };
+}
+
+// ---- the real schedule (setup, user 2026-11-20: "a simple team swap … and then still be able to use the real 2026
+// schedules (tulane and kentucky just swap schedules)")
+
+/** The ROM's real schedule (REALTAB, read by REALGEN's `lea REALTAB(pc),a2` at 0x211528), or null if it isn't there. */
+export function readRealSchedule(rom: Uint8Array, teams: number): DSchedule | null {
+  const at = 0x211528;
+  if (rom.length < at + 4 || rom[at] !== 0x45 || rom[at + 1] !== 0xfa) return null;
+  const tab = at + 2 + ((rom[at + 2] << 24) >> 16 | rom[at + 3]);
+  const weeks = rom[tab];
+  if (!(weeks >= 1 && weeks <= 14)) return null;
+  const games: SchedGame[] = [];
+  let i = tab + 1;
+  for (let w = 0; w < weeks; w++) {
+    const n = rom[i++];
+    for (let k = 0; k < n; k++, i += 2) {
+      if (rom[i] >= teams || rom[i + 1] >= teams || i + 1 >= rom.length) return null;
+      games.push({ week: w, visitor: rom[i], home: rom[i + 1] });
+    }
+  }
+  return { games, weeks, seed: 0, real: true };
+}
+
+/**
+ * Who takes whose schedule when conferences change (`from` → `to`, each team's conference): every team that leaves a
+ * conference is replaced there by one that arrives, and the arriving team takes the leaving team's games. A team that
+ * stays keeps its own. Null when a conference's number of teams changes (then the real schedule can't be used).
+ * Returns m: m[t] = the team whose games t plays.
+ */
+export function swapPlan(from: number[], to: number[]): number[] | null {
+  const n = from.length;
+  const m = Array.from({ length: n }, (_, t) => t);
+  const leave = new Map<number, number[]>(), arrive = new Map<number, number[]>();
+  for (let t = 0; t < n; t++) {
+    if (from[t] === to[t]) continue;
+    leave.set(from[t], [...(leave.get(from[t]) ?? []), t]);
+    arrive.set(to[t], [...(arrive.get(to[t]) ?? []), t]);
+  }
+  for (const c of new Set([...leave.keys(), ...arrive.keys()])) {
+    const l = leave.get(c) ?? [], a = arrive.get(c) ?? [];
+    if (l.length !== a.length) return null;
+    a.forEach((t, i) => { m[t] = l[i]; });
+  }
+  return m;
+}
+
+/** A schedule with teams moved: team t plays the games team m[t] had. */
+export function moveTeams(s: DSchedule, m: number[]): DSchedule {
+  const inv = new Array<number>(m.length);
+  m.forEach((src, t) => { inv[src] = t; });
+  return { ...s, games: s.games.map((x) => ({ week: x.week, visitor: inv[x.visitor], home: inv[x.home] })) };
+}
+
+/** The real schedule for these conferences (the ROM's teams moved by swaps), or null if counts changed. */
+export function realScheduleFor(rom: Uint8Array, romConf: number[], conf: number[]): DSchedule | null {
+  const real = readRealSchedule(rom, conf.length);
+  const m = real && swapPlan(romConf, conf);
+  return real && m ? moveTeams(real, m) : null;
 }
 
 // ---- the ROM's copy
@@ -473,5 +535,5 @@ export function setRivalries(d: Dynasty, list: Rivalry[] | null): Dynasty {
 /** Whether saving rivalries makes the newest season's schedule again (else they apply from the next one). */
 export const rivalriesCanRemake = (d: Dynasty) => {
   const s = d.seasons[d.seasons.length - 1];
-  return s.index > 0 && !!s.schedule && !scheduleLock(s);
+  return (s.index > 0 || !!d.seasonOneRom) && !!s.schedule && !s.schedule.real && !scheduleLock(s);
 };

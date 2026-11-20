@@ -11,7 +11,7 @@ import type { Dynasty } from '../../core/dynasty/model';
 import { playerName } from '../../core/dynasty/derive';
 import { firstTeam, href, ImpactDot, useDyn } from './ui';
 
-export function ImpactStep({ commit, busy }: { commit: (d: Dynasty, done?: string) => Promise<void>; busy: boolean }) {
+export function ImpactStep({ commit, busy, setup }: { commit: (d: Dynasty, done?: string) => Promise<void>; busy: boolean; /** In setup: no link to the next offseason step. */ setup?: boolean }) {
   const { d, focus } = useDyn();
   const season = d.seasons[d.seasons.length - 1];
   const [team, setTeam] = useState<number | undefined>(firstTeam(d, focus));
@@ -20,7 +20,7 @@ export function ImpactStep({ commit, busy }: { commit: (d: Dynasty, done?: strin
   const [error, setError] = useState<string | null>(null);
   useEffect(() => { setPicks(current); setError(null); }, [current]);
   const lock = impactLock(d);
-  const next = <div className="dy-row dy-next"><Button href={href('offseason/conferences')}>Next: the conferences</Button></div>;
+  const next = setup ? null : <div className="dy-row dy-next"><Button href={href('offseason/conferences')}>Next: the conferences</Button></div>;
 
   const intro = (
     <p>

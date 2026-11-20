@@ -324,7 +324,7 @@ function Apps() {
           <h3 className="home-h3">Dynasty</h3>
           <p>
             Runs a dynasty over many seasons: recruiting, player progression, real head coaches and a coaching carousel, schedules, a preseason Top 25, a new Walsh Report for every team each season, awards and records. After each season it writes the next
-            season into your ROM. Both editions. Get started walks you through your first season step by step.
+            season into your ROM. Both editions. Get started sets up your first season step by step: coaches, rosters, conferences and schedule.
           </p>
           <Button variant="quiet" href="/dynasty">Open Dynasty</Button>
         </article>
