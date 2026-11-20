@@ -66,3 +66,4 @@
   text-underline-offset: 3px;
   cursor: pointer;
 }
+.pat-ask { font-family: var(--font-display); font-style: italic; font-weight: 800; font-size: var(--fs-5); margin: var(--sp-3) 0 var(--sp-2); }

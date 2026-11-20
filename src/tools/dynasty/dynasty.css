@@ -868,3 +868,4 @@
 .dy-setup-sum li > span:first-child { font-weight: 600; }
 .dy-setup-dl { border: 2px solid var(--rule-strong); background: var(--highlight); padding: var(--sp-3) var(--sp-4); max-width: 720px; }
 .dy-setup-dl p { margin: var(--sp-2) 0 0; }
+.dy-noteam { margin: 0 0 var(--sp-2); }

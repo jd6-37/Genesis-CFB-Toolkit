@@ -2,7 +2,7 @@
 // What's next card. User, 2026-11-17: the creation note was "too much information in one alert banner"; "a better
 // step by step process for first time dynasty creation … When done then cta to link to the dynasty home page".
 // Mockups: the canvas "Dynasty Get started mockups" (approved: "build it").
-import { useContext, useState, type ReactNode } from 'react';
+import { useContext, useEffect, useState, type ReactNode } from 'react';
 import type { Dynasty } from '../../core/dynasty/model';
 import { EDITIONS, editionOf, type EditionId } from '../../core/dynasty/edition';
 import { weekName } from '../../core/dynasty/derive';
@@ -15,6 +15,9 @@ import { zipName } from '../../core/zip';
 import { PATCH_CONTENT } from '../../core/dynasty/upgrade';
 import { saveOriginal } from '../../core/dynasty/storage';
 import { SETUP_LABELS } from '../../core/dynasty/setup';
+import { sha1Hex } from '../../core/bytes';
+import { navClick } from '../../appNav';
+import { takeHandedRom, type HandedRom } from '../shared/romHandoff';
 import { applyListed, fetchPatchFile, fetchPatchList, offered, patchBase, refFromPage, romFileName, type Patch, type PatchList } from '../../core/patches';
 
 /** A dynasty made from the user's ROM but not saved yet (Get started's step 1), with what goes into the browser with it. */
@@ -50,6 +53,9 @@ const versionOf = (fileName: string) => {
   return m ? m[0].replace(/^v(\d+)[._](\d+)[._](\d+)/, 'v$1.$2.$3') : undefined;
 };
 
+// A handed-over ROM is taken once, also when React runs the mount effect twice (StrictMode in development).
+const taken = new WeakSet<HandedRom>();
+
 export const ORIGINAL_SHA1 = Object.keys(KNOWN).find((k) => KNOWN[k].kind === 'bw95' && !KNOWN[k].rebalanced)!;
 
 export function GetStarted({ actions, busy }: { actions: StartActions; busy: boolean }) {
@@ -74,12 +80,34 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
   const patchFor = (id: EditionId): Patch | undefined =>
     list ? offered(list).find((p) => p.content === PATCH_CONTENT[id] && p.fatigue === 'fixed') : undefined;
   const release = list?.releases[0].version;
-  const reset = () => { setPrep(null); setOrig(null); setPatched(null); setPatchError(null); setTeams([]); setYear(''); };
-  const takeRom = async (rom: { name: string; data: Uint8Array }) => {
+  // From the Toolkit's Patch tab (romHandoff.ts): its patched ROM, straight to step 2.
+  const [fromToolkit, setFromToolkit] = useState(false);
+  // A ROM that isn't a release as patched (changed in the Toolkit, or a test build): warn, don't refuse (user, 2026-11-20).
+  const [changed, setChanged] = useState(false);
+  const reset = () => { setPrep(null); setOrig(null); setPatched(null); setPatchError(null); setTeams([]); setYear(''); setFromToolkit(false); setChanged(false); };
+  const takeRom = async (rom: { name: string; data: Uint8Array }, checkRelease = true) => {
     const p = await actions.prepare(rom);
     setPrep(p);
     setYear(String(p.dyn.startYear));
+    setChanged(false);
+    if (checkRelease) {
+      const [sha1, l] = await Promise.all([sha1Hex(rom.data), list ? Promise.resolve(list) : fetchPatchList(base).catch(() => null)]);
+      if (l) setChanged(!l.releases.some((r) => r.patches.some((x) => x.rom === sha1)));
+    }
   };
+  useEffect(() => {
+    const h = takeHandedRom();
+    if (!h || taken.has(h)) return;
+    taken.add(h);
+    void work('Reading the ROM…', async () => {
+      await takeRom(h, false);
+      if (h.original) void saveOriginal(h.original).catch(() => undefined);
+      setFromToolkit(true);
+      go(1);
+    });
+    // Once, on opening Get started.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const openFile = async (f: File) => {
     const rom = await openRom(f.name, new Uint8Array(await f.arrayBuffer()));
     if (rom.sha1 !== ORIGINAL_SHA1) return takeRom(rom);
@@ -97,7 +125,7 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
     setPatchError(null);
     try {
       const { data } = await applyListed(orig.data, p, await fetchPatchFile(base, p));
-      await takeRom({ name: romFileName(p.file!), data });
+      await takeRom({ name: romFileName(p.file!), data }, false);
       // Kept for later upgrades (upgrade.ts): a newer version is patched from it without asking for a file.
       void saveOriginal(orig.data).catch(() => undefined);
       setPatched({ label: p.name.replace(/^Bill Walsh College Football '95 /, '') });
@@ -173,6 +201,13 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
                   <p className="dy-small">No download yet: the last step gives you your first season's ROM, built on this one.</p>
                 </>
               )}
+              {changed && (
+                <Note kind="error">
+                  <strong>Warning: this ROM was changed after patching.</strong> It isn't an Elevated release as patched, so a
+                  dynasty on it may not work. Start from a freshly patched ROM: load the original game here and the app patches
+                  it for you. Only go on with this ROM if you know what you're doing.
+                </Note>
+              )}
               <div className="dy-start-found">
                 <p><strong>{edition!.name}{versionOf(prep!.fileName) ? `, ${versionOf(prep!.fileName)}` : ''}</strong></p>
                 {!patched && <p className="dy-small dy-dim">{prep!.fileName}</p>}
@@ -196,6 +231,13 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
 
       {step === 1 && dyn && (
         <section>
+          {fromToolkit && (
+            <Note kind="ok">
+              <strong>Your patched ROM from the Toolkit:</strong> {edition!.name}{versionOf(prep!.fileName) ? ` ${versionOf(prep!.fileName)}` : ''},{' '}
+              {dyn.teams.length} teams, {dyn.players.length.toLocaleString('en-US')} players.{' '}
+              <a href="/toolkit" onClick={navClick('/toolkit')}>Back to the Toolkit</a>
+            </Note>
+          )}
           <h1>Name, starting year and teams</h1>
           <Field label="Dynasty name" value={name} onChange={setName} placeholder="My Dynasty" maxLength={40} />
           <Field
@@ -213,6 +255,9 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
                 </li>
               ))}
             </ul>
+          )}
+          {teams.length === 0 && (
+            <p className="dy-small dy-noteam"><strong>No team yet.</strong> Pick one and press <strong>Add team</strong> (or none, for an all-sim dynasty).</p>
           )}
           <div className="dy-row">
             <Select

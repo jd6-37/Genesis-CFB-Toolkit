@@ -113,9 +113,9 @@ export function SeasonWide({
           {season.titleGames && (
             <>
               A conference with a <b>Title game</b> plays one the week after the regular season, its leader at home against the
-              next team, and needs at least 2 teams; without one, its standings leader is the champion. With <b>1994 SEC
-              divisions</b> the leader plays the best team of the other division (East: {SEC_EAST_1994.join(', ')}; West: the
-              conference's other teams).{' '}
+              next team, and needs at least 2 teams; without one, its standings leader is the champion.
+              {edition === '1994' && <> With <b>1994 SEC divisions</b> the leader plays the best team of the other division
+              (East: {SEC_EAST_1994.join(', ')}; West: the conference's other teams).</>}{' '}
             </>
           )}
           Names can have up to {NAME_LEN} characters: {NAME_CHARS}.
@@ -158,12 +158,14 @@ export function SeasonWide({
                   >
                     Title game
                   </Check>
-                  <Check
+                  {/* 1994 only (user, 2026-11-20: "remove the divisions checkbox from the 2026 rom conferences. I don't
+                      think any conferences have divisions anymore"). A 2026 ROM that has the bit keeps it. */}
+                  {edition === '1994' && <Check
                     checked={(season.titleGames[c] & TG_SEC94) !== 0} disabled={disabled || (season.titleGames[c] & TG_ON) === 0}
                     onChange={(on) => edit((s) => (s.titleGames![c] = on ? s.titleGames![c] | TG_SEC94 : s.titleGames![c] & ~TG_SEC94))}
                   >
                     1994 SEC divisions
-                  </Check>
+                  </Check>}
                 </div>
               )}
               {c < INDEPENDENT && (

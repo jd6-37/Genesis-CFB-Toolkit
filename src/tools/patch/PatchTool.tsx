@@ -21,6 +21,7 @@ import {
   type PatchList,
 } from '../../core/patches';
 import { describeUnknown, identifyRom, KNOWN, openRom, is1994Edition, wideRomText, wideTabsText, type OpenedRom } from '../../core/romfile';
+import { startDynastyWith } from '../shared/romHandoff';
 import './patch.css';
 
 type Msg = { kind: 'error' | 'ok'; text: string } | null;
@@ -174,6 +175,17 @@ export function PatchTool({
   const chosen = patches.find((p) => p.content === pickContent && p.fatigue === pickFatigue);
   const isPatched = !!original && !!rom && rom !== original;
   const hit = okList && rom && !original ? findRelease(okList, rom.sha1) : null;
+  // A Season Edition just patched here: ask about a dynasty first (user, 2026-11-20; mockups approved). A dynasty
+  // starts from the ROM as patched, so its customizing belongs in the Dynasty app's setup.
+  const [noDynasty, setNoDynasty] = useState<string | null>(null);
+  const seasonEdition = !!rom?.known?.wide;
+  const asking = isPatched && !!rom && !!applied && !applied.fromFile && seasonEdition && noDynasty !== rom.sha1;
+  const toDynasty = () => rom && startDynastyWith({ name: rom.name, data: rom.data, original: original?.data });
+  const dynastyLink = (label: string) => (
+    <Button variant="link" onClick={toDynasty}>
+      {label}
+    </Button>
+  );
 
   return (
     <>
@@ -275,7 +287,27 @@ export function PatchTool({
             <FileButton variant="quiet" label="Use a .bps file" accept=".bps" multiple onFiles={(fs) => void api.loadFiles(fs)} />
           </div>
 
-          {isPatched && rom && applied && (
+          {asking && (
+            <div className="pat-done" role="status">
+              <p>
+                Patched: <b>{applied!.name}</b>
+              </p>
+              <h3 className="pat-ask">Planning a dynasty?</h3>
+              <p>
+                If you customize this ROM here, it won't work with the Dynasty app. Don't worry: you can still edit
+                rosters, coaches, conferences and the schedule while you set up the dynasty.
+              </p>
+              <div className="pat-done-actions">
+                <Button onClick={toDynasty}>I want to play a dynasty: set it up</Button>
+                <Button variant="quiet" onClick={() => setNoDynasty(rom!.sha1)}>
+                  No dynasty: go on to customize
+                </Button>
+              </div>
+              <p className="hint">The dynasty setup gives you the ROM to play at the end.</p>
+            </div>
+          )}
+
+          {!asking && isPatched && rom && applied && (
             <div className="pat-done" role="status">
               <p>
                 {applied.fromFile ? 'Patched with ' : 'Patched: '}
@@ -296,6 +328,7 @@ export function PatchTool({
                   Back to the original game
                 </Button>
               </div>
+              {seasonEdition && <p className="hint">Changed your mind? Before you customize: {dynastyLink('set up a dynasty with this ROM')}.</p>}
             </div>
           )}
         </section>
@@ -305,7 +338,15 @@ export function PatchTool({
         <section className="pat-add" aria-label="About this ROM">
           {hit ? (
             hit.current ? (
-              <p>This ROM already has the latest release, {hit.release.name}.</p>
+              <>
+                <p>This ROM already has the latest release, {hit.release.name}.</p>
+                {seasonEdition && (
+                  <Note>
+                    <b>Planning a dynasty?</b> Customizing this ROM here means it won't work with the Dynasty app. You can
+                    edit rosters, conferences and more during dynasty setup. {dynastyLink('Set up a dynasty with this ROM')}
+                  </Note>
+                )}
+              </>
             ) : (
               <p>
                 This ROM has {hit.release.name}. A newer release is out: <b>{okList!.releases[0].name}</b>. To update,
@@ -321,7 +362,7 @@ export function PatchTool({
         </section>
       )}
 
-      {rom && <NextSteps rom={rom} inWork={inWork} onSwap={onSwap} onEdit={onEdit} />}
+      {rom && !asking && <NextSteps rom={rom} inWork={inWork} onSwap={onSwap} onEdit={onEdit} />}
     </>
   );
 }

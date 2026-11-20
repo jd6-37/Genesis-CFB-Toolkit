@@ -69,7 +69,7 @@ export function ConferencesStep({ commit, busy, setup, warnReal }: {
       <div className="dy-confedit">
       <SeasonWide
         teams={d.teams.map((t) => t.school)} season={draft} loaded={loaded} onChange={(s) => { setDraft(s as ConfSetup); setError(null); }}
-        rules={ed.confRules} tag={tag} hint={hint} disabled={!!lock || busy}
+        edition={ed.id} rules={ed.confRules} tag={tag} hint={hint} disabled={!!lock || busy}
         footer={setup ? <>Conference games and weeks are how the app makes a new schedule. The real schedule keeps its own; changing them needs a new schedule.</> : <>Conference games and weeks are how the app makes the schedule: each conference's games start in that week. Every season gets a new schedule; last season's never carries over. Moving a team or changing a conference's games makes the {season.year} schedule again when you save, so changes you made to it on the Schedule step are lost. A new name or title game keeps it. Earlier seasons keep their conferences.</>}
       />
       </div>
