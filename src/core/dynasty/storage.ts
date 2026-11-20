@@ -101,6 +101,15 @@ export async function saveRom(id: string, rom: Uint8Array): Promise<void> {
   await run(ROM, 'readwrite', (s) => s.put(rom, id));
 }
 
+/** The original Bill Walsh '95, kept once for every dynasty (user, 2026-11-20: keep it, so a newer Elevated version
+ * can be patched without a file): saved when the user patches it in Get started or loads it for an upgrade. */
+const ORIGINAL = '#original';
+export const loadOriginal = () => loadRom(ORIGINAL);
+export const saveOriginal = (rom: Uint8Array) => saveRom(ORIGINAL, rom);
+export async function deleteOriginal(): Promise<void> {
+  await run(ROM, 'readwrite', (s) => s.delete(ORIGINAL));
+}
+
 export async function loadArt(id: string): Promise<TeamArt[] | null> {
   return (await run<TeamArt[] | undefined>(ART, 'readonly', (s) => s.get(id) as IDBRequest<TeamArt[] | undefined>)) ?? null;
 }

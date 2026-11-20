@@ -146,6 +146,8 @@ export interface DSeason {
   romId?: string;
   /** The base ROM's build (H-033): at creation for the first season, at each download of the season ROM after. */
   romBuild?: RomBuild;
+  /** A newer Elevated version taken mid-season (upgrade.ts): waits until a save from the new ROM is imported. */
+  upgrade?: { from: RomBuild; to: RomBuild; /** The new ROM has been downloaded. */ downloaded?: boolean };
   /** The ROM's conference week settings (first conference week and conference games per conference). */
   confWeeks?: ConfWeeks;
   /** Title game switches per conference (seasonWide.ts, CTG1); absent: the edition's defaults (conferences.ts). */
@@ -241,6 +243,8 @@ export interface Dynasty {
   renumbered?: { pos: string; name: string; school: string; from: number; to: number }[];
   /** ISO time of the last dynasty file download (Manage, the home page's backup line). Absent = never. */
   backedUp?: string;
+  /** "Not now" on the offer of this Elevated version (upgrade.ts): not offered again after an import. */
+  upgradeLater?: string;
   /** Shared snapshots (Manage, Share), at most SNAPSHOT_LIMIT, newest first, with their delete keys. */
   snapshots?: DSnapshot[];
 }
@@ -437,6 +441,8 @@ export interface ImportResult {
   newUserTeams: number[];
   /** Something to tell the user about the save (an out-of-date ROM). */
   warning?: string;
+  /** This import's save came from the new ROM of a mid-season upgrade, which is now done. */
+  upgraded?: string;
 }
 
 const packed = (file: Uint8Array, save: DynastySave): Uint8Array => {
@@ -520,11 +526,22 @@ export function importSave(d: Dynasty, file: Uint8Array, opt: { at?: string; all
       });
     if (!same) throw new Error(`This save's season isn't the one imported for ${season.year} so far (its games differ).`);
   }
+  // A mid-season upgrade (upgrade.ts): done once a save from the new ROM comes in; a save still from the old one says so.
+  let upgrade = season.upgrade;
+  let upgraded: string | undefined;
+  if (upgrade && save.elvb) {
+    if (save.elvb.lastSerial === upgrade.to.serial) { upgraded = upgrade.to.name; upgrade = undefined; }
+    else if (save.elvb.lastSerial === upgrade.from.serial) {
+      const still = `This save is still from ${upgrade.from.name}: you upgraded to ${upgrade.to.name}, but the game ran the old ROM. Put the new ${season.year} ROM in place of the old file (same name), load this save with it and keep playing.`;
+      warning = warning ? `${still} ${warning}` : still;
+    }
+  }
   const imp: SaveImport = { at: opt.at ?? new Date().toISOString(), played, weeksDone: weeksDone(save), data: toBase64(packed(file, save)), ...(save.elvb ? { elvb: save.elvb } : {}) };
   const imports = season.imports.filter((i) => i.weeksDone !== imp.weeksDone);
   imports.push(imp);
   imports.sort((a, b) => a.played - b.played);
-  const newSeason: DSeason = { ...season, imports };
+  const { upgrade: _old, ...kept } = season;
+  const newSeason: DSeason = { ...kept, ...(upgrade ? { upgrade } : {}), imports };
   const newUserTeams = save.season.userTeams.filter((t) => !d.userTeams.includes(t));
   return {
     dynasty: { ...d, userTeams: [...d.userTeams, ...newUserTeams], seasons: [...d.seasons.slice(0, -1), newSeason] },
@@ -533,6 +550,7 @@ export function importSave(d: Dynasty, file: Uint8Array, opt: { at?: string; all
     newGames: played - (last?.played ?? 0),
     newUserTeams,
     warning,
+    ...(upgraded ? { upgraded } : {}),
   };
 }
 

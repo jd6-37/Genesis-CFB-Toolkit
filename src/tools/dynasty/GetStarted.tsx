@@ -12,6 +12,8 @@ import { Ctx, href } from './ui';
 import { SAMPLE_PATH } from '../../core/dynasty/snapshotId';
 import { KNOWN, openRom, type OpenedRom } from '../../core/romfile';
 import { zipName } from '../../core/zip';
+import { PATCH_CONTENT } from '../../core/dynasty/upgrade';
+import { saveOriginal } from '../../core/dynasty/storage';
 import { applyListed, fetchPatchFile, fetchPatchList, offered, patchBase, refFromPage, romFileName, type Patch, type PatchList } from '../../core/patches';
 
 /** A dynasty made from the user's ROM but not saved yet (Get started's step 1), with what goes into the browser with it. */
@@ -46,10 +48,7 @@ const versionOf = (fileName: string) => {
   return m ? m[0].replace(/^v(\d+)[._](\d+)[._](\d+)/, 'v$1.$2.$3') : undefined;
 };
 
-/** The release patch that makes each edition (Elevated repo, patches.json: content ids; fatigue "fixed"). From v2.1.0
- * on, "elevated" is the 1994 Season Edition (before, the 36-team edition, which can't hold a dynasty). */
-const PATCH_CONTENT: Record<EditionId, string> = { '2026': 'elevated-2026', '1994': 'elevated' };
-const ORIGINAL_SHA1 = Object.keys(KNOWN).find((k) => KNOWN[k].kind === 'bw95' && !KNOWN[k].rebalanced)!;
+export const ORIGINAL_SHA1 = Object.keys(KNOWN).find((k) => KNOWN[k].kind === 'bw95' && !KNOWN[k].rebalanced)!;
 
 export function GetStarted({ actions, busy }: { actions: StartActions; busy: boolean }) {
   const [step, setStep] = useState(0);
@@ -100,6 +99,8 @@ export function GetStarted({ actions, busy }: { actions: StartActions; busy: boo
     try {
       const { data } = await applyListed(orig.data, p, await fetchPatchFile(base, p));
       await takeRom({ name: romFileName(p.file!), data });
+      // Kept for later upgrades (upgrade.ts): a newer version is patched from it without asking for a file.
+      void saveOriginal(orig.data).catch(() => undefined);
       setPatched({ label: p.name.replace(/^Bill Walsh College Football '95 /, '') });
     } catch (e) {
       setPatchError((e as Error).message);
@@ -458,7 +459,7 @@ const lastImport = (d: Dynasty) => d.seasons[d.seasons.length - 1].imports.slice
 
 /** The home page's card: what to do next, from where the dynasty is (user, 2026-11-17: "What else?" → approved mockup). */
 export function WhatsNext() {
-  const { d, v, downloadRom, backup, readOnly } = useContext(Ctx)!;
+  const { d, v, downloadRom, backup, readOnly, upgradeLine } = useContext(Ctx)!;
   if (readOnly) return <WhatsThis />;
   const s = d.seasons[d.seasons.length - 1];
   const guide = <a href={href('guide')} className="dy-small">How a season works</a>;
@@ -514,6 +515,7 @@ export function WhatsNext() {
         <p>{text}</p>
         {more && <p>{more}</p>}
         <div className="dy-row">{action}{guide}</div>
+        {upgradeLine && <p className="dy-small dy-next-upgrade">{upgradeLine} <a href={href('manage')}>Upgrade</a></p>}
         {needsBackup && backup && (
           <div className="dy-next-backup">
             <p className="dy-small"><strong>No backup since the last import.</strong> Your dynasty is saved in this browser; the dynasty file brings it back if the browser's data is cleared.</p>

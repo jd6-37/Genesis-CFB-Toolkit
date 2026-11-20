@@ -1,4 +1,5 @@
 // The offseason, step by step: departures, the transfer portal, signing day, cuts, the next season.
+import { VersionPick, type Upgrader } from './Upgrade';
 import { Button, Field, Note, PageHead, Select, Steps, SubHead, Table, Tabs } from '../../ui';
 import { useMemo, useState } from 'react';
 import type { DPlayer, Dynasty, OffseasonEvent } from '../../core/dynasty/model';
@@ -36,6 +37,8 @@ export interface OffseasonActions {
   /** Runs a step with a busy note; errors show on the page. */
   run: (what: string, fn: () => Promise<void>) => Promise<void>;
   downloadRom: (year: number) => void;
+  /** A newer Elevated version (Upgrade.tsx): the last step offers it. */
+  upgrade?: Upgrader;
 }
 
 /** The step whose results the page shows (the button below them runs the next one). */
@@ -600,6 +603,8 @@ function SeasonSteps({ actions, step, busy }: { actions: OffseasonActions; step:
   const { d, focus } = useDyn();
   const season = d.seasons[d.seasons.length - 1];
   const [team, setTeam] = useState(firstTeam(d, focus));
+  // The game version on the last step (mockup 4): the newest is picked.
+  const [version, setVersion] = useState<'new' | 'same'>('new');
   const pl = (id: number) => d.players[id - 1];
   const steps = <Steps label="Offseason steps" steps={stepList(true, true, hasTransfers(d))} current={FIRST_SEASON_STEP + SEASON_STEPS.indexOf(step)} />;
   if (step === 'players') return <>{steps}<EditPlayersStep team={team} onPick={setTeam} /></>;
@@ -652,8 +657,9 @@ function SeasonSteps({ actions, step, busy }: { actions: OffseasonActions; step:
       <p>The {season.year} season is set up. Download its ROM and start a <b>New Season</b> in the game with it: it has the new rosters{season.schedule ? ' and your schedule' : ''}, and the app can only import saves of seasons started with it. Import the save after you play.</p>
       {season.romDownloaded && !season.lineupEdited && <Note kind="ok">You have downloaded the {season.year} ROM. Start a New Season in the game with it.</Note>}
       {season.romDownloaded && season.lineupEdited && <Note>You changed the schedule, the conferences, the depth chart or the impact players after downloading. Download the ROM again before you start the New Season.</Note>}
+      {actions.upgrade && <VersionPick d={d} up={actions.upgrade} value={version} onChange={setVersion} />}
       <div className="dy-row dy-next">
-        <Button onClick={() => actions.downloadRom(season.year)}>Download the {season.year} ROM</Button>
+        <Button onClick={() => (actions.upgrade?.info?.offer && version === 'new' ? actions.upgrade.open() : actions.downloadRom(season.year))}>Download the {season.year} ROM</Button>
         <Button variant="quiet" href={href('offseason/depth')}>Back to the depth chart</Button>
       </div>
     </>
