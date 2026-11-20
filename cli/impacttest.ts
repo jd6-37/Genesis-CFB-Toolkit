@@ -10,12 +10,16 @@
 // - Every team is 4-3 by the ROM's Team Rosters bit table (the long at 0x06B100), which the port assumes.
 // - Three different players a team: the first an offensive skill player, the second a defender; a fullback only
 //   when no halfback is picked.
-import { hasV8 } from '../src/core/ratingsV8';
+// - H-047 (2026 / 1994 v2.1.1-test3 on): starters only, scored by position OVR in tenths on the display tables; the
+//   app's tables are the ROM's (Team Rosters at 0x2D7DC0, slot map at 0x2D7D00), and its OVR in tenths is the ROM's
+//   integer math (checked here on every slot against the tables read from the ROM); 2026 Tulsa: HB1, CB1, DE.
+import { hasV8, V8_TABLES_AT } from '../src/core/ratingsV8';
+import { OVR_FORMULAS_V8 } from '../src/core/dynasty/ovr';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { openRom } from '../src/core/romfile';
 import { openRosterRom, readPlayer } from '../src/core/rosterRom';
-import { fineValue, gameImpact, impactChoices, impactSlots, impactSet, readImpactTable, setImpactPicks, teamImpact } from '../src/core/dynasty/impact';
+import { fineValue, gameImpact, impactOvr10, impactChoices, impactSlots, impactSet, readImpactTable, setImpactPicks, teamImpact } from '../src/core/dynasty/impact';
 import { seasonRom } from '../src/core/dynasty/offseason';
 import type { Dynasty } from '../src/core/dynasty/model';
 import { createDynasty } from '../src/core/dynasty/model';
@@ -24,7 +28,8 @@ import { editionOfRom } from '../src/core/dynasty/edition';
 
 let n = 0;
 const ok = (what: string) => { n++; console.log(`ok - ${what}`); };
-const OFF = new Set([0, 1, 2, 3, 9, 10, 11, 12, 13, 14]);
+const OFF = new Set([0, 1, 3, 9, 10, 11, 13]);
+const STARTERS = new Set([0, 1, 3, 9, 10, 11, 13, 16, 17, 18, 19, 20, 21, 22, 24, 26, 28, 29]);
 
 for (const path of process.argv.slice(2)) {
   const rom = (await openRom(path, new Uint8Array(readFileSync(path)))).data;
@@ -44,8 +49,33 @@ for (const path of process.argv.slice(2)) {
     assert.equal(picks.length, 3);
     assert.equal(new Set(picks).size, 3);
     assert.ok(OFF.has(picks[0]) && !OFF.has(picks[1]), 'offense first, then defense');
-    if (picks.includes(3)) assert.ok(!picks.includes(1) && !picks.includes(2), 'a fullback only without a halfback');
+    if (picks.includes(3)) assert.ok(!picks.includes(1), 'a fullback only without a halfback');
+    assert.ok(picks.every((p) => STARTERS.has(p)), 'starters only (H-047)');
   }
+  // H-047: the OVR in tenths from the ROM's own display tables, the pick's integer math, for every scored slot.
+  const NIB: Record<string, string[]> = {
+    QB: ['Quickness', 'Speed', 'Awareness', 'Range', 'Power'], RB: ['Quickness', 'Speed', 'Awareness', 'Hands', 'Power'],
+    DL: ['Power', 'Speed', 'Awareness', 'Hands', 'Tackling'], DB: ['Quickness', 'Speed', 'Awareness', 'Hands', 'Tackling'],
+  };
+  const roleOf = (s: number): [string, string] => s === 0 ? ['QB', 'QB'] : s === 1 ? ['HB', 'RB'] : s === 3 ? ['FB', 'RB'] : s <= 11 ? ['WR', 'RB']
+    : s === 13 ? ['TE', 'RB'] : s === 16 || s === 18 ? ['DE', 'DL'] : s === 17 || s === 21 ? ['DT', 'DL'] : s <= 22 ? ['LB', 'DB'] : s <= 26 ? ['CB', 'DB'] : ['S', 'DB'];
+  let slotsChecked = 0;
+  for (const t of rr.teams) {
+    for (const slot of STARTERS) {
+      const fine = fineFrom(readPlayer(rr, t.index, slot).ratings, rom.subarray(FT + 96 * t.index + 3 * slot, FT + 96 * t.index + 3 * slot + 3));
+      const [role, g] = roleOf(slot);
+      const f = OVR_FORMULAS_V8[role];
+      let sum = 0;
+      for (let k = 1; k <= 5; k++) {
+        const w = (f.weights as Record<string, number>)[NIB[g][k - 1]] ?? 0;
+        if (w) sum += w * rom[V8_TABLES_AT + 248 * rom[0x2d7d00 + 6 * slot + k] + Math.min(247, fine[k])];
+      }
+      const want = Math.max(0, Math.min(990, Math.round(f.base * 10) + Math.floor((Math.round(f.scale * 1000) * sum + 5000) / 10000)));
+      assert.equal(impactOvr10(fine, slot), want, `${t.school} slot ${slot}: OVR in tenths as the ROM computes it`);
+      slotsChecked++;
+    }
+  }
+  ok(`${editionOfRom(rom)?.id}: OVR in tenths of ${slotsChecked} starters as the ROM's display tables give it`);
   const is94 = editionOfRom(rom)?.id === '1994';
   const u32 = (a: number) => ((rom[a] << 24) >>> 0) + (rom[a + 1] << 16) + (rom[a + 2] << 8) + rom[a + 3];
   const bits = u32(0x06b100);
@@ -59,6 +89,10 @@ for (const path of process.argv.slice(2)) {
     assert.deepEqual(teamImpact(d, s, t.index), want, `${t.school}: the dynasty's first season picks as the ROM`);
   }
   assert.equal(impactSet(d, s).size, 3 * d.teams.length);
+  if (!is94) {
+    const tulsa = d.teams.find((t) => t.school === 'Tulsa')!.index;
+    assert.deepEqual(fromRom[tulsa], [1, 24, 16], 'Tulsa 2026: HB1 Jones, CB1, DE (H-047)');
+  }
   if (is94) {
     const fsu = d.teams.find((t) => t.school === 'Florida State')!.index;
     assert.deepEqual([...fromRom[fsu]].sort((a, b) => a - b), [11, 18, 19], 'Florida State 1994: #88, #90, #10 Brooks (H-031)');

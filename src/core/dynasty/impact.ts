@@ -17,7 +17,9 @@
 // ("Max 2 per side of the ball"), and the season ROM carries every team's three as the table "IMP1" (address at the
 // dynasty header +0x2C): "IMP1", team count (word), 0 (word), then 3 roster slots per team (0xFF = none). The ROM
 // reads it in Season mode on the dynasty's roster set; Exhibition keeps its own pick.
-import { GROUP_ATTRS } from '../rosterLayouts';
+import { GROUP_ATTRS, type Attr } from '../rosterLayouts';
+import { V8_SLOT_POOLS, shownV8 } from '../ratingsV8';
+import { OVR_FORMULAS_V8 } from './ovr';
 import type { BwSlot, DSeason, Dynasty } from './model';
 import { bwSlotOf } from './ratings';
 import { SLOT_DEFS, spotLabel } from './lineup';
@@ -29,34 +31,73 @@ const SLOT_DEF = SLOT_DEFS.reduce<Record<number, (typeof SLOT_DEFS)[number]>>((m
  * linemen), 2 speed, 3 INTEL, 4 hands / range, 5 power / tackle. */
 type Fine = number[];
 
-// H-044 (user, 2026-11-19: "the dynasty app should follow suit"; the ROM since 2026 test64 / 1994 test65, reference
-// the ROM lane's finepick.py): DE and DT are separate groups (both on the DL ratings) with penalties of 3 and 6 steps
-// ("penalize DT more than DE"); each group's base is per edition, in fine units (the mean of each team's best starter's
-// rating sum, fitted on 2026 test63 / 1994 test64); a second pick of the first offensive pick's group scores less (RB
-// and TE 6 steps, WR 3: "two HBs or two TEs … difficult. 2x WR is slightly more acceptable"); and a second defensive
-// lineman is never picked ("Definitely never two dline"). The H-031 formula (one DL group, DLP 1, DL2P 5) is gone.
-// Group name: rating bits over nibbles 1-5 (bit 0 = nibble 1).
-const MASKS = { QB: 0b01110, RB: 0b10111, WR: 0b01111, TE: 0b01111, DE: 0b10111, DT: 0b10111, LB: 0b10110, DB: 0b11110 } as const;
-type ImpactGroup = keyof typeof MASKS;
-/** Per edition and group, the base in fine units (16 = one step). */
+// H-047 (user, 2026-11-20, on Tulsa's HB2 picked over HB1: "An impact player sitting on the bench is a wasted impact
+// player"; the ROM since 2026 / 1994 v2.1.1-test3, reference the ROM lane's `ovrpick.py`): only starters are picked
+// (QB, HB1, SE, FL, WR3, TE1, both DEs, both DTs, the three LBs, CB1, CB2, SS, FS; the fullback as before only when the
+// pick without him has no halfback), and a player scores his position OVR in tenths with the apps' formula
+// (OVR_FORMULAS_V8 on the display tables, the same numbers Team Rosters and the site show), less his group's base and
+// penalties (in tenths, per edition), so within a group the higher OVR always wins. H-044's rules stay: DE and DT are
+// separate groups, a second player of the first pick's group scores less (RB and TE 6 OVR, WR 5), never two defensive
+// linemen.
+type ImpactGroup = 'QB' | 'RB' | 'WR' | 'TE' | 'DE' | 'DT' | 'LB' | 'DB';
+/** Per edition and group, the base in OVR tenths (the mean of each season team's best starter, fitted on test2). */
 export const IMPACT_BASES: Record<'2026' | '1994', Record<ImpactGroup, number>> = {
-  2026: { QB: 483, RB: 688, WR: 714, TE: 539, DE: 682, DT: 622, LB: 557, DB: 650 },
-  1994: { QB: 430, RB: 643, WR: 673, TE: 410, DE: 598, DT: 592, LB: 557, DB: 687 },
+  2026: { QB: 807, RB: 838, WR: 838, TE: 777, DE: 814, DT: 806, LB: 810, DB: 839 },
+  1994: { QB: 766, RB: 811, WR: 795, TE: 658, DE: 755, DT: 786, LB: 819, DB: 856 },
 };
 const SLOTG: Record<number, ImpactGroup> = {
-  0: 'QB', 1: 'RB', 2: 'RB', 3: 'RB', 9: 'WR', 10: 'WR', 11: 'WR', 12: 'WR', 13: 'TE', 14: 'TE',
-  16: 'DE', 17: 'DT', 18: 'DE', 19: 'LB', 20: 'LB', 21: 'DT', 22: 'LB', 23: 'LB',
-  24: 'DB', 25: 'DB', 26: 'DB', 27: 'DB', 28: 'DB', 29: 'DB', 30: 'DB',
+  0: 'QB', 1: 'RB', 3: 'RB', 9: 'WR', 10: 'WR', 11: 'WR', 13: 'TE',
+  16: 'DE', 17: 'DT', 18: 'DE', 19: 'LB', 20: 'LB', 21: 'DT', 22: 'LB', 24: 'DB', 26: 'DB', 28: 'DB', 29: 'DB',
 };
-const QBB = -3, FBP = 10;
-/** Group penalties and the same-group penalty, in steps. */
-const PEN: Partial<Record<ImpactGroup, number>> = { DE: 3, DT: 6 };
-const SAMEP: Partial<Record<ImpactGroup, number>> = { RB: 6, TE: 6, WR: 3 };
-const OFF = [0, 1, 2, 3, 9, 10, 11, 12, 13, 14];
-const DEF = [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30];
+/** Penalties in OVR tenths. */
+const QBB = -20, FBP = 300;
+const PEN: Partial<Record<ImpactGroup, number>> = { DE: 10, DT: 40 };
+const SAMEP: Partial<Record<ImpactGroup, number>> = { RB: 60, TE: 60, WR: 50 };
+/** The starters (the fullback goes last, on the second pass only). */
+const OFF = [0, 1, 9, 10, 11, 13];
+const DEF = [16, 17, 18, 19, 20, 21, 22, 24, 26, 28, 29];
+/** The ratings in a record's nibble order 1-5, by rating group. */
+const NIB_ATTRS: Record<string, Attr[]> = {
+  QB: ['Quickness', 'Speed', 'Awareness', 'Range', 'Power'],
+  RB: ['Quickness', 'Speed', 'Awareness', 'Hands', 'Power'],
+  REC: ['Quickness', 'Speed', 'Awareness', 'Hands', 'Power'],
+  DL: ['Power', 'Speed', 'Awareness', 'Hands', 'Tackling'],
+  LB: ['Quickness', 'Speed', 'Awareness', 'Hands', 'Tackling'],
+  DB: ['Quickness', 'Speed', 'Awareness', 'Hands', 'Tackling'],
+};
+function ovrRole(slot: number, fourThree: boolean): [string, string] {
+  if (slot === 0) return ['QB', 'QB'];
+  if (slot <= 2) return ['HB', 'RB'];
+  if (slot === 3) return ['FB', 'RB'];
+  if (slot <= 12) return ['WR', 'REC'];
+  if (slot <= 14) return ['TE', 'REC'];
+  if (slot === 16 || slot === 18) return ['DE', 'DL'];
+  if (slot === 17 || (slot === 21 && fourThree)) return ['DT', 'DL'];
+  if (slot <= 23) return ['LB', 'LB'];
+  if (slot <= 27) return ['CB', 'DB'];
+  return ['S', 'DB'];
+}
 
 /**
- * The three impact slots of a roster (offense, defense, the third), from each slot's ROM nibbles (null = empty).
+ * A slot's position OVR in tenths as the ROM's pick computes it (integer math, so ties break the same way): base × 10
+ * + (scale × 1000 × Σ weight × shown + 5000) / 10000, clamped 0-990, shown = the display table value of the fine value
+ * (clamped 0-247). Rounded to whole points this is `playerOvr`.
+ */
+export function impactOvr10(fine: Fine, slot: number, fourThree = true): number {
+  const [role, g] = ovrRole(slot, fourThree);
+  const f = OVR_FORMULAS_V8[role];
+  const b10 = Math.round(f.base * 10), s1000 = Math.round(f.scale * 1000);
+  let sum = 0;
+  for (let k = 1; k <= 5; k++) {
+    const w = f.weights[NIB_ATTRS[g][k - 1]] ?? 0;
+    const key = V8_SLOT_POOLS[slot]?.[k];
+    if (w && key) sum += w * shownV8(key, Math.min(247, fine[k]));
+  }
+  return Math.max(0, Math.min(990, b10 + Math.floor((s1000 * sum + 5000) / 10000)));
+}
+
+/**
+ * The three impact slots of a roster (offense, defense, the third), from each slot's fine values (null = empty).
  * `fourThree`: slot 21 is a defensive lineman (every team of both Elevated editions is 4-3 by the ROM's bit table).
  */
 export function impactSlots(nib: (Fine | null)[], edition: '2026' | '1994', fourThree = true): number[] {
@@ -67,29 +108,27 @@ export function impactSlots(nib: (Fine | null)[], edition: '2026' | '1994', four
     const n = nib[s];
     if (!n) return null;
     const g = groupOf(s);
-    let sum = 0;
-    for (let i = 0; i < 5; i++) if ((MASKS[g] >> i) & 1) sum += n[i + 1];
-    return 2 * (sum - bases[g]) + 16 * ((s === 0 ? QBB : 0) - (s === 3 ? FBP : 0) - (PEN[g] ?? 0));
+    return impactOvr10(n, s, fourThree) - bases[g] - (PEN[g] ?? 0) + (s === 0 ? QBB : 0) - (s === 3 ? FBP : 0);
   };
-  const best = (list: number[], except: number, noFb: boolean): [number, number] => {
+  const best = (list: number[], except: number): [number, number] => {
     let b = -1, bv = -Infinity;
     for (const s of list) {
-      if (s === except || (s === 3 && noFb)) continue;
+      if (s === except) continue;
       if (except >= 0 && isDl(except) && isDl(s)) continue; // never a second defensive lineman
       const v0 = score(s);
       if (v0 === null) continue;
-      const v = v0 - (except >= 0 && SLOTG[except] && groupOf(except) === groupOf(s) ? 16 * (SAMEP[groupOf(s)] ?? 0) : 0);
+      const v = v0 - (except >= 0 && groupOf(except) === groupOf(s) ? SAMEP[groupOf(s)] ?? 0 : 0);
       if (v > bv) { b = s; bv = v; }
     }
     return [b, bv];
   };
-  for (const noFb of [true, false]) {
-    const [o1] = best(OFF, -1, noFb);
-    const [d1] = best(DEF, -1, noFb);
-    const [o2, vo] = best(OFF, o1, noFb);
-    const [d2, vd] = best(DEF, d1, noFb);
+  for (const off of [OFF, [...OFF, 3]]) {
+    const [o1] = best(off, -1);
+    const [d1] = best(DEF, -1);
+    const [o2, vo] = best(off, o1);
+    const [d2, vd] = best(DEF, d1);
     const third = vd > vo ? d2 : o2;
-    if (!noFb || o1 === 1 || o1 === 2 || third === 1 || third === 2) return [o1, d1, third].filter((s) => s >= 0);
+    if (off.length > OFF.length || o1 === 1 || third === 1) return [o1, d1, third].filter((s) => s >= 0);
   }
   return [];
 }
@@ -118,7 +157,7 @@ export function gameImpact(d: Pick<Dynasty, 'players' | 'edition'>, s: Pick<DSea
 }
 
 /** The roster slots a player may be picked from (QB, HB1, HB2, FB, WR, TE, every defender; no linemen, K or P). */
-export const IMPACT_SLOTS = [0, 1, 2, 3, 9, 10, 11, 12, 13, 14, ...DEF];
+export const IMPACT_SLOTS = [0, 1, 2, 3, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30];
 /** At most this many of a team's three on one side of the ball (user, 2026-11-18). */
 export const IMPACT_SIDE_MAX = 2;
 const isDefense = (slot: number) => slot >= 16;
