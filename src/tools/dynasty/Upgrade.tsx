@@ -9,6 +9,7 @@ import { openRom } from '../../core/romfile';
 import { applyListed, fetchPatchFile, fetchPatchList, offered, patchBase, PATCH_REPO_URL, refFromPage, type PatchList } from '../../core/patches';
 import type { Dynasty } from '../../core/dynasty/model';
 import { editionOf } from '../../core/dynasty/edition';
+import { refreshRomAssets } from '../../core/dynasty/assets';
 import { applyUpgrade, findUpgrade, PATCH_CONTENT, pendingUpgrade, seasonStarted, upgradeRomProblem, upgradeTiming, type UpgradeOffer } from '../../core/dynasty/upgrade';
 import { deleteOriginal, loadOriginal, loadRom, saveOriginal, saveRom } from '../../core/dynasty/storage';
 import { ORIGINAL_SHA1 } from './GetStarted';
@@ -43,7 +44,7 @@ const patchList = () => {
 
 const releaseUrl = (version: string) => `${PATCH_REPO_URL}/releases/tag/${version}`;
 
-export function useUpgrade(d: Dynasty | null, commit: (next: Dynasty) => Promise<void>, downloadRom: (year: number) => void): Upgrader {
+export function useUpgrade(d: Dynasty | null, commit: (next: Dynasty) => Promise<void>, downloadRom: (year: number) => void, refreshArt?: (rom: Uint8Array) => Promise<void>): Upgrader {
   const [info, setInfo] = useState<UpgradeInfo | null>(null);
   const [tick, setTick] = useState(0);
   const [isOpen, setOpen] = useState(false);
@@ -99,7 +100,9 @@ export function useUpgrade(d: Dynasty | null, commit: (next: Dynasty) => Promise
       await saveRom(d.id, next!);
       if (original && file) await saveOriginal(original);
       setMidSeason(seasonStarted(d));
-      await commit(applyUpgrade(d, kept, next!));
+      // The new version's logos, helmets, colors and uniforms (assets.ts; the user's uniform changes stay on top).
+      await commit(refreshRomAssets(applyUpgrade(d, kept, next!), next!));
+      await refreshArt?.(next!);
       setMade(readManifest(next!)?.name ?? 'the new version');
       setStage('done');
       setTick((t) => t + 1);
@@ -108,7 +111,7 @@ export function useUpgrade(d: Dynasty | null, commit: (next: Dynasty) => Promise
     } finally {
       setWorking(null);
     }
-  }, [d, info, edition, commit]);
+  }, [d, info, edition, commit, refreshArt]);
 
   const timing = d ? upgradeTiming(d, info?.offer?.build) : 'free';
   const full = info ? { ...info, timing } : null;
