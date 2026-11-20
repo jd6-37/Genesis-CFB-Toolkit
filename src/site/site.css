@@ -364,6 +364,21 @@ body { margin: 0; background: var(--surface); color: var(--text); font: 400 var(
 .rosters-table { margin-top: var(--sp-5); }
 .rosters-filters { display: flex; flex-wrap: wrap; gap: var(--sp-3) var(--sp-4); margin-bottom: var(--sp-4); }
 .rosters-grid-filters { margin-top: var(--sp-5); }
+.rosters-peek { position: fixed; z-index: 30; width: 360px; background: var(--surface); color: var(--text); border: 3px solid var(--rule-strong); box-shadow: var(--shadow-hard); padding: var(--sp-3) var(--sp-4) var(--sp-3) calc(var(--sp-4) + 10px); pointer-events: none; }
+.rosters-peek::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 10px; background: var(--stripe); }
+.rosters-peek-head { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-2); }
+.rosters-peek-head .rc-logo { flex: none; transform: scale(0.75); transform-origin: left center; margin-right: calc(var(--cw) * -0.25); }
+.rosters-peek p { margin: 0; }
+.rosters-peek-school { font: 800 var(--fs-5)/1 var(--font-display); text-transform: uppercase; color: var(--team); }
+.rosters-peek-sub { font-size: var(--fs-2); color: var(--text-muted); }
+.rosters-peek-ovr { font: 500 var(--fs-4)/1.2 var(--font-display); text-transform: uppercase; margin-bottom: var(--sp-2) !important; }
+.rosters-peek-ovr b { font-weight: 800; margin-right: var(--sp-2); }
+.rosters-peek-h { font: 700 var(--fs-2)/1.2 var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin-bottom: var(--sp-1) !important; }
+.rosters-peek-imp { width: 100%; border-collapse: collapse; font-size: var(--fs-2); }
+.rosters-peek-imp td { padding: 2px var(--sp-1); border-top: var(--rule-w) solid var(--rule); white-space: nowrap; }
+.rosters-peek-imp td:first-child { font: 700 var(--fs-2)/1.2 var(--font-display); padding-left: 0; }
+.rosters-peek-imp td:last-child { text-align: right; font-family: var(--font-display); padding-right: 0; }
+.rosters-peek-name { width: 100%; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
 .rosters-pos { flex: 1 1 100%; border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-3); min-width: 0; }
 .rosters-pos legend { float: left; width: 100%; padding: 0; margin-bottom: var(--sp-1); font: 700 var(--fs-2)/1.2 var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
 /* One flowing row of small targets (user: "Tighten it up"): the sides don't break the line. */
