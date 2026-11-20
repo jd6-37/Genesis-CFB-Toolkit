@@ -37,7 +37,7 @@ const EDITION_PROPS = {
       <>
         Conference games and weeks apply to Random schedules (Game Setup, New Season). The Real 1994 schedule keeps its
         games; there the conferences decide the standings, the title games and the bowls. Changes take effect in a new season.
-        Once a team changes conference, Game Setup's Schedule starts on Random and the real schedule is listed as "Real old" (v2.1.1 on).
+        Once a team changes conference, Game Setup's Schedule offers Random only (v2.1.1 on).
       </>
     ),
   },
@@ -204,7 +204,7 @@ export function SeasonWide({
           <>
             Conference games and weeks apply to Random schedules (Game Setup, New Season). The Real 2026 schedule keeps its
             games; there the conferences decide the standings and the title games. Changes take effect in a new season.
-            Once a team changes conference, Game Setup's Schedule starts on Random and the real schedule is listed as "Real old" (v2.1.1 on).
+            Once a team changes conference, Game Setup's Schedule offers Random only (v2.1.1 on).
           </>
         )}
       </p>

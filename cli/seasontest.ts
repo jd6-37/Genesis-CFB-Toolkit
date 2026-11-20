@@ -324,13 +324,13 @@ for (const wide of wides) {
   assert.ok(to.every((b, i) => b === d[i]), 'carried to a fresh copy = the same bytes');
   restoreWideSeason(d, wide);
   assert.ok(d.every((b, i) => b === wide[i]), 'undo puts every byte back');
-  // H-046 (v2.1.1 on): edited conferences turn the Schedule default to Random and the Real label to "Real old";
-  // conferences back as they were put the ROM's own back.
+  // H-046 (v2.1.1 on): edited conferences leave the Schedule row Random only; conferences back as they were put the
+  // ROM's own bytes back.
   const row = readScheduleRow(wide);
   if (row) {
     const h = wide.slice();
     writeWideSeason(h, e, undefined, wide);
-    assert.deepEqual(readScheduleRow(h), { def: 0, label: 'Real old' });
+    assert.deepEqual(readScheduleRow(h), { def: 0, real: false });
     const h2 = wide.slice();
     const renamed = readWideSeason(wide); renamed.names[0] = 'Southeastern';
     writeWideSeason(h2, renamed, undefined, wide);
@@ -340,7 +340,7 @@ for (const wide of wides) {
     const c = wide.slice();
     writeWideSeason(d, e, undefined, wide);
     carryEdits(d, c, wide);
-    assert.deepEqual(readScheduleRow(c), { def: 0, label: 'Real old' }, 'carried');
+    assert.deepEqual(readScheduleRow(c), { def: 0, real: false }, 'carried');
     restoreWideSeason(d, wide);
   }
   // Settings the engine can't play are refused, nothing written.
