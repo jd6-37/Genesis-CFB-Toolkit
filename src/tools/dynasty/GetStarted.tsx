@@ -399,7 +399,7 @@ export function SeasonGuide({ year, first, patched, backup, setup }: {
  */
 function WhatsThis() {
   return (
-    <section className="dy-next" aria-labelledby="dy-this-h">
+    <section className="dy-card-next" aria-labelledby="dy-this-h">
       <SubHead level={2} id="dy-this-h">What's this?</SubHead>
       <div className="dy-next-body">
         <h3>A dynasty played in Bill Walsh College Football '95 Elevated</h3>
@@ -476,7 +476,7 @@ export function WhatsNext() {
   const at = lastImport(d);
   const needsBackup = !!at && (!d.backedUp || d.backedUp < at);
   return (
-    <section className="dy-next" aria-labelledby="dy-next-h">
+    <section className="dy-card-next" aria-labelledby="dy-next-h">
       <SubHead level={2} id="dy-next-h">What's next</SubHead>
       <div className="dy-next-body">
         <p className="dy-next-label">{label}</p>

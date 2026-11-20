@@ -715,8 +715,8 @@
 .dy-guide p { margin: 0 0 var(--sp-2); }
 .dy-guide-more summary { cursor: pointer; font-weight: 700; min-height: 44px; display: flex; align-items: center; }
 .dy-guide-more p { font-size: var(--fs-2); background: var(--surface-sunken); padding: var(--sp-3); }
-.dy-next { border: 3px double var(--rule-strong); box-shadow: var(--shadow-hard); margin: var(--sp-4) 0 var(--sp-5); }
-.dy-next .ui-sub { margin: 0; }
+.dy-card-next { border: 3px double var(--rule-strong); box-shadow: var(--shadow-hard); margin: var(--sp-4) 0 var(--sp-5); }
+.dy-card-next .ui-sub { margin: 0; }
 .dy-next-body { padding: var(--sp-4); }
 .dy-next-body h3 { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-5); margin: 0 0 var(--sp-1); }
 .dy-next-body p { margin: 0 0 var(--sp-3); max-width: 64ch; }
