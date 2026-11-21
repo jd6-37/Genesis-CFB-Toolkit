@@ -137,7 +137,7 @@ export default function SnapshotApp({ id, toolkitHref }: { id: string; toolkitHr
       >
         {ctx && <NavBar label="Dynasty" items={PAGES.map((p) => ({ label: p.label, href: href(p.id), current: navPage === p.id }))} />}
       </Masthead>
-      <main className="dy-main">
+      <main className={`dy-main${navPage === 'home' ? ' dy-main-home' : ''}`}>
         {load.state === 'loading' && <Note>Loading the snapshot…</Note>}
         {load.state === 'error' && <Note kind="error">{load.message}</Note>}
         {load.state === 'gone' && (
