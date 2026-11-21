@@ -535,7 +535,14 @@
 .dy-school { display: grid; gap: var(--sp-5); align-items: start; }
 .dy-school > * { min-width: 0; }
 .dy-school aside { display: grid; gap: var(--sp-5); }
+.dy-school aside > * { min-width: 0; }
 @media (min-width: 1000px) { .dy-school { grid-template-columns: minmax(0, 1fr) 360px; } }
+@media (min-width: 1200px) { .dy-school { grid-template-columns: minmax(0, 1fr) 400px; } }
+/* Conference prestige (2026-11-21) */
+.dy-stars-off { color: var(--rule); }
+.dy-conf-prestige { width: 100%; font-size: var(--fs-2); }
+.dy-conf-prestige td, .dy-conf-prestige th { white-space: nowrap; padding-left: var(--sp-2); padding-right: var(--sp-2); }
+.ui-table tbody tr.dy-row-me:nth-child(n) td { background: var(--highlight); font-weight: 700; }
 .dy-pitches > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--sp-1) var(--sp-4); align-items: center; padding: var(--sp-3) var(--sp-4); }
 .dy-pitches > div:nth-child(odd) { background: var(--row); }
 .dy-pitches h5 { grid-column: 1 / -1; margin: 0; font: 700 var(--fs-4)/1.2 var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; }

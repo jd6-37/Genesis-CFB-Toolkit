@@ -78,6 +78,8 @@ export interface OffseasonRules {
   classMax: number;
   // Pitches: how much each matters, by stars (multiplied into a random draw, then scaled to add up to 1)
   pitchHome: ByStars; pitchPrestige: ByStars; pitchAcademics: ByStars; pitchContender: ByStars;
+  /** Conference prestige (confPrestige.ts, 2026-11-21). */
+  pitchConference: ByStars;
   /** Portal players care at least this much about playing time (plus chance). */
   portalPlayingTime: number;
   /** Championship Contender: the weight of last season's final poll (the rest is the roster as it stands). */
@@ -111,6 +113,7 @@ export const DEFAULT_RULES: OffseasonRules = {
   topStart: [0.5, 0.45, 0.4, 0.35, 0.3], poolPerSpot: 1.4, inStateCost: 0.8, pipelineCost: 0.9, pipelineMin: 4, classMax: 25,
   pitchHome: [1.6, 1.6, 1.5, 1.3, 0.8, 0.6], pitchPrestige: [0.6, 0.6, 0.7, 0.9, 1.4, 1.7],
   pitchAcademics: [0.7, 0.7, 0.7, 0.7, 0.7, 0.7], pitchContender: [0.4, 0.4, 0.5, 0.7, 1.1, 1.4],
+  pitchConference: [0.5, 0.6, 0.8, 1.0, 1.3, 1.5],
   portalPlayingTime: 0.5, contenderLastSeason: 0.5,
   pitchInterests: 2, pitchStrongAt: 0.65, pitchWeakBelow: 0.4, pitchGood: 1.6, pitchOk: 1.15, pitchBad: 0.6, pitchMinorGood: 1.2, pitchMinorOk: 1.05, pitchMinorBad: 0.9, pitchNotInterested: 0.9,
   freshmanGapMin: 7, freshmanGapMax: 13, diamondChance: 0.03, diamondPotMin: 84, diamondPotMax: 96,
@@ -243,6 +246,7 @@ export const RULE_SECTIONS: RuleSection[] = [
     fields: [
       { key: 'pitchHome', label: 'Being close to home', help: '', kind: 'num', min: 0, max: 5, items: STARS },
       { key: 'pitchPrestige', label: 'Program prestige', help: '', kind: 'num', min: 0, max: 5, items: STARS },
+      { key: 'pitchConference', label: 'Conference prestige', help: 'The average prestige of the school\'s conference against the best conference (an independent: its own).', kind: 'num', min: 0, max: 5, items: STARS },
       { key: 'pitchAcademics', label: 'Academics', help: 'College Football 27\'s academic grades.', kind: 'num', min: 0, max: 5, items: STARS },
       { key: 'pitchContender', label: 'Championship contender', help: '', kind: 'num', min: 0, max: 5, items: STARS },
       { key: 'portalPlayingTime', label: 'Portal players: playing time at least', help: 'Before scaling.', kind: 'num', min: 0, max: 5, portal: true },
