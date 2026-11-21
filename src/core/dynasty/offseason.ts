@@ -42,6 +42,7 @@ import { SLOT_DEF, depthChart, slotPosition, teamDepth } from './depth';
 import { rosterLayout } from '../rosterLayouts';
 import { roleOfSlot } from './ovr';
 import { recordYear } from './career';
+import { hasNil, moneyPull, nextBudgets, nilDeals, offerRates, payRates } from './nil';
 import { DEFAULT_RULES, growthRate, rulesOf, type OffseasonRules } from './rules';
 import { areaOf, EVEN_TRAINING, trainingFactor, trainingOf, weightGain, type Training } from './training';
 import { fromScale, ovrOf, ratingScaleIsV8, roleOfPos, toScale, type Ratings } from './ratings';
@@ -129,6 +130,11 @@ export interface OffseasonState {
   recruiting?: import('./recruiting').RecruitingState;
   /** The coaching carousel (carousel.ts), the first step when the dynasty has coaches. */
   carousel?: import('./carousel').CarouselState;
+  /**
+   * NIL (nil.ts): next season's budgets (set when the offseason starts), the user teams' players kept at their old
+   * pay, and after the deals each kept player's shortfall (0-1).
+   */
+  nil?: import('./nil').SeasonNil & { keep?: number[]; short?: Record<number, number> };
 }
 
 // ---- small helpers
@@ -264,6 +270,8 @@ export function startOffseason(d: Dynasty, opt: { seed?: number; force?: boolean
   const R = rulesOf(d);
   st.prestige = was.map((stars, t) => (v.save ? nextPrestige(stars, v.rank[t], [R.tier6, R.tier5, R.tier4, R.tier3, R.tier2]) : stars));
   st.prestige.forEach((to, t) => { if (to !== was[t]) st.events.push({ kind: 'prestige', team: t, from: was[t], to, finalRank: v.rank[t] }); });
+  // NIL: next season's budgets from the conference, the new prestige and the boosters after this season (nil.ts).
+  if (hasNil(d)) st.nil = nextBudgets(d, st.prestige);
   const r = stepRand(st, 1);
   const inGame = new Set(lastSeason(d).slots.flat().filter((x): x is number => x !== null));
   const players = d.players.map((p0) => {
@@ -320,7 +328,13 @@ export function confirmDepth(d: Dynasty, projected: Record<number, (number | nul
     const bad = projectedProblems(d, Number(t), slots);
     if (bad.length) throw new Error(`${d.teams[Number(t)].school}: ${bad.join(' ')}`);
   }
-  const next: Dynasty = { ...d, offseason: { ...st, projected: { ...st.projected, ...projected } } };
+  let next: Dynasty = { ...d, offseason: { ...st, projected: { ...st.projected, ...projected } } };
+  // NIL (nil.ts): the one-year deals for next season before anyone decides to leave (a user team's kept players
+  // stay at their old pay and are likelier to go).
+  if (hasNil(d) && st.nil) {
+    const { players, short } = nilDeals(next.players, st.nil.budget, st.nil.market, new Set(st.nil.keep ?? []));
+    next = { ...next, players, offseason: { ...next.offseason!, nil: { ...st.nil, short: Object.fromEntries(short) } } };
+  }
   return { ...next, offseason: { ...next.offseason!, step: 'portal', portal: chooseTransfers(next, st.seed) } };
 }
 
@@ -376,7 +390,15 @@ export function transferChance(d: Dynasty, p: DPlayer, ctx: PortalContext = port
   if (p.cls === 'SR' || p.cls === 'SR+') c += R.transferSenior;
   // His coach (2026): a good one keeps players a little more; a coach who left makes them likelier to go, starters too.
   const cf = transferFactor(d, p.team);
-  return clamp(c * (1 - R.playingTimeCut * playingTime(ctx, p, R.playingTimeShare)) * cf.times + cf.plus, 0, 1);
+  let pull = 0;
+  // NIL (nil.ts): a school that would start him and pays more pulls him; so does being kept at his old pay.
+  const st = d.offseason;
+  if (ctx.nilRates && st?.nil) {
+    let best = 0;
+    ctx.nilRates.forEach((rate, t) => { if (t !== p.team && rate > best && wouldStart(ctx, p, t)) best = rate; });
+    pull = moneyPull(p, best, st.nil.market, st.nil.short?.[p.id] ?? 0);
+  }
+  return clamp(c * (1 - R.playingTimeCut * playingTime(ctx, p, R.playingTimeShare)) * cf.times + cf.plus + pull, 0, 1);
 }
 
 /** Labels of the Active Roster spots that aren't starting jobs. */
@@ -394,6 +416,8 @@ export interface PortalContext {
   nextStarters: Set<number>;
   /** Per team and position, the weakest projected starter's OVR (who a transfer would have to beat). */
   starterBar: Map<number, Map<string, number>>;
+  /** NIL: what each school would offer a newcomer next season, as a share of his value (nil.ts offerRates). */
+  nilRates?: number[];
 }
 
 /** What the transfer rules need from last season and the current rosters. */
@@ -432,7 +456,10 @@ export function portalContext(d: Dynasty): PortalContext {
     });
     starterBar.set(t.index, bar);
   }
-  return { role, touches, typical, nextStarters, starterBar };
+  const nil = d.offseason?.nil;
+  // What each school would offer him (nil.ts offerRates), against what he's paid.
+  const nilRates = hasNil(d) && nil ? offerRates(nil.budget, payRates(d.players, nil.budget, nil.market)) : undefined;
+  return { role, touches, typical, nextStarters, starterBar, ...(nilRates ? { nilRates } : {}) };
 }
 
 /** His playing time last season, 0-1 (1 = at least half of a typical starter's touches at his position). */
@@ -841,6 +868,7 @@ export function finishOffseason(d: Dynasty): Dynasty {
     }),
     ...depthChart(withNumbers),
     prestige: st.prestige ?? seasonPrestige(d, prev),
+    ...(st.nil ? { nil: { budget: st.nil.budget, boost: st.nil.boost, market: st.nil.market } } : {}),
     // Each team's head coach this season (coaches.ts); the coaching carousel will change them before this point.
     ...(d.coaches ? { coach: d.teams.map((t) => d.coaches!.find((c) => c.team === t.index)?.id ?? null) } : {}),
     imports: [],

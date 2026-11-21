@@ -20,6 +20,7 @@
 import { rng, type DPlayer, type Dynasty, type OffseasonEvent } from './model';
 import { rulesOf, type OffseasonRules } from './rules';
 import { conferencePitch } from './confPrestige';
+import { hasNil, type Market, marketValue, offerRates, moneyFactor, nilPitch, payRates, payroll, prospectValue, NIL } from './nil';
 import { academicsOf } from './academics';
 import { seasonView } from './derive';
 import { headCoach, recruitingDiscount } from './coachEffects';
@@ -62,11 +63,17 @@ export interface TeamPlan {
   pitches?: Record<number, PitchKey>;
   /** Offers taken back this week, before the new ones (computer teams; user teams withdraw at once: withdrawOffer). */
   withdraw?: number[];
+  /** NIL (nil.ts): the yearly dollars offered with a scholarship (new offers, or a changed amount). */
+  nil?: Record<number, number>;
 }
 
 /** The six pitches (conference prestige since 2026-11-21: confPrestige.ts). */
-export type PitchKey = 'pt' | 'prestige' | 'conference' | 'home' | 'academics' | 'contender';
+export type PitchKey = 'pt' | 'prestige' | 'conference' | 'home' | 'academics' | 'contender' | 'nil';
 export const PITCHES: PitchKey[] = ['pt', 'prestige', 'conference', 'home', 'academics', 'contender'];
+/** With NIL (nil.ts): the seventh pitch, NIL opportunities. */
+export const ALL_PITCHES: PitchKey[] = [...PITCHES, 'nil'];
+/** The pitches a dynasty's schools can make. */
+export const pitchesOf = (d: Dynasty): PitchKey[] => (hasNil(d) ? ALL_PITCHES : PITCHES);
 /** A prospect's reaction to a pitch: his interest and the school strong (good), in between (ok), weak (bad); not his interest (no). */
 export type PitchReaction = 'good' | 'ok' | 'bad' | 'no';
 
@@ -85,6 +92,11 @@ export interface RecruitingState {
   scoutSpent: Record<number, number>;
   /** Per user team and prospect, his reactions to the pitches made so far (user, 2026-11-12). */
   reactions?: Record<number, Record<number, Partial<Record<PitchKey, PitchReaction>>>>;
+  /**
+   * NIL (nil.ts): each team's dollars on its offers (team → prospect → dollars a year), its room when recruiting
+   * began (next season's budget less the returning players' pay), its pay rate, next season's budgets and the year.
+   */
+  nil?: { offers: Record<number, Record<number, number>>; room: Record<number, number>; rate: number[]; offerRate?: number[]; budget: number[]; market: Market };
 }
 
 type Rand = () => number;
@@ -95,15 +107,17 @@ const seeded = (seed: number, salt: number) => rng((seed ^ Math.imul(salt + 11, 
  * What a prospect cares about (his pitches), adding up to 1: random, then by stars (user, 2026-11-12: "3
  * star and lower should have more chance of Location pitch. Higher star recruits, Program Prestige").
  */
-export interface Wants { pt: number; prestige: number; home: number; academics: number; contender: number; /** Absent on prospects made before 2026-11-21 (counts 0). */ conference?: number }
+export interface Wants { pt: number; prestige: number; home: number; academics: number; contender: number; /** Absent on prospects made before 2026-11-21 (counts 0). */ conference?: number; /** NIL opportunities (NIL dynasties only). */ nil?: number }
 const exp1 = (r: Rand) => -Math.log(1 - r());
 /** His pitches (rules: pitch weights by stars; academics and championship contender from 2026-11-12). */
-function wants(R: OffseasonRules, r: Rand, rc: Rand, stars = 3, pt?: number): Wants {
+function wants(R: OffseasonRules, r: Rand, rc: Rand, stars = 3, pt?: number, rn?: Rand): Wants {
   const w = { pt: pt ?? exp1(r), prestige: exp1(r) * R.pitchPrestige[stars], home: exp1(r) * R.pitchHome[stars], academics: exp1(r) * R.pitchAcademics[stars], contender: exp1(r) * R.pitchContender[stars] };
   // From its own random stream (rc), so the prospect pool and the other draws are the same as before it existed.
   const conference = exp1(rc) * R.pitchConference[stars];
-  const s = w.pt + w.prestige + w.home + w.academics + w.contender + conference || 1;
-  return { pt: w.pt / s, prestige: w.prestige / s, home: w.home / s, academics: w.academics / s, contender: w.contender / s, conference: conference / s };
+  // NIL opportunities (NIL dynasties): a third stream, so the rest is drawn as before.
+  const nil = rn ? exp1(rn) * NIL.pitchWeight[stars] : 0;
+  const s = w.pt + w.prestige + w.home + w.academics + w.contender + conference + nil || 1;
+  return { pt: w.pt / s, prestige: w.prestige / s, home: w.home / s, academics: w.academics / s, contender: w.contender / s, conference: conference / s, ...(rn ? { nil: nil / s } : {}) };
 }
 
 /** Stars a portal player counts as (by OVR). */
@@ -126,6 +140,7 @@ export function startRecruiting(d: Dynasty, tpl: RecruitTemplates, portal: DPlay
   const R = rulesOf(d);
   const r = seeded(seed, 22);
   const rc = seeded(seed, 23);
+  const rn = hasNil(d) ? seeded(seed, 24) : undefined;
   const portalIds = new Set(portal.map((p) => p.id));
   const spots: Record<number, number> = {};
   const need: Record<string, number> = {};
@@ -145,10 +160,10 @@ export function startRecruiting(d: Dynasty, tpl: RecruitTemplates, portal: DPlay
     for (const p of POSITIONS) if ((x -= need[p]) <= 0) { pos = p; break; }
     const stars = drawStars(r, 0.45);
     const player = makeRecruit(d, tpl, r, tempId, -1, pos, stars, year);
-    prospects.push({ id: tempId--, player: { ...player, team: null }, stars, from: null, wants: wants(R, r, rc, stars), interest: {}, offers: [], committed: null });
+    prospects.push({ id: tempId--, player: { ...player, team: null }, stars, from: null, wants: wants(R, r, rc, stars, undefined, rn), interest: {}, offers: [], committed: null });
   }
   for (const p of portal) {
-    prospects.push({ id: p.id, player: p, stars: portalStars(p.ovr), from: p.team, wants: wants(R, r, rc, portalStars(p.ovr), R.portalPlayingTime + 0.5 * r()), interest: {}, offers: [], committed: null });
+    prospects.push({ id: p.id, player: p, stars: portalStars(p.ovr), from: p.team, wants: wants(R, r, rc, portalStars(p.ovr), R.portalPlayingTime + 0.5 * r(), rn), interest: {}, offers: [], committed: null });
   }
   topSchools(d, prospects, r);
   // A user team's own players in the portal start on its board (user: "i should have a good chance at
@@ -158,7 +173,33 @@ export function startRecruiting(d: Dynasty, tpl: RecruitTemplates, portal: DPlay
     const own = prospects.filter((pr) => pr.from === u);
     if (own.length) plans[u] = { points: Object.fromEntries(own.map((pr) => [pr.id, 0])), offers: [] };
   }
-  return { week: 0, prospects, spots, log: [], plans, scouted: {}, scoutSpent: {} };
+  return { week: 0, prospects, spots, log: [], plans, scouted: {}, scoutSpent: {}, ...(hasNil(d) && d.offseason?.nil ? { nil: startNil(d, portalIds) } : {}) };
+}
+
+/**
+ * NIL at the start of recruiting (nil.ts): each team's room is next season's budget less what its returning players
+ * are paid (portal players out), and its pay rate.
+ */
+function startNil(d: Dynasty, portalIds: Set<number>): NonNullable<RecruitingState['nil']> {
+  const { budget, market } = d.offseason!.nil!;
+  const staying = d.players.filter((p) => !portalIds.has(p.id));
+  const room: Record<number, number> = {};
+  for (const t of d.teams) room[t.index] = Math.max(0, budget[t.index] - payroll(staying, t.index));
+  const rate = payRates(staying, budget, market);
+  return { offers: {}, room, rate, offerRate: offerRates(budget, rate), budget, market };
+}
+
+/** A prospect's market value (nil.ts): high-school recruits by stars, portal players by OVR. */
+export const valueOf = (pr: Prospect, m: Market) => (pr.id > 0 ? marketValue(pr.player, m) : prospectValue(pr.player.pos, pr.stars, m));
+
+/** A team's dollars still free for offers: its room less what its open offers and commitments hold. */
+export function nilRoom(rs: RecruitingState, team: number): number {
+  const n = rs.nil;
+  if (!n) return 0;
+  const mine = n.offers[team] ?? {};
+  let held = 0;
+  for (const p of rs.prospects) if (mine[p.id] !== undefined && (p.committed === null || p.committed === team) && p.offers.includes(team)) held += mine[p.id];
+  return n.room[team] - held;
 }
 
 /** Interest a prospect needs from a school to commit (portal players less: rules). */
@@ -203,6 +244,8 @@ export interface WeekContext {
   portalIds: Set<number>;
   /** Conference prestige, 0-1 (confPrestige.ts). */
   conference: Map<number, number>;
+  /** NIL opportunities per team, 0-1 (NIL dynasties). */
+  nil?: Map<number, number>;
   /** Championship Contender, 0-1 (contenderScores). */
   contender: Map<number, number>;
   /** Each team's pipeline states (pipelineStates). */
@@ -282,7 +325,7 @@ export function weekContext(d: Dynasty, rs: RecruitingState): WeekContext {
   };
   for (const p of d.players) if (p.status === 'active' && p.team !== null && !portalIds.has(p.id)) add(p.team, p.pos, p.ovr);
   for (const q of rs.prospects) if (q.committed !== null) add(q.committed, q.player.pos, q.player.ovr);
-  return { depth, prestige: new Map(d.teams.map((t) => [t.index, prestige(d, t.index)])), stars: new Map(d.teams.map((t) => [t.index, prestigeStars(d, t.index)])), portalIds, conference: conferencePitch(d), contender: contenderScores(d, depth), pipelines: new Map(d.teams.map((t) => [t.index, new Set(pipelineStates(d, t.index).map((x) => x.state))])) };
+  return { depth, prestige: new Map(d.teams.map((t) => [t.index, prestige(d, t.index)])), stars: new Map(d.teams.map((t) => [t.index, prestigeStars(d, t.index)])), portalIds, conference: conferencePitch(d), ...(rs.nil ? { nil: new Map(d.teams.map((t) => [t.index, nilPitch(rs.nil!.budget[t.index], rs.nil!.market)])) } : {}), contender: contenderScores(d, depth), pipelines: new Map(d.teams.map((t) => [t.index, new Set(pipelineStates(d, t.index).map((x) => x.state))])) };
 }
 
 /** How well a team fits what a prospect wants, 0-1. */
@@ -293,14 +336,14 @@ export function pitchScores(d: Dynasty, ctx: WeekContext, pr: Prospect, team: nu
   const pt = ahead < starters ? 1 : ahead < starters + 1 ? 0.65 : ahead < starters + 3 ? 0.35 : 0.15;
   return {
     pt, prestige: ctx.prestige.get(team)!, home: closeness(pr.player.state, d.teams[team].school),
-    academics: academicsOf(d.teams[team].school), contender: ctx.contender.get(team)!, conference: ctx.conference.get(team) ?? 0,
+    academics: academicsOf(d.teams[team].school), contender: ctx.contender.get(team)!, conference: ctx.conference.get(team) ?? 0, nil: ctx.nil?.get(team) ?? 0,
   };
 }
 
 /** How well a school fits what he wants: each pitch's weight for him × the school's score (his old school too). */
 export function fit(d: Dynasty, ctx: WeekContext, pr: Prospect, team: number): number {
   const sc = pitchScores(d, ctx, pr, team);
-  return PITCHES.reduce((a, k) => a + (pr.wants[k] ?? 0) * sc[k], 0);
+  return ALL_PITCHES.reduce((a, k) => a + (pr.wants[k] ?? 0) * sc[k], 0);
 }
 
 /**
@@ -314,19 +357,20 @@ export function learnedPitch(
   value: (k: PitchKey) => number = (k) => ({ good: 1.5, ok: 1.1, bad: 0.7, no: 0.9 })[known[k]!],
   main: (k: PitchKey) => boolean = (k) => known[k] !== 'no',
   interests = 2,
+  keys: PitchKey[] = PITCHES,
 ): PitchKey | undefined {
-  const tried = PITCHES.filter((k) => known[k]);
+  const tried = keys.filter((k) => known[k]);
   const found = tried.filter((k) => known[k] !== 'no');
   const best = tried.slice().sort((a, b) => value(b) - value(a))[0];
   if (best && value(best) > 1 && (found.some(main) || known[best] === 'good')) return best;
-  const untried = PITCHES.filter((k) => !known[k]);
+  const untried = keys.filter((k) => !known[k]);
   if (untried.length && found.length < interests) return untried[Math.floor(r() * untried.length)];
   return best && value(best) > 1 ? best : undefined;
 }
 
 /** His interests, the main one first: his top pitches (rules: pitchInterests). */
 export const interestsOf = (R: OffseasonRules, pr: Prospect): PitchKey[] =>
-  PITCHES.slice().sort((a, b) => (pr.wants[b] ?? 0) - (pr.wants[a] ?? 0)).slice(0, R.pitchInterests);
+  ALL_PITCHES.slice().sort((a, b) => (pr.wants[b] ?? 0) - (pr.wants[a] ?? 0)).slice(0, R.pitchInterests);
 
 /**
  * Where a pitch stands among his interests: 1 his main interest, 2 and up a minor one, 0 not an interest
@@ -386,7 +430,7 @@ export function cpuPlan(d: Dynasty, rs: RecruitingState, ctx: WeekContext, team:
   for (const c of cands) {
     if (!points[c.p.id]) continue;
     const known = memory[c.p.id] ?? {};
-    const pitch = learnedPitch(known, r, (k) => reactionValue(R, known[k]!, interestRank(R, c.p, k)), (k) => interestRank(R, c.p, k) === 1, R.pitchInterests);
+    const pitch = learnedPitch(known, r, (k) => reactionValue(R, known[k]!, interestRank(R, c.p, k)), (k) => interestRank(R, c.p, k) === 1, R.pitchInterests, pitchesOf(d));
     if (pitch) pitches[c.p.id] = pitch;
   }
   // Offers within the cap: it keeps the offers to its targets and to prospects it is among the top three
@@ -399,7 +443,26 @@ export function cpuPlan(d: Dynasty, rs: RecruitingState, ctx: WeekContext, team:
   const fresh = cands.filter((c) => !c.p.offers.includes(team) && c.p.committed === null).slice(0, Math.max(0, room)).map((c) => c.p.id);
   // A prospect committed elsewhere whom it tries to flip keeps its offer (those don't count toward the cap).
   const flips = cands.filter((c) => c.p.committed !== null).map((c) => c.p.id);
-  return { points, offers: [...fresh, ...flips], pitches, withdraw: mine.filter((p) => !kept.has(p.id)).map((p) => p.id) };
+  const withdraw = mine.filter((p) => !kept.has(p.id)).map((p) => p.id);
+  // NIL (nil.ts): each new offer's dollars, his value at the school's pay rate, while its budget has room (offers
+  // it takes back free their money); without room for most of it, no offer.
+  if (rs.nil) {
+    const nil: Record<number, number> = {};
+    const byId = new Map(rs.prospects.map((p) => [p.id, p]));
+    let free = nilRoom(rs, team) + withdraw.reduce((a, id) => a + (rs.nil!.offers[team]?.[id] ?? 0), 0);
+    const offers: number[] = [];
+    for (const id of [...fresh, ...flips]) {
+      const p = byId.get(id)!;
+      const want = Math.round(valueOf(p, rs.nil.market) * (rs.nil.offerRate ?? rs.nil.rate)[team] * (0.9 + 0.2 * r()));
+      const dollars = Math.min(want, free);
+      if (dollars < NIL.offerAtLeast * want) continue;
+      nil[id] = dollars;
+      free -= dollars;
+      offers.push(id);
+    }
+    return { points, offers, pitches, withdraw, nil };
+  }
+  return { points, offers: [...fresh, ...flips], pitches, withdraw };
 }
 
 /** Why a user team's plan can't be used (empty when it can). */
@@ -493,7 +556,7 @@ export function runRecruitingWeek(d: Dynasty, rs0: RecruitingState, userPlans: R
   const R = rulesOf(d);
   if (rs0.week >= R.weeks) throw new Error('Recruiting is over: it\'s signing day.');
   const r = seeded(seed, 100 + rs0.week);
-  const rs: RecruitingState = { ...rs0, prospects: rs0.prospects.map((p) => ({ ...p, interest: { ...p.interest }, offers: p.offers.slice() })), log: rs0.log.slice(), plans: { ...rs0.plans, ...userPlans }, scouted: rs0.scouted ?? {}, scoutSpent: {}, reactions: JSON.parse(JSON.stringify(rs0.reactions ?? {})) };
+  const rs: RecruitingState = { ...rs0, prospects: rs0.prospects.map((p) => ({ ...p, interest: { ...p.interest }, offers: p.offers.slice() })), log: rs0.log.slice(), plans: { ...rs0.plans, ...userPlans }, scouted: rs0.scouted ?? {}, scoutSpent: {}, reactions: JSON.parse(JSON.stringify(rs0.reactions ?? {})), ...(rs0.nil ? { nil: { ...rs0.nil, offers: Object.fromEntries(Object.entries(rs0.nil.offers).map(([t, o]) => [t, { ...o }])) } } : {}) };
   const ctx = weekContext(d, rs);
   for (const [t, p] of Object.entries(userPlans)) {
     const bad = planProblems(R, p, rs0.scoutSpent?.[Number(t)] ?? 0, planCost(d, ctx, rs, Number(t), p));
@@ -522,11 +585,16 @@ export function runRecruitingWeek(d: Dynasty, rs0: RecruitingState, userPlans: R
       if (p.committed === null && room-- <= 0) continue;
       p.offers.push(team);
     }
+    // NIL: the dollars on its offers (new ones, or a changed amount).
+    if (rs.nil && plan.nil) {
+      const mine = (rs.nil.offers[team] ??= {});
+      for (const [id, dollars] of Object.entries(plan.nil)) mine[Number(id)] = Math.max(0, Math.round(dollars));
+    }
     for (const [idS, pts] of Object.entries(plan.points)) {
       const p = byId.get(Number(idS));
       if (!p || pts <= 0) continue;
       const sc = pitchScores(d, ctx, p, team);
-      const f = PITCHES.reduce((a, k) => a + (p.wants[k] ?? 0) * sc[k], 0);
+      const f = ALL_PITCHES.reduce((a, k) => a + (p.wants[k] ?? 0) * sc[k], 0);
       const pitch = plan.pitches?.[p.id];
       let pv = 1;
       if (pitch) {
@@ -535,7 +603,9 @@ export function runRecruitingWeek(d: Dynasty, rs0: RecruitingState, userPlans: R
         const mine = (rs.reactions ??= {})[team] ??= {};
         mine[p.id] = { ...mine[p.id], [pitch]: x };
       }
-      p.interest[team] = (p.interest[team] ?? 0) + pts * pv * (0.5 + f) * (p.offers.includes(team) ? R.offerBoost : R.noOffer) * reach(p.stars, ctx.stars.get(team)!) * (0.85 + 0.3 * r());
+      // NIL: an offer's dollars against what he expects (nil.ts); no dollars on an offer count as the least.
+      const mf = rs.nil && p.offers.includes(team) ? moneyFactor(rs.nil.offers[team]?.[p.id] ?? 0, valueOf(p, rs.nil.market), p.stars) : 1;
+      p.interest[team] = (p.interest[team] ?? 0) + pts * pv * mf * (0.5 + f) * (p.offers.includes(team) ? R.offerBoost : R.noOffer) * reach(p.stars, ctx.stars.get(team)!) * (0.85 + 0.3 * r());
     }
   }
   // Commitments and flips (best prospects decide first, so spots go to them).
@@ -612,18 +682,42 @@ export function signingDay(d: Dynasty, rs: RecruitingState, year: number): { pla
   let nextId = players.reduce((a, p) => Math.max(a, p.id), 0) + 1;
   const events: OffseasonEvent[] = [];
   const points = new Map<number, { points: number; signed: number }>();
+  // NIL (nil.ts): a signee is paid what his school offered; a late signing (no offer) what's left, up to his value
+  // at the school's pay rate.
+  const n = rs.nil;
+  const free = new Map<number, number>();
+  if (n) for (const t of d.teams) free.set(t.index, n.room[t.index] - prs.filter((p) => p.committed === t.index).reduce((a, p) => a + (n.offers[t.index]?.[p.id] ?? 0), 0));
+  const payOf = (p: Prospect, team: number): number | undefined => {
+    if (!n) return undefined;
+    const offered = n.offers[team]?.[p.id];
+    if (offered !== undefined && p.offers.includes(team)) return offered;
+    // Nothing left: no deal (a walk-on's terms).
+    const pay = Math.min(Math.round(valueOf(p, n.market) * n.rate[team]), Math.max(0, free.get(team) ?? 0));
+    free.set(team, (free.get(team) ?? 0) - pay);
+    return pay;
+  };
   for (const p of prs) {
     if (p.id > 0) {
       // A portal player.
       // Nobody signed him, or his old school got him back: he stays (no transfer).
       const old = players[p.id - 1];
       const to = p.committed;
-      if (to === null || to === old.team) continue;
-      players[p.id - 1] = { ...old, team: to, transfers: [...(old.transfers ?? []), { year: year - 1, from: old.team!, to }] };
+      if (to === null || to === old.team) {
+        // NIL: back with his school at what it offered him, or, nobody took him, at what it still has room for.
+        if (n && old.team !== null) {
+          const pay = to === old.team ? payOf(p, to) : Math.min(old.nil ?? 0, Math.max(0, free.get(old.team) ?? 0));
+          if (to === null) free.set(old.team, (free.get(old.team) ?? 0) - (pay ?? 0));
+          players[p.id - 1] = { ...old, nil: pay };
+        }
+        continue;
+      }
+      const pay = payOf(p, to);
+      players[p.id - 1] = { ...old, team: to, transfers: [...(old.transfers ?? []), { year: year - 1, from: old.team!, to }], ...(pay !== undefined ? { nil: pay } : {}) };
       events.push({ kind: 'transfer', player: p.id, from: old.team!, to, ovr: old.ovr });
     } else if (p.committed !== null) {
       const id = nextId++;
-      players.push({ ...p.player, id, team: p.committed, recruit: { stars: p.stars, year } });
+      const pay = payOf(p, p.committed);
+      players.push({ ...p.player, id, team: p.committed, recruit: { stars: p.stars, year }, ...(pay !== undefined ? { nil: pay } : {}) });
       events.push({ kind: 'signed', player: id, team: p.committed, stars: p.stars, ovr: p.player.ovr });
       const c = points.get(p.committed) ?? { points: 0, signed: 0 };
       points.set(p.committed, { points: c.points + STAR_POINTS[p.stars], signed: c.signed + 1 });

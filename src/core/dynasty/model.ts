@@ -66,6 +66,8 @@ export interface DPlayer {
   look?: import('./headshot').LookEdit;
   /** 2 = made since the headshots' new hair styles (2026-11-18): his generated look can use any style. Absent = the earlier styles, so existing players keep their hair. */
   lookV?: 2;
+  /** NIL pay this season, dollars (nil.ts; NIL dynasties only). */
+  nil?: number;
   status: 'active' | 'graduated' | 'pro' | 'transferred' | 'cut';
   /** The CFB 27 player ID for the starting players. */
   srcId?: number;
@@ -127,6 +129,8 @@ export interface DSeason {
   bench?: (number | null)[][];
   benchBw?: (BwSlot | null)[][];
   /** Each team's prestige this season, 1-6 stars (prestige.ts). */
+  /** NIL budgets and booster money (nil.ts; NIL dynasties only). */
+  nil?: import('./nil').SeasonNil;
   prestige?: number[];
   /** Each team's offense and defense OVR in the ROM this season (what Game Setup shows). */
   teamOvr?: TeamRating[];
@@ -239,6 +243,8 @@ export interface Dynasty {
   yourCoachFired?: boolean;
   /** Head coaches nudge their team's OFF and DEF in the season ROM, ±2 at most (coachEffects.ts `simNudge`). Absent = off. */
   coachSim?: boolean;
+  /** NIL (nil.ts; 2026 dynasties made with it): budgets, pay, money in recruiting. */
+  nil?: { on: true };
   /** The season sim's settings for this dynasty's season ROMs (seasonSim.ts); absent = the ROM's own. */
   sim?: import('../simSettings').SimSettings;
   /** Sim stat multipliers for its season ROMs (seasonSim.ts, H-021); absent = the ROM's own (×1). */

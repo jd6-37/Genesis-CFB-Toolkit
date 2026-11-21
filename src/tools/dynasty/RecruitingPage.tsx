@@ -24,7 +24,7 @@ const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['
 const starText = (n: number) => `${n}★`;
 
 /** The pitches (user, 2026-11-12: his interests stay hidden; a pitch shows whether it matched). */
-const PITCH: Record<PitchKey, string> = { pt: 'Playing time', prestige: 'Program prestige', conference: 'Conference prestige', home: 'Close to home', academics: 'Academics', contender: 'Championship contender' };
+const PITCH: Record<PitchKey, string> = { pt: 'Playing time', prestige: 'Program prestige', conference: 'Conference prestige', home: 'Close to home', academics: 'Academics', contender: 'Championship contender', nil: 'NIL opportunities' };
 const REACT: Record<PitchReaction, { mark: string; text: string; cls: string }> = {
   good: { mark: '+', text: 'interested, and you\'re strong there', cls: 'dy-react-good' },
   ok: { mark: '~', text: 'interested, you\'re in between', cls: 'dy-react-ok' },
