@@ -20,7 +20,9 @@
 :where(.dy) a:not(.ui-button) { color: inherit; text-decoration: none; }
 :where(.dy) a:not(.ui-button):hover { text-decoration: underline; text-underline-offset: 3px; }
 
-.dy-main { max-width: 1240px; margin: 0 auto; padding: 0 24px 120px; }
+/* Wider on big screens (user, 2026-11-21: use the horizontal space on desktop). */
+.dy { --page-max: 1480px; }
+.dy-main { max-width: var(--page-max); margin: 0 auto; padding: 0 24px 120px; }
 
 /* Ticker */
 .dy-ticker { display: flex; border-bottom: var(--rule-w) solid var(--rule); margin: 0 -24px; }
