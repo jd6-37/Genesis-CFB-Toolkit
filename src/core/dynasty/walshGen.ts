@@ -962,6 +962,7 @@ const favoriteSay: Gen = (c) => {
 
 /**
  * A big donor (nil.ts; user, 2026-11-22): the season he arrives. Amounts in words, the game's font has no dollar sign.
+ * The only NIL line in the reports (user, 2026-11-22: no NIL "unless it's very notable").
  */
 const donorSay: Gen = (c) => {
   const { f, L } = c;
@@ -974,29 +975,6 @@ const donorSay: Gen = (c) => {
   ]);
 };
 
-/**
- * NIL money (user, 2026-11-22: amounts in words): the biggest NIL budget in the country, or the year's biggest new
- * deal (a recruit, a transfer or an FCS arrival) when this team signed it. Not every year.
- */
-const nilSay: Gen = (c) => {
-  const { f, L } = c, d = L.d;
-  const b = L.season.nil?.budget;
-  if (!b || L.season.nil?.donor?.[f.T] === NIL.donorSeasons) return null;
-  const deals = L.events.flatMap((e) => {
-    if (e.kind !== 'signed' && e.kind !== 'transfer' && e.kind !== 'fcs') return [];
-    const to = e.kind === 'signed' ? e.team : e.to;
-    return to === null ? [] : [{ to, p: d.players[e.player - 1], how: e.kind }];
-  }).filter((x) => (x.p?.nil ?? 0) > 0).sort((a, b2) => (b2.p.nil ?? 0) - (a.p.nil ?? 0));
-  const top = deals[0];
-  if (top && top.to === f.T && c.r() < 0.7) {
-    const what = top.how === 'signed' ? 'the year\'s biggest NIL deal for a recruit' : 'the biggest NIL deal of the offseason';
-    return `${f.school} landed ${c.n.ref(top.p)} with ${what}: ${moneyWords(top.p.nil!)}.`;
-  }
-  if (b[f.T] === Math.max(...b) && c.r() < 0.5) {
-    return pick(c.r, [`No school spends more on NIL than ${f.school}: ${moneyWords(b[f.T])} this year.`, `${f.school} has the biggest NIL budget in the country, ${moneyWords(b[f.T])}.`]);
-  }
-  return null;
-};
 
 /**
  * The dynasty era (user, 2026-11-18): only from the dynasty's fourth season, worded "this dynasty era (N years)", a
@@ -1092,7 +1070,7 @@ export function walshReport(L: WalshLeague, team: number, variant = 0): Report {
 
   // Team-level facts in the opener (H-035): the conference favorite (the app's own poll) and, from the dynasty's
   // fourth season, now and then a line about the dynasty era.
-  const open = [S(opening(c)), S(favoriteSay(c)), S(eraSay(c)), S(donorSay(c)), S(nilSay(c))].filter(Boolean).join(' ');
+  const open = [S(opening(c)), S(favoriteSay(c)), S(eraSay(c)), S(donorSay(c))].filter(Boolean).join(' ');
   // An opening that counts starters says it once.
   if (open && /starters? on offense/.test(open)) c.said.add('retOff');
   if (open && /returns? \w+ starters?(?! on)/.test(open)) { c.said.add('retOff'); c.said.add('retDef'); }
