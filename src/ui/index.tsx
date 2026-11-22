@@ -620,4 +620,23 @@ export function Combobox({ label, options, onPick, placeholder, max = 60 }: {
   );
 }
 
+/**
+ * A short set of choices that filter what's under it, one picked (a team's roster by position group). Buttons with
+ * aria-pressed, so a controller reaches them like any button. `side`: a column at the left from 760 px (a row on a
+ * phone); put it in a `ui-sided` box with the content after it.
+ */
+export function Segments<T extends string>({ label, options, value, onChange, side }: {
+  label: string;
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+  side?: boolean;
+}) {
+  return (
+    <div className={cx('ui-segments', side && 'ui-segments-side')} role="group" aria-label={label}>
+      {options.map((o) => <button key={o.value} type="button" aria-pressed={o.value === value} onClick={() => onChange(o.value)}>{o.label}</button>)}
+    </div>
+  );
+}
+
 export { AppBar, MenuDrawer, StepNav } from './shell';

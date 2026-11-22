@@ -4,7 +4,7 @@ import { WhatsNext } from './GetStarted';
 import { playerHonors, seasonAwards } from '../../core/dynasty/awards';
 import { academicGrade } from '../../core/dynasty/academics';
 import { scheduleLock } from '../../core/dynasty/schedule';
-import { Button, Modal, Note, Num, PageHead, Select, SubHead, Table, Tabs } from '../../ui';
+import { Button, Modal, Note, Num, PageHead, Segments, Select, SubHead, Table, Tabs } from '../../ui';
 import { useEffect, useMemo, useState } from 'react';
 import {
   champions, leaders, playerLines, playerName, seasonView, standings, statValue, teamHistory, weekName,
@@ -29,6 +29,7 @@ import type { Dynasty } from '../../core/dynasty/model';
 import { backupLabel, isBackup, lineupLock, moveToSpot, slotKind, slotOfSpot, spotLabel, spotsFor, SPOTS } from '../../core/dynasty/lineup';
 import { playerOvr, roleOfSlot } from '../../core/dynasty/ovr';
 import { UniformsBox } from './UniformsBox';
+import { POS_GROUPS } from './RostersPage';
 import { accentOn, Empty, Headshot, ImpactDot, Locked, StoryArt, TeamLink, TeamMark, href, heightText, hometownText, inkColor, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
 
 // ---- front page
@@ -446,13 +447,20 @@ function Prestige({ stars }: { stars: number }) {
 export function Teams() {
   const { d, v } = useDyn();
   const confs = v.season.confNames.map((name, c) => ({ name, c })).filter(({ c }) => v.season.conf.includes(c));
+  // Below desktop size one conference at a time, as tabs, your team's first (user, 2026-11-22); a desktop shows all.
+  const mine = d.userTeams.length ? v.season.conf[d.userTeams[0]] : undefined;
+  const [open, setOpen] = useState(mine !== undefined && confs.some((x) => x.c === mine) ? mine : confs[0]?.c ?? 0);
+  const name = (c: number) => (c === INDEPENDENT ? 'Independents' : v.season.confNames[c]);
   return (
     <section>
       <PageHead title="Teams" />
-      <div className="dy-team-index">
-        {confs.map(({ name, c }) => (
-          <div key={c}>
-            <h3>{c === INDEPENDENT ? 'Independents' : name}</h3>
+      <div className="ui-handheld-only">
+        <Tabs label="Conferences" value={String(open)} onChange={(x) => setOpen(Number(x))} tabs={confs.map(({ c }) => ({ value: String(c), label: name(c) }))} />
+      </div>
+      <div className="dy-team-index" data-open={open}>
+        {confs.map(({ c }) => (
+          <div key={c} className={c === open ? 'dy-conf-open' : undefined}>
+            <h3>{name(c)}</h3>
             <ul>
               {d.teams
                 .filter((t) => v.season.conf[t.index] === c)
@@ -522,6 +530,8 @@ export function Team({ team, tab = 'overview' }: { team: number; tab?: TeamTab }
   const { d, v, downloadRom, commit, readOnly, go } = useDyn();
   const lines = useMemo(() => playerLines(v).filter((l) => l.team === team), [v, team]);
   const [moveError, setMoveError] = useState<string | null>(null);
+  // The roster tab's position group ('' = everyone; user, 2026-11-22 mockup).
+  const [grp, setGrp] = useState('');
   const t = d.teams[team];
   if (!t) return <Empty><p>There's no such team.</p></Empty>;
   const c = mainColor(d, team);
@@ -546,6 +556,8 @@ export function Team({ team, tab = 'overview' }: { team: number; tab?: TeamTab }
   const conf = v.season.conf[team];
   const hist = teamHistory(d, team);
   const impact = teamImpact(d, v.season, team);
+  const group = POS_GROUPS.find((g) => g.id === grp);
+  const inGroup = <T extends { p: DPlayer }>(rows: T[]) => (group ? rows.filter((r) => group.pos.includes(r.p.pos)) : rows);
   // Previous / next team, A to Z (L2 / R2 on a controller; user, 2026-11-22).
   const az = d.teams.map((x, i) => ({ i, s: x.school })).sort((a, b) => a.s.localeCompare(b.s)).map((x) => x.i);
   const at = az.indexOf(team);
@@ -643,7 +655,12 @@ export function Team({ team, tab = 'overview' }: { team: number; tab?: TeamTab }
 
       {tab === 'uniforms' && <UniformsBox team={team} />}
 
-      {tab === 'roster' && <>
+      {tab === 'roster' && <div className="ui-sided">
+      <Segments
+        label="Positions" side value={grp} onChange={setGrp}
+        options={[{ value: '', label: 'All' }, ...POS_GROUPS.map((g) => ({ value: g.id, label: g.id === 'ST' ? 'K / P' : g.id }))]}
+      />
+      <div>
       <SubHead>Active Roster</SubHead>
       <p className="dy-dim dy-small">
         The {roster.length} players in Bill Walsh '95 this season.
@@ -658,12 +675,13 @@ export function Team({ team, tab = 'overview' }: { team: number; tab?: TeamTab }
         </Note>
       )}
       {moveError && <Note kind="error">{moveError}</Note>}
-      <RosterTable rows={roster} edit={edit} impact={impact} />
+      <RosterTable rows={inGroup(roster)} edit={edit} impact={impact} />
       <SubHead>Backups</SubHead>
       <p className="dy-dim dy-small">{bench.length + reserves.length} players who aren't on the Active Roster this season. Each backs up a spot and can move up when it opens.</p>
-      <RosterTable rows={[...bench, ...reserves.map((p) => ({ p, spot: null, label: p.pos, ovr: null }))]} edit={edit} impact={impact} />
+      <RosterTable rows={inGroup([...bench, ...reserves.map((p) => ({ p, spot: null, label: p.pos, ovr: null }))])} edit={edit} impact={impact} />
       <Locked><AddPlayer team={team} /></Locked>
-      </>}
+      </div>
+      </div>}
     </section>
   );
 }

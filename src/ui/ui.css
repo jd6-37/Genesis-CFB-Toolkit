@@ -376,3 +376,20 @@ a.ui-button.ui-button-chrome, a.ui-button.ui-button-chrome:hover { color: var(--
 .ui-stepnav-pips .ui-pip-done { background: var(--text-muted); }
 .ui-stepnav-pips .ui-pip-now { background: var(--text); height: 7px; }
 @media (min-width: 640px) { .ui-stepnav-side { font-size: var(--fs-3); } .ui-stepnav-pips span { width: 18px; } }
+
+/* Segments: a short set of choices that filter what's under them (one pressed). `ui-segments-side` in a `ui-sided`
+   box: a column at the left from 760 px, a row on a phone. */
+.ui-segments { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
+.ui-segments button {
+  min-width: 44px; min-height: 40px; padding: 0 var(--sp-3); border: 0; background: var(--surface-sunken); color: var(--text);
+  font: 700 var(--fs-3)/1 var(--font-display); text-align: left; cursor: pointer;
+}
+.ui-segments button:hover { background: var(--highlight); }
+.ui-segments button[aria-pressed='true'] { background: var(--accent); color: var(--on-accent); }
+.ui-segments button:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+.ui-sided { display: grid; gap: var(--sp-3); }
+.ui-sided > * { min-width: 0; }
+@media (min-width: 760px) {
+  .ui-sided { grid-template-columns: 96px minmax(0, 1fr); gap: var(--sp-4); align-items: start; }
+  .ui-segments-side { flex-direction: column; flex-wrap: nowrap; position: sticky; top: 48px; }
+}

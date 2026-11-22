@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
-import { Button, Check, Combobox, Field, LinkSwitch, FileButton, DataTable, Empty, Masthead, Meter, Modal, NavBar, Note, Num, PageHead, Row, Select, Stat, Steps, SubHead, Table, Tabs, ThemeToggle } from './index';
+import { Button, Check, Combobox, Segments, Field, LinkSwitch, FileButton, DataTable, Empty, Masthead, Meter, Modal, NavBar, Note, Num, PageHead, Row, Select, Stat, Steps, SubHead, Table, Tabs, ThemeToggle } from './index';
 
 const meta: Meta = { title: 'Components' };
 export default meta;
@@ -265,4 +265,21 @@ export const ComboboxStory: Story = {
       ]} />
     </div>
   ),
+};
+
+/** Choices that filter what's under them (a roster by position group). `side`: a column at the left from 760 px. */
+export const SegmentsStory: Story = {
+  name: 'Segments',
+  render: () => {
+    const [g, setG] = useState('WR');
+    return (
+      <div className="ui-sided">
+        <Segments label="Positions" side value={g} onChange={setG} options={['All', 'QB', 'RB', 'WR', 'TE', 'OL', 'DL', 'LB', 'DB'].map((x) => ({ value: x, label: x }))} />
+        <Table figures>
+          <thead><tr><th className="ui-left">Name</th><th>OVR</th></tr></thead>
+          <tbody><tr><td className="ui-left">Marcus Hale ({g})</td><td>90</td></tr><tr><td className="ui-left">Dorian Webb ({g})</td><td>85</td></tr></tbody>
+        </Table>
+      </div>
+    );
+  },
 };
