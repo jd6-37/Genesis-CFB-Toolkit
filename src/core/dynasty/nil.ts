@@ -280,6 +280,14 @@ export function money(v: number): string {
   return `$${Math.round(v / 1000)}K`;
 }
 
+/**
+ * Money in words for the Walsh Reports, whose font has no dollar sign (user, 2026-11-22): "6.2 million", "850,000".
+ */
+export function moneyWords(v: number): string {
+  if (v >= 1e6) return `${(v / 1e6).toFixed(1).replace(/\.0$/, '')} million`;
+  return `${(Math.round(v / 1e4) * 1e4).toLocaleString('en-US')}`;
+}
+
 /** Turns NIL on for a new 2026 dynasty: the first season's budgets and every player's starting pay. */
 export function enableNil(d: Dynasty): Dynasty {
   if (editionOf(d).id !== '2026') return d;
