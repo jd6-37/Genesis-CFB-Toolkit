@@ -249,9 +249,15 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
   }, [d]);
   const up = useUpgrade(d, commit, (y) => dlRef.current(y), refreshArt);
   const upLine = d ? upgradeLine(d, up.info) : null;
-  // Light or dark: the reader's choice, kept in this browser (it's a preference, not part of a dynasty).
-  const [dark, setDarkState] = useState(() => { try { return localStorage.getItem(THEME_KEY) === 'dark'; } catch { return false; } });
-  const setDark = (on: boolean) => { setDarkState(on); try { localStorage.setItem(THEME_KEY, on ? 'dark' : 'light'); } catch { /* private mode: the choice lasts for this visit */ } };
+  // Light or dark: kept in the dynasty (its file too, user 2026-11-22) and in this browser for pages without a
+  // dynasty (Get started) and dynasties that have no choice yet.
+  const [browserDark, setBrowserDark] = useState(() => { try { return localStorage.getItem(THEME_KEY) === 'dark'; } catch { return false; } });
+  const dark = d?.theme ? d.theme === 'dark' : browserDark;
+  const setDark = (on: boolean) => {
+    setBrowserDark(on);
+    try { localStorage.setItem(THEME_KEY, on ? 'dark' : 'light'); } catch { /* private mode: the choice lasts for this visit */ }
+    if (d) void commit({ ...d, theme: on ? 'dark' : 'light' });
+  };
   // The team picked in the masthead's team menu (with several of your teams), kept in this browser per dynasty.
   const [focus, setFocusState] = useState<number | undefined>(undefined);
   useEffect(() => {
