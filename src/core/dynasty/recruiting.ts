@@ -21,7 +21,7 @@ import { rng, type DPlayer, type Dynasty, type OffseasonEvent } from './model';
 import { rulesOf, type OffseasonRules } from './rules';
 import { conferencePitch } from './confPrestige';
 import { FCS_STARS, fcsSeasons, fcsSchools, pickFcs } from './fcs';
-import { hasNil, type Market, marketValue, offerRates, moneyFactor, nilPitch, payRates, payroll, prospectValue, NIL } from './nil';
+import { hasNil, type Market, marketValue, money, offerRates, moneyFactor, nilPitch, payRates, payroll, prospectValue, NIL } from './nil';
 import { academicsOf } from './academics';
 import { seasonView } from './derive';
 import { transferFactor } from './coachEffects';
@@ -184,7 +184,7 @@ export function startRecruiting(d: Dynasty, tpl: RecruitTemplates, portal: DPlay
     let z = rf(), years = 1;
     for (const [n, w] of [[1, 0.3], [2, 0.4], [3, 0.3]] as const) if ((z -= w) <= 0) { years = n; break; }
     let player = makeRecruit(d, tpl, rf, tempId, -1, pos, stars, year - years);
-    for (let j = 0; j < years; j++) player = develop(player, Math.max(0, ((player.pot ?? player.ovr) - player.ovr) * 0.4), rf);
+    for (let j = 0; j < years; j++) player = develop(player, Math.max(0, ((player.pot ?? player.ovr) - player.ovr) * 0.3), rf);
     player = { ...player, team: null, cls: (['FR', 'SO', 'JR', 'SR'] as const)[years], recruit: undefined, fcs: { school: school.name, seasons: fcsSeasons(player, years, year - 1, rf) } };
     prospects.push({ id: tempId--, player, stars: portalStars(player.ovr), from: null, fcs: school.name, wants: wants(R, rf, rc, portalStars(player.ovr), R.portalPlayingTime + 0.5 * rf(), rn), interest: {}, offers: [], committed: null });
   }
@@ -635,6 +635,16 @@ export function runRecruitingWeek(d: Dynasty, rs0: RecruitingState, userPlans: R
     const bad = planProblems(R, p, rs0.scoutSpent?.[Number(t)] ?? 0, planCost(d, ctx, rs, Number(t), p));
     const fresh = newOffers(rs, Number(t), p).length, cap = offerCap(R, rs, Number(t)), out = offersOut(rs, Number(t));
     if (fresh && out + fresh > cap) bad.push(`That's ${out + fresh} offers out: you can have ${cap} (your open spots plus ${R.offerExtra}).`);
+    // NIL: the dollars on its offers (old ones, changed amounts and new ones) must fit its room.
+    if (rs0.nil && p.nil) {
+      const team = Number(t);
+      const mine = { ...(rs0.nil.offers[team] ?? {}), ...p.nil };
+      const withdrawn = new Set(p.withdraw ?? []);
+      const ids = new Set([...rs0.prospects.filter((q) => q.offers.includes(team)).map((q) => q.id), ...p.offers]);
+      let held = 0;
+      for (const q of rs0.prospects) if (ids.has(q.id) && !withdrawn.has(q.id) && (q.committed === null || q.committed === team)) held += mine[q.id] ?? 0;
+      if (held > rs0.nil.room[team]) bad.push(`Those offers come to ${money(held)} a year: your NIL room is ${money(rs0.nil.room[team])}.`);
+    }
     if (bad.length) throw new Error(`${d.teams[Number(t)].school}: ${bad.join(' ')}`);
   }
   const byId = new Map(rs.prospects.map((p) => [p.id, p]));
@@ -858,6 +868,15 @@ export function signingDay(d: Dynasty, rs: RecruitingState, year: number): { pla
   }
   [...points.entries()].sort((a, b) => b[1].points - a[1].points || a[0] - b[0])
     .forEach(([team, c], i) => events.push({ kind: 'class', team, rank: i + 1, signed: c.signed, points: c.points }));
+  // The transfer class (user, 2026-11-22): the portal and FCS players a school signed, by their stars, ranked apart.
+  const tpts = new Map<number, { points: number; signed: number }>();
+  for (const e of events) {
+    if ((e.kind !== 'fcs' && e.kind !== 'transfer') || e.to === null) continue;
+    const c = tpts.get(e.to) ?? { points: 0, signed: 0 };
+    tpts.set(e.to, { points: c.points + STAR_POINTS[portalStars(e.ovr)], signed: c.signed + 1 });
+  }
+  [...tpts.entries()].sort((a, b) => b[1].points - a[1].points || a[0] - b[0])
+    .forEach(([team, c], i) => events.push({ kind: 'transferClass', team, rank: i + 1, signed: c.signed, points: c.points }));
   // Where every prospect ended up (by prospect ID; null = nowhere).
   return { players, events, went: new Map(prs.map((p) => [p.id, p.committed])) };
 }

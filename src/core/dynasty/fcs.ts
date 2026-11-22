@@ -55,7 +55,7 @@ export function pickFcs(list: FcsSchool[], r: Rand, better = 1): FcsSchool {
 }
 
 /** Star odds (2★, 3★, 4★) of a player coming up from an FCS school, by the school's tier (1 = top programs). */
-export const FCS_STARS: Record<1 | 2 | 3, number[]> = { 1: [0.3, 0.55, 0.15], 2: [0.5, 0.45, 0.05], 3: [0.7, 0.29, 0.01] };
+export const FCS_STARS: Record<1 | 2 | 3, number[]> = { 1: [0.45, 0.5, 0.05], 2: [0.6, 0.38, 0.02], 3: [0.8, 0.2, 0] };
 
 /** How a school shows: "Harvard (FCS)". */
 export const fcsLabel = (name: string) => `${name} (FCS)`;

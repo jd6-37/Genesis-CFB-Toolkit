@@ -42,7 +42,7 @@ import { SLOT_DEF, depthChart, slotPosition, teamDepth } from './depth';
 import { rosterLayout } from '../rosterLayouts';
 import { roleOfSlot } from './ovr';
 import { recordYear } from './career';
-import { hasNil, moneyPull, nextBudgets, nilDeals, offerRates, payRates } from './nil';
+import { hasNil, moneyPull, nextBudgets, nilDeals, nilStay, offerRates, payRates } from './nil';
 import { DEFAULT_RULES, growthRate, rulesOf, type OffseasonRules } from './rules';
 import { areaOf, EVEN_TRAINING, trainingFactor, trainingOf, weightGain, type Training } from './training';
 import { fromScale, ovrOf, ratingScaleIsV8, roleOfPos, toScale, type Ratings } from './ratings';
@@ -283,12 +283,14 @@ export function startOffseason(d: Dynasty, opt: { seed?: number; force?: boolean
       return { ...p, status: kind === 'pro' ? 'pro' : 'graduated', team: null, leftYear: year };
     };
     if (p.cls === 'SR+') return leave('graduated');
+    // NIL (nil.ts nilStay): a well-paid player is less likely to leave early for the pros.
+    const stay = st.nil ? nilStay(p, st.nil.market) : 1;
     if (p.cls === 'SR') {
-      if (r() < clamp((p.ovr - R.proSeniorBase) / R.proSeniorScale, 0, R.proSeniorMax)) return leave('pro');
+      if (r() < stay * clamp((p.ovr - R.proSeniorBase) / R.proSeniorScale, 0, R.proSeniorMax)) return leave('pro');
       if (r() < R.srPlusReturn) st.events.push({ kind: 'returns', player: p.id, team, ovr: p.ovr });
       else return leave('graduated');
     }
-    if (p.cls === 'JR' && r() < clamp((p.ovr - R.proJuniorBase) / R.proJuniorScale, 0, R.proJuniorMax)) return leave('pro');
+    if (p.cls === 'JR' && r() < stay * clamp((p.ovr - R.proJuniorBase) / R.proJuniorScale, 0, R.proJuniorMax)) return leave('pro');
     // Moves up a class; he develops at the end of the offseason (trainPlayers).
     st.train!.push({ player: p.id, leaving: p.cls, starter: inGame.has(p.id) });
     return { ...p, cls: CLASSES[Math.min(4, CLASSES.indexOf(p.cls) + 1)] };

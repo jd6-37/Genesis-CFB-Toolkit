@@ -24,6 +24,7 @@
 // font only (A-Z a-z 0-9 space . , ! ? ' " - & ( ) / : ; % + =), no word over 20 characters.
 
 import { fcsLabel } from './fcs';
+import { NIL } from './nil';
 import type { DPlayer, DSeason, Dynasty, OffseasonEvent, BwSlot } from './model';
 import { rng } from './model';
 import { seasonView, playerLines, standings, bowlOf, INDEPENDENT, type SeasonView, type PlayerLine } from './derive';
@@ -494,6 +495,8 @@ function opening(c: Ctx): string {
       ...(c.L.portalStarters[f.T] >= top(c.L.portalStarters, 0.05) ? [`Few teams leaned on the transfer portal more than ${T}.`] : []),
       `${T} rebuilt its roster through the transfer portal.`,
       `The ${N} will look very different in ${Y}: ${plural(f.inTransfers.length, 'transfer')} arrived in the offseason.`,
+      // User, 2026-11-22: "lost six players to the portal but reloaded with seven".
+      ...(f.gone.filter((g) => g.why === 'transfer').length >= 3 ? [`${T} lost ${word(f.gone.filter((g) => g.why === 'transfer').length)} players to the portal and reloaded with ${word(f.inTransfers.length)}.`] : []),
     ],
     steady: [
       `${T} went ${rec} in ${LY}${f.confPlace ? ` and finished ${ordinal(f.confPlace)} in the ${f.conf ?? 'conference'}` : ''}.`,
@@ -958,6 +961,17 @@ const favoriteSay: Gen = (c) => {
 };
 
 /**
+ * A big donor (nil.ts; user, 2026-11-22): the season he arrives. No dollar sign (the game's font has none).
+ */
+const donorSay: Gen = (c) => {
+  const { f, L } = c;
+  if (L.season.nil?.donor?.[f.T] !== NIL.donorSeasons) return null;
+  const was = L.prev.nil?.budget[f.T] ?? 0, now = L.season.nil.budget[f.T];
+  const grew = was > 0 && now >= 3 * was ? 'more than tripled' : was > 0 && now >= 2 * was ? 'more than doubled' : 'jumped';
+  return pick(c.r, [`A big donor has changed the outlook at ${f.school}: its NIL budget has ${grew}.`, `New booster money has ${f.school} thinking big. Its NIL budget has ${grew}.`]);
+};
+
+/**
  * The dynasty era (user, 2026-11-18): only from the dynasty's fourth season, worded "this dynasty era (N years)", a
  * team's rise, fall or continued dominance over the seasons played, and rarely (about one team in four of those with a
  * clear pattern).
@@ -1051,7 +1065,7 @@ export function walshReport(L: WalshLeague, team: number, variant = 0): Report {
 
   // Team-level facts in the opener (H-035): the conference favorite (the app's own poll) and, from the dynasty's
   // fourth season, now and then a line about the dynasty era.
-  const open = [S(opening(c)), S(favoriteSay(c)), S(eraSay(c))].filter(Boolean).join(' ');
+  const open = [S(opening(c)), S(favoriteSay(c)), S(eraSay(c)), S(donorSay(c))].filter(Boolean).join(' ');
   // An opening that counts starters says it once.
   if (open && /starters? on offense/.test(open)) c.said.add('retOff');
   if (open && /returns? \w+ starters?(?! on)/.test(open)) { c.said.add('retOff'); c.said.add('retDef'); }

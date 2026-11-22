@@ -58,6 +58,8 @@ export const NIL = {
    * donorLevel × that typical budget (the last two seasons half way back).
    */
   donorChance: 0.004, donorUnder: 0.35, donorLevel: 0.8, donorSeasons: 5,
+  /** Going pro early: the chance × (1 − stayPull × his pay / stayPay, at most 1) (user, 2026-11-22: money keeps players in school). */
+  stayPull: 0.4, stayPay: 1.5e6,
 };
 
 /** Position groups for value. */
@@ -254,6 +256,11 @@ export function moneyPull(p: DPlayer, bestRate: number, m: Market, short = 0): n
   const pay = Math.max(NIL.floor, p.nil ?? 0);
   const ratio = (marketValue(p, m) * bestRate) / pay;
   return clamp(NIL.poachSlope * (ratio - NIL.poachFrom), 0, NIL.poachMax) + NIL.underpaidSlope * short;
+}
+
+/** How much his NIL pay lowers a player's chance to leave early for the pros (a factor, 0.6-1). */
+export function nilStay(p: Pick<DPlayer, 'nil'>, m: Market): number {
+  return 1 - NIL.stayPull * clamp((p.nil ?? 0) / (NIL.stayPay * m.index), 0, 1);
 }
 
 /** What a school's offer does to a prospect's interest: its dollars against what he expects. */

@@ -182,6 +182,8 @@ export type OffseasonEvent =
   | { kind: 'cut'; player: number; team: number; ovr: number }
   | { kind: 'walkon'; player: number; team: number; ovr: number }
   | { kind: 'class'; team: number; rank: number; signed: number; points: number }
+  /** The transfer class: portal and FCS players a school signed, ranked by their stars (recruiting.ts). */
+  | { kind: 'transferClass'; team: number; rank: number; signed: number; points: number }
   | { kind: 'prestige'; team: number; from: number; to: number; finalRank: number }
   | { kind: 'coachRetired'; coach: number; team: number }
   | { kind: 'coachFired'; coach: number; team: number; heat: number }

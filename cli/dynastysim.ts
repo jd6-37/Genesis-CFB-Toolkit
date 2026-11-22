@@ -106,16 +106,29 @@ export function playSeason(d: Dynasty, rom: Uint8Array, seed: number): Dynasty {
 }
 
 /** The whole offseason as the computer runs it for every team (full recruiting). `hooks` run between the steps. */
-export function runOffseason(d: Dynasty, seed: number, hooks: { beforeRecruiting?: (d: Dynasty) => Dynasty; beforeSigning?: (d: Dynasty) => void } = {}): Dynasty {
+export function runOffseason(d: Dynasty, seed: number, hooks: { beforeDepth?: (d: Dynasty) => Dynasty; beforeRecruiting?: (d: Dynasty) => Dynasty; beforeSigning?: (d: Dynasty) => void; afterWeek?: (d: Dynasty) => Dynasty; userPlans?: (d: Dynasty) => Record<number, Rec.TeamPlan> } = {}): Dynasty {
   let x = Off.startOffseason(d, { seed, force: true });
   if (x.offseason!.step === 'carousel') throw new Error('Coaches are off in the study.');
+  if (hooks.beforeDepth) x = hooks.beforeDepth(x);
   x = Off.confirmDepth(x);
   if (hooks.beforeRecruiting) x = hooks.beforeRecruiting(x);
   const tpl = Off.recruitTemplates(x);
   x = Rec.openRecruiting(x, tpl);
-  x = Rec.simRecruiting(x);
-  while (x.offseason!.recruiting!.week < 99) {
-    try { x = Rec.recruitingWeek(x, {}); } catch { break; }
+  const W = x.offseason!.recruiting ? 99 : 0;
+  if (hooks.userPlans) {
+    while (x.offseason!.recruiting && x.offseason!.recruiting!.week < W) {
+      try { x = Rec.recruitingWeek(x, hooks.userPlans(x)); } catch (e) { if (String(e).includes('signing day')) break; throw e; }
+    }
+  } else if (hooks.afterWeek) {
+    while (true) {
+      try { x = Rec.recruitingWeek(x, {}); } catch { break; }
+      x = hooks.afterWeek(x);
+    }
+  } else {
+    x = Rec.simRecruiting(x);
+    while (x.offseason!.recruiting!.week < 99) {
+      try { x = Rec.recruitingWeek(x, {}); } catch { break; }
+    }
   }
   hooks.beforeSigning?.(x);
   x = Rec.finishRecruiting(x, tpl);
