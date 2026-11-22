@@ -356,8 +356,15 @@ export function Tabs<T extends string>({ label, tabs, value, onChange }: {
   value: T;
   onChange: (value: T) => void;
 }) {
+  // Many tabs (weeks, conferences) scroll sideways: keep the open one in view.
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current?.querySelector<HTMLElement>('[aria-selected="true"]');
+    const box = ref.current;
+    if (el && box && box.scrollWidth > box.clientWidth) box.scrollLeft = el.offsetLeft - (box.clientWidth - el.offsetWidth) / 2;
+  }, [value]);
   return (
-    <div className="ui-tabs" role="tablist" aria-label={label}>
+    <div className="ui-tabs" role="tablist" aria-label={label} ref={ref}>
       {tabs.map((t) => (
         <button key={t.value} type="button" role="tab" aria-selected={t.value === value} className="ui-tab" onClick={() => onChange(t.value)}>
           {t.label}{t.count !== undefined && <span className="ui-tab-count">{t.count}</span>}
@@ -612,3 +619,5 @@ export function Combobox({ label, options, onPick, placeholder, max = 60 }: {
     </div>
   );
 }
+
+export { AppBar, MenuDrawer, StepNav } from './shell';

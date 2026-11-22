@@ -6,6 +6,7 @@
 //   data-pad-label="Offer"            the button's name in the hints (else its text)
 //   role="tablist" (the Tabs component) or data-pad-tabs   what L1 / R1 switch; without one, the app's menu
 //   data-pad-start                    where the focus starts on a page (else the first item in <main>)
+//   data-pad-menu                     the button Start presses (the app menu; Start closes it again)
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   activeBindings, bindingGlyph, defaultSettings, heldActions, mapOf, PAD_KEY, PadRepeater, parseSettings,
@@ -111,7 +112,7 @@ function setValue(el: HTMLInputElement | HTMLSelectElement, value: string) {
 function tabStrip(root: HTMLElement): HTMLElement | null {
   const strips = [...root.querySelectorAll<HTMLElement>('[role="tablist"], [data-pad-tabs]')].filter(visible);
   const a = document.activeElement;
-  return strips.find((s) => s.contains(a)) ?? strips[0] ?? (root === document.body ? document.querySelector<HTMLElement>('.ui-nav') : null);
+  return strips.find((s) => s.contains(a)) ?? strips[0] ?? (root === document.body ? [...document.querySelectorAll<HTMLElement>('.ui-appbar-nav, .ui-nav')].find(visible) ?? null : null);
 }
 
 function switchTab(strip: HTMLElement, by: 1 | -1) {
@@ -272,6 +273,10 @@ export function PadLayer({ children }: { children: ReactNode }) {
         return;
       }
       case 'menu': {
+        // The app menu (shell.tsx): Start opens it, and closes it again.
+        if (root.matches('[data-menu-drawer]')) { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); return; }
+        const button = [...document.querySelectorAll<HTMLElement>('[data-pad-menu]')].find(visible);
+        if (button) { button.click(); return; }
         const nav = document.querySelector<HTMLElement>('.ui-nav [aria-current="page"]') ?? document.querySelector<HTMLElement>('.ui-nav a[href]');
         if (nav) { window.scrollTo({ top: 0 }); go(nav); }
         return;

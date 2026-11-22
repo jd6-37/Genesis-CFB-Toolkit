@@ -31,15 +31,21 @@
 .ui-note-ok { background: var(--good-wash); border-left-color: var(--good); }
 .ui-note-error { background: var(--bad-wash); border-left-color: var(--bad); }
 
-/* A page's title in a double-line frame over a faint dither, like the title box of the game's menu screens. */
+/* A page's title. On handhelds, tablets and phones a plain heading row (the screen is short); on a desktop (1200 px
+   wide and 700 px tall) in a double-line frame over a faint dither, like the title box of the game's menu screens. */
 .ui-pagehead {
-  margin: var(--sp-5) 0 var(--sp-4); padding: var(--sp-3) var(--sp-4);
-  display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-4);
-  border: 6px double var(--rule-strong);
-  background: repeating-conic-gradient(var(--dither) 0% 25%, transparent 0% 50%) 0 0 / 4px 4px;
+  margin: var(--sp-3) 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-4);
 }
-.ui-pagehead h2 { margin: 0; font: 900 var(--fs-7)/1 var(--font-display); text-transform: uppercase; color: var(--text); }
+.ui-pagehead h2 { margin: 0; font: 900 var(--fs-6)/1 var(--font-display); text-transform: uppercase; color: var(--text); }
 .ui-pagehead p { margin: 0; flex-basis: 100%; color: var(--text-muted); }
+@media (min-width: 1200px) and (min-height: 700px) {
+  .ui-pagehead {
+    margin: var(--sp-5) 0 var(--sp-4); padding: var(--sp-3) var(--sp-4);
+    border: 6px double var(--rule-strong);
+    background: repeating-conic-gradient(var(--dither) 0% 25%, transparent 0% 50%) 0 0 / 4px 4px;
+  }
+  .ui-pagehead h2 { font-size: var(--fs-7); }
+}
 .ui-pagehead-actions { margin-left: auto; display: flex; flex-wrap: wrap; gap: var(--sp-2); }
 /* A section heading: a bar with slanted block type, like the game's QUARTERBACK / RUNNING BACKS headings. */
 .ui-sub {
@@ -178,7 +184,7 @@ a.ui-button-danger, a.ui-button-danger:hover { color: var(--bad); }
 .ui-num-drop { display: inline-block; transform: translateY(0.125em); }
 
 /* Tabs: the sections of a hub page. The open one carries a heavy marker, as the Toolkit's tab menu does. */
-.ui-tabs { display: flex; overflow-x: auto; margin: var(--sp-4) 0; border-bottom: 2px solid var(--rule-strong); }
+.ui-tabs { position: relative; display: flex; overflow-x: auto; margin: var(--sp-4) 0; border-bottom: 2px solid var(--rule-strong); }
 .ui-tab {
   flex: none; min-height: 44px; padding: var(--sp-2) var(--sp-4); border: 0; border-bottom: var(--rule-w-strong) solid transparent; background: none;
   color: var(--text-muted); font: 700 var(--fs-4)/1.2 var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; cursor: pointer;
@@ -302,3 +308,71 @@ a.ui-button.ui-button-chrome, a.ui-button.ui-button-chrome:hover { color: var(--
   border: 2px solid currentColor; border-radius: 4px; font: 700 var(--fs-2)/1 var(--font-display); letter-spacing: 0.02em;
 }
 .ui-padkey-face { border-radius: 12px; padding: 0; width: 24px; }
+
+/* The shell (shell.tsx). Desktop = 1200 px wide and 700 px tall or more: the Masthead and NavBar (wrap them in
+   .ui-desktop-only); anything smaller gets the AppBar (.ui-handheld-only for other handheld-only parts). */
+.ui-desktop-only { display: none; }
+@media (min-width: 1200px) and (min-height: 700px) {
+  .ui-desktop-only { display: block; }
+  .ui-handheld-only { display: none !important; }
+}
+.ui-appbar {
+  position: sticky; top: 0; z-index: 20; height: 40px; display: flex; align-items: stretch;
+  background: var(--masthead); color: var(--on-masthead);
+}
+.ui-appbar-menu { flex: none; width: 48px; border: 0; background: none; color: inherit; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.ui-appbar-page { flex: 1; min-width: 0; display: flex; align-items: center; font: 800 var(--fs-5)/1 var(--font-display); white-space: nowrap; overflow: hidden; }
+.ui-appbar-nav { display: none; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.ui-appbar-nav a {
+  display: flex; align-items: center; padding: 0 var(--sp-2); white-space: nowrap; text-decoration: none;
+  color: color-mix(in srgb, var(--on-masthead) 70%, var(--masthead)); font: 600 var(--fs-3)/1 var(--font-display); letter-spacing: 0.01em;
+}
+.ui-appbar-nav a:hover { color: var(--on-masthead); text-decoration: none; }
+.ui-appbar-nav a[aria-current='page'] { color: var(--on-masthead); box-shadow: inset 0 -3px 0 var(--on-masthead); }
+.ui-appbar-nav a.ui-appbar-off { opacity: 0.5; pointer-events: none; }
+.ui-appbar-right { flex: none; display: flex; align-items: center; gap: var(--sp-2); padding: 0 var(--sp-2); }
+@media (min-width: 960px) {
+  .ui-appbar-page { display: none; }
+  .ui-appbar-nav { display: flex; }
+  .ui-appbar-nav a { padding: 0 var(--sp-2); }
+}
+@media (min-width: 1100px) { .ui-appbar-nav a { padding: 0 var(--sp-3); } }
+
+.ui-drawer-back { position: fixed; z-index: 40; inset: 0; background: var(--scrim); }
+.ui-drawer {
+  position: absolute; left: 0; top: 0; bottom: 0; width: min(330px, 86vw); box-sizing: border-box; overflow-y: auto;
+  display: flex; flex-direction: column; background: var(--surface-raised); color: var(--text); border-right: 2px solid var(--rule-strong);
+}
+:root[data-input='pad'] .ui-drawer { bottom: var(--pad-bar-h); }
+.ui-drawer-head { padding: var(--sp-3) var(--sp-4); border-bottom: var(--rule-w) solid var(--rule); }
+.ui-drawer-head h2 { margin: 0; font: 800 var(--fs-6)/1 var(--font-display); }
+.ui-drawer-head p { margin: var(--sp-1) 0 0; color: var(--text-muted); font-size: var(--fs-2); }
+.ui-drawer-nav { display: flex; flex-direction: column; padding: var(--sp-1) 0; }
+.ui-drawer-nav a {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); min-height: 40px; padding: 0 var(--sp-4);
+  color: var(--text); font: 700 var(--fs-4)/1 var(--font-display); text-decoration: none;
+}
+.ui-drawer-nav a:hover { background: var(--highlight); text-decoration: none; }
+.ui-drawer-nav a[aria-current='page'] { background: var(--accent); color: var(--on-accent); }
+.ui-drawer-nav a[aria-disabled='true'] { opacity: 0.5; pointer-events: none; }
+.ui-drawer-nav small { font: 400 var(--fs-2)/1 var(--font-body); opacity: 0.75; }
+.ui-drawer-foot { margin-top: auto; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-4); padding: var(--sp-3) var(--sp-4); border-top: var(--rule-w) solid var(--rule); }
+.ui-drawer-foot .ui-theme { color: var(--text); }
+.ui-drawer-foot .ui-theme-box { border-color: var(--text); }
+.ui-drawer-foot .ui-theme[aria-checked='true'] .ui-theme-box { background: var(--text); box-shadow: inset 0 0 0 2px var(--surface-raised); }
+.ui-drawer-foot a { color: var(--text); font: 700 var(--fs-3)/1 var(--font-display); }
+
+.ui-stepnav {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: var(--sp-3);
+  min-height: 48px; margin: var(--sp-2) 0; padding: var(--sp-1) var(--sp-3); background: var(--surface-sunken);
+}
+.ui-stepnav-side { color: var(--text-muted); font: 600 var(--fs-2)/1.2 var(--font-display); text-decoration: none; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ui-stepnav a.ui-stepnav-side:hover { color: var(--text); }
+.ui-stepnav-next { justify-self: end; text-align: right; }
+.ui-stepnav-now { display: flex; flex-direction: column; align-items: center; gap: var(--sp-1); text-align: center; }
+.ui-stepnav-now strong { font: 800 var(--fs-4)/1.1 var(--font-display); }
+.ui-stepnav-pips { display: flex; gap: 3px; }
+.ui-stepnav-pips span { width: 12px; height: 5px; background: var(--rule); }
+.ui-stepnav-pips .ui-pip-done { background: var(--text-muted); }
+.ui-stepnav-pips .ui-pip-now { background: var(--text); height: 7px; }
+@media (min-width: 640px) { .ui-stepnav-side { font-size: var(--fs-3); } .ui-stepnav-pips span { width: 18px; } }

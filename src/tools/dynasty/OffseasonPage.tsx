@@ -1,6 +1,6 @@
 // The offseason, step by step: departures, the transfer portal, signing day, cuts, the next season.
 import { VersionPick, type Upgrader } from './Upgrade';
-import { Button, Field, Note, PageHead, Select, Steps, SubHead, Table, Tabs } from '../../ui';
+import { Button, Field, Note, PageHead, Select, StepNav, Steps, SubHead, Table, Tabs } from '../../ui';
 import { useMemo, useState } from 'react';
 import type { DPlayer, Dynasty, OffseasonEvent } from '../../core/dynasty/model';
 import {
@@ -59,6 +59,19 @@ const stepList = (full: boolean, links: boolean, portal = true) => STEPS.map((la
   label: i === 3 && (full || !portal) ? 'Recruiting' : label,
   href: links && i >= FIRST_SEASON_STEP ? href(`offseason/${SEASON_STEPS[i - FIRST_SEASON_STEP]}`) : undefined,
 }));
+
+/**
+ * The steps: on a desktop the full list; on smaller screens one step at a time (StepNav: the steps before and after,
+ * L2 / R2 on a controller, where they can be opened; user, 2026-11-22).
+ */
+function OffSteps({ steps, current }: { steps: { label: string; href?: string }[]; current: number }) {
+  return (
+    <>
+      <div className="ui-handheld-only"><StepNav label="Offseason steps" steps={steps} current={current} /></div>
+      <div className="ui-desktop-only"><Steps label="Offseason steps" steps={steps} current={current} /></div>
+    </>
+  );
+}
 
 /** What new players are made from (the dynasty's own players). */
 export const getTemplates = async (d: Dynasty): Promise<RecruitTemplates> => recruitTemplates(d);
@@ -195,7 +208,7 @@ export function Offseason({ actions, busy, arg }: { actions: OffseasonActions; b
   return (
     <section className={['recruiting', 'portal'].includes(st.step) || (st.step === 'cuts' && !st.cutsPicked) ? 'dy-off dy-off-wide' : 'dy-off'}>
       <PageHead title={`Offseason ${st.year}`} />
-      <Steps label="Offseason steps" steps={stepList(st.mode === 'full', false, hasTransfers(d))} current={step} />
+      <OffSteps steps={stepList(st.mode === 'full', false, hasTransfers(d))} current={step} />
 
       {st.step === 'carousel' && <CarouselStep actions={actions} busy={busy} />}
       {st.step !== 'carousel' && <CarouselSummary />}
@@ -606,7 +619,7 @@ function SeasonSteps({ actions, step, busy }: { actions: OffseasonActions; step:
   // The game version on the last step (mockup 4): the newest is picked.
   const [version, setVersion] = useState<'new' | 'same'>('new');
   const pl = (id: number) => d.players[id - 1];
-  const steps = <Steps label="Offseason steps" steps={stepList(true, true, hasTransfers(d))} current={FIRST_SEASON_STEP + SEASON_STEPS.indexOf(step)} />;
+  const steps = <OffSteps steps={stepList(true, true, hasTransfers(d))} current={FIRST_SEASON_STEP + SEASON_STEPS.indexOf(step)} />;
   if (step === 'players') return <>{steps}<EditPlayersStep team={team} onPick={setTeam} /></>;
   if (step === 'depth') {
     const slots = team !== undefined ? season.slots[team] ?? [] : [];
