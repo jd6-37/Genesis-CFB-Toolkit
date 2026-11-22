@@ -45,7 +45,7 @@ export const NIL = {
   /** The share of market value a prospect expects, by stars (0-5): schools at his level pay about that. */
   expectRate: [0.2, 0.2, 0.3, 0.5, 0.75, 0.95],
   /** Transfers: a player another school would start and pay `ratio` times his pay gets poachSlope × (ratio − poachFrom), at most poachMax. */
-  poachFrom: 1.5, poachSlope: 0.05, poachMax: 0.3,
+  poachFrom: 1.5, poachSlope: 0.04, poachMax: 0.25,
   /** Kept at his old pay (the user's Keep): + underpaidSlope × the share he's short. */
   underpaidSlope: 0.5,
   /** How much prospects care about NIL opportunities, by stars (0-5; 1 = average, as the other pitch weights). */

@@ -20,6 +20,7 @@ import { prestigeStars } from '../../core/dynasty/offseason';
 import { MAX_PRESTIGE } from '../../core/dynasty/prestige';
 import { GoalsBox, SeasonCoach, TeamCoach } from './CoachPages';
 import type { SaveGame } from '../../core/dynasty/save';
+import { fcsLabel } from '../../core/dynasty/fcs';
 import type { DPlayer } from '../../core/dynasty/model';
 import { GROUP_COLUMNS, type Attr } from '../../core/rosterLayouts';
 import { fineAt, GROUP_OF_ROLE, RATINGS, roleOfPos, shownAt, shownFineInSlot, shownInSlot } from '../../core/dynasty/ratings';
@@ -982,7 +983,13 @@ function Progression({ p, color }: { p: DPlayer; color: string }) {
  */
 function CareerStats({ p, seasons }: { p: DPlayer; seasons: { year: number; team: number | null; lines: PlayerLine[] }[] }) {
   const { v } = useDyn();
-  const withStats = seasons.filter((s) => s.lines.length > 0).slice().reverse(); // oldest first
+  // His seasons at an FCS school first (fcs.ts; user, 2026-11-22): in his career line, not in the dynasty's records.
+  const fcs = (p.fcs?.seasons ?? []).map((f) => ({
+    year: f.year, team: null, school: p.fcs!.school, cls: f.cls,
+    lines: (Object.keys(f.stats) as StatCategory[]).map((cat) => ({ player: p.id, team: -1, slot: -1, cat, s: f.stats[cat]! }) as PlayerLine),
+  }));
+  type Row = { year: number; team: number | null; lines: PlayerLine[]; school?: string; cls?: string };
+  const withStats: Row[] = [...fcs, ...seasons.filter((s) => s.lines.length > 0).slice().reverse()]; // oldest first
   if (!withStats.length || (withStats.length === 1 && withStats[0].year === v.season.year)) return null;
   const sum = (l: PlayerLine[], k: string) => (k === 'long' ? Math.max(0, ...l.map((x) => statValue(x, k))) : l.reduce((a, x) => a + statValue(x, k), 0));
   return (
@@ -1000,10 +1007,10 @@ function CareerStats({ p, seasons }: { p: DPlayer; seasons: { year: number; team
               <thead><tr><th className="ui-left">Season</th><th className="ui-left">Team</th><th>Class</th>{t.cols.map(([k, label]) => <th key={k}>{label}</th>)}</tr></thead>
               <tbody>
                 {rows.map(({ s, lines }) => (
-                  <tr key={s.year}>
+                  <tr key={`${s.year}-${s.school ? 'fcs' : 'fbs'}`}>
                     <td className="ui-left">{s.year}</td>
-                    <td className="ui-left">{s.team !== null ? <TeamLink team={s.team} rank={false} size={16} /> : ''}</td>
-                    <td className="ui-text">{p.years?.find((y) => y.year === s.year)?.cls ?? ''}</td>
+                    <td className="ui-left">{s.school ? fcsLabel(s.school) : s.team !== null ? <TeamLink team={s.team} rank={false} size={16} /> : ''}</td>
+                    <td className="ui-text">{s.cls ?? p.years?.find((y) => y.year === s.year)?.cls ?? ''}</td>
                     {t.cols.map(([k]) => <td key={k}><Num value={sum(lines, k)} /></td>)}
                   </tr>
                 ))}
@@ -1019,6 +1026,7 @@ function CareerStats({ p, seasons }: { p: DPlayer; seasons: { year: number; team
           );
         })}
       </div>
+      {fcs.length > 0 && <p className="dy-small dy-dim">His {fcsLabel(p.fcs!.school)} seasons count in his career line, not in the dynasty's records.</p>}
     </>
   );
 }

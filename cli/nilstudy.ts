@@ -6,7 +6,8 @@ import { loadRom, newDynasty, playSeason, runOffseason, strengths } from './dyna
 import { seasonView } from '../src/core/dynasty/derive';
 import { enableNil, marketValue, payroll, payRates } from '../src/core/dynasty/nil';
 import { seasonPrestige } from '../src/core/dynasty/prestige';
-import { STAR_POINTS } from '../src/core/dynasty/offseason';
+import { DEPTH_SLOTS, STAR_POINTS } from '../src/core/dynasty/offseason';
+import { SLOT_DEF } from '../src/core/dynasty/depth';
 import type { Dynasty } from '../src/core/dynasty/model';
 
 const [romPath, seedsArg = '3', seasonsArg = '20', outPath] = process.argv.slice(2);
@@ -54,7 +55,12 @@ function measure(d: Dynasty, before: Dynasty | null, tag: string, seed: number):
     row.top5Str = +mean(teams.slice().sort((a, b) => str[b] - str[a]).slice(0, 5).map((t) => str[t])).toFixed(1);
     const ev = s.events ?? [];
     const tr = ev.filter((e) => e.kind === 'transfer') as { from: number; to: number; ovr: number }[];
-    row.transfers = tr.length;
+    row.transfers = tr.filter((e) => e.to !== null).length;
+    row.down = ev.filter((e) => e.kind === 'transfer' && e.down).length;
+    row.fcsIn = ev.filter((e) => e.kind === 'fcs').length;
+    let st = 0, trs = 0;
+    s.slots.forEach((team) => team.forEach((id, slot) => { if (id === null || DEPTH_SLOTS.has(SLOT_DEF[slot].label)) return; st++; const p = d.players[id - 1]; if (p?.transfers?.some((x) => x.to !== null) || p?.fcs) trs++; }));
+    row.trStartPct = +(100 * trs / Math.max(1, st)).toFixed(1);
     row.g5ToP4 = tr.filter((e) => tier(e.from) === 'G5' && tier(e.to) === 'P4').length;
     row.p4ToG5 = tr.filter((e) => tier(e.from) === 'P4' && tier(e.to) === 'G5').length;
     row.g5StartersOut = tr.filter((e) => tier(e.from) === 'G5' && e.ovr >= 80).length;

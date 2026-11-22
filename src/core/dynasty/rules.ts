@@ -45,6 +45,14 @@ export interface OffseasonRules {
   playingTimeShare: number;
   /** Most transfers one team takes (random classes). */
   transfersPerTeam: number;
+  /** Players up from FCS schools in the portal, per FBS team (full recruiting; fcs.ts). */
+  fcsPerTeam: number;
+  /** A portal player nobody signs transfers down to an FCS school at this chance (else he goes back to his team). */
+  portalDown: number;
+  /** How much computer schools favor transfers (experience) over high-school players of the same stars. */
+  portalPrefer: number;
+  /** Transfers a computer school signs beyond the players it lost to the portal (more after a playoff season or with a new coach). */
+  portalExtra: number;
   // Recruiting
   weeks: number;
   userPoints: number; cpuPoints: number;
@@ -107,7 +115,7 @@ export interface OffseasonRules {
 export const DEFAULT_RULES: OffseasonRules = {
   proSeniorBase: 80, proSeniorScale: 14, proSeniorMax: 0.85, srPlusReturn: 0.3, proJuniorBase: 84, proJuniorScale: 12, proJuniorMax: 0.7,
   growthFR: 0.45, growthSO: 0.4, growthJR: 0.35, growthSR: 0.3, growthSRPlus: 0.25, growthMin: 0.5, growthMax: 1.5, starterBonus: 1, speedPace: 0.5, paceQuickness: 0.7, paceRange: 0.8, pacePower: 1, paceTechnique: 1.2, paceAwareness: 1.4, trainingMax: 40, trainingEffect: 0.2, weightGainPct: 0.02, weightTrainingEffect: 0.5, capAwareness: 18, capSpeed: 6, capQuickRange: 10, capOther: 14,
-  transferStarter: 0.01, transferDepth: 0.08, transferBackup: 0.12, transferBlocked: 0.1, transferSenior: 0.05, playingTimeCut: 0.8, playingTimeShare: 0.5, transfersPerTeam: 4,
+  transferStarter: 0.01, transferDepth: 0.04, transferBackup: 0.065, transferBlocked: 0.05, transferSenior: 0.03, playingTimeCut: 0.8, playingTimeShare: 0.5, transfersPerTeam: 4, fcsPerTeam: 1, portalDown: 0.6, portalPrefer: 1.35, portalExtra: 0,
   weeks: 5, userPoints: 1000, cpuPoints: 1000, maxPerProspect: 60, boardSize: 35, scoutOvr: 10, scoutRatings: 20, offerExtra: 5, offerBoost: 1.2, noOffer: 0.6,
   commitThreshold: [40, 60, 100, 160, 230, 320], firstWeek: [1, 1, 2, 2, 3, 4], portalThreshold: 0.7, commitLead: 1.25, flipMargin: 1.5, flipChance: 0.5,
   topStart: [0.5, 0.45, 0.4, 0.35, 0.3], poolPerSpot: 1.4, inStateCost: 0.8, pipelineCost: 0.9, pipelineMin: 4, classMax: 25,
@@ -210,6 +218,10 @@ export const RULE_SECTIONS: RuleSection[] = [
       { key: 'playingTimeCut', label: 'Less with full playing time', help: '0.8 means 80% less for a player who got the ball enough.', kind: 'pct', min: 0, max: 1 },
       { key: 'playingTimeShare', label: 'Full playing time = this share of a starter\'s touches', help: 'Carries and catches, or tackles, sacks and interceptions.', kind: 'pct', min: 0.01, max: 2 },
       { key: 'transfersPerTeam', label: 'Most transfers a team takes (random classes)', help: '', kind: 'int', min: 0, max: 25 },
+      { key: 'fcsPerTeam', label: 'Players up from FCS schools, per team', help: 'New players in the portal (recruiting).', kind: 'num', min: 0, max: 10 },
+      { key: 'portalDown', label: 'Unsigned portal players who transfer down to FCS', help: 'The rest go back to their team.', kind: 'pct', min: 0, max: 1 },
+      { key: 'portalExtra', label: 'Transfers a school signs beyond the ones it lost', help: 'Computer schools; +2 after a playoff season, +3 with a new head coach.', kind: 'int', min: 0, max: 15 },
+      { key: 'portalPrefer', label: 'How much computer schools favor transfers', help: 'Over high-school players of the same stars (experience).', kind: 'num', min: 0.2, max: 5 },
     ],
   },
   {

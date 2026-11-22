@@ -68,6 +68,8 @@ export interface DPlayer {
   lookV?: 2;
   /** NIL pay this season, dollars (nil.ts; NIL dynasties only). */
   nil?: number;
+  /** The FCS school he transferred up from and his seasons there, with stats (fcs.ts; not in the dynasty's records). */
+  fcs?: { school: string; seasons: import('./fcs').FcsSeason[] };
   status: 'active' | 'graduated' | 'pro' | 'transferred' | 'cut';
   /** The CFB 27 player ID for the starting players. */
   srcId?: number;
@@ -173,7 +175,9 @@ export interface DSeason {
 
 export type OffseasonEvent =
   | { kind: 'graduated' | 'pro' | 'returns'; player: number; team: number; ovr: number }
-  | { kind: 'transfer'; player: number; from: number; to: number | null; ovr: number }
+  | { kind: 'transfer'; player: number; from: number; to: number | null; ovr: number; /** Nobody signed him: the FCS school he went down to (fcs.ts). */ down?: string }
+  /** A player up from an FCS school (fcs.ts): a new player in the dynasty. */
+  | { kind: 'fcs'; player: number; school: string; to: number; ovr: number }
   | { kind: 'signed'; player: number; team: number; stars: number; ovr: number }
   | { kind: 'cut'; player: number; team: number; ovr: number }
   | { kind: 'walkon'; player: number; team: number; ovr: number }

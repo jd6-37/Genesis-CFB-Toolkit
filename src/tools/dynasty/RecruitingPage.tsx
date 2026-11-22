@@ -14,7 +14,8 @@ import { rulesOf } from '../../core/dynasty/rules';
 import { hasTransfers } from '../../core/dynasty/edition';
 import { academicGrade, academicsOf, gradeOf } from '../../core/dynasty/academics';
 import { conferencePrestige } from '../../core/dynasty/confPrestige';
-import { costOf, interestRank, newOffers, offerCap, offersOut, pipelineStates, planCost, pointCost, withdrawOffer } from '../../core/dynasty/recruiting';
+import { costOf, interestRank, isTransfer, newOffers, offerCap, offersOut, pipelineStates, planCost, pointCost, withdrawOffer } from '../../core/dynasty/recruiting';
+import { fcsLabel } from '../../core/dynasty/fcs';
 import { SCHOOL_STATE, stateCode } from '../../core/dynasty/schoolStates';
 import { GROUP_OF_ROLE, roleOfPos, shownAt } from '../../core/dynasty/ratings';
 import { Empty, Headshot, heightText, hometownText, inkColor, mainColor, onColor, useDyn } from './ui';
@@ -84,6 +85,9 @@ function standingOnly(p: Prospect, team: number, d: Dynasty): string {
 }
 
 type Tab = 'board' | 'prospects' | 'portal' | 'school' | 'classes';
+
+/** Where a portal player comes from: his FBS school, or "Harvard (FCS)". */
+const fromText = (d: Dynasty, p: Prospect) => (p.fcs ? fcsLabel(p.fcs) : p.from !== null ? d.teams[p.from].school : '');
 
 /** His interest in a school as a share of what he needs to commit (the bars and their figures). */
 const share = (R: ReturnType<typeof rulesOf>, p: Prospect, team: number) => Math.min(1, (p.interest[team] ?? 0) / commitNeed(R, p));
@@ -304,7 +308,7 @@ function BoardTab({ hub, board, commits, toProspects }: { hub: Hub; board: Prosp
                       const offered = p.offers.includes(team) || plan.offers.includes(p.id);
                       return (
                         <tr key={p.id} className={cur?.id === p.id ? 'ui-row-mine' : undefined}>
-                          <td className="ui-left"><Button variant="link" strong onClick={() => pick(p.id)}>{playerName(p.player)}</Button>{offered && <span className="dy-chip">Offered</span>}{p.id > 0 && <span className="dy-chip">Transfer</span>}</td>
+                          <td className="ui-left"><Button variant="link" strong onClick={() => pick(p.id)}>{playerName(p.player)}</Button>{offered && <span className="dy-chip">Offered</span>}{isTransfer(p) && <span className="dy-chip">Transfer</span>}</td>
                           <td className="ui-left">{p.player.pos}</td>
                           <td className="dy-wide">{p.stars}</td>
                           <td className="ui-left dy-wide">{stateCode(p.player.state) || '-'}</td>
@@ -328,7 +332,7 @@ function BoardTab({ hub, board, commits, toProspects }: { hub: Hub; board: Prosp
           <SubHead>Committed to you</SubHead>
           <ul className="dy-commit-list">
             {commits.slice().sort((a, b) => b.stars - a.stars).map((p) => (
-              <li key={p.id}><Headshot p={p.player} size={40} plain /><span><span className="dy-strong">{playerName(p.player)}</span><br /><span className="dy-small dy-dim">{starText(p.stars)} {p.player.pos}{p.from !== null ? `, transfer from ${d.teams[p.from].school}` : `, ${hometownText(p.player)}`}</span></span><span className="dy-ovr">{ovrText(p, scoutLevel(rs, team, p))}</span></li>
+              <li key={p.id}><Headshot p={p.player} size={40} plain /><span><span className="dy-strong">{playerName(p.player)}</span><br /><span className="dy-small dy-dim">{starText(p.stars)} {p.player.pos}{fromText(d, p) ? `, transfer from ${fromText(d, p)}` : `, ${hometownText(p.player)}`}</span></span><span className="dy-ovr">{ovrText(p, scoutLevel(rs, team, p))}</span></li>
             ))}
           </ul>
         </>
@@ -361,7 +365,7 @@ function ProspectCard({ p, hub }: { p: Prospect; hub: Hub }) {
         <div className="dy-card-who">
           <h4>{playerName(p.player)}</h4>
           <p>{p.player.pos}, {p.stars} {p.stars === 1 ? 'star' : 'stars'}. {heightText(p.player.heightIn)}, {p.player.weight} lb</p>
-          <p className="dy-dim">{p.from === team ? 'Left your team for the transfer portal' : `${p.from !== null ? `Transfer from ${d.teams[p.from].school}. ` : ''}${hometownText(p.player)}`}</p>
+          <p className="dy-dim">{p.from === team ? 'Left your team for the transfer portal' : `${fromText(d, p) ? `Transfer from ${fromText(d, p)}. ` : ''}${hometownText(p.player)}`}</p>
         </div>
         <div className="dy-card-ovr"><span>OVR</span><b title={lv >= 1 ? undefined : 'Not scouted'}>{lv >= 1 ? p.player.ovr : '?'}</b></div>
       </div>
@@ -426,7 +430,7 @@ function ProspectCard({ p, hub }: { p: Prospect; hub: Hub }) {
 
       <div className="dy-card-part">
         <h5>Scouting</h5>
-        {lv >= 2 ? <RatingsLine p={p} /> : <p>{p.id > 0 ? '' : lv === 1 ? 'His overall is known. His ratings are hidden.' : 'Nothing known yet.'}</p>}
+        {lv >= 2 ? <RatingsLine p={p} /> : <p>{isTransfer(p) ? '' : lv === 1 ? 'His overall is known. His ratings are hidden.' : 'Nothing known yet.'}</p>}
         {hub.open && lv < 2 && <div className="dy-row"><ScoutButtons p={p} team={team} lv={lv} left={hub.left} onScout={hub.scout} /></div>}
       </div>
 
@@ -473,8 +477,8 @@ function ProspectsTab({ hub, portal }: { hub: Hub; portal: boolean }) {
   };
   const text = q.trim().toLowerCase();
   const list = rs.prospects
-    .filter((p) => p.committed === null && (portal ? p.id > 0 : true) && (!hide || !onBoard(p)) && (!pos || p.player.pos === pos) && p.stars >= Number(minStars) &&
-      (portal || kind === 'all' || (kind === 'hs' && p.id < 0) || (kind === 'portal' && p.id > 0) || (kind === 'near' && closeness(p.player.state, school) >= 0.6)) &&
+    .filter((p) => p.committed === null && (portal ? isTransfer(p) : true) && (!hide || !onBoard(p)) && (!pos || p.player.pos === pos) && p.stars >= Number(minStars) &&
+      (portal || kind === 'all' || (kind === 'hs' && !isTransfer(p)) || (kind === 'portal' && isTransfer(p)) || (kind === 'near' && closeness(p.player.state, school) >= 0.6)) &&
       (!state || (state === 'pipeline' ? pipeSet.has(stateCode(p.player.state)) : state === 'home' ? pointCost(d, hub.pipes, p, team) < 1 : stateCode(p.player.state) === state)) &&
       (!text || `${playerName(p.player)} ${hometownText(p.player)}`.toLowerCase().includes(text)))
     .sort((a, b) => key(b) - key(a) || b.stars - a.stars || a.player.last.localeCompare(b.player.last));
@@ -512,10 +516,10 @@ function ProspectsTab({ hub, portal }: { hub: Hub; portal: boolean }) {
                   const tag = discountTag(d, hub.pipes, p, team);
                   return (
                     <tr key={p.id} className={cur?.id === p.id ? 'ui-row-mine' : undefined}>
-                      <td className="ui-left"><Button variant="link" strong onClick={() => { setSel(p.id); setShown(true); }}>{playerName(p.player)}</Button>{!portal && p.id > 0 && <span className="dy-chip">Transfer</span>}</td>
+                      <td className="ui-left"><Button variant="link" strong onClick={() => { setSel(p.id); setShown(true); }}>{playerName(p.player)}</Button>{!portal && isTransfer(p) && <span className="dy-chip">Transfer</span>}</td>
                       <td className="ui-left">{p.player.pos}</td>
                       <td>{p.stars}</td>
-                      <td className="ui-left dy-wide">{portal && p.from !== null ? d.teams[p.from].school : hometownText(p.player)}{tag && <span className="dy-small dy-dim"> {tag.split(',')[0]}</span>}</td>
+                      <td className="ui-left dy-wide">{portal && fromText(d, p) ? fromText(d, p) : hometownText(p.player)}{tag && <span className="dy-small dy-dim"> {tag.split(',')[0]}</span>}</td>
                       <td className="ui-num">{ovrText(p, scoutLevel(rs, team, p)) || '?'}</td>
                       <td className="ui-left dy-wide">{lead ? (lead.team === team ? <b>You</b> : d.teams[lead.team].school) : <span className="dy-dim">Open</span>}</td>
                       <td>{onBoard(p) ? <span className="dy-small dy-dim">On board</span> : hub.open && <Button variant="quiet" disabled={hub.full} onClick={() => hub.add(p.id)} label={`Add ${playerName(p.player)} to your board`}>Add</Button>}</td>
@@ -657,7 +661,7 @@ function ClassesTab({ team }: { team: number }) {
   const rows = useMemo(() => d.teams.map((t) => {
     const c = rs.prospects.filter((p) => p.committed === t.index);
     const by = (s: number) => c.filter((p) => p.stars === s).length;
-    return { t: t.index, n: c.length, s5: by(5), s4: by(4), s3: by(3), s2: by(2) + by(1), tr: c.filter((p) => p.id > 0).length, pts: c.reduce((a, p) => a + STAR_POINTS[p.stars], 0) };
+    return { t: t.index, n: c.length, s5: by(5), s4: by(4), s3: by(3), s2: by(2) + by(1), tr: c.filter((p) => isTransfer(p)).length, pts: c.reduce((a, p) => a + STAR_POINTS[p.stars], 0) };
   }).sort((a, b) => b.pts - a.pts || b.n - a.n || d.teams[a.t].school.localeCompare(d.teams[b.t].school)), [d, rs]);
   const place = (t: number) => rows.findIndex((r) => r.t === t) + 1;
   const list = all ? rows : rows.filter((r, i) => i < 25 || r.t === team || r.t === sel);
@@ -692,7 +696,7 @@ function ClassesTab({ team }: { team: number }) {
           {commits.length === 0 ? <p className="dy-card-pad dy-dim">No commitments yet.</p> : (
             <ul className="dy-commit-list dy-card-pad">
               {commits.map((p) => (
-                <li key={p.id}><Headshot p={p.player} size={40} plain /><span><span className="dy-strong">{playerName(p.player)}</span><br /><span className="dy-small dy-dim">{starText(p.stars)} {p.player.pos}{p.from !== null ? `, transfer from ${d.teams[p.from].school}` : `, ${hometownText(p.player)}`}</span></span><span className="dy-ovr">{ovrText(p, scoutLevel(rs, team, p))}</span></li>
+                <li key={p.id}><Headshot p={p.player} size={40} plain /><span><span className="dy-strong">{playerName(p.player)}</span><br /><span className="dy-small dy-dim">{starText(p.stars)} {p.player.pos}{fromText(d, p) ? `, transfer from ${fromText(d, p)}` : `, ${hometownText(p.player)}`}</span></span><span className="dy-ovr">{ovrText(p, scoutLevel(rs, team, p))}</span></li>
               ))}
             </ul>
           )}
