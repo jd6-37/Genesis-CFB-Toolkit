@@ -278,3 +278,27 @@ a.ui-button.ui-button-chrome, a.ui-button.ui-button-chrome:hover { color: var(--
 .ui-combo-option small { color: var(--text-muted); font-size: var(--fs-2); }
 .ui-combo-option[aria-selected='true'] { background: var(--highlight); }
 .ui-combo-none { color: var(--text-muted); cursor: default; }
+
+/* Controllers (pad.tsx). While a controller is in use (data-input="pad" on the document), the focused item gets a
+   thick yellow frame with a black edge, over any other focus style, and the hint bar sits along the bottom. */
+:root[data-input='pad'] :focus {
+  outline: var(--focus-w) solid var(--focus) !important;
+  outline-offset: 0 !important;
+  box-shadow: 0 0 0 calc(var(--focus-w) + 2px) var(--focus-edge);
+  position: relative;
+  z-index: 1;
+}
+:root[data-input='pad'] body { padding-bottom: var(--pad-bar-h); }
+.ui-padbar {
+  position: fixed; z-index: 50; left: 0; right: 0; bottom: 0; height: var(--pad-bar-h); box-sizing: border-box;
+  display: flex; justify-content: space-between; gap: var(--sp-4); padding: 0 var(--sp-4);
+  background: var(--masthead); color: var(--on-masthead); font: 600 var(--fs-3)/1 var(--font-display);
+}
+.ui-padbar-side { display: flex; align-items: center; gap: var(--sp-4); min-width: 0; overflow: hidden; }
+.ui-padbar-item { display: inline-flex; align-items: center; gap: var(--sp-1); white-space: nowrap; }
+.ui-padbar-item > span:last-child { margin-left: var(--sp-1); }
+.ui-padkey {
+  display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: 24px; height: 24px; padding: 0 var(--sp-1);
+  border: 2px solid currentColor; border-radius: 4px; font: 700 var(--fs-2)/1 var(--font-display); letter-spacing: 0.02em;
+}
+.ui-padkey-face { border-radius: 12px; padding: 0; width: 24px; }

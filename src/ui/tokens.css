@@ -64,6 +64,13 @@
   --rule-w: 1px;
   --rule-w-strong: 4px;
 
+  /* Controllers (src/ui/pad.tsx): the focus frame, seen from arm's length on a handheld (yellow with a black
+     edge, so it shows on white and on black), and the hint bar's height. */
+  --focus: #ffdb49;
+  --focus-edge: #000000;
+  --focus-w: 4px;
+  --pad-bar-h: 44px;
+
   /* Breakpoints (mobile first; use these two in min-width queries): 640px tablet, 960px desktop. */
 }
 
