@@ -24,7 +24,7 @@
 // font only (A-Z a-z 0-9 space . , ! ? ' " - & ( ) / : ; % + =), no word over 20 characters.
 
 import { fcsLabel } from './fcs';
-import { moneyWords, NIL } from './nil';
+import { groupOf, moneyWords, NIL } from './nil';
 import type { DPlayer, DSeason, Dynasty, OffseasonEvent, BwSlot } from './model';
 import { rng } from './model';
 import { seasonView, playerLines, standings, bowlOf, INDEPENDENT, type SeasonView, type PlayerLine } from './derive';
@@ -962,7 +962,7 @@ const favoriteSay: Gen = (c) => {
 
 /**
  * A big donor (nil.ts; user, 2026-11-22): the season he arrives. Amounts in words, the game's font has no dollar sign.
- * The only NIL line in the reports (user, 2026-11-22: no NIL "unless it's very notable").
+ * NIL in the reports only when it's notable (user, 2026-11-22): this, `nilSay`.
  */
 const donorSay: Gen = (c) => {
   const { f, L } = c;
@@ -972,6 +972,36 @@ const donorSay: Gen = (c) => {
   return pick(c.r, [
     `A big donor has changed the outlook at ${f.school}: its NIL budget is now ${moneyWords(now)}${from}.`,
     `New booster money has ${f.school} thinking big. Its NIL budget is ${moneyWords(now)}${from}.`,
+  ]);
+};
+
+const GROUP_WORD: Record<string, string> = { QB: 'quarterback', RB: 'running back', WR: 'receiver', TE: 'tight end', OL: 'offensive lineman', DL: 'defensive lineman', LB: 'linebacker', DB: 'defensive back' };
+
+/**
+ * Notable NIL only (user, 2026-11-22): the biggest NIL budget in the country (half the time), or the country's
+ * highest-paid player at a position group (kickers left out), when he plays here. Not in a donor year.
+ */
+const nilSay: Gen = (c) => {
+  const { f, L } = c, d = L.d;
+  const b = L.season.nil?.budget;
+  if (!b || L.season.nil?.donor?.[f.T] === NIL.donorSeasons) return null;
+  if (b[f.T] === Math.max(...b) && c.r() < 0.5) {
+    return pick(c.r, [`No school spends more on NIL than ${f.school}: ${moneyWords(b[f.T])} this year.`, `${f.school} has the biggest NIL budget in the country, ${moneyWords(b[f.T])}.`]);
+  }
+  const top = new Map<string, DPlayer>();
+  for (const p of d.players) {
+    if (p.status !== 'active' || p.team === null || !(p.nil && p.nil > 0)) continue;
+    const g = groupOf(p.pos);
+    if (!GROUP_WORD[g]) continue;
+    const cur = top.get(g);
+    if (!cur || p.nil > (cur.nil ?? 0)) top.set(g, p);
+  }
+  const mine = [...top.entries()].filter(([, p]) => p.team === f.T).sort((x, y) => (y[1].nil ?? 0) - (x[1].nil ?? 0))[0];
+  if (!mine) return null;
+  const [g, p] = mine;
+  return pick(c.r, [
+    `${cap(c.n.ref(p))} is the highest-paid ${GROUP_WORD[g]} in the country, at ${moneyWords(p.nil!)}.`,
+    `No ${GROUP_WORD[g]} in the country makes more in NIL than ${c.n.ref(p)}: ${moneyWords(p.nil!)}.`,
   ]);
 };
 
@@ -1070,7 +1100,7 @@ export function walshReport(L: WalshLeague, team: number, variant = 0): Report {
 
   // Team-level facts in the opener (H-035): the conference favorite (the app's own poll) and, from the dynasty's
   // fourth season, now and then a line about the dynasty era.
-  const open = [S(opening(c)), S(favoriteSay(c)), S(eraSay(c)), S(donorSay(c))].filter(Boolean).join(' ');
+  const open = [S(opening(c)), S(favoriteSay(c)), S(eraSay(c)), S(donorSay(c)), S(nilSay(c))].filter(Boolean).join(' ');
   // An opening that counts starters says it once.
   if (open && /starters? on offense/.test(open)) c.said.add('retOff');
   if (open && /returns? \w+ starters?(?! on)/.test(open)) { c.said.add('retOff'); c.said.add('retDef'); }

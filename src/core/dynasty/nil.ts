@@ -63,7 +63,7 @@ export const NIL = {
 };
 
 /** Position groups for value. */
-const GROUP: Record<string, string> = { QB: 'QB', HB: 'RB', FB: 'RB', WR: 'WR', TE: 'TE', LT: 'OL', LG: 'OL', C: 'OL', RG: 'OL', RT: 'OL', OT: 'OL', OG: 'OL', LE: 'DL', RE: 'DL', DE: 'DL', DT: 'DL', LOLB: 'LB', MLB: 'LB', ROLB: 'LB', OLB: 'LB', LB: 'LB', CB: 'DB', FS: 'DB', SS: 'DB', S: 'DB', K: 'K', P: 'K' };
+export const GROUP: Record<string, string> = { QB: 'QB', HB: 'RB', FB: 'RB', WR: 'WR', TE: 'TE', LT: 'OL', LG: 'OL', C: 'OL', RG: 'OL', RT: 'OL', OT: 'OL', OG: 'OL', LE: 'DL', RE: 'DL', DE: 'DL', DT: 'DL', LOLB: 'LB', MLB: 'LB', ROLB: 'LB', OLB: 'LB', LB: 'LB', CB: 'DB', FS: 'DB', SS: 'DB', S: 'DB', K: 'K', P: 'K' };
 /**
  * Median value at the Power 4 median OVR, and growth per OVR point (fit to the medians and 90th percentiles).
  * The Power 4 median OVR isn't fixed: it's the group's OVR at `pct` among every player in the league each season
@@ -279,6 +279,9 @@ export function money(v: number): string {
   if (v >= 1e6) return `$${(v / 1e6).toFixed(v >= 1e7 ? 1 : 2).replace(/\.?0+$/, '')}M`;
   return `$${Math.round(v / 1000)}K`;
 }
+
+/** A player's position group (QB, RB, WR, TE, OL, DL, LB, DB, K). */
+export const groupOf = (pos: string): string => GROUP[pos] ?? 'LB';
 
 /**
  * Money in words for the Walsh Reports, whose font has no dollar sign (user, 2026-11-22): "6.2 million", "850,000".
