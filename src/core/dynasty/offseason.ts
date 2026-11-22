@@ -271,7 +271,7 @@ export function startOffseason(d: Dynasty, opt: { seed?: number; force?: boolean
   st.prestige = was.map((stars, t) => (v.save ? nextPrestige(stars, v.rank[t], [R.tier6, R.tier5, R.tier4, R.tier3, R.tier2]) : stars));
   st.prestige.forEach((to, t) => { if (to !== was[t]) st.events.push({ kind: 'prestige', team: t, from: was[t], to, finalRank: v.rank[t] }); });
   // NIL: next season's budgets from the conference, the new prestige and the boosters after this season (nil.ts).
-  if (hasNil(d)) st.nil = nextBudgets(d, st.prestige);
+  if (hasNil(d)) st.nil = nextBudgets(d, st.prestige, st.seed);
   const r = stepRand(st, 1);
   const inGame = new Set(lastSeason(d).slots.flat().filter((x): x is number => x !== null));
   const players = d.players.map((p0) => {
@@ -561,10 +561,21 @@ export function recruitTemplates(d: Dynasty): RecruitTemplates {
   return { byPos, firstNames: namePool(first, firstOdds, MAX_FIRST), lastNames: namePool(last, lastOdds, MAX_LAST), realNames: real, towns };
 }
 
-/** Where in the league's players of a position a recruit of each star rating is modeled on (OVR percentile), before the freshman gap. */
-const STAR_BAND: Record<number, [number, number]> = { 5: [0.97, 1], 4: [0.8, 0.97], 3: [0.35, 0.8], 2: [0.05, 0.35], 1: [0, 0.05], 0: [0, 0.08] };
+/**
+ * Where in the league's players of a position a recruit of each star rating is modeled on (OVR percentile), before
+ * the freshman gap. With the real star mix (POOL_STARS; user, 2026-11-22) the bands sit so that a class brings in
+ * as much talent as the earlier mix did (more 3-stars, each a little better), or the league would get weaker.
+ */
+const STAR_BAND: Record<number, [number, number]> = { 5: [0.99, 1], 4: [0.9, 0.99], 3: [0.4, 0.9], 2: [0.12, 0.4], 1: [0, 0.12], 0: [0, 0.08] };
+/**
+ * The high-school pool's star mix (full recruiting), as in real classes: about 1% five-stars, 10-11% four-stars
+ * (247Sports composites: ~35 five-stars and ~350-400 four-stars a year among about 3,000 FBS signees).
+ */
+export const POOL_STARS = [0.08, 0.27, 0.53, 0.11, 0.011]; // 1★ … 5★
 /** Potential range by stars (walk-ons 0). */
-const STAR_POT: Record<number, [number, number]> = { 5: [86, 99], 4: [80, 93], 3: [72, 86], 2: [65, 79], 1: [58, 72], 0: [55, 70] };
+// With the real star mix (2026-11-22) fewer recruits are blue chips, so each star level has a little more room to grow:
+// the league's supply of potential (and of 90+ ceilings) stays about where the earlier mix had it.
+const STAR_POT: Record<number, [number, number]> = { 5: [90, 99], 4: [84, 96], 3: [76, 90], 2: [68, 83], 1: [58, 72], 0: [55, 70] };
 /**
  * A diamond in the rough (user, 2026-11-12: "a few rare ones would be cool"): a walk-on with the potential
  * of a top recruit. He starts as weak as any walk-on and grows fast (development is a share of his room).
@@ -572,9 +583,17 @@ const STAR_POT: Record<number, [number, number]> = { 5: [86, 99], 4: [80, 93], 3
 export const DIAMOND_CHANCE = DEFAULT_RULES.diamondChance;
 export const DIAMOND_POT: [number, number] = [DEFAULT_RULES.diamondPotMin, DEFAULT_RULES.diamondPotMax];
 
+/** Stars for one high-school prospect in the full-recruiting pool (POOL_STARS). */
+export function drawPoolStars(r: Rand): number {
+  let x = r() * POOL_STARS.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < 5; i++) if ((x -= POOL_STARS[i]) <= 0) return i + 1;
+  return 3;
+}
+
 /** Stars for one recruit of a program with this prestige (0-1). */
 export function drawStars(r: Rand, pres: number): number {
-  const w = [0.12 * (1 - pres), 0.38 * (1 - pres) + 0.05, 0.42, 0.06 + 0.42 * pres, 0.005 + 0.12 * pres * pres]; // 1★ … 5★
+  // Blue chips mostly at the top programs (a 6-star program: ~45% four-stars, ~13% five-stars; a 2-star one ~3%).
+  const w = [0.1 * (1 - pres), 0.4 * (1 - pres) + 0.03, 0.45, 0.01 + 0.55 * pres * pres, 0.15 * pres ** 3]; // 1★ … 5★
   let x = r() * w.reduce((a, b) => a + b, 0);
   for (let i = 0; i < 5; i++) if ((x -= w[i]) <= 0) return i + 1;
   return 3;
@@ -868,7 +887,7 @@ export function finishOffseason(d: Dynasty): Dynasty {
     }),
     ...depthChart(withNumbers),
     prestige: st.prestige ?? seasonPrestige(d, prev),
-    ...(st.nil ? { nil: { budget: st.nil.budget, boost: st.nil.boost, market: st.nil.market } } : {}),
+    ...(st.nil ? { nil: { budget: st.nil.budget, boost: st.nil.boost, market: st.nil.market, ...(st.nil.donor ? { donor: st.nil.donor } : {}) } } : {}),
     // Each team's head coach this season (coaches.ts); the coaching carousel will change them before this point.
     ...(d.coaches ? { coach: d.teams.map((t) => d.coaches!.find((c) => c.team === t.index)?.id ?? null) } : {}),
     imports: [],

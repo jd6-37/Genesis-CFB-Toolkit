@@ -43,6 +43,11 @@ function measure(d: Dynasty, before: Dynasty | null, tag: string, seed: number):
   if (prev) {
     const v = seasonView({ ...d, seasons: d.seasons.slice(0, -1) }, prev);
     row.champ = d.teams[v.champion ?? 0]?.school ?? '';
+    row.champG5 = v.champion !== null && tier(v.champion) === 'G5' ? 1 : 0;
+    const dn = prev.nil?.donor;
+    row.donors = dn ? dn.filter((x) => x > 0).length : 0;
+    row.donorBest = dn && dn.some((x) => x > 0) ? Math.min(...dn.map((x, t) => (x > 0 ? v.rank[t] : 999))) : 0;
+    if (dn) dn.forEach((x, t) => { if (x > 0) donorLog.push(`${prev.year} ${d.teams[t].school} left ${x} rank ${v.rank[t]}${v.champion === t ? ' CHAMPION' : ''}`); });
     row.g5Top25 = v.order.slice(0, 25).filter((t) => tier(t) === 'G5').length;
     row.g5Top12 = v.order.slice(0, 12).filter((t) => tier(t) === 'G5').length;
     row.bb10 = v.order.slice(0, 10).filter((t) => BB.has(d.teams[t].school)).length;
@@ -95,6 +100,7 @@ function measure(d: Dynasty, before: Dynasty | null, tag: string, seed: number):
 }
 
 const rows: Row[] = [];
+const donorLog: string[] = [];
 const seeds = +seedsArg, seasons = +seasonsArg;
 for (let seed = 1; seed <= seeds; seed++) {
   for (const mode of (process.env.MODES ?? 'off,nil').split(',') as ('off' | 'nil')[]) {
@@ -111,6 +117,7 @@ for (let seed = 1; seed <= seeds; seed++) {
   }
 }
 if (outPath) writeFileSync(outPath, JSON.stringify(rows));
+if (donorLog.length) console.log(donorLog.join('\n'));
 // Summary: by mode, averaged over seeds, by period.
 const keys = Object.keys(rows.find((r) => r.tag === 'nil' && r.transfers !== undefined) ?? rows[0]).filter((k) => typeof rows.find((r) => r[k] !== undefined)![k] === 'number' && !['seed', 'year'].includes(k));
 const periods = [[0, 0], [1, 5], [6, 10], [11, 15], [16, 30]].filter(([a]) => a <= seasons);

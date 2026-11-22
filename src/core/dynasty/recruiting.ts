@@ -24,7 +24,7 @@ import { hasNil, type Market, marketValue, offerRates, moneyFactor, nilPitch, pa
 import { academicsOf } from './academics';
 import { seasonView } from './derive';
 import { headCoach, recruitingDiscount } from './coachEffects';
-import { POSITIONS, POS_TARGET, ROSTER_LIMIT, STAR_POINTS, chooseTransfers, drawStars, fillMinimums, makeRecruit, prestige, prestigeStars, suggestCuts, type RecruitTemplates } from './offseason';
+import { POSITIONS, POS_TARGET, ROSTER_LIMIT, STAR_POINTS, chooseTransfers, drawPoolStars, fillMinimums, makeRecruit, prestige, prestigeStars, suggestCuts, type RecruitTemplates } from './offseason';
 import { SCHOOL_STATE, closeness, stateCode } from './schoolStates';
 import { hasTransfers } from './edition';
 
@@ -158,7 +158,7 @@ export function startRecruiting(d: Dynasty, tpl: RecruitTemplates, portal: DPlay
   for (let k = 0; k < size; k++) {
     let x = r() * totalNeed, pos = POSITIONS[0];
     for (const p of POSITIONS) if ((x -= need[p]) <= 0) { pos = p; break; }
-    const stars = drawStars(r, 0.45);
+    const stars = drawPoolStars(r);
     const player = makeRecruit(d, tpl, r, tempId, -1, pos, stars, year);
     prospects.push({ id: tempId--, player: { ...player, team: null }, stars, from: null, wants: wants(R, r, rc, stars, undefined, rn), interest: {}, offers: [], committed: null });
   }

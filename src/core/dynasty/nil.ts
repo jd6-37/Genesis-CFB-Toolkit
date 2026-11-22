@@ -13,7 +13,7 @@
 // A school pays its players at its own rate: its budget over what its roster is worth (at most 1). That is why a
 // Group of Five team pays a fraction of market value, as in real life (non-Power 4 medians are 7-9 times lower).
 
-import type { DPlayer, Dynasty, DSeason } from './model';
+import { rng, type DPlayer, type Dynasty, type DSeason } from './model';
 import { editionOf } from './edition';
 import { seasonView } from './derive';
 import { seasonPrestige } from './prestige';
@@ -52,6 +52,12 @@ export const NIL = {
   pitchWeight: [0.7, 0.7, 0.8, 1, 1.2, 1.4],
   /** A computer team offers only with room for at least this share of the dollars it means to offer. */
   offerAtLeast: 0.5,
+  /**
+   * A big donor (user, 2026-11-22: "a rare cinderella would be cool"): each offseason a school whose budget is under
+   * donorUnder × a typical rich program's may get one, at donorChance; for donorSeasons its budget is at least
+   * donorLevel × that typical budget (the last two seasons half way back).
+   */
+  donorChance: 0.004, donorUnder: 0.35, donorLevel: 0.8, donorSeasons: 5,
 };
 
 /** Position groups for value. */
@@ -136,13 +142,17 @@ function boostOf(rank: number, wins: number, losses: number, champ: boolean): nu
 }
 
 /** Each team's NIL for a season: budget and booster share. */
-export interface SeasonNil { budget: number[]; boost: number[]; market: Market }
+export interface SeasonNil {
+  budget: number[]; boost: number[]; market: Market;
+  /** A big donor's backing (a Cinderella; user, 2026-11-22): seasons it has left per team (absent or 0 = none). */
+  donor?: number[];
+}
 
 /**
  * Next season's budgets, at the start of the offseason: the conference base (season `next` is the season about to
  * start; its conferences), the program's prestige stars, booster money built up from last season, the money index.
  */
-export function nextBudgets(d: Dynasty, stars: number[]): SeasonNil {
+export function nextBudgets(d: Dynasty, stars: number[], seed = 0): SeasonNil {
   const s = d.seasons[d.seasons.length - 1];
   const v = seasonView(d, s);
   const prev = s.nil;
@@ -154,7 +164,26 @@ export function nextBudgets(d: Dynasty, stars: number[]): SeasonNil {
     boost.push(b);
     budget.push(Math.round(confBase(s, t.index, stars[t.index]) * (NIL.prestigeBase + NIL.prestigeStep * stars[t.index]) * (1 + b) * moneyIndex(year)));
   }
-  return { budget, boost, market: marketOf(d.players, year, budget) };
+  // Big donors: the ones still backing a school, and now and then a new one for a small-budget school.
+  const ref = richMedian(budget);
+  const r = rng((seed ^ 0xd0d0) >>> 0);
+  const donor = d.teams.map((t) => {
+    const left = Math.max(0, (prev?.donor?.[t.index] ?? 0) - 1);
+    if (left > 0) return left;
+    return budget[t.index] < NIL.donorUnder * ref && r() < NIL.donorChance ? NIL.donorSeasons : 0;
+  });
+  donor.forEach((left, t) => {
+    if (!left) return;
+    const lift = left > 2 ? 1 : 0.5;
+    budget[t] = Math.round(Math.max(budget[t], budget[t] + (NIL.donorLevel * ref - budget[t]) * lift));
+  });
+  return { budget, boost, market: marketOf(d.players, year, budget), ...(donor.some((x) => x) ? { donor } : {}) };
+}
+
+/** A typical rich program's budget: the median of the richer half. */
+export function richMedian(budgets: number[]): number {
+  const rich = budgets.slice().sort((a, b) => b - a).slice(0, Math.ceil(budgets.length / 2));
+  return rich[Math.floor(rich.length / 2)] || 1;
 }
 
 /** The first season's budgets (no booster money yet). */
@@ -179,8 +208,7 @@ export function payRate(budget: number, value: number): number {
  * (the median of the richer half), so the richest schools bid the most whatever their roster is worth.
  */
 export function offerRates(budgets: number[], rates: number[]): number[] {
-  const rich = budgets.slice().sort((a, b) => b - a).slice(0, Math.ceil(budgets.length / 2));
-  const ref = rich[Math.floor(rich.length / 2)] || 1;
+  const ref = richMedian(budgets);
   // Never less than what it pays its own players.
   return budgets.map((b, t) => clamp(Math.max(b / ref, rates[t]), NIL.rateMin, NIL.offerMax));
 }
