@@ -23,6 +23,7 @@
 // at his first mention, his last name after; former players without a number; no advice to the player; the game's
 // font only (A-Z a-z 0-9 space . , ! ? ' " - & ( ) / : ; % + =), no word over 20 characters.
 
+import { fcsLabel } from './fcs';
 import type { DPlayer, DSeason, Dynasty, OffseasonEvent, BwSlot } from './model';
 import { rng } from './model';
 import { seasonView, playerLines, standings, bowlOf, INDEPENDENT, type SeasonView, type PlayerLine } from './derive';
@@ -188,6 +189,7 @@ export function walshLeague(d: Dynasty, season: DSeason): WalshLeague | null {
     if ((e.kind === 'graduated' || e.kind === 'pro') && starterOf(prev, e.team, e.player)) lostStarters[e.team]++;
     if (e.kind === 'transfer' && starterOf(prev, e.from, e.player)) lostStarters[e.from]++;
     if (e.kind === 'transfer' && e.to !== null && starterOf(season, e.to, e.player)) portalStarters[e.to]++;
+    if (e.kind === 'fcs' && starterOf(season, e.to, e.player)) portalStarters[e.to]++;
   }
   const eraRanks = i >= 3
     ? d.seasons.slice(0, i).filter((x) => x.imports.length).map((x) => (x === prev ? vPrev : seasonView(d, x)).rank.map((rk) => (rk && rk <= 25 ? rk : 0)))
@@ -228,7 +230,8 @@ interface Facts {
   wonConf: boolean;
   offRet: number; defRet: number;
   gone: { p: DPlayer; why: 'graduated' | 'pro' | 'transfer'; to: number | null; starter: boolean; side: 'off' | 'def' | null; line: string | null }[];
-  inTransfers: { p: DPlayer; from: number; starter: boolean }[];
+  /** Transfers in: the school he came from as written ("Duke", or "Montana State (FCS)": fcs.ts). */
+  inTransfers: { p: DPlayer; from: string; starter: boolean }[];
   recruits: { p: DPlayer; stars: number; starter: boolean }[];
   classRank: number | null;
   qb: DPlayer | null; qbNew: boolean;
@@ -319,7 +322,8 @@ function factsOf(L: WalshLeague, T: number): Facts {
   gone.sort((a, b) => Number(b.starter) - Number(a.starter) || b.p.ovr - a.p.ovr);
 
   const nowStarter = new Set(season.slots[T].flatMap((id, s) => (id !== null && STARTERS.has(s) ? [id] : [])));
-  const inTransfers = L.events.flatMap((e) => (e.kind === 'transfer' && e.to === T ? [{ p: d.players[e.player - 1], from: e.from, starter: nowStarter.has(e.player) }] : []))
+  const inTransfers = L.events.flatMap((e) => (e.kind === 'transfer' && e.to === T ? [{ p: d.players[e.player - 1], from: d.teams[e.from].school, starter: nowStarter.has(e.player) }]
+    : e.kind === 'fcs' && e.to === T ? [{ p: d.players[e.player - 1], from: fcsLabel(e.school), starter: nowStarter.has(e.player) }] : []))
     .sort((a, b) => Number(b.starter) - Number(a.starter) || b.p.ovr - a.p.ovr);
   const recruits = L.events.flatMap((e) => (e.kind === 'signed' && e.team === T ? [{ p: d.players[e.player - 1], stars: e.stars, starter: nowStarter.has(e.player) }] : []))
     .sort((a, b) => b.stars - a.stars || b.p.ovr - a.p.ovr);
@@ -536,7 +540,7 @@ const qbSay: Gen = (c) => {
     // H-035: "Duke transfer #10 Darian Mensah takes over at QB".
     n.restore(snap);
     const as = n.ref(qb, false);
-    return `${walshText(c.L.d.teams[transfer.from].school)} transfer ${as} takes over at QB${style ? ` and ${style}` : ''}.`;
+    return `${walshText(transfer.from)} transfer ${as} takes over at QB${style ? ` and ${style}` : ''}.`;
   }
   if (recruit) return `${recruit.stars}-star freshman ${who} won the starting job${style ? ` and ${style}` : ''}.`;
   if (f.qbNew) {
@@ -734,7 +738,7 @@ function arrivalSay(side: 'off' | 'def'): Gen {
     }
     if (tr.length === 1) {
       // H-035: by the school he came from, with position and number, once.
-      const x = tr[0], from = walshText(c.L.d.teams[x.from].school), who = n.ref(x.p);
+      const x = tr[0], from = walshText(x.from), who = n.ref(x.p);
       return pick(r, [`${from} transfer ${who} starts.`, `${from} transfer ${who} steps in as a starter.`]);
     }
     if (rc.length && rc[0].stars >= 4) {
