@@ -19,6 +19,7 @@
 
 import { rng, type DPlayer, type Dynasty, type OffseasonEvent } from './model';
 import { rulesOf, type OffseasonRules } from './rules';
+import { conferencePitch } from './confPrestige';
 import { academicsOf } from './academics';
 import { seasonView } from './derive';
 import { headCoach, recruitingDiscount } from './coachEffects';
@@ -63,9 +64,9 @@ export interface TeamPlan {
   withdraw?: number[];
 }
 
-/** The five pitches. */
-export type PitchKey = 'pt' | 'prestige' | 'home' | 'academics' | 'contender';
-export const PITCHES: PitchKey[] = ['pt', 'prestige', 'home', 'academics', 'contender'];
+/** The six pitches (conference prestige since 2026-11-21: confPrestige.ts). */
+export type PitchKey = 'pt' | 'prestige' | 'conference' | 'home' | 'academics' | 'contender';
+export const PITCHES: PitchKey[] = ['pt', 'prestige', 'conference', 'home', 'academics', 'contender'];
 /** A prospect's reaction to a pitch: his interest and the school strong (good), in between (ok), weak (bad); not his interest (no). */
 export type PitchReaction = 'good' | 'ok' | 'bad' | 'no';
 
@@ -94,13 +95,15 @@ const seeded = (seed: number, salt: number) => rng((seed ^ Math.imul(salt + 11, 
  * What a prospect cares about (his pitches), adding up to 1: random, then by stars (user, 2026-11-12: "3
  * star and lower should have more chance of Location pitch. Higher star recruits, Program Prestige").
  */
-export interface Wants { pt: number; prestige: number; home: number; academics: number; contender: number }
+export interface Wants { pt: number; prestige: number; home: number; academics: number; contender: number; /** Absent on prospects made before 2026-11-21 (counts 0). */ conference?: number }
 const exp1 = (r: Rand) => -Math.log(1 - r());
 /** His pitches (rules: pitch weights by stars; academics and championship contender from 2026-11-12). */
-function wants(R: OffseasonRules, r: Rand, stars = 3, pt?: number): Wants {
+function wants(R: OffseasonRules, r: Rand, rc: Rand, stars = 3, pt?: number): Wants {
   const w = { pt: pt ?? exp1(r), prestige: exp1(r) * R.pitchPrestige[stars], home: exp1(r) * R.pitchHome[stars], academics: exp1(r) * R.pitchAcademics[stars], contender: exp1(r) * R.pitchContender[stars] };
-  const s = w.pt + w.prestige + w.home + w.academics + w.contender || 1;
-  return { pt: w.pt / s, prestige: w.prestige / s, home: w.home / s, academics: w.academics / s, contender: w.contender / s };
+  // From its own random stream (rc), so the prospect pool and the other draws are the same as before it existed.
+  const conference = exp1(rc) * R.pitchConference[stars];
+  const s = w.pt + w.prestige + w.home + w.academics + w.contender + conference || 1;
+  return { pt: w.pt / s, prestige: w.prestige / s, home: w.home / s, academics: w.academics / s, contender: w.contender / s, conference: conference / s };
 }
 
 /** Stars a portal player counts as (by OVR). */
@@ -122,6 +125,7 @@ export function portalEntries(d: Dynasty, seed: number): DPlayer[] {
 export function startRecruiting(d: Dynasty, tpl: RecruitTemplates, portal: DPlayer[], seed: number, year: number): RecruitingState {
   const R = rulesOf(d);
   const r = seeded(seed, 22);
+  const rc = seeded(seed, 23);
   const portalIds = new Set(portal.map((p) => p.id));
   const spots: Record<number, number> = {};
   const need: Record<string, number> = {};
@@ -141,10 +145,10 @@ export function startRecruiting(d: Dynasty, tpl: RecruitTemplates, portal: DPlay
     for (const p of POSITIONS) if ((x -= need[p]) <= 0) { pos = p; break; }
     const stars = drawStars(r, 0.45);
     const player = makeRecruit(d, tpl, r, tempId, -1, pos, stars, year);
-    prospects.push({ id: tempId--, player: { ...player, team: null }, stars, from: null, wants: wants(R, r, stars), interest: {}, offers: [], committed: null });
+    prospects.push({ id: tempId--, player: { ...player, team: null }, stars, from: null, wants: wants(R, r, rc, stars), interest: {}, offers: [], committed: null });
   }
   for (const p of portal) {
-    prospects.push({ id: p.id, player: p, stars: portalStars(p.ovr), from: p.team, wants: wants(R, r, portalStars(p.ovr), R.portalPlayingTime + 0.5 * r()), interest: {}, offers: [], committed: null });
+    prospects.push({ id: p.id, player: p, stars: portalStars(p.ovr), from: p.team, wants: wants(R, r, rc, portalStars(p.ovr), R.portalPlayingTime + 0.5 * r()), interest: {}, offers: [], committed: null });
   }
   topSchools(d, prospects, r);
   // A user team's own players in the portal start on its board (user: "i should have a good chance at
@@ -197,6 +201,8 @@ export interface WeekContext {
   prestige: Map<number, number>;
   stars: Map<number, number>;
   portalIds: Set<number>;
+  /** Conference prestige, 0-1 (confPrestige.ts). */
+  conference: Map<number, number>;
   /** Championship Contender, 0-1 (contenderScores). */
   contender: Map<number, number>;
   /** Each team's pipeline states (pipelineStates). */
@@ -276,7 +282,7 @@ export function weekContext(d: Dynasty, rs: RecruitingState): WeekContext {
   };
   for (const p of d.players) if (p.status === 'active' && p.team !== null && !portalIds.has(p.id)) add(p.team, p.pos, p.ovr);
   for (const q of rs.prospects) if (q.committed !== null) add(q.committed, q.player.pos, q.player.ovr);
-  return { depth, prestige: new Map(d.teams.map((t) => [t.index, prestige(d, t.index)])), stars: new Map(d.teams.map((t) => [t.index, prestigeStars(d, t.index)])), portalIds, contender: contenderScores(d, depth), pipelines: new Map(d.teams.map((t) => [t.index, new Set(pipelineStates(d, t.index).map((x) => x.state))])) };
+  return { depth, prestige: new Map(d.teams.map((t) => [t.index, prestige(d, t.index)])), stars: new Map(d.teams.map((t) => [t.index, prestigeStars(d, t.index)])), portalIds, conference: conferencePitch(d), contender: contenderScores(d, depth), pipelines: new Map(d.teams.map((t) => [t.index, new Set(pipelineStates(d, t.index).map((x) => x.state))])) };
 }
 
 /** How well a team fits what a prospect wants, 0-1. */
@@ -287,7 +293,7 @@ export function pitchScores(d: Dynasty, ctx: WeekContext, pr: Prospect, team: nu
   const pt = ahead < starters ? 1 : ahead < starters + 1 ? 0.65 : ahead < starters + 3 ? 0.35 : 0.15;
   return {
     pt, prestige: ctx.prestige.get(team)!, home: closeness(pr.player.state, d.teams[team].school),
-    academics: academicsOf(d.teams[team].school), contender: ctx.contender.get(team)!,
+    academics: academicsOf(d.teams[team].school), contender: ctx.contender.get(team)!, conference: ctx.conference.get(team) ?? 0,
   };
 }
 

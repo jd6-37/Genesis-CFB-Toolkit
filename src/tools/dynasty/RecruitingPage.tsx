@@ -13,6 +13,7 @@ import { GROUP_COLUMNS, type Attr } from '../../core/rosterLayouts';
 import { rulesOf } from '../../core/dynasty/rules';
 import { hasTransfers } from '../../core/dynasty/edition';
 import { academicGrade, academicsOf, gradeOf } from '../../core/dynasty/academics';
+import { conferencePrestige } from '../../core/dynasty/confPrestige';
 import { costOf, interestRank, newOffers, offerCap, offersOut, pipelineStates, planCost, pointCost, withdrawOffer } from '../../core/dynasty/recruiting';
 import { SCHOOL_STATE, stateCode } from '../../core/dynasty/schoolStates';
 import { GROUP_OF_ROLE, roleOfPos, shownAt } from '../../core/dynasty/ratings';
@@ -23,7 +24,7 @@ const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['
 const starText = (n: number) => `${n}★`;
 
 /** The pitches (user, 2026-11-12: his interests stay hidden; a pitch shows whether it matched). */
-const PITCH: Record<PitchKey, string> = { pt: 'Playing time', prestige: 'Program prestige', home: 'Close to home', academics: 'Academics', contender: 'Championship contender' };
+const PITCH: Record<PitchKey, string> = { pt: 'Playing time', prestige: 'Program prestige', conference: 'Conference prestige', home: 'Close to home', academics: 'Academics', contender: 'Championship contender' };
 const REACT: Record<PitchReaction, { mark: string; text: string; cls: string }> = {
   good: { mark: '+', text: 'interested, and you\'re strong there', cls: 'dy-react-good' },
   ok: { mark: '~', text: 'interested, you\'re in between', cls: 'dy-react-ok' },
@@ -533,6 +534,18 @@ function ProspectsTab({ hub, portal }: { hub: Hub; portal: boolean }) {
   );
 }
 
+/** Stars rounded to the half: 4.56 → 4.5. */
+const halfStars = (x: number) => Math.round(x * 2) / 2;
+/** 1-6 stars, halves shown, out of 6 (the conference list). */
+function Stars({ value }: { value: number }) {
+  const h = halfStars(value), full = Math.floor(h), half = h > full;
+  return (
+    <span className="dy-stars" aria-label={`${h} of 6 stars`}>
+      {'★'.repeat(full)}{half ? '½' : ''}<span className="dy-stars-off">{'★'.repeat(6 - full - (half ? 1 : 0))}</span>
+    </span>
+  );
+}
+
 /** OVR for sorting: only what the team knows (unscouted last). */
 const knownOvr = (rs: RecruitingState, team: number, p: Prospect) => (scoutLevel(rs, team, p) >= 1 ? p.player.ovr : -1);
 
@@ -549,11 +562,18 @@ function SchoolTab({ team }: { team: number }) {
   const pipes = pipelineStates(d, team).filter((x) => x.state !== SCHOOL_STATE[school]);
   const place = (score: (t: number) => number) => 1 + d.teams.filter((t) => score(t.index) > score(team)).length;
   const needs = needsOf(d, rs, team);
+  const confs = useMemo(() => conferencePrestige(d), [d]);
+  const myConf = confs.find((c) => c.conf === d.seasons[d.seasons.length - 1].conf[team]);
   const openPos = needs.filter((n) => n.need > 0).map((n) => n.pos);
   const pitches: { name: string; v: number | null; fig: string; why: string }[] = [
     { name: PITCH.pt, v: null, fig: '', why: `Depends on the position: a prospect who would start hears it best. ${openPos.length ? `Open spots at ${openPos.join(', ')}.` : 'No open spots right now.'}` },
     { name: PITCH.home, v: null, fig: '', why: `Counts for prospects from ${SCHOOL_STATE[school] ?? 'your state'} and nearby states. It doesn't depend on your school.` },
     { name: PITCH.prestige, v: ctx.prestige.get(team)!, fig: `${prestigeStars(d, team)} stars, ${ordinal(place((t) => ctx.prestige.get(t)!))}`, why: 'Moves slowly with your results over several seasons.' },
+    {
+      name: PITCH.conference, v: ctx.conference.get(team) ?? 0,
+      fig: myConf ? `${myConf.name}, ${halfStars(myConf.mean)} stars, ${ordinal(confs.indexOf(myConf) + 1)}` : `${prestigeStars(d, team)} stars (yours)`,
+      why: myConf ? `The average prestige of the ${myConf.name}'s schools, ${ordinal(confs.indexOf(myConf) + 1)} of ${confs.length} conferences, against the best one. It moves when its schools win or lose, or when teams change conferences.` : 'An independent pitches its own prestige here, against the best conference.',
+    },
     { name: PITCH.contender, v: ctx.contender.get(team)!, fig: `${gradeOf(ctx.contender.get(team)!)}, ${ordinal(place((t) => ctx.contender.get(t)!))}`, why: 'Last season\'s final poll and the roster as it stands, commitments included.' },
     { name: PITCH.academics, v: academicsOf(school), fig: `${academicGrade(school)}, ${ordinal(place((t) => academicsOf(d.teams[t].school)))}`, why: 'Fixed for the school.' },
   ];
@@ -593,6 +613,18 @@ function SchoolTab({ team }: { team: number }) {
         </Table>
       </div>
       <aside>
+        <section className="dy-card dy-card-pad">
+          <h4>Conference prestige</h4>
+          <p className="dy-small dy-dim">Each conference's average school prestige; the pitch is against the best conference. Independents pitch their own prestige.</p>
+          <Table figures className="dy-conf-prestige">
+            <thead><tr><th>#</th><th className="ui-left">Conference</th><th className="ui-left">Prestige</th><th>Pitch</th><th>Teams</th></tr></thead>
+            <tbody>{confs.map((c, i) => (
+              <tr key={c.conf} className={c === myConf ? 'dy-row-me' : undefined}>
+                <td>{i + 1}</td><td className="ui-left">{c.name}</td><td className="ui-left" title={`${c.mean.toFixed(2)} stars on average`}><Stars value={c.mean} /></td><td>{pct(c.value)}</td><td>{c.teams}</td>
+              </tr>
+            ))}</tbody>
+          </Table>
+        </section>
         <section className="dy-card dy-card-pad">
           <h4>Home ground</h4>
           <dl className="dy-facts">

@@ -39,6 +39,7 @@ import { kitOf, ownOf, setKit, setOwn, setWhiteHome, whiteHomeLock } from '../sr
 import * as Off from '../src/core/dynasty/offseason';
 import * as Num from '../src/core/dynasty/numbers';
 import * as Rec from '../src/core/dynasty/recruiting';
+import { conferencePitch, conferencePrestige } from '../src/core/dynasty/confPrestige';
 import * as Sim from '../src/core/dynasty/sim';
 import { DEFAULT_RULES as RD, readRulesFile, rulesFileText, rulesOf, setRules } from '../src/core/dynasty/rules';
 import { academicsOf, CFB27_ACADEMICS } from '../src/core/dynasty/academics';
@@ -556,6 +557,28 @@ ok(`offseason: ${o1.offseason!.events.filter((e) => e.kind !== 'returns').length
 // Full recruiting: five weeks, then signing day; every team stays within its spots.
 const f1 = Rec.openRecruiting(o1p, tpl);
 const rs0 = f1.offseason!.recruiting!;
+
+// Conference prestige (2026-11-21): the average stars of a conference's schools against the best conference;
+// independents pitch their own; every new prospect cares about it a little or a lot; old prospects without it count 0.
+{
+  const cp = conferencePrestige(f1);
+  assert.equal(cp[0].value, 1, 'the best conference is 100%');
+  assert.ok(cp.every((c, i) => i === 0 || c.mean <= cp[i - 1].mean), 'best first');
+  assert.ok(!cp.some((c) => /independent/i.test(c.name)), 'independents are no conference here');
+  const s1 = f1.seasons[f1.seasons.length - 1];
+  const pitch = conferencePitch(f1);
+  const T = (n: string) => f1.teams.find((t) => t.school === n)!.index;
+  const sec = cp.find((c) => c.conf === s1.conf[T('Alabama')])!;
+  assert.equal(pitch.get(T('Alabama')), sec.value);
+  const nd = T('Notre Dame');
+  assert.equal(pitch.get(nd), Math.min(1, Off.prestigeStars(f1, nd) / cp[0].mean), 'an independent pitches its own stars');
+  assert.ok(rs0.prospects.every((p) => p.wants.conference !== undefined && p.wants.conference >= 0), 'every prospect has the new interest');
+  const ctx = Rec.weekContext(f1, rs0);
+  const pr = rs0.prospects[0];
+  const old = { ...pr, wants: { ...pr.wants, conference: undefined } };
+  assert.ok(Number.isFinite(Rec.fit(f1, ctx, old, T('Alabama'))), 'an older prospect without it still fits');
+  ok(`conference prestige: ${cp.map((c) => `${c.name} ${c.mean.toFixed(2)}`).slice(0, 3).join(', ')} …; independents pitch their own; every prospect has the interest`);
+}
 assert.equal(f1.offseason!.step, 'recruiting');
 assert.ok(rs0.prospects.some((p) => p.id < 0) && rs0.prospects.filter((p) => p.id > 0).length === o1p.offseason!.portal!.length, 'high-school prospects and the portal players');
 // Five top schools from the start; a portal player's old school is his third; pitches by stars.
@@ -627,7 +650,7 @@ assert.deepEqual(setRules(ruled, RD).rules, undefined, 'back to the defaults');
 const moreTransfers = Off.confirmDepth(setRules(o1, { ...RD, transferBackup: 0.6, transferDepth: 0.6 }));
 assert.ok(moreTransfers.offseason!.portal!.length > entering.length * 2, 'a higher transfer chance sends more players to the portal');
 // Pitches: five, academics and contender included; contender 0-1, last season's best teams near the top; pipelines.
-assert.ok(rs0.prospects.every((p) => Math.abs(p.wants.pt + p.wants.prestige + p.wants.home + p.wants.academics + p.wants.contender - 1) < 1e-9));
+assert.ok(rs0.prospects.every((p) => Math.abs(p.wants.pt + p.wants.prestige + p.wants.home + p.wants.academics + p.wants.contender + (p.wants.conference ?? 0) - 1) < 1e-9));
 const ctxW = Rec.weekContext(f1, rs0);
 const v26 = seasonView(f1, f1.seasons[0]);
 const no1 = d1.teams.findIndex((t) => v26.rank[t.index] === 1);
