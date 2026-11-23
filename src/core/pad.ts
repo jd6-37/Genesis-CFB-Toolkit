@@ -103,6 +103,11 @@ export function bindingGlyph(b: string, labels: PadLabels = 'xbox', names?: Reco
   return b;
 }
 
+/** What a binding does in the app ("Previous tab, Back"), or "" (the tester, Manage's Buttons table). */
+export function actionsOf(b: string, map: PadMap): string {
+  return PAD_ACTIONS.filter(({ action }) => map[action].includes(b)).map((x) => x.label).join(', ');
+}
+
 /** Past this an axis counts as pushed; a trigger's value past this counts as pressed. */
 export const DEAD_ZONE = 0.5;
 

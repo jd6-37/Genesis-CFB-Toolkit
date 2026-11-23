@@ -4,7 +4,8 @@
 import { useEffect, useState } from 'react';
 import { Button, Check, Field, Note, Select, Table } from '../../ui';
 import { PadKey, usePad } from '../../ui/pad';
-import { bindingGlyph, bindingName, clashes, defaultSettings, DEFAULT_MAP, NAME_MAX, PAD_ACTIONS, PAD_LABELS, withBinding, withName, type PadAction, type PadLabels } from '../../core/pad';
+import { PadTester } from '../../ui/padTester';
+import { actionsOf, bindingGlyph, bindingName, clashes, defaultSettings, DEFAULT_MAP, NAME_MAX, PAD_ACTIONS, PAD_LABELS, withBinding, withName, type PadAction, type PadLabels } from '../../core/pad';
 
 /** How long "Press a button" waits. */
 const WAIT_MS = 10000;
@@ -12,15 +13,14 @@ const WAIT_MS = 10000;
 export function ControllerPanel() {
   const pad = usePad();
   const [waiting, setWaiting] = useState<{ action: PadAction; add: boolean } | null>(null);
-  const [held, setHeld] = useState<string[]>([]);
-
-  // The test line: what's held now.
+  const [testing, setTesting] = useState(false);
+  // Buttons past the standard 17 that were pressed this visit (a 6-button pad's extras on some adapters).
+  const [seen, setSeen] = useState<string[]>([]);
   useEffect(() => {
     if (!pad) return;
-    let last = '';
     return pad.watch((on) => {
-      const now = [...on].sort().join();
-      if (now !== last) { last = now; setHeld([...on]); }
+      const extra = [...on].filter((b) => /^b\d+$/.test(b) && +b.slice(1) > 16);
+      if (extra.length) setSeen((was) => (extra.every((b) => was.includes(b)) ? was : [...new Set([...was, ...extra])]));
     });
   }, [pad]);
 
@@ -40,8 +40,11 @@ export function ControllerPanel() {
   if (!pad) return null;
   const { settings, setSettings, map } = pad;
   const name = (b: string) => bindingName(b, settings.labels, settings.names);
-  // Every button the mapping uses (sticks are named by direction and keep their names).
-  const used = [...new Set(PAD_ACTIONS.flatMap(({ action }) => map[action]))].filter((b) => /^b\d+$/.test(b)).sort((a, b) => +a.slice(1) - +b.slice(1));
+  // Every button: the standard 17, and any other the mapping uses, has a name for, or was pressed this visit.
+  const buttons = [...new Set([
+    ...Array.from({ length: 17 }, (_, i) => `b${i}`),
+    ...PAD_ACTIONS.flatMap(({ action }) => map[action]), ...Object.keys(settings.names ?? {}), ...seen,
+  ])].filter((b) => /^b\d+$/.test(b)).sort((a, b) => +a.slice(1) - +b.slice(1));
   const changed = Object.keys(settings.map).length > 0;
 
   return (
@@ -63,9 +66,16 @@ export function ControllerPanel() {
         />
         <Check checked={settings.hints} onChange={(v) => setSettings({ ...settings, hints: v })}>Show the button hints</Check>
       </div>
+      <div className="dy-row">
+        <Button onClick={() => setTesting(true)}>Test your buttons</Button>
+        <span className="dy-small dy-dim">See which button is which, and what it does here.</span>
+      </div>
+      {testing && <PadTester onClose={() => setTesting(false)} />}
 
-      <h3>Buttons</h3>
-      <p>To change a button, choose Change and press the one you want. Add keeps the old button too (a D-pad and a stick, say).</p>
+      <div className="dy-pad-grid">
+      <div>
+      <h3>Actions</h3>
+      <p>What each button does in the app. To change one, choose Change and press the button you want. Add keeps the old one too (a D-pad and a stick, say).</p>
       <Table edit className="dy-pad-table">
         <thead><tr><th className="ui-left">Action</th><th className="ui-left">Buttons</th><th className="ui-left"><span className="sr-only">Change</span></th></tr></thead>
         <tbody>
@@ -102,29 +112,38 @@ export function ControllerPanel() {
           })}
         </tbody>
       </Table>
-
-      <h3>Button names</h3>
-      <p>
-        If your controller's buttons say something other than what the app shows (a Genesis pad on a USB adapter, say, whose Z
-        reaches the app as L1), type what yours says. The hints and this page use your names. Empty = the app's name.
-      </p>
-      <div className="dy-pad-names">
-        {used.map((b) => (
-          <div key={b} className="dy-pad-name">
-            <span className="dy-pad-key"><PadKey binding={b} labels={settings.labels} /> {bindingName(b, settings.labels)}</span>
-            <Field
-              label={`Your name for ${bindingName(b, settings.labels)}`} hideLabel compact maxLength={NAME_MAX}
-              placeholder={bindingGlyph(b, settings.labels)} value={settings.names?.[b] ?? ''}
-              onChange={(v) => setSettings(withName(settings, b, v))} changed={!!settings.names?.[b]}
-            />
-          </div>
-        ))}
       </div>
 
-      <h3>Test</h3>
-      <p className="dy-pad-test" aria-live="polite">
-        {held.length ? held.map((b) => <span key={b} className="dy-pad-key"><PadKey binding={b} labels={settings.labels} names={settings.names} /> {name(b)}</span>) : <span className="dy-dim">Hold a button to see its name here.</span>}
+      <div>
+      <h3>Buttons</h3>
+      <p>
+        Every button the app knows, and what it does now. If your controller's buttons say something else (a Genesis pad
+        on a USB adapter, say, whose Z reaches the app as L1), type what yours says: the hints and this page use it.
       </p>
+      <Table edit className="dy-pad-table dy-pad-buttons">
+        <thead><tr><th className="ui-left">Button</th><th className="ui-left">Your name</th><th className="ui-left">Does now</th></tr></thead>
+        <tbody>
+          {buttons.map((b) => {
+            const does = actionsOf(b, map);
+            return (
+              <tr key={b} className={settings.names?.[b] ? 'ui-row-mine' : undefined}>
+                <td className="ui-left"><span className="dy-pad-key"><PadKey binding={b} labels={settings.labels} /> {bindingName(b, settings.labels)}</span></td>
+                <td className="ui-left">
+                  <Field
+                    label={`Your name for ${bindingName(b, settings.labels)}`} hideLabel compact maxLength={NAME_MAX}
+                    placeholder={bindingGlyph(b, settings.labels)} value={settings.names?.[b] ?? ''}
+                    onChange={(v) => setSettings(withName(settings, b, v))} changed={!!settings.names?.[b]}
+                  />
+                </td>
+                <td className="ui-left">{does || <span className="dy-dim">Nothing</span>}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </Table>
+      </div>
+      </div>
+
       {changed && (
         <div className="dy-row">
           <Button variant="quiet" onClick={() => setSettings({ ...defaultSettings(), labels: settings.labels, hints: settings.hints, names: settings.names })}>Reset every button</Button>

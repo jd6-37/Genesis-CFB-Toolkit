@@ -187,6 +187,8 @@ interface PadApi {
   capture: (cb: ((binding: string) => void) | null) => void;
   /** Calls `cb` with the bindings held, every frame, while subscribed (the Manage page's test). */
   watch: (cb: (on: Set<string>) => void) => () => void;
+  /** While muted the controller runs no actions (the button tester); watchers still see every press. */
+  mute: (on: boolean) => void;
 }
 
 const PadCtx = createContext<PadApi | null>(null);
@@ -212,6 +214,7 @@ export function PadLayer({ children }: { children: ReactNode }) {
   const captureRef = useRef<((b: string) => void) | null>(null);
   const watchers = useRef(new Set<(on: Set<string>) => void>());
   const inApp = useRef(0);
+  const muted = useRef(false);
 
   const setSettings = useCallback((s: PadSettings) => {
     setSettingsState(s);
@@ -298,6 +301,7 @@ export function PadLayer({ children }: { children: ReactNode }) {
     let raf = 0, running = false, lastHints = 0;
     const rep = new PadRepeater();
     let prevOn = new Set<string>();
+    const swallow = new Set<string>();
     const frame = (now: number) => {
       const list = [...navigator.getGamepads()].filter((g): g is Gamepad => !!g && g.connected);
       if (!list.length) { running = false; return; }
@@ -305,11 +309,16 @@ export function PadLayer({ children }: { children: ReactNode }) {
       for (const g of list) for (const b of activeBindings(g.buttons, g.axes)) on.add(b);
       watchers.current.forEach((w) => w(on));
       const cap = captureRef.current;
-      if (cap) {
+      // Buttons held while muted (Start, closing the tester) do nothing until they're let go.
+      for (const b of swallow) if (!on.has(b)) swallow.delete(b);
+      if (muted.current) {
+        for (const b of on) swallow.add(b);
+        rep.reset();
+      } else if (cap) {
         const fresh = [...on].find((b) => !prevOn.has(b));
         if (fresh) { captureRef.current = null; rep.reset(); cap(fresh); }
       } else {
-        const fired = rep.step(heldActions(on, mapRef.current), now);
+        const fired = rep.step(heldActions(new Set([...on].filter((b) => !swallow.has(b))), mapRef.current), now);
         if (fired.length) {
           if (document.documentElement.dataset.input !== 'pad') { document.documentElement.dataset.input = 'pad'; setActive(true); }
           fired.forEach(run);
@@ -339,6 +348,7 @@ export function PadLayer({ children }: { children: ReactNode }) {
     settings, setSettings, map, active, pads,
     capture: (cb) => { captureRef.current = cb; },
     watch: (cb) => { watchers.current.add(cb); return () => watchers.current.delete(cb); },
+    mute: (on) => { muted.current = on; },
   }), [settings, setSettings, map, active, pads]);
 
   return (

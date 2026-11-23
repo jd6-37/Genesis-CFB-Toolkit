@@ -406,3 +406,26 @@ a.ui-button.ui-button-chrome, a.ui-button.ui-button-chrome:hover { color: var(--
   display: flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 var(--sp-2);
   border: var(--rule-w) solid var(--rule-strong); background: var(--surface-sunken); font: 400 var(--fs-num-2)/1 var(--font-num);
 }
+
+/* The button tester (padTester.tsx): a controller outline whose held buttons light up. */
+.ui-padd { display: block; width: 100%; max-width: 420px; margin: 0 auto; }
+.ui-padd-body { fill: var(--surface-sunken); stroke: var(--rule-strong); stroke-width: 2; }
+.ui-padd-part { fill: var(--surface-raised); stroke: var(--rule-strong); stroke-width: 1.5; }
+.ui-padd-on { fill: var(--focus); stroke: var(--rule-strong); stroke-width: 1.5; }
+.ui-padd-dot { fill: var(--text-muted); }
+.ui-padd-label { font-family: var(--font-display); font-weight: 700; font-size: var(--fs-1); text-anchor: middle; fill: var(--text); pointer-events: none; }
+.ui-padtest { display: grid; gap: var(--sp-3); }
+.ui-padtest-extra { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); font-size: var(--fs-2); }
+.ui-padtest-now { min-height: 52px; }
+.ui-padtest-now p { margin: 0 0 var(--sp-1); display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1); }
+.ui-padtest-none { color: var(--text-muted); }
+.ui-padtest-close { display: grid; gap: var(--sp-1); font-size: var(--fs-2); color: var(--text-muted); }
+.ui-padtest-bar { display: block; height: 8px; background: var(--surface-sunken); border: var(--rule-w) solid var(--rule); }
+.ui-padtest-bar > span { display: block; height: 100%; background: var(--focus); }
+.ui-modal:has(.ui-padtest) { max-width: 760px; }
+/* Short landscape screens (Portal, Nova): the drawing beside what's held. */
+@media (orientation: landscape) and (max-height: 699px) {
+  .ui-modal:has(.ui-padtest) { padding: var(--sp-3) var(--sp-4); }
+  .ui-padtest { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); align-items: start; }
+  .ui-padtest > .ui-padd { grid-row: span 3; max-height: 52vh; }
+}

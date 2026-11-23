@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { DEFAULT_MAP, defaultSettings, type PadLabels } from '../core/pad';
 import { PadBar, PadKey } from './pad';
+import { PadTestView } from './padTester';
 import { Button, Row } from './index';
 
 const meta: Meta = { title: 'Controller' };
@@ -44,3 +45,18 @@ export const FocusFrame: Story = {
   },
   play: async ({ canvasElement }) => { (canvasElement.querySelector('button') as HTMLButtonElement)?.focus(); },
 };
+
+const genesis = { b4: 'Z', b5: 'Y', b6: 'X', b2: 'C' };
+const tester = (on: string[], closing = 0, names?: Record<string, string>) => (
+  <div style={{ maxWidth: 480 }}>
+    <PadTestView on={new Set(on)} labels="xbox" names={names} map={DEFAULT_MAP} closing={closing} closeBy="Start" />
+  </div>
+);
+/** The button tester (Manage › Controller › Test your buttons), nothing held. */
+export const TesterIdle: Story = { render: () => tester([]) };
+/** A Genesis pad's Z, which the app sees as L1, held: what the app calls it, the user's name, what it does. */
+export const TesterNamed: Story = { render: () => tester(['b4'], 0.1, genesis) };
+/** Start held to close: the bar fills over 3 seconds. A stick pushed moves its dot. */
+export const TesterClosing: Story = { render: () => tester(['b9', 'a0+', 'a1-'], 0.6) };
+/** A button the drawing doesn't have (an adapter's extra button) is listed under it. */
+export const TesterExtra: Story = { render: () => tester(['b17', 'b0']) };

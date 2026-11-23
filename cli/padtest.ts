@@ -1,6 +1,6 @@
 // Controller mapping (src/core/pad.ts) and the focus search (src/ui/pad.tsx `nearest`). No ROM needed.
 //   npm run test:pad
-import { activeBindings, bindingGlyph, bindingName, clashes, withName, NAME_MAX, DEFAULT_MAP, heldActions, mapOf, parseSettings, PadRepeater, REPEAT_DELAY, REPEAT_EVERY, withBinding, defaultSettings } from '../src/core/pad';
+import { actionsOf, activeBindings, bindingGlyph, bindingName, clashes, withName, NAME_MAX, DEFAULT_MAP, heldActions, mapOf, parseSettings, PadRepeater, REPEAT_DELAY, REPEAT_EVERY, withBinding, defaultSettings } from '../src/core/pad';
 import { nearest } from '../src/ui/pad';
 
 let pass = 0;
@@ -34,6 +34,8 @@ n = withName(n, 'b0', 'Button C long');
 ok(n.names?.b0?.length === NAME_MAX, `own names cut to ${NAME_MAX} characters`);
 ok(parseSettings(JSON.stringify(n)).names?.b4 === 'Z' && !('names' in withName(withName(defaultSettings(), 'b4', 'Z'), 'b4', '')), 'own names survive saving; an empty name clears it');
 ok(!parseSettings(JSON.stringify({ names: { b4: 'x'.repeat(20), zz: 'A' } })).names, 'bad own names are dropped');
+
+ok(actionsOf('b4', DEFAULT_MAP) === 'Previous tab' && actionsOf('b16', DEFAULT_MAP) === '' && actionsOf('b9', mapOf(withBinding(defaultSettings(), 'back', ['b9']))).includes('Back'), "the tester's 'does': L1 = previous tab, Home nothing, Start after a change");
 
 const rect = (x: number, y: number, w = 100, h = 40) => ({ left: x, top: y, right: x + w, bottom: y + h, width: w, height: h, x, y, toJSON: () => 0 }) as DOMRect;
 const el = (name: string) => ({ name }) as unknown as HTMLElement;
