@@ -25,6 +25,10 @@ Picked from three Figma mockups (file "CFB-Toolkit", page "Directions"): **"B's 
 
 The website (`src/site`, homepage, manual, Insights) uses the same tokens and components. Its pages are the **Mod Toolkit** brand (indigo, yellow; the hero's action is the `chrome` button); the **manual** and the text of an **Insights post** sit on the **Dynasty light** brand (`data-brand="dynasty" data-theme="light"`): white paper, black ink and bars, like the printed booklet in a 16-bit game box. Section headings are `SubHead` bars; screenshots and clips are `Screen`s; Insights cards and code blocks are the black screen of a Walsh Report. Tokens added for it: `--shadow-hard` (both brands), `--fs-display` (the site's big titles), and `--screen`, `--screen-edge`, `--on-screen` for Dynasty light. Figma: file "CFB-Toolkit", page "Website".
 
+## Handhelds and controllers (owner, 2026-11-22)
+
+Many users run the Dynasty app on Android handhelds: mainly the **Odin 2 Portal** (7", 1920×1080 landscape, about 960×540 CSS px) and the **Retroid Pocket Nova** (4.5", 1280×960, 4:3, about 640×480). Everything built from now on is made for them first: touch friendly (44 px targets) **and** game-controller friendly (`PadLayer`: L1 / R1 tabs, B back, A choose, the D-pad moves), then enhanced for desktop. Check pages at 960×540 and 640×480 too, with a controller (a fake one in Playwright: `navigator.getGamepads`). The existing pages get a redesign for these screens (mockups first).
+
 ## Where things are
 
 | What | Where |
@@ -55,6 +59,7 @@ Run `npm run storybook` to browse the components (port 6006).
 - **Type:** `--font-display` (Barlow Condensed), `--font-body` (Barlow), `--font-num` (Press Start 2P, figures only; sizes `--fs-num-1` to `--fs-num-4`); sizes `--fs-1` (12 px) to `--fs-8` (56 px), and `--fs-hero` for the Mod Toolkit's title. Every font size in every stylesheet is one of these (or a `clamp` between two of them for Dynasty's big titles).
 - **Spacing:** `--sp-1` (4 px) to `--sp-7` (48 px), built on the Genesis' 8 px tile.
 - **Shape:** `--radius` (0), `--rule-w` (1 px), `--rule-w-strong` (4 px).
+- **Controllers:** `--focus` (yellow) and `--focus-edge` (black) for the focus frame while a controller is in use (`--focus-w` wide), `--pad-bar-h` for the hint bar.
 
 ## Components
 
@@ -77,6 +82,8 @@ Run `npm run storybook` to browse the components (port 6006).
 | `Steps` | A process in order with the step the user is on (`label` for screen readers, `steps` with `label` and optional `href`, `current`). Steps before it read as done; a step with `href` is a link, for steps the user may jump to. On a phone only the current step shows, as "Step 3 of 8: Recruiting". |
 | `Tabs` | The sections of a hub page, one open at a time: `label` (for screen readers), `tabs` (`value`, `label`, optional `count`), `value`, `onChange`. The page shows the open section itself. Scrolls sideways inside itself on phones. |
 | `Meter` | A bar for a share from 0 to 1 (interest, a pitch's strength). `label` for screen readers; `color` only for a team's color. Put the figure beside it when it matters. |
+| `PadLayer` (`src/ui/pad.tsx`) | Wraps an app for game controllers: moves the focus, runs the buttons, shows the hint bar while a controller is in use. Pages need nothing; optional marks: `data-pad="primary"` / `"secondary"` (what X / Y press; without one X presses the view's only primary `Button`), `data-pad="prev"` / `"next"` (L2 / R2), `data-pad-label` (the name in the hints), `data-pad-tabs` (a strip L1 / R1 switch, besides `Tabs`), `data-pad-start` (where the focus starts). The mapping is `src/core/pad.ts`. |
+| `PadKey`, `PadBar` | A controller button as the hints draw it (a circle for A B X Y, a box for the others), and the hint bar. |
 | `Masthead` | An app's header: `title` (links to `href`), `sub` (one line under it), `left` and `right` for small controls and marks; its children sit under the title row (the `NavBar`). On a phone the title drops to its own row. |
 | `NavBar` | An app's main menu: `label` (for screen readers) and `items` (`label`, `href`, `current`, `off`). One mark per item: a bar under it. Scrolls sideways inside itself on phones. |
 | `ThemeToggle` | The light/dark switch in Dynasty's masthead. The app sets `data-theme` from it and keeps the choice in the browser. |

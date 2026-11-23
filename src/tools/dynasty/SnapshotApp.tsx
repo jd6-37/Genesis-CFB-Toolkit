@@ -14,6 +14,7 @@ import { Records } from './RecordsPage';
 import { History, Home, Leaders, Player, Rankings, Scores, Standings, Team, teamRoute, Teams } from './pages';
 import { Coach, Coaches } from './CoachPages';
 import { Rosters } from './RostersPage';
+import { PadLayer } from '../../ui/pad';
 import './dynasty.css';
 
 const THEME_KEY = 'dynasty-theme';
@@ -121,6 +122,7 @@ export default function SnapshotApp({ id, toolkitHref }: { id: string; toolkitHr
 
   return (
     <div className="dy" data-brand="dynasty" data-theme={dark ? 'dark' : 'light'}>
+      <PadLayer>
       {snap && d && (
         <div className="dy-snapbar">
           {sample
@@ -149,6 +151,7 @@ export default function SnapshotApp({ id, toolkitHref }: { id: string; toolkitHr
         )}
         <Ctx.Provider value={ctx}>{body}</Ctx.Provider>
       </main>
+      </PadLayer>
     </div>
   );
 }

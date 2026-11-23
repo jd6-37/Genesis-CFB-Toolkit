@@ -39,6 +39,8 @@ import { benchSource, GetStarted, Renumbered, SeasonGuide, type StartActions } f
 import { UpgradeCard, upgradeLine, useUpgrade, VersionRows, type Upgrader } from './Upgrade';
 import { SetupPage } from './SetupPage';
 import { SETUP_STEPS, startSetup, type SetupStep } from '../../core/dynasty/setup';
+import { PadLayer } from '../../ui/pad';
+import { ControllerPanel } from './ControllerPanel';
 import './dynasty.css';
 
 const THEME_KEY = 'dynasty-theme';
@@ -486,6 +488,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
 
   return (
     <div className="dy" data-brand="dynasty" data-theme={dark ? 'dark' : 'light'}>
+      <PadLayer>
       <Masthead
         title={d?.name ?? 'Dynasty'} href={href('home')}
         sub={d ? `${d.offseason ? d.offseason.year : d.seasons[d.seasons.length - 1].year}${week ? `, ${week}` : ''}` : undefined}
@@ -549,6 +552,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
           );
         })()}
       </main>
+      </PadLayer>
     </div>
   );
 }
@@ -632,6 +636,7 @@ const MANAGE_SECTIONS = [
   { id: 'dy-m-files', label: 'Backup and files' },
   { id: 'dy-m-share', label: 'Share' },
   { id: 'dy-m-help', label: 'Rules and help' },
+  { id: 'dy-m-pad', label: 'Controller' },
   { id: 'dy-m-others', label: 'Other dynasties' },
 ];
 
@@ -810,6 +815,8 @@ function Manage({ d, art, list, busy, note, actions, focus, ctx, up }: {
           </section>
         </>
       )}
+
+      <ControllerPanel />
 
       <section className="dy-panel" id="dy-m-others">
         {others.length > 0 && (
