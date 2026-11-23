@@ -254,6 +254,11 @@ export interface Dynasty {
    * season on the user's own ROM.
    */
   seasonOneRom?: boolean;
+  /**
+   * Light or dark, as the user last chose it in this dynasty (user, 2026-11-22: "remember the preference in the
+   * dynasty save"); kept in the dynasty file, so it comes back on another device. Absent: the browser's last choice.
+   */
+  theme?: 'light' | 'dark';
   /** Setup's starting point: each team's head coach (coach ids) and conference, for "Your changes" and the summary. */
   setupCoaches?: (number | null)[];
   setupConf?: number[];
