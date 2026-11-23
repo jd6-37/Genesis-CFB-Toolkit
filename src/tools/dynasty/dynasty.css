@@ -907,9 +907,10 @@
 
 /* Manage › Controller (ControllerPanel.tsx). */
 .dy-pad-table { max-width: 760px !important; }
-.dy-pad-keys, .dy-pad-test { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); }
+.dy-pad-grid { display: grid; gap: var(--sp-5); }
+@media (min-width: 1200px) { .dy-pad-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; } }
+.dy-pad-keys { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); }
 .dy-pad-key { display: inline-flex; align-items: center; gap: var(--sp-1); white-space: nowrap; }
-.dy-pad-test { min-height: 32px; align-items: center; }
 
 /* Standings (pages.tsx): one conference at a time. On a wide, short screen (the Odin 2 Portal, 960 × 540) the
    conference sits in two halves side by side, without PF / PA, so 16 teams fit without scrolling. */
@@ -992,11 +993,9 @@
   .dy-hub-band .ui-button { margin-left: auto; white-space: nowrap; }
   .dy-off .ui-tabs { margin: var(--sp-2) 0; }
 }
-/* Manage › Controller: the user's own button names. */
-.dy-pad-names { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--sp-2) var(--sp-4); max-width: 760px; }
-.dy-pad-name { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
-.dy-pad-name > .ui-field { width: 96px !important; min-width: 0; flex: 0 0 96px; }
-.dy-pad-name > .ui-field input { width: 100%; box-sizing: border-box; }
+/* Manage › Controller: the Buttons table's name field. */
+.dy-pad-buttons .ui-field { width: 96px !important; min-width: 0; }
+.dy-pad-buttons .ui-field input { width: 100%; box-sizing: border-box; }
 
 /* The team page's NIL tab (pages.tsx TeamNil). */
 .dy-nil-grid { display: grid; gap: var(--sp-3); margin-bottom: var(--sp-3); max-width: 760px; }
