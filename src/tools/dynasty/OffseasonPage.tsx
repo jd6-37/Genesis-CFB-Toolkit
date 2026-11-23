@@ -1,4 +1,5 @@
 // The offseason, step by step: departures, the transfer portal, signing day, cuts, the next season.
+import { fcsLabel } from '../../core/dynasty/fcs';
 import { VersionPick, type Upgrader } from './Upgrade';
 import { Button, Field, Note, PageHead, Select, StepNav, Steps, SubHead, Table, Tabs } from '../../ui';
 import { useMemo, useState } from 'react';
@@ -226,12 +227,12 @@ export function Offseason({ actions, busy, arg }: { actions: OffseasonActions; b
             <div key={u} className="dy-off-team">
               <h4><TeamLink team={u} rank={false} /></h4>
               <p className="dy-small dy-dim">Leaving</p>
-              <PlayerList rows={of('transfer').filter((e) => e.from === u).map((e) => ({ p: pl(e.player), extra: e.to !== null ? `to ${d.teams[e.to].school}` : 'out of the dynasty' }))} />
+              <PlayerList rows={of('transfer').filter((e) => e.from === u).map((e) => ({ p: pl(e.player), extra: e.to !== null ? `to ${d.teams[e.to].school}` : e.down ? `to ${fcsLabel(e.down)}` : 'out of the dynasty' }))} />
               <p className="dy-small dy-dim">Coming in</p>
-              <PlayerList rows={of('transfer').filter((e) => e.to === u).map((e) => ({ p: pl(e.player), extra: `from ${d.teams[e.from].school}` }))} />
+              <PlayerList rows={[...of('transfer').filter((e) => e.to === u).map((e) => ({ p: pl(e.player), extra: `from ${d.teams[e.from].school}` })), ...of('fcs').filter((e) => e.to === u).map((e) => ({ p: pl(e.player), extra: `from ${fcsLabel(e.school)}` }))]} />
             </div>
           ))}
-          <p>{of('transfer').length} players entered the portal; {of('transfer').filter((e) => e.to !== null).length} found a new team.</p>
+          <p>{of('transfer').length} players entered the portal; {of('transfer').filter((e) => e.to !== null).length} found a new team, {of('transfer').filter((e) => e.down).length} transferred down to FCS schools{of('fcs').length ? `, and ${of('fcs').length} came up from FCS schools` : ''}.</p>
           <h4>Biggest moves</h4>
           <PlayerList rows={of('transfer').filter((e) => e.to !== null).sort((a, b) => b.ovr - a.ovr).slice(0, 10).map((e) => ({ p: pl(e.player), extra: `${d.teams[e.from].school} to ${d.teams[e.to!].school}` }))} />
           </>}

@@ -84,6 +84,13 @@ function start(root: HTMLElement): HTMLElement | null {
 
 /** ◀ ▶ on a value: a dropdown takes the previous / next choice, a number or range field steps. */
 function adjust(el: HTMLElement, by: 1 | -1): boolean {
+  // A Stepper (src/ui): ◀ ▶ press its − or + while the focus is on either.
+  const stepper = el.closest('.ui-stepper');
+  if (stepper) {
+    const b = stepper.querySelectorAll<HTMLButtonElement>('button')[by > 0 ? 1 : 0];
+    if (b && !b.disabled) b.click();
+    return true;
+  }
   if (el instanceof HTMLSelectElement) {
     const opts = [...el.options].filter((o) => !o.disabled && !o.hidden);
     const i = opts.findIndex((o) => o.value === el.value);
@@ -162,7 +169,7 @@ function hintsNow(): PadHint[] {
   if (p) out.push({ action: 'primary', text: p });
   const s = labelOf(actionButton(root, 'secondary'));
   if (s) out.push({ action: 'secondary', text: s });
-  if (cur && (cur instanceof HTMLSelectElement || (cur instanceof HTMLInputElement && (cur.type === 'number' || cur.type === 'range')))) out.push({ action: 'adjust', text: 'Change' });
+  if (cur && (cur instanceof HTMLSelectElement || cur.closest('.ui-stepper') || (cur instanceof HTMLInputElement && (cur.type === 'number' || cur.type === 'range')))) out.push({ action: 'adjust', text: 'Change' });
   if (marked(root, 'prev') || marked(root, 'next')) out.push({ action: 'items', text: labelOf(marked(root, 'next')) ?? 'Prev / next' });
   if (tabStrip(root)) out.push({ action: 'tabs', text: 'Tabs' });
   return out;

@@ -41,6 +41,7 @@ import { SetupPage } from './SetupPage';
 import { SETUP_STEPS, startSetup, type SetupStep } from '../../core/dynasty/setup';
 import { PadLayer } from '../../ui/pad';
 import { ControllerPanel } from './ControllerPanel';
+import { disableNil, enableNil, hasNil, NIL_TEXT } from '../../core/dynasty/nil';
 import './dynasty.css';
 
 const THEME_KEY = 'dynasty-theme';
@@ -842,6 +843,13 @@ function Manage({ d, art, list, busy, note, actions, focus, ctx, up }: {
               <Button variant="quiet" href={href('rules')}>Offseason rules</Button>
               <Button variant="quiet" href={href('guide')}>How a season works</Button>
             </div>
+            {/* NIL for a 2026 dynasty already running: on between seasons (the offseason sets the budgets it starts from). */}
+            {editionOf(d).id === '2026' && (
+              <div className="dy-setup-switch">
+                <Check checked={hasNil(d)} disabled={!!d.offseason || !!busy} onChange={(on) => void actions.commit(on ? enableNil(d!) : disableNil(d!))}><strong>NIL</strong></Check>
+                <p className="dy-small">{NIL_TEXT}{d.offseason ? ' It can be turned on or off once the offseason is done.' : hasNil(d) ? ' Turning it off drops every budget and deal.' : ''}</p>
+              </div>
+            )}
           </section>
         </>
       )}

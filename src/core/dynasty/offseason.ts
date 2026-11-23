@@ -42,6 +42,7 @@ import { SLOT_DEF, depthChart, slotPosition, teamDepth } from './depth';
 import { rosterLayout } from '../rosterLayouts';
 import { roleOfSlot } from './ovr';
 import { recordYear } from './career';
+import { hasNil, moneyPull, nextBudgets, nilDeals, nilStay, offerRates, payRates } from './nil';
 import { DEFAULT_RULES, growthRate, rulesOf, type OffseasonRules } from './rules';
 import { areaOf, EVEN_TRAINING, trainingFactor, trainingOf, weightGain, type Training } from './training';
 import { fromScale, ovrOf, ratingScaleIsV8, roleOfPos, toScale, type Ratings } from './ratings';
@@ -129,6 +130,11 @@ export interface OffseasonState {
   recruiting?: import('./recruiting').RecruitingState;
   /** The coaching carousel (carousel.ts), the first step when the dynasty has coaches. */
   carousel?: import('./carousel').CarouselState;
+  /**
+   * NIL (nil.ts): next season's budgets (set when the offseason starts), the user teams' players kept at their old
+   * pay, and after the deals each kept player's shortfall (0-1).
+   */
+  nil?: import('./nil').SeasonNil & { keep?: number[]; short?: Record<number, number> };
 }
 
 // ---- small helpers
@@ -264,6 +270,8 @@ export function startOffseason(d: Dynasty, opt: { seed?: number; force?: boolean
   const R = rulesOf(d);
   st.prestige = was.map((stars, t) => (v.save ? nextPrestige(stars, v.rank[t], [R.tier6, R.tier5, R.tier4, R.tier3, R.tier2]) : stars));
   st.prestige.forEach((to, t) => { if (to !== was[t]) st.events.push({ kind: 'prestige', team: t, from: was[t], to, finalRank: v.rank[t] }); });
+  // NIL: next season's budgets from the conference, the new prestige and the boosters after this season (nil.ts).
+  if (hasNil(d)) st.nil = nextBudgets(d, st.prestige, st.seed);
   const r = stepRand(st, 1);
   const inGame = new Set(lastSeason(d).slots.flat().filter((x): x is number => x !== null));
   const players = d.players.map((p0) => {
@@ -275,12 +283,14 @@ export function startOffseason(d: Dynasty, opt: { seed?: number; force?: boolean
       return { ...p, status: kind === 'pro' ? 'pro' : 'graduated', team: null, leftYear: year };
     };
     if (p.cls === 'SR+') return leave('graduated');
+    // NIL (nil.ts nilStay): a well-paid player is less likely to leave early for the pros.
+    const stay = st.nil ? nilStay(p, st.nil.market) : 1;
     if (p.cls === 'SR') {
-      if (r() < clamp((p.ovr - R.proSeniorBase) / R.proSeniorScale, 0, R.proSeniorMax)) return leave('pro');
+      if (r() < stay * clamp((p.ovr - R.proSeniorBase) / R.proSeniorScale, 0, R.proSeniorMax)) return leave('pro');
       if (r() < R.srPlusReturn) st.events.push({ kind: 'returns', player: p.id, team, ovr: p.ovr });
       else return leave('graduated');
     }
-    if (p.cls === 'JR' && r() < clamp((p.ovr - R.proJuniorBase) / R.proJuniorScale, 0, R.proJuniorMax)) return leave('pro');
+    if (p.cls === 'JR' && r() < stay * clamp((p.ovr - R.proJuniorBase) / R.proJuniorScale, 0, R.proJuniorMax)) return leave('pro');
     // Moves up a class; he develops at the end of the offseason (trainPlayers).
     st.train!.push({ player: p.id, leaving: p.cls, starter: inGame.has(p.id) });
     return { ...p, cls: CLASSES[Math.min(4, CLASSES.indexOf(p.cls) + 1)] };
@@ -320,7 +330,13 @@ export function confirmDepth(d: Dynasty, projected: Record<number, (number | nul
     const bad = projectedProblems(d, Number(t), slots);
     if (bad.length) throw new Error(`${d.teams[Number(t)].school}: ${bad.join(' ')}`);
   }
-  const next: Dynasty = { ...d, offseason: { ...st, projected: { ...st.projected, ...projected } } };
+  let next: Dynasty = { ...d, offseason: { ...st, projected: { ...st.projected, ...projected } } };
+  // NIL (nil.ts): the one-year deals for next season before anyone decides to leave (a user team's kept players
+  // stay at their old pay and are likelier to go).
+  if (hasNil(d) && st.nil) {
+    const { players, short } = nilDeals(next.players, st.nil.budget, st.nil.market, new Set(st.nil.keep ?? []));
+    next = { ...next, players, offseason: { ...next.offseason!, nil: { ...st.nil, short: Object.fromEntries(short) } } };
+  }
   return { ...next, offseason: { ...next.offseason!, step: 'portal', portal: chooseTransfers(next, st.seed) } };
 }
 
@@ -376,7 +392,15 @@ export function transferChance(d: Dynasty, p: DPlayer, ctx: PortalContext = port
   if (p.cls === 'SR' || p.cls === 'SR+') c += R.transferSenior;
   // His coach (2026): a good one keeps players a little more; a coach who left makes them likelier to go, starters too.
   const cf = transferFactor(d, p.team);
-  return clamp(c * (1 - R.playingTimeCut * playingTime(ctx, p, R.playingTimeShare)) * cf.times + cf.plus, 0, 1);
+  let pull = 0;
+  // NIL (nil.ts): a school that would start him and pays more pulls him; so does being kept at his old pay.
+  const st = d.offseason;
+  if (ctx.nilRates && st?.nil) {
+    let best = 0;
+    ctx.nilRates.forEach((rate, t) => { if (t !== p.team && rate > best && wouldStart(ctx, p, t)) best = rate; });
+    pull = moneyPull(p, best, st.nil.market, st.nil.short?.[p.id] ?? 0);
+  }
+  return clamp(c * (1 - R.playingTimeCut * playingTime(ctx, p, R.playingTimeShare)) * cf.times + cf.plus + pull, 0, 1);
 }
 
 /** Labels of the Active Roster spots that aren't starting jobs. */
@@ -394,6 +418,8 @@ export interface PortalContext {
   nextStarters: Set<number>;
   /** Per team and position, the weakest projected starter's OVR (who a transfer would have to beat). */
   starterBar: Map<number, Map<string, number>>;
+  /** NIL: what each school would offer a newcomer next season, as a share of his value (nil.ts offerRates). */
+  nilRates?: number[];
 }
 
 /** What the transfer rules need from last season and the current rosters. */
@@ -432,7 +458,10 @@ export function portalContext(d: Dynasty): PortalContext {
     });
     starterBar.set(t.index, bar);
   }
-  return { role, touches, typical, nextStarters, starterBar };
+  const nil = d.offseason?.nil;
+  // What each school would offer him (nil.ts offerRates), against what he's paid.
+  const nilRates = hasNil(d) && nil ? offerRates(nil.budget, payRates(d.players, nil.budget, nil.market)) : undefined;
+  return { role, touches, typical, nextStarters, starterBar, ...(nilRates ? { nilRates } : {}) };
 }
 
 /** His playing time last season, 0-1 (1 = at least half of a typical starter's touches at his position). */
@@ -534,10 +563,21 @@ export function recruitTemplates(d: Dynasty): RecruitTemplates {
   return { byPos, firstNames: namePool(first, firstOdds, MAX_FIRST), lastNames: namePool(last, lastOdds, MAX_LAST), realNames: real, towns };
 }
 
-/** Where in the league's players of a position a recruit of each star rating is modeled on (OVR percentile), before the freshman gap. */
-const STAR_BAND: Record<number, [number, number]> = { 5: [0.97, 1], 4: [0.8, 0.97], 3: [0.35, 0.8], 2: [0.05, 0.35], 1: [0, 0.05], 0: [0, 0.08] };
+/**
+ * Where in the league's players of a position a recruit of each star rating is modeled on (OVR percentile), before
+ * the freshman gap. With the real star mix (POOL_STARS; user, 2026-11-22) the bands sit so that a class brings in
+ * as much talent as the earlier mix did (more 3-stars, each a little better), or the league would get weaker.
+ */
+const STAR_BAND: Record<number, [number, number]> = { 5: [0.99, 1], 4: [0.9, 0.99], 3: [0.4, 0.9], 2: [0.12, 0.4], 1: [0, 0.12], 0: [0, 0.08] };
+/**
+ * The high-school pool's star mix (full recruiting), as in real classes: about 1% five-stars, 10-11% four-stars
+ * (247Sports composites: ~35 five-stars and ~350-400 four-stars a year among about 3,000 FBS signees).
+ */
+export const POOL_STARS = [0.08, 0.27, 0.53, 0.11, 0.011]; // 1★ … 5★
 /** Potential range by stars (walk-ons 0). */
-const STAR_POT: Record<number, [number, number]> = { 5: [86, 99], 4: [80, 93], 3: [72, 86], 2: [65, 79], 1: [58, 72], 0: [55, 70] };
+// With the real star mix (2026-11-22) fewer recruits are blue chips, so each star level has a little more room to grow:
+// the league's supply of potential (and of 90+ ceilings) stays about where the earlier mix had it.
+const STAR_POT: Record<number, [number, number]> = { 5: [90, 99], 4: [84, 96], 3: [76, 90], 2: [68, 83], 1: [58, 72], 0: [55, 70] };
 /**
  * A diamond in the rough (user, 2026-11-12: "a few rare ones would be cool"): a walk-on with the potential
  * of a top recruit. He starts as weak as any walk-on and grows fast (development is a share of his room).
@@ -545,9 +585,17 @@ const STAR_POT: Record<number, [number, number]> = { 5: [86, 99], 4: [80, 93], 3
 export const DIAMOND_CHANCE = DEFAULT_RULES.diamondChance;
 export const DIAMOND_POT: [number, number] = [DEFAULT_RULES.diamondPotMin, DEFAULT_RULES.diamondPotMax];
 
+/** Stars for one high-school prospect in the full-recruiting pool (POOL_STARS). */
+export function drawPoolStars(r: Rand): number {
+  let x = r() * POOL_STARS.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < 5; i++) if ((x -= POOL_STARS[i]) <= 0) return i + 1;
+  return 3;
+}
+
 /** Stars for one recruit of a program with this prestige (0-1). */
 export function drawStars(r: Rand, pres: number): number {
-  const w = [0.12 * (1 - pres), 0.38 * (1 - pres) + 0.05, 0.42, 0.06 + 0.42 * pres, 0.005 + 0.12 * pres * pres]; // 1★ … 5★
+  // Blue chips mostly at the top programs (a 6-star program: ~45% four-stars, ~13% five-stars; a 2-star one ~3%).
+  const w = [0.1 * (1 - pres), 0.4 * (1 - pres) + 0.03, 0.45, 0.01 + 0.55 * pres * pres, 0.15 * pres ** 3]; // 1★ … 5★
   let x = r() * w.reduce((a, b) => a + b, 0);
   for (let i = 0; i < 5; i++) if ((x -= w[i]) <= 0) return i + 1;
   return 3;
@@ -841,6 +889,7 @@ export function finishOffseason(d: Dynasty): Dynasty {
     }),
     ...depthChart(withNumbers),
     prestige: st.prestige ?? seasonPrestige(d, prev),
+    ...(st.nil ? { nil: { budget: st.nil.budget, boost: st.nil.boost, market: st.nil.market, ...(st.nil.donor ? { donor: st.nil.donor } : {}) } } : {}),
     // Each team's head coach this season (coaches.ts); the coaching carousel will change them before this point.
     ...(d.coaches ? { coach: d.teams.map((t) => d.coaches!.find((c) => c.team === t.index)?.id ?? null) } : {}),
     imports: [],

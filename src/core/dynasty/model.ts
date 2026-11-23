@@ -66,6 +66,10 @@ export interface DPlayer {
   look?: import('./headshot').LookEdit;
   /** 2 = made since the headshots' new hair styles (2026-11-18): his generated look can use any style. Absent = the earlier styles, so existing players keep their hair. */
   lookV?: 2;
+  /** NIL pay this season, dollars (nil.ts; NIL dynasties only). */
+  nil?: number;
+  /** The FCS school he transferred up from and his seasons there, with stats (fcs.ts; not in the dynasty's records). */
+  fcs?: { school: string; seasons: import('./fcs').FcsSeason[] };
   status: 'active' | 'graduated' | 'pro' | 'transferred' | 'cut';
   /** The CFB 27 player ID for the starting players. */
   srcId?: number;
@@ -127,6 +131,8 @@ export interface DSeason {
   bench?: (number | null)[][];
   benchBw?: (BwSlot | null)[][];
   /** Each team's prestige this season, 1-6 stars (prestige.ts). */
+  /** NIL budgets and booster money (nil.ts; NIL dynasties only). */
+  nil?: import('./nil').SeasonNil;
   prestige?: number[];
   /** Each team's offense and defense OVR in the ROM this season (what Game Setup shows). */
   teamOvr?: TeamRating[];
@@ -169,11 +175,15 @@ export interface DSeason {
 
 export type OffseasonEvent =
   | { kind: 'graduated' | 'pro' | 'returns'; player: number; team: number; ovr: number }
-  | { kind: 'transfer'; player: number; from: number; to: number | null; ovr: number }
+  | { kind: 'transfer'; player: number; from: number; to: number | null; ovr: number; /** Nobody signed him: the FCS school he went down to (fcs.ts). */ down?: string }
+  /** A player up from an FCS school (fcs.ts): a new player in the dynasty. */
+  | { kind: 'fcs'; player: number; school: string; to: number; ovr: number }
   | { kind: 'signed'; player: number; team: number; stars: number; ovr: number }
   | { kind: 'cut'; player: number; team: number; ovr: number }
   | { kind: 'walkon'; player: number; team: number; ovr: number }
   | { kind: 'class'; team: number; rank: number; signed: number; points: number }
+  /** The transfer class: portal and FCS players a school signed, ranked by their stars (recruiting.ts). */
+  | { kind: 'transferClass'; team: number; rank: number; signed: number; points: number }
   | { kind: 'prestige'; team: number; from: number; to: number; finalRank: number }
   | { kind: 'coachRetired'; coach: number; team: number }
   | { kind: 'coachFired'; coach: number; team: number; heat: number }
@@ -239,6 +249,12 @@ export interface Dynasty {
   yourCoachFired?: boolean;
   /** Head coaches nudge their team's OFF and DEF in the season ROM, ±2 at most (coachEffects.ts `simNudge`). Absent = off. */
   coachSim?: boolean;
+  /** NIL (nil.ts; 2026 dynasties made with it): budgets, pay, money in recruiting. */
+  nil?: {
+    on: true;
+    /** The CPU sets the user teams' NIL offers (user, 2026-11-22: "let the cpu manage all nil, similar to letting cpu manage coach xp"). */
+    auto?: boolean;
+  };
   /** The season sim's settings for this dynasty's season ROMs (seasonSim.ts); absent = the ROM's own. */
   sim?: import('../simSettings').SimSettings;
   /** Sim stat multipliers for its season ROMs (seasonSim.ts, H-021); absent = the ROM's own (×1). */

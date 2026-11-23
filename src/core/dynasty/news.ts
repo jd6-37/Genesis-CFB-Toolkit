@@ -1,6 +1,8 @@
 // Stories for the Dynasty's news homepage, written from the season's results with templates.
 // Pure functions: the same season gives the same stories.
 
+import { fcsLabel } from './fcs';
+import { hasNil, money, NIL } from './nil';
 import { bowlOf, bowlWeek, INDEPENDENT, leaders, playerLabel, playerLines, playerName, RECORD_STATS, seasonView, standings, statValue, weekName, type SeasonView } from './derive';
 import { preseasonPoll } from './poll';
 import { rivalryOf } from './rivalries';
@@ -599,6 +601,48 @@ export function offseasonStories(d: Dynasty, events: OffseasonEvent[], year: num
       headline: `Former ${school !== undefined ? `${name(school)} ` : ''}${p.pos} ${c.name} starts a coaching career`,
       dek: e.drafted ? 'After his years in the NFL he joins the pool of coaches.' : 'He joins the pool of coaches right out of school.',
     });
+  }
+  // The portal and NIL (user, 2026-11-22: headlines for them). Who entered the portal, while it's open.
+  const st = d.offseason?.year === year ? d.offseason : undefined;
+  if (st?.portal?.length && !events.some((e) => e.kind === 'class')) {
+    st.portal.map(pl).filter((p) => p && p.team !== null).sort((a, b) => b.ovr - a.ovr).slice(0, 3).forEach((p, i) => out.push({
+      id: `${year}-portal-${p.id}`, kind: d.userTeams.includes(p.team!) ? 'yours' : 'upset', week: 0, weight: (d.userTeams.includes(p.team!) ? 80 : 63) - i * 4, teams: [p.team!],
+      headline: pick(`${year}-portal-${p.id}`, [`${name(p.team!)} ${p.pos} ${p.first} ${p.last} enters the transfer portal`, `${who(p.id)} hits the portal`]),
+      dek: `A ${p.ovr} OVR ${p.cls} from ${name(p.team!)}. Recruiting decides where he lands.`,
+    }));
+  }
+  // Up from FCS schools: the best two.
+  events.filter((e): e is Extract<OffseasonEvent, { kind: 'fcs' }> => e.kind === 'fcs').sort((a, b) => b.ovr - a.ovr).slice(0, 2).forEach((e, i) => out.push({
+    id: `${year}-fcs-${e.player}`, kind: d.userTeams.includes(e.to) ? 'yours' : 'leader', week: 0, weight: (d.userTeams.includes(e.to) ? 76 : 56) - i * 4, teams: [e.to],
+    headline: `${who(e.player)} moves up from ${fcsLabel(e.school)} to ${name(e.to)}`,
+    dek: `A ${e.ovr} OVR ${pl(e.player).cls} who starred at ${e.school}.`,
+  }));
+  const tclasses = events.filter((e): e is Extract<OffseasonEvent, { kind: 'transferClass' }> => e.kind === 'transferClass').sort((a, b) => a.rank - b.rank);
+  if (tclasses[0]) out.push({
+    id: `${year}-tclass-1`, kind: 'topgame', week: 0, weight: 67, teams: [tclasses[0].team],
+    headline: `${name(tclasses[0].team)} lands the No. 1 transfer class`,
+    dek: `${tclasses[0].signed} transfers.${tclasses[1] ? ` ${name(tclasses[1].team)} is second.` : ''}`,
+  });
+  if (hasNil(d)) {
+    // The biggest new deal of the year.
+    const deals = events.filter((e): e is Extract<OffseasonEvent, { kind: 'signed' | 'transfer' | 'fcs' }> => e.kind === 'signed' || e.kind === 'fcs' || (e.kind === 'transfer' && e.to !== null))
+      .map((e) => ({ e, pay: pl(e.player)?.nil ?? 0 })).sort((a, b) => b.pay - a.pay);
+    const top = deals[0];
+    if (top && top.pay > 0) {
+      const to = top.e.kind === 'signed' ? top.e.team : top.e.to!;
+      out.push({
+        id: `${year}-nil-top`, kind: 'record', week: 0, weight: 64, teams: [to],
+        headline: `${top.e.kind === 'signed' ? `${STAR(top.e.stars)} ` : ''}${who(top.e.player)} gets the year's biggest NIL deal: ${money(top.pay)} at ${name(to)}`,
+        dek: top.e.kind === 'signed' ? 'The richest deal of the signing class.' : `The richest deal of the transfer portal${top.e.kind === 'fcs' ? `, for a player up from ${fcsLabel(top.e.school)}` : ''}.`,
+      });
+    }
+    // Big donors (nil.ts): a new one in the budgets for next season.
+    const nil = st?.nil ?? (d.seasons.find((x) => x.year === year + 1)?.nil);
+    nil?.donor?.forEach((left, t) => { if (left === NIL.donorSeasons) out.push({
+      id: `${year}-donor-${t}`, kind: d.userTeams.includes(t) ? 'yours' : 'number1', week: 0, weight: d.userTeams.includes(t) ? 88 : 70, teams: [t],
+      headline: pick(`${year}-donor-${t}`, [`A big donor backs ${name(t)}`, `${name(t)}'s new booster opens the checkbook`]),
+      dek: `${name(t)}'s NIL budget jumps to ${money(nil.budget[t])} a year. Recruits and the portal will notice.`,
+    }); });
   }
   for (const u of d.userTeams) {
     const c = classes.find((x) => x.team === u);

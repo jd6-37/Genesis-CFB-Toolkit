@@ -385,9 +385,9 @@ assert.equal(o1.offseason!.step, 'depth');
 assert.throws(() => Off.runPortal(o1), /after the season/);
 const ctx1 = Off.portalContext(o1);
 const depthGuy = act(o1).find((p) => ctx1.role.get(p.id) === 'depth' && !ctx1.nextStarters.has(p.id) && Off.playingTime(ctx1, p) === 0 && p.cls !== 'SR' && p.cls !== 'SR+')!;
-assert.ok(Math.abs(Off.transferChance(o1, depthGuy, ctx1) - 0.18) < 1e-9, 'a blocked depth player with no touches: 8% + 10%');
+{ const R0 = rulesOf(o1); assert.ok(Math.abs(Off.transferChance(o1, depthGuy, ctx1) - (R0.transferDepth + R0.transferBlocked)) < 1e-9, 'a blocked depth player with no touches: depth + blocked'); }
 const busy = { ...ctx1, touches: new Map(ctx1.touches).set(depthGuy.id, 1000) };
-assert.ok(Math.abs(Off.transferChance(o1, depthGuy, busy) - 0.18 * 0.2) < 1e-9, 'full playing time: 80% less');
+assert.ok(Math.abs(Off.transferChance(o1, depthGuy, busy) - (RD.transferDepth + RD.transferBlocked) * 0.2) < 1e-9, 'full playing time: 80% less');
 // Promoting him to a starting spot on the projected depth chart takes away the "blocked" 10%.
 const team1 = depthGuy.team!;
 const chart = Off.projectedDepth(o1, team1).slice();
@@ -398,7 +398,7 @@ if (spot >= 0) {
   if (was >= 0) chart[was] = chart[spot];
   chart[spot] = depthGuy.id;
   const promoted = { ...o1, offseason: { ...o1.offseason!, projected: { [team1]: chart } } };
-  assert.ok(Math.abs(Off.transferChance(promoted, depthGuy) - 0.08) < 1e-9, 'a promised starting job: no longer blocked');
+  assert.ok(Math.abs(Off.transferChance(promoted, depthGuy) - RD.transferDepth) < 1e-9, 'a promised starting job: no longer blocked');
 }
 assert.ok(Off.projectedProblems(o1, team1, [...chart.slice(0, 31), 999999]).length > 0, 'a player from elsewhere is refused');
 // A team with no quarterback: the projected chart leaves the spot open and nobody holds two spots;

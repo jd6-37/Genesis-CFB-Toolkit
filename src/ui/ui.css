@@ -393,3 +393,16 @@ a.ui-button.ui-button-chrome, a.ui-button.ui-button-chrome:hover { color: var(--
   .ui-sided { grid-template-columns: 96px minmax(0, 1fr); gap: var(--sp-4); align-items: start; }
   .ui-segments-side { flex-direction: column; flex-wrap: nowrap; position: sticky; top: 48px; }
 }
+
+/* Stepper: − value + (an NIL offer). 44 px targets; the value in the figure font. */
+.ui-stepper { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: var(--sp-2); align-items: stretch; max-width: 360px; }
+.ui-stepper button {
+  min-height: 44px; border: var(--rule-w-strong) solid var(--text); background: var(--surface); color: var(--text);
+  font: 700 var(--fs-5)/1 var(--font-display); cursor: pointer;
+}
+.ui-stepper button:hover:not(:disabled) { background: var(--highlight); }
+.ui-stepper button:disabled { opacity: 0.4; cursor: not-allowed; }
+.ui-stepper-value {
+  display: flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 var(--sp-2);
+  border: var(--rule-w) solid var(--rule-strong); background: var(--surface-sunken); font: 400 var(--fs-num-2)/1 var(--font-num);
+}

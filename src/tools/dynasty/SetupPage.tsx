@@ -10,6 +10,7 @@ import { simNudges } from '../../core/dynasty/coachEffects';
 import { randomBench } from '../../core/dynasty/bench';
 import { losesRealSchedule } from '../../core/dynasty/conferences';
 import { editionOf } from '../../core/dynasty/edition';
+import { disableNil, enableNil, hasNil, NIL_TEXT } from '../../core/dynasty/nil';
 import { seasonRomName } from '../../core/dynasty/offseason';
 import { coachChanges, SETUP_LABELS, fillOpenJobs, openJobs, realScheduleNow, SETUP_STEPS, setupFire, setupHire, setupLock, setupSchedule, setupSwap, type SetupStep } from '../../core/dynasty/setup';
 import { zipName } from '../../core/zip';
@@ -109,6 +110,12 @@ function CoachesStep({ actions, busy }: { actions: SetupActions; busy: boolean }
         <Check checked={!!d.coachSim} disabled={busy} onChange={(on) => void act(() => ({ ...d, coachSim: on || undefined }))}><strong>Coaches affect the sim</strong></Check>
         <p className="dy-small">{COACH_SIM_TEXT}</p>
       </div>
+      {editionOf(d).id === '2026' && (
+        <div className="dy-setup-switch">
+          <Check checked={hasNil(d)} disabled={busy} onChange={(on) => void act(() => (on ? enableNil(d) : disableNil(d)))}><strong>NIL</strong></Check>
+          <p className="dy-small">{NIL_TEXT}</p>
+        </div>
+      )}
       {changes.length > 0 && (
         <div className="dy-setup-changes">
           <p><strong>Your changes</strong></p>

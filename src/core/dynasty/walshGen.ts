@@ -23,6 +23,8 @@
 // at his first mention, his last name after; former players without a number; no advice to the player; the game's
 // font only (A-Z a-z 0-9 space . , ! ? ' " - & ( ) / : ; % + =), no word over 20 characters.
 
+import { fcsLabel } from './fcs';
+import { groupOf, moneyWords, NIL } from './nil';
 import type { DPlayer, DSeason, Dynasty, OffseasonEvent, BwSlot } from './model';
 import { rng } from './model';
 import { seasonView, playerLines, standings, bowlOf, INDEPENDENT, type SeasonView, type PlayerLine } from './derive';
@@ -188,6 +190,7 @@ export function walshLeague(d: Dynasty, season: DSeason): WalshLeague | null {
     if ((e.kind === 'graduated' || e.kind === 'pro') && starterOf(prev, e.team, e.player)) lostStarters[e.team]++;
     if (e.kind === 'transfer' && starterOf(prev, e.from, e.player)) lostStarters[e.from]++;
     if (e.kind === 'transfer' && e.to !== null && starterOf(season, e.to, e.player)) portalStarters[e.to]++;
+    if (e.kind === 'fcs' && starterOf(season, e.to, e.player)) portalStarters[e.to]++;
   }
   const eraRanks = i >= 3
     ? d.seasons.slice(0, i).filter((x) => x.imports.length).map((x) => (x === prev ? vPrev : seasonView(d, x)).rank.map((rk) => (rk && rk <= 25 ? rk : 0)))
@@ -228,7 +231,8 @@ interface Facts {
   wonConf: boolean;
   offRet: number; defRet: number;
   gone: { p: DPlayer; why: 'graduated' | 'pro' | 'transfer'; to: number | null; starter: boolean; side: 'off' | 'def' | null; line: string | null }[];
-  inTransfers: { p: DPlayer; from: number; starter: boolean }[];
+  /** Transfers in: the school he came from as written ("Duke", or "Montana State (FCS)": fcs.ts). */
+  inTransfers: { p: DPlayer; from: string; starter: boolean }[];
   recruits: { p: DPlayer; stars: number; starter: boolean }[];
   classRank: number | null;
   qb: DPlayer | null; qbNew: boolean;
@@ -319,7 +323,8 @@ function factsOf(L: WalshLeague, T: number): Facts {
   gone.sort((a, b) => Number(b.starter) - Number(a.starter) || b.p.ovr - a.p.ovr);
 
   const nowStarter = new Set(season.slots[T].flatMap((id, s) => (id !== null && STARTERS.has(s) ? [id] : [])));
-  const inTransfers = L.events.flatMap((e) => (e.kind === 'transfer' && e.to === T ? [{ p: d.players[e.player - 1], from: e.from, starter: nowStarter.has(e.player) }] : []))
+  const inTransfers = L.events.flatMap((e) => (e.kind === 'transfer' && e.to === T ? [{ p: d.players[e.player - 1], from: d.teams[e.from].school, starter: nowStarter.has(e.player) }]
+    : e.kind === 'fcs' && e.to === T ? [{ p: d.players[e.player - 1], from: fcsLabel(e.school), starter: nowStarter.has(e.player) }] : []))
     .sort((a, b) => Number(b.starter) - Number(a.starter) || b.p.ovr - a.p.ovr);
   const recruits = L.events.flatMap((e) => (e.kind === 'signed' && e.team === T ? [{ p: d.players[e.player - 1], stars: e.stars, starter: nowStarter.has(e.player) }] : []))
     .sort((a, b) => b.stars - a.stars || b.p.ovr - a.p.ovr);
@@ -490,6 +495,8 @@ function opening(c: Ctx): string {
       ...(c.L.portalStarters[f.T] >= top(c.L.portalStarters, 0.05) ? [`Few teams leaned on the transfer portal more than ${T}.`] : []),
       `${T} rebuilt its roster through the transfer portal.`,
       `The ${N} will look very different in ${Y}: ${plural(f.inTransfers.length, 'transfer')} arrived in the offseason.`,
+      // User, 2026-11-22: "lost six players to the portal but reloaded with seven".
+      ...(f.gone.filter((g) => g.why === 'transfer').length >= 3 ? [`${T} lost ${word(f.gone.filter((g) => g.why === 'transfer').length)} players to the portal and reloaded with ${word(f.inTransfers.length)}.`] : []),
     ],
     steady: [
       `${T} went ${rec} in ${LY}${f.confPlace ? ` and finished ${ordinal(f.confPlace)} in the ${f.conf ?? 'conference'}` : ''}.`,
@@ -536,7 +543,7 @@ const qbSay: Gen = (c) => {
     // H-035: "Duke transfer #10 Darian Mensah takes over at QB".
     n.restore(snap);
     const as = n.ref(qb, false);
-    return `${walshText(c.L.d.teams[transfer.from].school)} transfer ${as} takes over at QB${style ? ` and ${style}` : ''}.`;
+    return `${walshText(transfer.from)} transfer ${as} takes over at QB${style ? ` and ${style}` : ''}.`;
   }
   if (recruit) return `${recruit.stars}-star freshman ${who} won the starting job${style ? ` and ${style}` : ''}.`;
   if (f.qbNew) {
@@ -734,7 +741,7 @@ function arrivalSay(side: 'off' | 'def'): Gen {
     }
     if (tr.length === 1) {
       // H-035: by the school he came from, with position and number, once.
-      const x = tr[0], from = walshText(c.L.d.teams[x.from].school), who = n.ref(x.p);
+      const x = tr[0], from = walshText(x.from), who = n.ref(x.p);
       return pick(r, [`${from} transfer ${who} starts.`, `${from} transfer ${who} steps in as a starter.`]);
     }
     if (rc.length && rc[0].stars >= 4) {
@@ -954,6 +961,52 @@ const favoriteSay: Gen = (c) => {
 };
 
 /**
+ * A big donor (nil.ts; user, 2026-11-22): the season he arrives. Amounts in words, the game's font has no dollar sign.
+ * NIL in the reports only when it's notable (user, 2026-11-22): this, `nilSay`.
+ */
+const donorSay: Gen = (c) => {
+  const { f, L } = c;
+  if (L.season.nil?.donor?.[f.T] !== NIL.donorSeasons) return null;
+  const was = L.prev.nil?.budget[f.T] ?? 0, now = L.season.nil.budget[f.T];
+  const from = was > 0 ? `, up from ${moneyWords(was)}` : '';
+  return pick(c.r, [
+    `A big donor has changed the outlook at ${f.school}: its NIL budget is now ${moneyWords(now)}${from}.`,
+    `New booster money has ${f.school} thinking big. Its NIL budget is ${moneyWords(now)}${from}.`,
+  ]);
+};
+
+const GROUP_WORD: Record<string, string> = { QB: 'quarterback', RB: 'running back', WR: 'receiver', TE: 'tight end', OL: 'offensive lineman', DL: 'defensive lineman', LB: 'linebacker', DB: 'defensive back' };
+
+/**
+ * Notable NIL only (user, 2026-11-22): the biggest NIL budget in the country (half the time), or the country's
+ * highest-paid player at a position group (kickers left out), when he plays here. Not in a donor year.
+ */
+const nilSay: Gen = (c) => {
+  const { f, L } = c, d = L.d;
+  const b = L.season.nil?.budget;
+  if (!b || L.season.nil?.donor?.[f.T] === NIL.donorSeasons) return null;
+  if (b[f.T] === Math.max(...b) && c.r() < 0.5) {
+    return pick(c.r, [`No school spends more on NIL than ${f.school}: ${moneyWords(b[f.T])} this year.`, `${f.school} has the biggest NIL budget in the country, ${moneyWords(b[f.T])}.`]);
+  }
+  const top = new Map<string, DPlayer>();
+  for (const p of d.players) {
+    if (p.status !== 'active' || p.team === null || !(p.nil && p.nil > 0)) continue;
+    const g = groupOf(p.pos);
+    if (!GROUP_WORD[g]) continue;
+    const cur = top.get(g);
+    if (!cur || p.nil > (cur.nil ?? 0)) top.set(g, p);
+  }
+  const mine = [...top.entries()].filter(([, p]) => p.team === f.T).sort((x, y) => (y[1].nil ?? 0) - (x[1].nil ?? 0))[0];
+  if (!mine) return null;
+  const [g, p] = mine;
+  return pick(c.r, [
+    `${cap(c.n.ref(p))} is the highest-paid ${GROUP_WORD[g]} in the country, at ${moneyWords(p.nil!)}.`,
+    `No ${GROUP_WORD[g]} in the country makes more in NIL than ${c.n.ref(p)}: ${moneyWords(p.nil!)}.`,
+  ]);
+};
+
+
+/**
  * The dynasty era (user, 2026-11-18): only from the dynasty's fourth season, worded "this dynasty era (N years)", a
  * team's rise, fall or continued dominance over the seasons played, and rarely (about one team in four of those with a
  * clear pattern).
@@ -1047,7 +1100,7 @@ export function walshReport(L: WalshLeague, team: number, variant = 0): Report {
 
   // Team-level facts in the opener (H-035): the conference favorite (the app's own poll) and, from the dynasty's
   // fourth season, now and then a line about the dynasty era.
-  const open = [S(opening(c)), S(favoriteSay(c)), S(eraSay(c))].filter(Boolean).join(' ');
+  const open = [S(opening(c)), S(favoriteSay(c)), S(eraSay(c)), S(donorSay(c)), S(nilSay(c))].filter(Boolean).join(' ');
   // An opening that counts starters says it once.
   if (open && /starters? on offense/.test(open)) c.said.add('retOff');
   if (open && /returns? \w+ starters?(?! on)/.test(open)) { c.said.add('retOff'); c.said.add('retDef'); }
