@@ -3,8 +3,9 @@
 // controller select screen reads a per-team table, KTAB, that the apps may edit (project handoff H-004,
 // claude/handoffs/H-004-uniform-presets-editor.md; the ROM side is the patch's uniforms.py).
 //
-// KTAB at 0x2B6000, at most 4 KB (0x2B6000-0x2B6FFF), big-endian:
-//   +0 "KIT1"   +4 team count (word, 138 or 107)   +6 a long per team: its record's offset from 0x2B6000, 0 = none
+// KTAB where the manifest's KIT1 entry says (2026 v2.1.1-test23 on: 0x2DC200, 8 KB); an entry with size 0, or no
+// manifest, means the old place: 0x2B6000, 4 KB (1994, and 2026 up to test22). Big-endian:
+//   +0 "KIT1"   +4 team count (word, 138 or 107)   +6 a long per team: its record's offset from KTAB, 0 = none
 //   record (even address): NH, NJH, NJA, NP (extra helmets, dark jerseys, white jerseys, pants), FLAGS
 //   (bit 0 = wears white at home), 0; then NH × 3 words, NJH × 4, NJA × 4, NP × 4.
 // Colors are Genesis CRAM words in the uniform palette's places:
@@ -12,9 +13,17 @@
 //   pants [3] side stripe, [13] light, [14] middle, [15] dark.
 // A team's own home and away uniforms are always the first choices and aren't in the table.
 import { fromLevels, LEVELS, toLevels } from './colors';
+import { entryOf, readManifest } from './manifest';
 
-export const KTAB = 0x2b6000;
-export const KTAB_SIZE = 0x1000;
+/** KTAB's old place and size (1994, and 2026 up to v2.1.1-test22). */
+export const KTAB_OLD = 0x2b6000;
+export const KTAB_OLD_SIZE = 0x1000;
+
+/** Where this ROM's KTAB is and how big it may be: the manifest's KIT1 entry (ROM lane, test23 inbox), else the old place. */
+export function ktabOf(d: Uint8Array): { at: number; size: number } {
+  const e = entryOf(readManifest(d), 'KIT1');
+  return e && e.address && e.size ? { at: e.address, size: e.size } : { at: KTAB_OLD, size: KTAB_OLD_SIZE };
+}
 const TAG = [0x4b, 0x49, 0x54, 0x31]; // KIT1
 /** Team counts of the editions with the table (2026: 138, 1994: 107). */
 const COUNTS = [138, 107];
@@ -40,11 +49,12 @@ const u16 = (d: Uint8Array, a: number) => (d[a] << 8) | d[a + 1];
 const u32 = (d: Uint8Array, a: number) => ((d[a] << 24) >>> 0) + (d[a + 1] << 16) + (d[a + 2] << 8) + d[a + 3];
 
 /** Whether the ROM has the uniform picker's table. */
-export const hasKits = (d: Uint8Array) => d.length >= KTAB + KTAB_SIZE && TAG.every((b, k) => d[KTAB + k] === b) && COUNTS.includes(u16(d, KTAB + 4));
+export const hasKits = (d: Uint8Array) => { const { at, size } = ktabOf(d); return d.length >= at + size && TAG.every((b, k) => d[at + k] === b) && COUNTS.includes(u16(d, at + 4)); };
 
 /** Every team's extras and flag. */
 export function readKits(d: Uint8Array): TeamKit[] {
   if (!hasKits(d)) throw new Error("This ROM has no alternate uniforms (they came with Bill Walsh '95 Elevated 2026 v2.0.1-test14).");
+  const { at: KTAB, size: KTAB_SIZE } = ktabOf(d);
   const out: TeamKit[] = [];
   const teams = u16(d, KTAB + 4);
   for (let t = 0; t < teams; t++) {
@@ -69,8 +79,9 @@ export function readKits(d: Uint8Array): TeamKit[] {
 export const KIT_LIMITS = { helmets: 7, pants: 7, jerseys: 7 };
 const CRAM = 0x0eee;
 
-/** Why these kits can't be written (empty when they can). */
-export function kitIssues(kits: TeamKit[], names?: string[]): string[] {
+/** Why these kits can't be written (empty when they can); `room`: the ROM's KTAB size (ktabOf), else the old 4 KB. */
+export function kitIssues(kits: TeamKit[], names?: string[], room = KTAB_OLD_SIZE): string[] {
+  const KTAB_SIZE = room;
   const out: string[] = [];
   if (!COUNTS.includes(kits.length)) return [`Expected ${COUNTS.join(' or ')} teams, got ${kits.length}.`];
   let size = headOf(kits.length);
@@ -91,7 +102,8 @@ export function kitIssues(kits: TeamKit[], names?: string[]): string[] {
 /** Rebuilds the table from the kits (the checksum at 0x18E is the caller's to fix). */
 export function writeKits(d: Uint8Array, kits: TeamKit[]): void {
   if (!hasKits(d)) throw new Error('This ROM has no alternate uniforms table.');
-  const issues = kitIssues(kits);
+  const { at: KTAB, size: KTAB_SIZE } = ktabOf(d);
+  const issues = kitIssues(kits, undefined, KTAB_SIZE);
   if (issues.length) throw new Error(issues[0]);
   if (kits.length !== u16(d, KTAB + 4)) throw new Error(`This ROM's uniforms table is for ${u16(d, KTAB + 4)} teams, not ${kits.length}.`);
   // Unchanged uniforms keep the table's bytes as they are (another tool may have laid out its records in another
@@ -111,9 +123,17 @@ export function writeKits(d: Uint8Array, kits: TeamKit[]): void {
   d.set(t8, KTAB);
 }
 
-export const kitRanges = (): [number, number][] => [[KTAB, KTAB + KTAB_SIZE]];
+/** The ROM range the uniforms table may take. */
+export const kitRanges = (d: Uint8Array): [number, number][] => { const { at, size } = ktabOf(d); return [[at, at + size]]; };
 /** Whether the uniform tables of two ROMs differ. */
-export const kitsDiffer = (a: Uint8Array, b: Uint8Array) => hasKits(a) && hasKits(b) && !a.subarray(KTAB, KTAB + KTAB_SIZE).every((x, i) => x === b[KTAB + i]);
+export const kitsDiffer = (a: Uint8Array, b: Uint8Array) => {
+  if (!hasKits(a) || !hasKits(b)) return false;
+  const x = ktabOf(a), y = ktabOf(b);
+  // Compare the tables' used bytes (they may sit at different places and sizes in two builds).
+  const n = Math.max(x.size, y.size);
+  for (let i = 0; i < n; i++) if ((i < x.size ? a[x.at + i] : 0xff) !== (i < y.size ? b[y.at + i] : 0xff)) return true;
+  return false;
+};
 
 // ---- colors from one pick (user, 2026-11-12: "a jersey has three … different colors … you would take that and
 // then make the two shades … I can handle that in the toolkit")
@@ -152,7 +172,7 @@ export function writeOwnUniforms(d: Uint8Array, team: number, own: OwnUniforms):
 /** The teams whose own uniforms differ between two ROMs (the uniform places only). */
 export function ownChanges(a: Uint8Array, b: Uint8Array): number[] {
   if (!hasKits(a) || !hasKits(b)) return [];
-  const n = Math.min(u16(a, KTAB + 4), u16(b, KTAB + 4));
+  const n = Math.min(u16(a, ktabOf(a).at + 4), u16(b, ktabOf(b).at + 4));
   const places = [...KIT_PLACES.helmets, ...KIT_PLACES.dark, ...KIT_PLACES.pants];
   const out: number[] = [];
   for (let t = 0; t < n; t++) {

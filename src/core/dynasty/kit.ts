@@ -7,7 +7,7 @@
 // What the dynasty keeps: the ROM's own uniforms as a snapshot for the editor and the pages (`romUniforms`, read
 // when the dynasty is made or the first time the editor gets the ROM), the flags (`whiteHome`), and only the teams
 // the user changed (`kitEdits`). Season ROMs get the ROM's table with those teams put in.
-import { hasKits, kitIssues, ownUniforms, readKits, readKitSprite, writeKits, writeOwnUniforms, type KitSprite, type OwnUniforms, type TeamKit } from '../kits';
+import { hasKits, kitIssues, ktabOf, ownUniforms, readKits, readKitSprite, writeKits, writeOwnUniforms, type KitSprite, type OwnUniforms, type TeamKit } from '../kits';
 import { fromBase64, toBase64, type DSeason, type Dynasty } from './model';
 
 export interface RomUniforms {
@@ -17,6 +17,8 @@ export interface RomUniforms {
   kits: TeamKit[];
   /** The player the editor shows each piece on (the picker's sprite; tiles in base64). Absent on older snapshots. */
   sprite?: { sprites: KitSprite['sprites']; tiles: string };
+  /** The ROM's room for the table in bytes (its manifest KIT1 entry: 8 KB from 2026 v2.1.1-test23); absent = the old 4 KB. */
+  room?: number;
 }
 
 /** The flags a new dynasty starts with (undefined on a ROM without the uniform picker). */
@@ -28,7 +30,7 @@ export function romUniformsOf(rom: Uint8Array, teams: number): RomUniforms | und
   const kits = readKits(rom);
   if (kits.length !== teams) return undefined;
   const sp = readKitSprite(rom);
-  return { own: kits.map((_, t) => ownUniforms(rom, t)), kits, ...(sp && { sprite: { sprites: sp.sprites, tiles: toBase64(sp.tiles) } }) };
+  return { own: kits.map((_, t) => ownUniforms(rom, t)), kits, room: ktabOf(rom).size, ...(sp && { sprite: { sprites: sp.sprites, tiles: toBase64(sp.tiles) } }) };
 }
 
 /** The editor's player sprite, or null. */
@@ -92,7 +94,7 @@ export function setKit(d: Dynasty, team: number, kit: TeamKit, names?: string[])
   const strip = (k: TeamKit): TeamKit => ({ helmets: k.helmets, dark: k.dark, white: k.white, pants: k.pants, whiteHome: false });
   const next = strip(kit);
   const all = d.romUniforms.kits.map((k, t) => strip(t === team ? next : d.kitEdits?.[t] ?? k));
-  const issues = kitIssues(all, names);
+  const issues = kitIssues(all, names, d.romUniforms.room);
   if (issues.length) throw new Error(issues[0]);
   const edits = { ...(d.kitEdits ?? {}) };
   if (JSON.stringify(next) === JSON.stringify(strip(d.romUniforms.kits[team]))) delete edits[team];

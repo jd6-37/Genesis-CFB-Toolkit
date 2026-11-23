@@ -39,7 +39,7 @@ ok('entries: all inside the ROM, every required one known to the app');
 
 // Addresses the app used to find by itself agree with the manifest's.
 const at = (tag: string) => entryOf(m, tag)!.address;
-assert.equal(at('DYNA'), 0x3e0000); assert.equal(at('KIT1'), 0x2b6000); assert.equal(at('NAM1'), 0x2c0000);
+assert.equal(at('DYNA'), 0x3e0000); assert.ok(at('KIT1') === 0x2b6000 || at('KIT1') === 0x2dc200, 'KIT1 at 0x2B6000 (up to 2026 test22, 1994) or 0x2DC200 (2026 test23 on)'); assert.equal(at('NAM1'), 0x2c0000);
 assert.equal(at('FINE'), 0x2e0000); assert.equal(at('WLSH'), 0x218800); assert.equal(at('DHOK'), 0x2b0000);
 assert.ok(hasFineRatings(rom), 'fine ratings found through FINE');
 assert.ok(KNOWN_BUILDS[m.editionYear]?.[m.serial], `the app's table of known builds has serial ${m.serial} (add it to KNOWN_BUILDS)`);

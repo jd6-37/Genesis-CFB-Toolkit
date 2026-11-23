@@ -2,7 +2,7 @@
 // own home and away pieces (locked behind a warning: the game also colors the end zones and the crowd from them) and
 // the extras for the picker on the controller screen, and whether it wears white at home.
 import { useEffect, useMemo, useState } from 'react';
-import { kitIssues, ownChanges, ownUniforms, readKits, readKitSprite, writeKits, writeOwnUniforms, type OwnUniforms, type TeamKit } from '../../core/kits';
+import { kitIssues, ownChanges, ownUniforms, readKits, readKitSprite, writeKits, writeOwnUniforms, type OwnUniforms, type TeamKit, ktabOf } from '../../core/kits';
 import { Button, Note, Row, Select, SubHead } from '../../ui';
 import { KitParts } from './KitParts';
 import type { WorkApi } from '../shared/WorkRom';
@@ -29,7 +29,7 @@ export function KitEditor({ api, names }: { api: WorkApi; names: string[] }) {
   const changed = [...new Set([...kits.flatMap((k, t) => (same(k, loaded[t]) ? [] : [t])), ...ownChanged])];
 
   const save = (next: TeamKit[]) => {
-    const issues = kitIssues(next, names);
+    const issues = kitIssues(next, names, ktabOf(work.data).size);
     if (issues.length) return setError(issues[0]);
     try {
       writeKits(work.data, next);

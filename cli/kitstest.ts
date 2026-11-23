@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { openRom } from '../src/core/romfile';
 import { openRosterRom, fixChecksums } from '../src/core/rosterRom';
-import { emptyKit, hasKits, helmetOf, kitIssues, KTAB, KTAB_SIZE, readKits, shadesOf, writeKits } from '../src/core/kits';
+import { emptyKit, hasKits, helmetOf, kitIssues, ktabOf, KTAB_OLD, readKits, shadesOf, writeKits } from '../src/core/kits';
 import { editsSince, carryEdits } from '../src/core/workRom';
 
 const path = process.argv[2];
@@ -18,6 +18,10 @@ const rom = (await openRom(basename(path), new Uint8Array(readFileSync(path)))).
 let n = 0;
 const ok = (m: string) => { n++; console.log(`ok - ${m}`); };
 assert.ok(hasKits(rom), 'the ROM has the uniforms table');
+// Where the table is: the manifest's KIT1 entry (2026 test23 on: 0x2DC200, 8 KB), else 0x2B6000, 4 KB.
+const { at: KTAB, size: KTAB_SIZE } = ktabOf(rom);
+if (KTAB !== KTAB_OLD) assert.ok(rom.subarray(KTAB_OLD, KTAB_OLD + 0x1000).every((b) => b === 0xff), 'the old place is free');
+ok(`table at 0x${KTAB.toString(16).toUpperCase()}, ${KTAB_SIZE / 1024} KB`);
 const names = openRosterRom(rom).teams.map((t) => t.school);
 const kits = readKits(rom);
 const N = kits.length;
@@ -33,7 +37,7 @@ assert.deepEqual(same.subarray(KTAB, KTAB + KTAB_SIZE), rom.subarray(KTAB, KTAB 
 assert.ok(same.every((b, i) => b === rom[i]), 'nothing else changes');
 ok('an unchanged write is byte-identical');
 
-// Edits read back, stay inside the 4 KB, and only touch the table.
+// Edits read back, stay inside the table's room, and only touch the table.
 const ala = names.indexOf('Alabama'), tex = names.indexOf('Texas');
 const edit = kits.map((k) => ({ ...k }));
 edit[ala] = { ...emptyKit(), helmets: [helmetOf(0x0eee, 0x000e)], dark: [shadesOf(0x0008, 0x0eee)], pants: [shadesOf(0x0888, 0x000e)] };
@@ -51,6 +55,8 @@ const many = kits.map((k) => ({ ...k })); many[ala] = { ...emptyKit(), helmets: 
 assert.match(kitIssues(many, names)[0], /Alabama: at most 7 extra helmets/);
 const big = kits.map(() => ({ ...emptyKit(), dark: Array.from({ length: 4 }, () => shadesOf(0x0008, 0)) }));
 assert.match(kitIssues(big, names).join(' '), /room for 4096/);
+const bigger = kits.map(() => ({ ...emptyKit(), dark: Array.from({ length: 7 }, () => shadesOf(0x0008, 0)) }));
+assert.match(kitIssues(bigger, names, KTAB_SIZE).join(' '), new RegExp(`room for ${KTAB_SIZE}`));
 const odd = kits.map((k) => ({ ...k })); odd[ala] = { ...emptyKit(), pants: [[0x0111, 0, 0, 0]] };
 assert.match(kitIssues(odd, names)[0], /isn't a Genesis color/);
 assert.throws(() => writeKits(rom.slice(), many));

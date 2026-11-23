@@ -33,7 +33,7 @@ import { dynastyFileName, dynastyFileText, readDynastyFile } from '../src/core/d
 import { CFB27_LATEST } from '../src/core/cfb27Latest';
 import { OVR_FORMULAS, OVR_FORMULAS_V8, playerOvr, roleOfSlot } from '../src/core/dynasty/ovr';
 import { readRating } from '../src/core/teamRatings';
-import { hasKits, readKits } from '../src/core/kits';
+import { hasKits, ktabOf, readKits } from '../src/core/kits';
 import { ownUniforms } from '../src/core/kits';
 import { kitOf, ownOf, setKit, setOwn, setWhiteHome, whiteHomeLock } from '../src/core/dynasty/kit';
 import * as Off from '../src/core/dynasty/offseason';
@@ -1482,7 +1482,7 @@ if (hasKits(rom)) {
   }
   // The first season's ROM: the user's ROM with only the uniform table (and the checksums) changed.
   const u = Off.uniformRom(k2, rom);
-  const diff = [...u].flatMap((x, i) => (x === rom[i] || (i >= 0x2b6000 && i < 0x2b7000) ? [] : [i]));
+  const diff = [...u].flatMap((x, i) => (x === rom[i] || (i >= ktabOf(rom).at && i < ktabOf(rom).at + ktabOf(rom).size) ? [] : [i]));
   assert.ok(diff.every((i) => i < 0x200 || (i >= 0x1e6400 && i < 0x1e6440)), `only the uniforms and checksums change: ${diff.slice(0, 5).map((i) => i.toString(16))}`);
   // A team's own uniform (behind a warning in the editor): written into season ROMs; back to the ROM's drops it.
   const own = ownOf(k2, 5)!;
