@@ -992,3 +992,8 @@
   .dy-hub-band .ui-button { margin-left: auto; white-space: nowrap; }
   .dy-off .ui-tabs { margin: var(--sp-2) 0; }
 }
+/* Manage › Controller: the user's own button names. */
+.dy-pad-names { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--sp-2) var(--sp-4); max-width: 760px; }
+.dy-pad-name { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.dy-pad-name > .ui-field { width: 96px !important; min-width: 0; flex: 0 0 96px; }
+.dy-pad-name > .ui-field input { width: 100%; box-sizing: border-box; }

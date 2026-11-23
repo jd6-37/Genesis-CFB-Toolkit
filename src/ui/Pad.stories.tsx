@@ -18,6 +18,14 @@ export const Keys: Story = {
   ),
 };
 
+/** The user's own names (Manage › Controller): a Genesis pad whose Z, Y and X reach the app as L1, R1 and L2. */
+export const OwnNames: Story = {
+  render: () => {
+    const names = { b4: 'Z', b5: 'Y', b6: 'X', b2: 'C' };
+    return <Row>{['b0', 'b1', 'b2', 'b4', 'b5', 'b6'].map((b) => <PadKey key={b} binding={b} names={names} />)}</Row>;
+  },
+};
+
 /** The hint bar (fixed to the bottom of the window). */
 export const HintBar: Story = {
   render: () => (
