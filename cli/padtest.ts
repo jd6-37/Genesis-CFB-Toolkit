@@ -1,6 +1,6 @@
 // Controller mapping (src/core/pad.ts) and the focus search (src/ui/pad.tsx `nearest`). No ROM needed.
 //   npm run test:pad
-import { activeBindings, bindingName, clashes, DEFAULT_MAP, heldActions, mapOf, parseSettings, PadRepeater, REPEAT_DELAY, REPEAT_EVERY, withBinding, defaultSettings } from '../src/core/pad';
+import { activeBindings, bindingGlyph, bindingName, clashes, withName, NAME_MAX, DEFAULT_MAP, heldActions, mapOf, parseSettings, PadRepeater, REPEAT_DELAY, REPEAT_EVERY, withBinding, defaultSettings } from '../src/core/pad';
 import { nearest } from '../src/ui/pad';
 
 let pass = 0;
@@ -27,6 +27,13 @@ ok(!('back' in s.map), 'setting the default again drops the change');
 const back = parseSettings(JSON.stringify({ ...withBinding(defaultSettings(), 'menu', ['b16']), labels: 'nintendo', hints: false }));
 ok(back.map.menu?.join() === 'b16' && back.labels === 'nintendo' && !back.hints, 'settings survive saving');
 ok(Object.keys(parseSettings('{"map":{"menu":["rm -rf"]},"labels":"sega"}').map).length === 0 && parseSettings('nope').labels === 'xbox', 'bad saved settings fall back to the defaults');
+
+let n = withName(defaultSettings(), 'b4', ' Z ');
+ok(n.names?.b4 === 'Z' && bindingGlyph('b4', 'xbox', n.names) === 'Z' && bindingName('b4', 'xbox', n.names) === 'Z' && bindingGlyph('b5', 'xbox', n.names) === 'R1', "own names: L1 called Z, R1 kept");
+n = withName(n, 'b0', 'Button C long');
+ok(n.names?.b0?.length === NAME_MAX, `own names cut to ${NAME_MAX} characters`);
+ok(parseSettings(JSON.stringify(n)).names?.b4 === 'Z' && !('names' in withName(withName(defaultSettings(), 'b4', 'Z'), 'b4', '')), 'own names survive saving; an empty name clears it');
+ok(!parseSettings(JSON.stringify({ names: { b4: 'x'.repeat(20), zz: 'A' } })).names, 'bad own names are dropped');
 
 const rect = (x: number, y: number, w = 100, h = 40) => ({ left: x, top: y, right: x + w, bottom: y + h, width: w, height: h, x, y, toJSON: () => 0 }) as DOMRect;
 const el = (name: string) => ({ name }) as unknown as HTMLElement;

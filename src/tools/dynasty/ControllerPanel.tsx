@@ -2,9 +2,9 @@
 // buttons do what in case they have a non-standard controller"). The mapping itself: src/core/pad.ts; the layer
 // that runs it: src/ui/pad.tsx.
 import { useEffect, useState } from 'react';
-import { Button, Check, Note, Select, Table } from '../../ui';
+import { Button, Check, Field, Note, Select, Table } from '../../ui';
 import { PadKey, usePad } from '../../ui/pad';
-import { bindingName, clashes, defaultSettings, DEFAULT_MAP, PAD_ACTIONS, PAD_LABELS, withBinding, type PadAction, type PadLabels } from '../../core/pad';
+import { bindingGlyph, bindingName, clashes, defaultSettings, DEFAULT_MAP, NAME_MAX, PAD_ACTIONS, PAD_LABELS, withBinding, withName, type PadAction, type PadLabels } from '../../core/pad';
 
 /** How long "Press a button" waits. */
 const WAIT_MS = 10000;
@@ -39,7 +39,9 @@ export function ControllerPanel() {
 
   if (!pad) return null;
   const { settings, setSettings, map } = pad;
-  const name = (b: string) => bindingName(b, settings.labels);
+  const name = (b: string) => bindingName(b, settings.labels, settings.names);
+  // Every button the mapping uses (sticks are named by direction and keep their names).
+  const used = [...new Set(PAD_ACTIONS.flatMap(({ action }) => map[action]))].filter((b) => /^b\d+$/.test(b)).sort((a, b) => +a.slice(1) - +b.slice(1));
   const changed = Object.keys(settings.map).length > 0;
 
   return (
@@ -80,7 +82,7 @@ export function ControllerPanel() {
                 <td className="ui-left">
                   {wait ? <strong>Press a button…</strong> : (
                     <span className="dy-pad-keys">{map[action].map((b) => (
-                      <span key={b} className="dy-pad-key"><PadKey binding={b} labels={settings.labels} /> {name(b)}</span>
+                      <span key={b} className="dy-pad-key"><PadKey binding={b} labels={settings.labels} names={settings.names} /> {name(b)}</span>
                     ))}</span>
                   )}
                 </td>
@@ -101,13 +103,31 @@ export function ControllerPanel() {
         </tbody>
       </Table>
 
+      <h3>Button names</h3>
+      <p>
+        If your controller's buttons say something other than what the app shows (a Genesis pad on a USB adapter, say, whose Z
+        reaches the app as L1), type what yours says. The hints and this page use your names. Empty = the app's name.
+      </p>
+      <div className="dy-pad-names">
+        {used.map((b) => (
+          <div key={b} className="dy-pad-name">
+            <span className="dy-pad-key"><PadKey binding={b} labels={settings.labels} /> {bindingName(b, settings.labels)}</span>
+            <Field
+              label={`Your name for ${bindingName(b, settings.labels)}`} hideLabel compact maxLength={NAME_MAX}
+              placeholder={bindingGlyph(b, settings.labels)} value={settings.names?.[b] ?? ''}
+              onChange={(v) => setSettings(withName(settings, b, v))} changed={!!settings.names?.[b]}
+            />
+          </div>
+        ))}
+      </div>
+
       <h3>Test</h3>
       <p className="dy-pad-test" aria-live="polite">
-        {held.length ? held.map((b) => <span key={b} className="dy-pad-key"><PadKey binding={b} labels={settings.labels} /> {name(b)}</span>) : <span className="dy-dim">Hold a button to see its name here.</span>}
+        {held.length ? held.map((b) => <span key={b} className="dy-pad-key"><PadKey binding={b} labels={settings.labels} names={settings.names} /> {name(b)}</span>) : <span className="dy-dim">Hold a button to see its name here.</span>}
       </p>
       {changed && (
         <div className="dy-row">
-          <Button variant="quiet" onClick={() => setSettings({ ...defaultSettings(), labels: settings.labels, hints: settings.hints })}>Reset every button</Button>
+          <Button variant="quiet" onClick={() => setSettings({ ...defaultSettings(), labels: settings.labels, hints: settings.hints, names: settings.names })}>Reset every button</Button>
         </div>
       )}
     </section>

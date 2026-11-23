@@ -74,7 +74,8 @@ const AXIS = ['Left stick', 'Left stick', 'Right stick', 'Right stick'];
 const AXIS_DIR: Record<string, [string, string]> = { 0: ['left', 'right'], 1: ['up', 'down'], 2: ['left', 'right'], 3: ['up', 'down'] };
 
 /** "A", "L1", "Right stick down", "Button 17", "Axis 6 +". */
-export function bindingName(b: string, labels: PadLabels = 'xbox'): string {
+export function bindingName(b: string, labels: PadLabels = 'xbox', names?: Record<string, string>): string {
+  if (names?.[b]) return names[b];
   const m = /^b(\d+)$/.exec(b);
   if (m) {
     const i = +m[1];
@@ -89,7 +90,8 @@ export function bindingName(b: string, labels: PadLabels = 'xbox'): string {
 }
 
 /** A short glyph for the hints: "A", "L1", "◀ ▶". */
-export function bindingGlyph(b: string, labels: PadLabels = 'xbox'): string {
+export function bindingGlyph(b: string, labels: PadLabels = 'xbox', names?: Record<string, string>): string {
+  if (names?.[b]) return names[b];
   const m = /^b(\d+)$/.exec(b);
   if (m) {
     const i = +m[1];
@@ -162,7 +164,15 @@ export interface PadSettings {
   hints: boolean;
   /** Actions whose bindings differ from the defaults. */
   map: Partial<PadMap>;
+  /**
+   * The user's own names for buttons, by binding (user, 2026-11-22: a Genesis 6-button pad on a USB adapter may send Z
+   * as L1, so the hints should say "Z"). Up to `NAME_MAX` characters; absent = the label set's name.
+   */
+  names?: Record<string, string>;
 }
+
+/** The longest own button name (it has to fit the hint's small box). */
+export const NAME_MAX = 6;
 
 export const PAD_KEY = 'dynasty.pad';
 
@@ -178,6 +188,10 @@ export function parseSettings(text: string | null): PadSettings {
     const o = JSON.parse(text) as Partial<PadSettings>;
     if (o.labels && PAD_LABELS.some((x) => x.value === o.labels)) s.labels = o.labels;
     if (typeof o.hints === 'boolean') s.hints = o.hints;
+    if (o.names && typeof o.names === 'object') {
+      const names = Object.fromEntries(Object.entries(o.names).filter(([b, n]) => BINDING.test(b) && typeof n === 'string' && n.trim() && n.length <= NAME_MAX).map(([b, n]) => [b, n.trim()]));
+      if (Object.keys(names).length) s.names = names;
+    }
     for (const { action } of PAD_ACTIONS) {
       const b = o.map?.[action];
       if (Array.isArray(b) && b.every((x) => typeof x === 'string' && BINDING.test(x))) s.map[action] = b;
@@ -195,6 +209,15 @@ export function withBinding(s: PadSettings, action: PadAction, bindings: string[
   if (bindings.join() === DEFAULT_MAP[action].join()) delete map[action];
   else map[action] = bindings;
   return { ...s, map };
+}
+
+/** Sets (or, with an empty name, clears) the user's own name for a button. */
+export function withName(s: PadSettings, binding: string, name: string): PadSettings {
+  const names = { ...(s.names ?? {}) };
+  const n = name.trim().slice(0, NAME_MAX);
+  if (n) names[binding] = n; else delete names[binding];
+  const { names: _old, ...rest } = s;
+  return Object.keys(names).length ? { ...rest, names } : rest;
 }
 
 /** Other actions that use the same binding (shown as a warning; both still work). */

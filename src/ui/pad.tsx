@@ -343,9 +343,10 @@ export function PadLayer({ children }: { children: ReactNode }) {
 }
 
 /** A controller button as a small mark: a circle for a face button, a rounded box for the others. */
-export function PadKey({ binding, labels = 'xbox' }: { binding: string; labels?: PadSettings['labels'] }) {
-  const g = bindingGlyph(binding, labels);
-  const face = /^b[0-3]$/.test(binding);
+export function PadKey({ binding, labels = 'xbox', names }: { binding: string; labels?: PadSettings['labels']; /** The user's own button names (PadSettings.names). */ names?: Record<string, string> }) {
+  const g = bindingGlyph(binding, labels, names);
+  // A face button is a circle, unless its own name is longer than fits one.
+  const face = /^b[0-3]$/.test(binding) && g.length <= 1;
   return <span className={face ? 'ui-padkey ui-padkey-face' : 'ui-padkey'}>{g}</span>;
 }
 
@@ -362,7 +363,7 @@ export function PadBar({ hints, map, settings }: { hints: PadHint[]; map: PadMap
   const right = new Set(['tabs', 'items', 'adjust']);
   const item = (h: PadHint) => (
     <span key={h.action} className="ui-padbar-item">
-      {keys(h).map((b) => <PadKey key={b} binding={b} labels={settings.labels} />)}
+      {keys(h).map((b) => <PadKey key={b} binding={b} labels={settings.labels} names={settings.names} />)}
       <span>{h.text}</span>
     </span>
   );
