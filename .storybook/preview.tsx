@@ -24,7 +24,18 @@ const preview: Preview = {
     },
   },
   initialGlobals: { brand: 'dynasty', theme: 'light' },
-  parameters: { layout: 'fullscreen' },
+  parameters: {
+    layout: 'fullscreen',
+    // The screens the apps are checked on (docs/design-system.md, "Handhelds and controllers"): CSS pixels.
+    viewport: {
+      viewports: {
+        portal: { name: 'Odin 2 Portal (960×540)', styles: { width: '960px', height: '540px' }, type: 'tablet' },
+        nova: { name: 'Retroid Pocket Nova (640×480)', styles: { width: '640px', height: '480px' }, type: 'tablet' },
+        phone: { name: 'Phone (390×844)', styles: { width: '390px', height: '844px' }, type: 'mobile' },
+        desktop: { name: 'Desktop (1280×900)', styles: { width: '1280px', height: '900px' }, type: 'desktop' },
+      },
+    },
+  },
   decorators: [
     (Story, ctx) => (
       <div

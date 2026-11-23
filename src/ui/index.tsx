@@ -356,8 +356,15 @@ export function Tabs<T extends string>({ label, tabs, value, onChange }: {
   value: T;
   onChange: (value: T) => void;
 }) {
+  // Many tabs (weeks, conferences) scroll sideways: keep the open one in view.
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current?.querySelector<HTMLElement>('[aria-selected="true"]');
+    const box = ref.current;
+    if (el && box && box.scrollWidth > box.clientWidth) box.scrollLeft = el.offsetLeft - (box.clientWidth - el.offsetWidth) / 2;
+  }, [value]);
   return (
-    <div className="ui-tabs" role="tablist" aria-label={label}>
+    <div className="ui-tabs" role="tablist" aria-label={label} ref={ref}>
       {tabs.map((t) => (
         <button key={t.value} type="button" role="tab" aria-selected={t.value === value} className="ui-tab" onClick={() => onChange(t.value)}>
           {t.label}{t.count !== undefined && <span className="ui-tab-count">{t.count}</span>}
@@ -612,3 +619,24 @@ export function Combobox({ label, options, onPick, placeholder, max = 60 }: {
     </div>
   );
 }
+
+/**
+ * A short set of choices that filter what's under it, one picked (a team's roster by position group). Buttons with
+ * aria-pressed, so a controller reaches them like any button. `side`: a column at the left from 760 px (a row on a
+ * phone); put it in a `ui-sided` box with the content after it.
+ */
+export function Segments<T extends string>({ label, options, value, onChange, side }: {
+  label: string;
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+  side?: boolean;
+}) {
+  return (
+    <div className={cx('ui-segments', side && 'ui-segments-side')} role="group" aria-label={label}>
+      {options.map((o) => <button key={o.value} type="button" aria-pressed={o.value === value} onClick={() => onChange(o.value)}>{o.label}</button>)}
+    </div>
+  );
+}
+
+export { AppBar, MenuDrawer, StepNav } from './shell';

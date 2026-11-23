@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { seasonView, weekName } from '../../core/dynasty/derive';
 import { readSnapshot, type Snapshot } from '../../core/dynasty/snapshot';
 import { SAMPLE_FILE, SAMPLE_ID, snapshotExpires, SNAPSHOT_DAYS } from '../../core/dynasty/snapshotId';
-import { Button, Masthead, NavBar, Note, ThemeToggle } from '../../ui';
+import { AppBar, Button, Masthead, MenuDrawer, NavBar, Note, ThemeToggle } from '../../ui';
 import { navClick } from '../../appNav';
 import { Ctx, href, TeamMark, type DynCtx } from './ui';
 import { Awards } from './AwardsPage';
@@ -116,6 +116,8 @@ export default function SnapshotApp({ id, toolkitHref }: { id: string; toolkitHr
     }
   })();
   const navPage = page === 'team' ? 'teams' : page === 'player' ? 'stats' : page === 'coach' ? 'coaches' : page === 'awards' || page === 'records' ? 'history' : page;
+  const [menu, setMenu] = useState(false);
+  const navItems = PAGES.map((p) => ({ label: p.label, href: href(p.id), current: navPage === p.id }));
   const week = d?.offseason ? 'Offseason' : v && v.save ? (v.currentWeek < v.weeks ? weekName(v, v.currentWeek) : 'Season complete') : 'Preseason';
   const shared = snap ? new Date(snap.sharedAt).toLocaleDateString('en-US', { dateStyle: 'medium' }) : '';
   const until = snap ? snapshotExpires(snap.sharedAt).toLocaleDateString('en-US', { dateStyle: 'medium' }) : '';
@@ -131,14 +133,28 @@ export default function SnapshotApp({ id, toolkitHref }: { id: string; toolkitHr
           <a href="/dynasty">Start your own dynasty</a>
         </div>
       )}
+      <div className="ui-desktop-only">
       <Masthead
         title={d?.name ?? 'Dynasty'} href={href('home')}
         sub={d ? `${d.offseason ? d.offseason.year : d.seasons[d.seasons.length - 1].year}, ${week}` : undefined}
         left={<><a href="/">BW95 Elevated</a><a href={toolkitHref} onClick={navClick(toolkitHref)}>Mod Toolkit</a><ThemeToggle dark={dark} onChange={setDark} /></>}
         right={ctx && snap && <Ctx.Provider value={ctx}><a href={href(`team/${snap.team}`)} aria-label={d!.teams[snap.team]?.school}><TeamMark team={snap.team} size={64} exact /></a></Ctx.Provider>}
       >
-        {ctx && <NavBar label="Dynasty" items={PAGES.map((p) => ({ label: p.label, href: href(p.id), current: navPage === p.id }))} />}
+        {ctx && <NavBar label="Dynasty" items={navItems} />}
       </Masthead>
+      </div>
+      <div className="ui-handheld-only">
+        <AppBar
+          label="Dynasty" items={ctx ? navItems : []} page={PAGES.find((p) => p.id === navPage)?.label ?? 'Dynasty'} onMenu={() => setMenu(true)}
+          right={ctx && snap && <Ctx.Provider value={ctx}><a href={href(`team/${snap.team}`)} aria-label={d!.teams[snap.team]?.school}><TeamMark team={snap.team} size={28} /></a></Ctx.Provider>}
+        />
+      </div>
+      {menu && (
+        <MenuDrawer
+          title={d?.name ?? 'Dynasty'} sub={d ? `${d.offseason ? d.offseason.year : d.seasons[d.seasons.length - 1].year}, ${week}` : undefined} items={ctx ? navItems : []} onClose={() => setMenu(false)}
+          footer={<><ThemeToggle dark={dark} onChange={setDark} /><a href="/dynasty">Start your own dynasty</a><a href="/">BW95 Elevated</a></>}
+        />
+      )}
       <main className={`dy-main${navPage === 'home' ? ' dy-main-home' : ''}`}>
         {load.state === 'loading' && <Note>Loading the snapshot…</Note>}
         {load.state === 'error' && <Note kind="error">{load.message}</Note>}

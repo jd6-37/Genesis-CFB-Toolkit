@@ -22,12 +22,14 @@
 
 /* Wider on big screens (user, 2026-11-21: use the horizontal space on desktop). */
 .dy { --page-max: 1480px; }
-.dy-main { max-width: var(--page-max); margin: 0 auto; padding: 0 24px 120px; }
+.dy-main { --dy-pad: var(--sp-3); max-width: var(--page-max); margin: 0 auto; padding: 0 var(--dy-pad) var(--sp-7); }
+/* Desktop (1200 × 700 and up): the roomier page of before. Smaller screens: tighter edges, less space below. */
+@media (min-width: 1200px) and (min-height: 700px) { .dy-main { --dy-pad: 24px; padding-bottom: 120px; } }
 /* Home is a front page: the wider page would only blow up the lead art (user, 2026-11-21). The masthead stays wide. */
 .dy-main.dy-main-home { max-width: 1240px; }
 
 /* Ticker */
-.dy-ticker { display: flex; border-bottom: var(--rule-w) solid var(--rule); margin: 0 -24px; }
+.dy-ticker { display: flex; border-bottom: var(--rule-w) solid var(--rule); margin: 0 calc(-1 * var(--dy-pad)); }
 .dy-ticker-week {
   flex: none; display: flex; align-items: center; padding: 0 var(--sp-4); max-width: 120px;
   font: 700 var(--fs-4)/1.05 var(--font-display); border-right: var(--rule-w) solid var(--rule);
@@ -120,7 +122,7 @@
 .dy-team-index .dy-team, .dy-top25:not(.dy-compact) .dy-team { gap: 12px; }
 .dy-team-index .dy-mark, .dy-top25:not(.dy-compact) .dy-mark { width: 104px; flex: none; }
 .dy-teamhead {
-  display: flex; flex-direction: column; gap: 16px; padding: 20px 16px; margin: 20px -24px 0; background: var(--wash);
+  display: flex; flex-direction: column; gap: 16px; padding: 20px 16px; margin: 20px calc(-1 * var(--dy-pad)) 0; background: var(--wash);
 }
 .dy-teamhead-id { display: flex; align-items: center; gap: 16px; min-width: 0; }
 .dy-teamhead-id .dy-mark { flex: none; height: 64px !important; }
@@ -137,15 +139,36 @@
 .dy-teamovr.dy-on-light > div { background: var(--on-team-tint); }
 .dy-teamovr dt { font-size: var(--fs-2); font-weight: 600; }
 .dy-teamovr dd { margin: 0; font: 400 var(--fs-num-3)/1 var(--font-num); transform: translateY(0.125em); }
-@media (min-width: 760px) {
-  .dy-teamhead { flex-direction: row; align-items: center; gap: 24px; padding: 24px 28px; margin-top: 28px; }
-  .dy-teamhead-id { flex: 1; gap: 24px; }
-  .dy-teamhead-id .dy-mark, .dy-teamhead-id .dy-mark .sprite { height: 96px !important; }
-  .dy-teamhead-helmet { display: block; }
-  .dy-teamovr { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 112px; }
-  .dy-teamovr > div { flex-direction: column-reverse; align-items: center; gap: 2px; padding: 10px 12px; }
-  .dy-teamovr dd { font-size: var(--fs-num-4); transform: none; }
+/* From 760 px, or any short landscape screen (the Retroid Pocket Nova, 640 × 480): one row. Below desktop size
+   (handhelds, tablets) a slim band, so the tabs and the page fit under it. */
+@media (min-width: 760px), (orientation: landscape) and (max-height: 699px) {
+  .dy-teamhead { flex-direction: row; align-items: center; gap: 16px; padding: 8px 14px; margin-top: 8px; }
+  .dy-teamhead-id { flex: 1; gap: 14px; }
+  .dy-teamhead-id .dy-mark, .dy-teamhead-id .dy-mark .sprite { height: 48px !important; }
+  .dy-teamhead h2 { font-size: var(--fs-6); }
+  .dy-teamhead p { margin-top: 2px; font-size: var(--fs-2); }
+  .dy-teamovr { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 72px; }
+  .dy-teamovr > div { flex-direction: column-reverse; align-items: center; gap: 2px; padding: 6px 8px; }
+  .dy-teamovr dd { font-size: var(--fs-num-2); transform: none; }
 }
+@media (min-width: 1200px) and (min-height: 700px) {
+  .dy-teamhead { gap: 24px; padding: 24px 28px; margin-top: 28px; }
+  .dy-teamhead-id { gap: 24px; }
+  .dy-teamhead-id .dy-mark, .dy-teamhead-id .dy-mark .sprite { height: 96px !important; }
+  .dy-teamhead h2 { font-size: clamp(var(--fs-6), 8vw, var(--fs-8)); }
+  .dy-teamhead p { margin-top: 6px; font-size: var(--fs-3); }
+  .dy-teamhead-helmet { display: block; }
+  .dy-teamovr { grid-auto-columns: 112px; }
+  .dy-teamovr > div { padding: 10px 12px; }
+  .dy-teamovr dd { font-size: var(--fs-num-4); }
+}
+/* Previous / next team (L2 / R2 on a controller). */
+.dy-teamstep { display: flex; gap: var(--sp-1); }
+.dy-teamstep a {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px;
+  color: inherit; font: 700 var(--fs-4)/1 var(--font-display); text-decoration: none !important; background: var(--on-team-shade);
+}
+.dy-teamovr.dy-on-light ~ .dy-teamstep a, .dy-on-light-head .dy-teamstep a { background: var(--on-team-tint); }
 .dy-team-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 40px; }
 .dy-stat-tables { display: grid; gap: 24px; }
 .dy-boards { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 32px 40px; }
@@ -833,7 +856,8 @@
 .dy-teamrank { font-size: 0.72em; margin-right: 0.25em; }
 
 /* Team page: the tab bar under the header, and the stat leaders (pages.tsx, user 2026-11-18). */
-.dy-teamtabs { margin: var(--sp-4) 0 var(--sp-2); overflow-x: auto; }
+.dy-teamtabs { margin: var(--sp-2) 0; overflow-x: auto; }
+@media (min-width: 1200px) and (min-height: 700px) { .dy-teamtabs { margin: var(--sp-4) 0 var(--sp-2); } }
 .dy-leaders { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: var(--sp-2); margin: 0 0 var(--sp-2); padding: 0; list-style: none; }
 .dy-leaders li { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2); border: var(--rule-w) solid var(--rule); border-radius: var(--radius); min-width: 0; }
 .dy-leaders li > div { min-width: 0; }
@@ -886,3 +910,85 @@
 .dy-pad-keys, .dy-pad-test { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3); }
 .dy-pad-key { display: inline-flex; align-items: center; gap: var(--sp-1); white-space: nowrap; }
 .dy-pad-test { min-height: 32px; align-items: center; }
+
+/* Standings (pages.tsx): one conference at a time. On a wide, short screen (the Odin 2 Portal, 960 × 540) the
+   conference sits in two halves side by side, without PF / PA, so 16 teams fit without scrolling. */
+.dy-stand-split { display: none; }
+@media (min-width: 960px) and (max-height: 699px) {
+  .dy-stand-full { display: none; }
+  .dy-stand-split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-5); }
+  .dy-stand-split .dy-stand-more { display: none; }
+  .dy-stand-split .ui-table { margin: 0; }
+}
+
+/* Manage (DynastyApp.tsx): its sections as tabs; only the open one shows (data-sec on .dy-manage). */
+.dy-manage[data-sec] > .dy-panel { display: none; }
+.dy-manage[data-sec='dy-m-season'] > #dy-m-season, .dy-manage[data-sec='dy-m-teams'] > #dy-m-teams,
+.dy-manage[data-sec='dy-m-players'] > #dy-m-players, .dy-manage[data-sec='dy-m-files'] > #dy-m-files,
+.dy-manage[data-sec='dy-m-share'] > #dy-m-share, .dy-manage[data-sec='dy-m-help'] > #dy-m-help,
+.dy-manage[data-sec='dy-m-pad'] > #dy-m-pad, .dy-manage[data-sec='dy-m-others'] > #dy-m-others { display: block; }
+.dy-manage[data-sec] > .dy-panel { border-bottom: 0; }
+
+/* Front page on a wide, short screen (the Odin 2 Portal): a lower lead picture and title, so the lead story, the
+   headlines and What's next fit on the first screen. */
+@media (orientation: landscape) and (max-height: 699px) {
+  .dy-front { gap: var(--sp-5); margin-top: var(--sp-3); }
+  .dy-lead .dy-art { aspect-ratio: auto; height: 190px; }
+  .dy-lead h2 { font-size: var(--fs-6); margin: var(--sp-2) 0 var(--sp-1); }
+  .dy-lead p { font-size: var(--fs-3); }
+}
+/* The tab names the section: no second heading. Smaller dynasty name below desktop size. */
+.dy-manage[data-sec] > .dy-panel > h2:first-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+@media not ((min-width: 1200px) and (min-height: 700px)) {
+  .dy-manage-head h1 { font-size: var(--fs-6); margin: var(--sp-3) 0 0; }
+  .dy-manage-head p { margin: 0; }
+}
+
+/* ---- Handhelds, tablets and phones (below desktop size; user, 2026-11-22) ---- */
+
+/* Teams: one conference at a time (its tab), its teams in a grid of tiles. */
+@media not ((min-width: 1200px) and (min-height: 700px)) {
+  .dy-team-index { columns: auto !important; display: block; }
+  .dy-team-index > div:not(.dy-conf-open) { display: none; }
+  .dy-team-index > div > h3 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  .dy-team-index ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--sp-1) var(--sp-4); }
+  .dy-team-index li { padding: 0; }
+  .dy-team-index .dy-team { min-height: 48px; }
+  .dy-team-index .dy-mark { width: 48px !important; }
+}
+
+/* A page's line of text: smaller on a short landscape screen (two lines at most). */
+@media (orientation: landscape) and (max-height: 699px) {
+  .ui-pagehead p { font-size: var(--fs-2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+}
+
+/* Top 25 on a short landscape screen: two columns (1-13, 14-25) with small marks, so the poll fits on one screen. */
+@media (orientation: landscape) and (max-height: 699px) {
+  .dy-top25:not(.dy-compact) { max-width: none; columns: 2; column-gap: var(--sp-6); }
+  .dy-top25:not(.dy-compact) li { break-inside: avoid; padding: 2px 0; grid-template-columns: 28px 1fr auto 64px; min-height: 30px; }
+  .dy-top25:not(.dy-compact) .dy-mark { width: 28px !important; }
+  .dy-top25:not(.dy-compact) .dy-team { gap: var(--sp-2); }
+}
+
+/* Rosters on a short landscape screen: the filters fold behind their button, as on a phone, so the table shows. */
+@media (orientation: landscape) and (max-height: 699px) {
+  .dy-rfilters { gap: var(--sp-2); margin-bottom: var(--sp-2); }
+  .dy-rfilters-toggle { display: block; }
+  .dy-rfilters-body { display: none; }
+  .dy-rfilters-body.is-open { display: flex; }
+}
+
+/* The offseason on a short landscape screen (the Odin 2 Portal): the step bar names the page, so no title; the
+   recruiting and portal band in one slim row. */
+@media (orientation: landscape) and (max-height: 699px) {
+  .dy-off > .ui-pagehead { display: none; }
+  .dy-off .ui-stepnav { margin-top: var(--sp-2); }
+  .dy-hub-band { margin-top: var(--sp-2); padding: var(--sp-2) var(--sp-3); gap: var(--sp-2) var(--sp-5); flex-wrap: nowrap; }
+  .dy-hub-title { flex: 0 1 auto; }
+  .dy-hub-title h3 { font-size: var(--fs-5); }
+  .dy-hub-title p { margin-top: var(--sp-1); }
+  .dy-hub-stats { flex-wrap: nowrap; gap: var(--sp-4); }
+  .dy-hub-stats dd { margin-top: var(--sp-1); font-size: var(--fs-num-1); }
+  .dy-hub-band .ui-button { margin-left: auto; white-space: nowrap; }
+  .dy-off .ui-tabs { margin: var(--sp-2) 0; }
+}

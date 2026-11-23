@@ -33,7 +33,7 @@ import { fetchCoachData } from '../../core/dynasty/coachData';
 import { withCoaches } from '../../core/dynasty/coaches';
 import { newRomId, seasonDone, seasonRom, seasonRomName, uniformRom } from '../../core/dynasty/offseason';
 import { canReplaceBench, randomBench } from '../../core/dynasty/bench';
-import { Button, Check, Field, FileButton, Masthead, Modal, NavBar, Note, Select, Table, ThemeToggle } from '../../ui';
+import { AppBar, Button, Check, Field, FileButton, Masthead, MenuDrawer, Modal, NavBar, Note, Select, Table, Tabs, ThemeToggle } from '../../ui';
 import { navClick } from '../../appNav';
 import { benchSource, GetStarted, Renumbered, SeasonGuide, type StartActions } from './GetStarted';
 import { UpgradeCard, upgradeLine, useUpgrade, VersionRows, type Upgrader } from './Upgrade';
@@ -113,7 +113,7 @@ type Note = { kind: 'error' | 'ok'; text: string; action?: ReactNode } | null;
  * top right becomes a dropdown to switch between their teams"). Picking one opens its page, and pages that show
  * one of your teams (the offseason steps, the schedule, Walsh Reports) start on it.
  */
-function TeamMenu({ focus, onPick }: { focus?: number; onPick: (t: number) => void }) {
+function TeamMenu({ focus, onPick, compact }: { focus?: number; onPick: (t: number) => void; /** In the AppBar: a small mark, no name. */ compact?: boolean }) {
   const { d } = useContext(Ctx)!;
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -129,8 +129,8 @@ function TeamMenu({ focus, onPick }: { focus?: number; onPick: (t: number) => vo
   return (
     <div className="dy-teammenu" ref={ref}>
       <button type="button" className="dy-teammenu-btn" aria-haspopup="true" aria-expanded={open} onClick={() => setOpen(!open)} aria-label={`Your teams: ${d.teams[cur].school}`}>
-        <TeamMark team={cur} size={48} exact />
-        <span className="dy-teammenu-name">{d.teams[cur].school}</span>
+        <TeamMark team={cur} size={compact ? 28 : 48} exact={!compact} />
+        {!compact && <span className="dy-teammenu-name">{d.teams[cur].school}</span>}
         <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 5l5 5 5-5" stroke="currentColor" strokeWidth="2" fill="none" /></svg>
       </button>
       {open && (
@@ -247,6 +247,9 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
     await saveArt(d.id, pics);
     setArt(pics);
   }, [d]);
+  // The app menu on smaller screens (AppBar's button, Start on a controller); closes on a page change too.
+  const [menu, setMenu] = useState(false);
+  const closeMenu = useCallback(() => setMenu(false), []);
   const up = useUpgrade(d, commit, (y) => dlRef.current(y), refreshArt);
   const upLine = d ? upgradeLine(d, up.info) : null;
   // Light or dark: kept in the dynasty (its file too, user 2026-11-22) and in this browser for pages without a
@@ -490,14 +493,18 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
     }
   })();
   const navPage = page === 'team' || page === 'player' || page === 'schedule' ? (page === 'player' ? 'stats' : 'teams') : page === 'rules' || page === 'guide' || page === 'start' || page === 'setup' ? 'manage' : page === 'training' ? 'offseason' : page === 'awards' || page === 'records' ? 'history' : page;
+  const navItems = PAGES.map((p) => ({ label: p.label, href: href(p.id), current: navPage === p.id, off: !ctx && p.id !== 'manage' }));
   const week = d?.offseason ? 'Offseason' : v && v.save ? (v.currentWeek < v.weeks ? weekName(v, v.currentWeek) : 'Season complete') : d && d.seasons.length > 1 ? 'Preseason' : null;
+  const mastSub = d ? `${d.offseason ? d.offseason.year : d.seasons[d.seasons.length - 1].year}${week ? `, ${week}` : ''}` : undefined;
 
   return (
     <div className="dy" data-brand="dynasty" data-theme={dark ? 'dark' : 'light'}>
       <PadLayer>
+      {/* Desktop: the masthead and its menu. Smaller screens (handhelds, tablets, phones): the AppBar and its menu. */}
+      <div className="ui-desktop-only">
       <Masthead
         title={d?.name ?? 'Dynasty'} href={href('home')}
-        sub={d ? `${d.offseason ? d.offseason.year : d.seasons[d.seasons.length - 1].year}${week ? `, ${week}` : ''}` : undefined}
+        sub={mastSub}
         left={<><a href="/">BW95 Elevated</a><a href={toolkitHref} onClick={navClick(toolkitHref)}>Mod Toolkit</a><ThemeToggle dark={dark} onChange={setDark} /></>}
         right={ctx && (d!.userTeams.length > 1
           ? <Ctx.Provider value={ctx}><TeamMenu focus={focus} onPick={setFocus} /></Ctx.Provider>
@@ -505,8 +512,25 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
             <Ctx.Provider key={t} value={ctx}><a href={href(`team/${t}`)} aria-label={d!.teams[t].school}><TeamMark team={t} size={64} exact /></a></Ctx.Provider>
           )))}
       >
-        <NavBar label="Dynasty" items={PAGES.map((p) => ({ label: p.label, href: href(p.id), current: navPage === p.id, off: !ctx && p.id !== 'manage' }))} />
+        <NavBar label="Dynasty" items={navItems} />
       </Masthead>
+      </div>
+      <div className="ui-handheld-only">
+        <AppBar
+          label="Dynasty" items={navItems} page={PAGES.find((p) => p.id === navPage)?.label ?? 'Dynasty'} onMenu={() => setMenu(true)}
+          right={ctx && (d!.userTeams.length > 1
+            ? <Ctx.Provider value={ctx}><TeamMenu focus={focus} onPick={setFocus} compact /></Ctx.Provider>
+            : d!.userTeams.map((t) => (
+              <Ctx.Provider key={t} value={ctx}><a href={href(`team/${t}`)} aria-label={d!.teams[t].school}><TeamMark team={t} size={28} /></a></Ctx.Provider>
+            )))}
+        />
+      </div>
+      {menu && (
+        <MenuDrawer
+          title={d?.name ?? 'Dynasty'} sub={mastSub} items={navItems} onClose={closeMenu}
+          footer={<><ThemeToggle dark={dark} onChange={setDark} /><a href={toolkitHref} onClick={navClick(toolkitHref)}>Mod Toolkit</a><a href="/">BW95 Elevated</a></>}
+        />
+      )}
       <main className={`dy-main${navPage === 'home' ? ' dy-main-home' : ''}`}>
         {note && page !== 'manage' && <Note kind={note.kind}>{note.text}</Note>}
         <Ctx.Provider value={ctx}>{body}</Ctx.Provider>
@@ -634,16 +658,16 @@ function Guide() {
   );
 }
 
-/** Manage's sections, for its jump menu (buttons: the page's own address is the hash route). */
+/** Manage's sections, as tabs (one open at a time). */
 const MANAGE_SECTIONS = [
   { id: 'dy-m-season', label: 'This season' },
   { id: 'dy-m-teams', label: 'Your teams' },
   { id: 'dy-m-players', label: 'Players' },
-  { id: 'dy-m-files', label: 'Backup and files' },
+  { id: 'dy-m-files', label: 'Files' },
   { id: 'dy-m-share', label: 'Share' },
-  { id: 'dy-m-help', label: 'Rules and help' },
+  { id: 'dy-m-help', label: 'Rules' },
   { id: 'dy-m-pad', label: 'Controller' },
-  { id: 'dy-m-others', label: 'Other dynasties' },
+  { id: 'dy-m-others', label: 'Dynasties' },
 ];
 
 function Manage({ d, art, list, busy, note, actions, focus, ctx, up }: {
@@ -665,11 +689,11 @@ function Manage({ d, art, list, busy, note, actions, focus, ctx, up }: {
   const [addTeam, setAddTeam] = useState('');
   const season = d?.seasons[d.seasons.length - 1];
   const others = (list ?? []).filter((x) => x.id !== d?.id);
-  const jump = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const [sec, setSec] = useState(MANAGE_SECTIONS[0].id);
   const when = (iso: string) => new Date(iso).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
 
   return (
-    <div className="dy-manage">
+    <div className="dy-manage" data-sec={d && season ? sec : undefined}>
       {busy && <Note>{busy}</Note>}
       {note && (note.action
         ? <Note kind={note.kind} block><p>{note.text}</p><div className="dy-row dy-note-action">{note.action}</div></Note>
@@ -682,11 +706,11 @@ function Manage({ d, art, list, busy, note, actions, focus, ctx, up }: {
             <h1>{d.name}</h1>
             <p className="dy-dim">Started {new Date(d.created).toLocaleDateString('en-US', { dateStyle: 'medium' })} with the {d.startYear} rosters.</p>
           </div>
-          <nav className="dy-manage-jump" aria-label="On this page">
-            <ul>{(others.length ? MANAGE_SECTIONS : MANAGE_SECTIONS.map((x) => (x.id === 'dy-m-others' ? { ...x, label: 'Start a new dynasty' } : x))).map((x) => (
-              <li key={x.id}><button type="button" onClick={() => jump(x.id)}>{x.label}</button></li>
-            ))}</ul>
-          </nav>
+          {/* Sections as tabs, one open at a time (L1 / R1 on a controller; user, 2026-11-22). */}
+          <Tabs
+            label="Manage sections" value={sec} onChange={setSec}
+            tabs={MANAGE_SECTIONS.map((x) => ({ value: x.id, label: x.id === 'dy-m-others' && !others.length ? 'New dynasty' : x.label }))}
+          />
 
           <section className="dy-panel" id="dy-m-season">
             <h2>This season</h2>

@@ -22,7 +22,7 @@ const RATING_COLS: { key: Attr; label: string }[] = [
   { key: 'Range', label: 'RNG' },
   { key: 'Accuracy', label: 'ACC' },
 ];
-const POS_GROUPS: { id: string; label: string; pos: string[] }[] = [
+export const POS_GROUPS: { id: string; label: string; pos: string[] }[] = [
   { id: 'QB', label: 'Quarterbacks', pos: ['QB'] },
   { id: 'RB', label: 'Running backs', pos: ['HB', 'FB'] },
   { id: 'WR', label: 'Wide receivers', pos: ['WR'] },

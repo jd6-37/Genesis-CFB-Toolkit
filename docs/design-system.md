@@ -40,7 +40,9 @@ Many users run the Dynasty app on Android handhelds: mainly the **Odin 2 Portal*
 | Token check | `npm run lint:design` (`cli/designlint.ts`) |
 | Visual checks on pull requests | Chromatic (`.github/workflows/chromatic.yml`) |
 
-Run `npm run storybook` to browse the components (port 6006).
+Run `npm run storybook` to browse the components (port 6006). The toolbar switches brand and theme; the viewport menu has the Odin 2 Portal (960×540), Retroid Pocket Nova (640×480), phone (390×844) and desktop (1280×900) sizes.
+
+**Storybook first and last** (owner, 2026-11-22): look here for a component before building UI, and give every new or changed component a story afterwards (all three looks, the handheld sizes too); `npm run build-storybook` must pass.
 
 ## Rules
 
@@ -48,7 +50,7 @@ Run `npm run storybook` to browse the components (port 6006).
 2. **A new kind of element becomes a component first:** add it to `src/ui/index.tsx`, style it in `ui.css`, give it a story, then use it.
 3. **Only tokens in styles.** No raw colors (`#fff`, `rgb()`) and no font sizes in px outside `tokens.css`, in any stylesheet under `src` (the tools' own included). `npm run lint:design` fails otherwise. A lighter or see-through version of a token is `color-mix(in srgb, var(--accent) 50%, transparent)`.
 4. **Colors are semantic.** Use `--surface`, `--text`, `--rule`, `--accent` and so on, never a brand's color by name, so a component works in every brand and theme.
-5. **Mobile first.** Base styles are for a phone. Two breakpoints only: `min-width: 640px` and `min-width: 960px`.
+5. **Mobile first.** Base styles are for a phone. Breakpoints: `min-width: 640px`, `min-width: 960px` (the Portal's width), and the desktop query `(min-width: 1200px) and (min-height: 700px)` (the Masthead, the framed page titles, roomier pages; `.ui-desktop-only` / `.ui-handheld-only`).
 6. **Check every component in all three looks** in Storybook: Dynasty light, Dynasty dark, Mod Toolkit.
 7. **Team colors come from the ROM at run time**, as before. They are not tokens.
 
@@ -83,6 +85,9 @@ Run `npm run storybook` to browse the components (port 6006).
 | `Tabs` | The sections of a hub page, one open at a time: `label` (for screen readers), `tabs` (`value`, `label`, optional `count`), `value`, `onChange`. The page shows the open section itself. Scrolls sideways inside itself on phones. |
 | `Meter` | A bar for a share from 0 to 1 (interest, a pitch's strength). `label` for screen readers; `color` only for a team's color. Put the figure beside it when it matters. |
 | `PadLayer` (`src/ui/pad.tsx`) | Wraps an app for game controllers: moves the focus, runs the buttons, shows the hint bar while a controller is in use. Pages need nothing; optional marks: `data-pad="primary"` / `"secondary"` (what X / Y press; without one X presses the view's only primary `Button`), `data-pad="prev"` / `"next"` (L2 / R2), `data-pad-label` (the name in the hints), `data-pad-tabs` (a strip L1 / R1 switch, besides `Tabs`), `data-pad-start` (where the focus starts). The mapping is `src/core/pad.ts`. |
+| `Segments` | A short set of choices that filter what's under them, one pressed (a roster by position group). `side`: in a `ui-sided` box, a column at the left from 760 px, a row on a phone. |
+| `AppBar`, `MenuDrawer` (`src/ui/shell.tsx`) | The shell below desktop size: a 40 px row with the menu button, the pages from 960 px (the open page's name below), and marks at the right; the menu it opens (Start on a controller). Wrap the Masthead in `.ui-desktop-only` and the AppBar in `.ui-handheld-only`. |
+| `StepNav` | A process one step at a time (the offseason): the steps before and after (L2 / R2), the open one with a pip per step. |
 | `PadKey`, `PadBar` | A controller button as the hints draw it (a circle for A B X Y, a box for the others), and the hint bar. |
 | `Masthead` | An app's header: `title` (links to `href`), `sub` (one line under it), `left` and `right` for small controls and marks; its children sit under the title row (the `NavBar`). On a phone the title drops to its own row. |
 | `NavBar` | An app's main menu: `label` (for screen readers) and `items` (`label`, `href`, `current`, `off`). One mark per item: a bar under it. Scrolls sideways inside itself on phones. |
