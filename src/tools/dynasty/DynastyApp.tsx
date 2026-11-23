@@ -31,7 +31,7 @@ import { Coach, Coaches } from './CoachPages';
 import { Rosters } from './RostersPage';
 import { fetchCoachData } from '../../core/dynasty/coachData';
 import { withCoaches } from '../../core/dynasty/coaches';
-import { newRomId, seasonDone, seasonRom, seasonRomName, uniformRom } from '../../core/dynasty/offseason';
+import { newRomId, romStem, seasonDone, seasonRom, seasonRomName, uniformRom } from '../../core/dynasty/offseason';
 import { canReplaceBench, randomBench } from '../../core/dynasty/bench';
 import { AppBar, Button, Check, Field, FileButton, Masthead, MenuDrawer, Modal, NavBar, Note, Select, Table, Tabs, ThemeToggle } from '../../ui';
 import { navClick } from '../../appNav';
@@ -325,7 +325,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       await saveArt(d.id, pics);
       await saveRom(d.id, rom);
       setArt(pics);
-      await commit(refreshRomAssets(d, rom));
+      await commit({ ...refreshRomAssets(d, rom), romFile: romStem(romFile.name) });
       setNote({ kind: 'ok', text: `Logos, helmets, colors and uniforms updated from ${romFile.name}. They reach the game with the next ROM you download from the app.` });
     }),
     exportFile: () => { if (d) void backupRef.current(d); },
@@ -396,7 +396,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       // Another starting year (user, 2026-11-17: "if someone wants to make a 2027 roster next year, they can ... start
       // their dynasty with year 2027"): made again from the same ROM, starting then.
       const base = o.year !== p.dyn.startYear ? await build(p.rom, o.year) : p.dyn;
-      let dyn: Dynasty = { ...base, name: o.name.trim() || base.name, userTeams: o.teams, ...(o.coachSim ? { coachSim: true } : {}) };
+      let dyn: Dynasty = { ...base, name: o.name.trim() || base.name, userTeams: o.teams, ...(o.coachSim ? { coachSim: true } : {}), romFile: romStem(p.fileName) };
       if (o.generated) dyn = { ...randomBench(dyn), benchGenerated: true };
       // Setup (user, 2026-11-20): the first season on a ROM the app builds, the real schedule to start.
       dyn = startSetup(dyn, p.rom);
@@ -441,10 +441,12 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       const again = !!season.romDownloaded;
       // H-033: the base ROM's build, for the mid-season check at import.
       const romBuild = romBuildOf(rom);
+      // The file name is fixed at the season's first download (re-downloads keep it, so the save stays linked).
+      const named = (x: DSeason) => (x.romId ? {} : { romId: newRomId(), ...(d.romFile ? { romFile: d.romFile } : {}) });
       const build = romBuild ? { romBuild } : {};
       const done: DSeason = first
-        ? { ...season, ...build, romId: season.romId ?? newRomId(), kitsEdited: false } // the first season's lineup never goes into a ROM
-        : { ...season, ...build, romId: season.romId ?? newRomId(), lineupEdited: false, kitsEdited: false, romDownloaded: true };
+        ? { ...season, ...build, ...named(season), kitsEdited: false } // the first season's lineup never goes into a ROM
+        : { ...season, ...build, ...named(season), lineupEdited: false, kitsEdited: false, romDownloaded: true };
       if (done.upgrade) done.upgrade = { ...done.upgrade, downloaded: true };
       const name = seasonRomName(d, done);
       await downloadRom(name, first ? uniformRom(d, rom) : seasonRom(d, done, rom));
@@ -562,7 +564,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
         })()}
         {d && stale && staleAt !== null && staleAt !== here && staleLater !== stale.key && page !== 'offseason' && page !== 'setup' && (() => {
           const s = d.seasons[d.seasons.length - 1];
-          const name = seasonRomName(d, { ...s, romId: s.romId ?? 'xxxxxx' });
+          const name = seasonRomName(d, s);
           return (
             <Modal
               title={stale.first ? `Download your ${s.year} ROM with the new uniforms` : `Download the ${s.year} ROM again`}

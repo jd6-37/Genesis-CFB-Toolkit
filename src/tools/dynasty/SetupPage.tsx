@@ -304,7 +304,7 @@ function DownloadStep({ actions, busy }: { actions: SetupActions; busy: boolean 
   const start = d.setupCoaches ?? [];
   const changes = coachChanges(d, start).length;
   const romConfChanged = !!d.setupConf && d.setupConf.some((c, t) => c !== s.conf[t]);
-  const name = zipName(seasonRomName(d, { ...s, romId: s.romId ?? 'xxxxxx' }));
+  const name = zipName(seasonRomName(d, s));
   const rows: [string, string, string][] = [
     ['Coaches', `${changes ? `${changes} ${changes === 1 ? 'change' : 'changes'}` : 'The real coaches'}; coaches affect the sim: ${d.coachSim ? 'on' : 'off'}`, 'coaches'],
     ['Rosters', `${d.benchGenerated ? 'Generated' : 'Real'} backups${Object.keys(s.impact ?? {}).length ? ', your impact players' : ''}`, 'rosters'],

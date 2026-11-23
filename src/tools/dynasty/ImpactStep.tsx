@@ -39,7 +39,9 @@ export function ImpactStep({ commit, busy, setup }: { commit: (d: Dynasty, done?
   const name = (id: number) => playerName(d.players[id - 1]);
   const label = (id: number) => {
     const c = choices.find((x) => x.id === id);
-    return `${c ? `${c.label} ` : ''}${name(id)}, OVR ${d.players[id - 1].ovr}`;
+    // "HB1 #7 John Smith, OVR 88" (user, 2026-11-23: show the jersey number).
+    const p = d.players[id - 1];
+    return `${c ? `${c.label} ` : ''}#${p.jersey} ${name(id)}, OVR ${p.ovr}`;
   };
   const options = choices.map((c) => ({ value: c.id, label: label(c.id), group: c.defense ? 'Defense' : 'Offense' }));
   const problem = impactPicksProblem(season, team, picks);
