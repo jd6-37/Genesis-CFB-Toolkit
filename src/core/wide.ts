@@ -8,6 +8,7 @@
 
 import { rl } from './bytes';
 import { isWideBw95 } from './romfile';
+import { ktabOf } from './kits';
 
 export const WIDE = {
   teamTable: 0x0028dc,
@@ -47,16 +48,16 @@ export function wideLayoutProblems(d: Uint8Array): string[] {
 
 /**
  * The season teams (138 / 107): since 2026 test72 / 1994 test73 the team table also lists the 32 historic teams
- * (Exhibition only, after the season teams; H-045), so the season count is KTAB's ("KIT1" at 0x2B6000, a word at
- * +4), which the manifest's season-team count also gives. Without KTAB, the team table's count.
+ * (Exhibition only, after the season teams; H-045), so the season count is KTAB's ("KIT1" where the manifest's KIT1
+ * entry says, else 0x2B6000; a word at +4), which the manifest's season-team count also gives. Without KTAB, the team table's count.
  */
 export function seasonTeamCount(d: Uint8Array): number {
   const n = wideTeamCount(d);
+  const { at: KTAB } = ktabOf(d);
   if (String.fromCharCode(...d.subarray(KTAB, KTAB + 4)) !== 'KIT1') return n;
   const k = (d[KTAB + 4] << 8) | d[KTAB + 5];
   return k > 36 && k <= n ? k : n;
 }
-const KTAB = 0x2b6000;
 
 /** Every team Game Setup offers (season teams, then the historic teams): the team table's count. */
 export const setupTeamsOf = (d: Uint8Array) => (isWide(d) ? wideTeamCount(d) : 36);

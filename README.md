@@ -238,7 +238,7 @@ On the 138-team 2026 Season Edition and the 107-team 1994 Season Edition with th
 - At most 7 extra helmets, 7 extra pants and 7 extra jerseys (dark and white together) per team: the picker's menu shows single digits.
 - **Undo** puts a team's, or every team's, uniforms back as the ROM was loaded.
 
-The extras are in a 4 KB table at `0x2B6000`-`0x2B6FFF` ("KIT1"); the app rewrites only that table, and only when the ROM has it. The table's team count (138 or 107) comes from the ROM. `npm run test:kits -- ELEVATED_2026_138` (or the 1994 ROM) checks reading, writing and the limits; writing unchanged uniforms leaves the table's bytes as they are.
+The extras are in a table ("KIT1") where the ROM's manifest entry KIT1 says: 8 KB at `0x2DC200`-`0x2DE1FF` from 2026 v2.1.1-test23 on; 4 KB at `0x2B6000`-`0x2B6FFF` in the 1994 edition and 2026 up to test22 (an entry with size 0, or no manifest). The app rewrites only that table, and only when the ROM has it. The table's team count (138 or 107) comes from the ROM. `npm run test:kits -- ELEVATED_2026_138` (or the 1994 ROM) checks reading, writing and the limits; writing unchanged uniforms leaves the table's bytes as they are.
 
 ### College Football 27 reference
 

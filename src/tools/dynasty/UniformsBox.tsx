@@ -48,7 +48,7 @@ export function UniformsBox({ team }: { team: number }) {
       if (!rom) return;
       const ru = romUniformsOf(rom, d.teams.length);
       if (!ru) throw new Error('This ROM has no alternate uniforms.');
-      await commit({ ...d, romUniforms: d.romUniforms ? { ...d.romUniforms, sprite: ru.sprite } : ru });
+      await commit({ ...d, romUniforms: d.romUniforms ? { ...d.romUniforms, sprite: ru.sprite, room: ru.room } : ru });
     }
     setOpen(true);
   });
