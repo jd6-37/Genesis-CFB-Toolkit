@@ -498,7 +498,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       >
         <NavBar label="Dynasty" items={PAGES.map((p) => ({ label: p.label, href: href(p.id), current: navPage === p.id, off: !ctx && p.id !== 'manage' }))} />
       </Masthead>
-      <main className="dy-main">
+      <main className={`dy-main${navPage === 'home' ? ' dy-main-home' : ''}`}>
         {note && page !== 'manage' && <Note kind={note.kind}>{note.text}</Note>}
         <Ctx.Provider value={ctx}>{body}</Ctx.Provider>
         {up.modal}

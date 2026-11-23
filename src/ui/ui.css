@@ -121,7 +121,7 @@
 .ui-mast { background: var(--masthead); color: var(--on-masthead); }
 .ui-mast-inner {
   display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--sp-4);
-  max-width: 1240px; margin: 0 auto; padding: var(--sp-3) var(--sp-4) var(--sp-2);
+  max-width: var(--page-max, 1240px); margin: 0 auto; padding: var(--sp-3) var(--sp-4) var(--sp-2);
 }
 .ui-mast-left { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-3); justify-self: start; }
 .ui-mast .ui-mast-left a { color: color-mix(in srgb, var(--on-masthead) 70%, var(--masthead)); font-size: var(--fs-2); text-decoration: none; }
