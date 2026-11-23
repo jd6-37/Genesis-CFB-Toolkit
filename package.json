@@ -16,6 +16,7 @@
     "test:teams": "tsx cli/teamstest.ts",
     "test:patch": "tsx cli/patchtest.ts",
     "test:pad": "tsx cli/padtest.ts",
+    "test:nil": "tsx cli/niltest.ts",
     "test:swap": "tsx cli/swaptest.ts",
     "test:walsh": "tsx cli/walshtest.ts",
     "test:dynasty": "tsx cli/dynastytest.ts",

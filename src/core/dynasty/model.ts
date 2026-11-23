@@ -250,7 +250,11 @@ export interface Dynasty {
   /** Head coaches nudge their team's OFF and DEF in the season ROM, ±2 at most (coachEffects.ts `simNudge`). Absent = off. */
   coachSim?: boolean;
   /** NIL (nil.ts; 2026 dynasties made with it): budgets, pay, money in recruiting. */
-  nil?: { on: true };
+  nil?: {
+    on: true;
+    /** The CPU sets the user teams' NIL offers (user, 2026-11-22: "let the cpu manage all nil, similar to letting cpu manage coach xp"). */
+    auto?: boolean;
+  };
   /** The season sim's settings for this dynasty's season ROMs (seasonSim.ts); absent = the ROM's own. */
   sim?: import('../simSettings').SimSettings;
   /** Sim stat multipliers for its season ROMs (seasonSim.ts, H-021); absent = the ROM's own (×1). */

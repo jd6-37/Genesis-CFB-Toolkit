@@ -292,6 +292,15 @@ export function moneyWords(v: number): string {
 }
 
 /** Turns NIL on for a new 2026 dynasty: the first season's budgets and every player's starting pay. */
+/** What NIL does, for the switch that turns it on (setup; Manage). */
+export const NIL_TEXT = 'Name, image and likeness money: every school gets a yearly NIL budget from its conference, prestige and boosters; players are paid one-season deals; recruits and transfers weigh the money you offer. Your team page gets an NIL tab, where the CPU can manage it for you. 2026 dynasties only.';
+
+/** Turns NIL off again (before it matters: no budgets, pay or offers kept). */
+export function disableNil(d: Dynasty): Dynasty {
+  const { nil: _n, ...rest } = d;
+  return { ...rest, players: d.players.map(({ nil: _p, ...p }) => p), seasons: d.seasons.map(({ nil: _s, ...s }) => s) };
+}
+
 export function enableNil(d: Dynasty): Dynasty {
   if (editionOf(d).id !== '2026') return d;
   const s = d.seasons[d.seasons.length - 1];

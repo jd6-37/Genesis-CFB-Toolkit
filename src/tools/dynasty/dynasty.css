@@ -997,3 +997,11 @@
 .dy-pad-name { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
 .dy-pad-name > .ui-field { width: 96px !important; min-width: 0; flex: 0 0 96px; }
 .dy-pad-name > .ui-field input { width: 100%; box-sizing: border-box; }
+
+/* The team page's NIL tab (pages.tsx TeamNil). */
+.dy-nil-grid { display: grid; gap: var(--sp-3); margin-bottom: var(--sp-3); max-width: 760px; }
+.dy-nil-tiles { margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sp-2); }
+.dy-nil-tiles > div { padding: var(--sp-2) var(--sp-3); background: var(--surface-sunken); }
+.dy-nil-tiles dt { font: 700 var(--fs-2)/1.2 var(--font-display); text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+.dy-nil-tiles dd { margin: var(--sp-2) 0 0; font: 400 var(--fs-num-2)/1 var(--font-num); }
+.dy-teamovr dd.dy-nil-pay { font-size: var(--fs-num-1); }

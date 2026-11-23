@@ -4,7 +4,7 @@ import { WhatsNext } from './GetStarted';
 import { playerHonors, seasonAwards } from '../../core/dynasty/awards';
 import { academicGrade } from '../../core/dynasty/academics';
 import { scheduleLock } from '../../core/dynasty/schedule';
-import { Button, Modal, Note, Num, PageHead, Segments, Select, SubHead, Table, Tabs } from '../../ui';
+import { Button, Check, Modal, Note, Num, PageHead, Segments, Select, SubHead, Table, Tabs } from '../../ui';
 import { useEffect, useMemo, useState } from 'react';
 import {
   champions, leaders, playerLines, playerName, seasonView, standings, statValue, teamHistory, weekName,
@@ -31,6 +31,7 @@ import { backupLabel, isBackup, lineupLock, moveToSpot, slotKind, slotOfSpot, sp
 import { playerOvr, roleOfSlot } from '../../core/dynasty/ovr';
 import { UniformsBox } from './UniformsBox';
 import { POS_GROUPS } from './RostersPage';
+import { hasNil, money, payroll } from '../../core/dynasty/nil';
 import { accentOn, Empty, Headshot, ImpactDot, Locked, StoryArt, TeamLink, TeamMark, href, heightText, hometownText, inkColor, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
 
 // ---- front page
@@ -477,15 +478,75 @@ export function Teams() {
 
 /** The team page's tabs (user, 2026-11-18: "The team page is getting kind of long ... Stats on the main page could just
  * be the stat leaders. Rosters can go to its own tab. uniforms on its own"); each has its own address, team/12/roster. */
-export const TEAM_TABS = ['overview', 'roster', 'stats', 'uniforms'] as const;
+export const TEAM_TABS = ['overview', 'roster', 'stats', 'nil', 'uniforms'] as const;
 export type TeamTab = (typeof TEAM_TABS)[number];
-const TEAM_TAB_LABELS: Record<TeamTab, string> = { overview: 'Overview', roster: 'Roster', stats: 'Stats', uniforms: 'Uniforms' };
+const TEAM_TAB_LABELS: Record<TeamTab, string> = { overview: 'Overview', roster: 'Roster', stats: 'Stats', nil: 'NIL', uniforms: 'Uniforms' };
 /** "12" or "12/roster" → the team and tab (null when it isn't one). */
 export function teamRoute(arg: string | undefined): { team: number; tab: TeamTab } | null {
-  const m = /^(\d+)(?:\/(roster|stats|uniforms))?$/.exec(arg ?? '');
+  const m = /^(\d+)(?:\/(roster|stats|nil|uniforms))?$/.exec(arg ?? '');
   return m ? { team: Number(m[1]), tab: (m[2] as TeamTab | undefined) ?? 'overview' } : null;
 }
 export const teamHref = (team: number, tab: TeamTab = 'overview') => href(`team/${team}${tab === 'overview' ? '' : `/${tab}`}`);
+
+/**
+ * A team's NIL (NIL dynasties; user-approved mockup 2026-11-23): this season's budget, payroll and room, the booster
+ * money's change, the CPU-manages switch for your teams, and the highest-paid players.
+ */
+function TeamNil({ team }: { team: number }) {
+  const { d, v, commit, readOnly } = useDyn();
+  const sn = d.offseason?.nil ?? v.season.nil;
+  const budget = sn?.budget[team] ?? 0;
+  const pay = payroll(d.players, team);
+  const boost = sn?.boost[team] ?? 0;
+  const donor = (sn?.donor?.[team] ?? 0) > 0;
+  const mine = d.userTeams.includes(team);
+  const paid = d.players.filter((p) => p.team === team && p.status === 'active' && (p.nil ?? 0) > 0).sort((a, b) => (b.nil ?? 0) - (a.nil ?? 0)).slice(0, 10);
+  const origin = (p: DPlayer) => {
+    const last = p.transfers?.at(-1);
+    if (p.fcs) return `From ${p.fcs.school} (FCS)`;
+    if (last && last.to === team && last.from !== null) return `Transfer from ${d.teams[last.from]?.school ?? '?'}`;
+    return p.recruit ? `${p.recruit.stars}★ recruit, ${p.recruit.year}` : '';
+  };
+  return (
+    <>
+      <SubHead>NIL</SubHead>
+      <div className="dy-nil-grid">
+        <dl className="dy-nil-tiles">
+          <div><dt>Budget</dt><dd>{money(budget)}</dd></div>
+          <div><dt>Payroll</dt><dd>{money(pay)}</dd></div>
+          <div><dt>Room</dt><dd className={budget - pay < 0 ? 'dy-down' : 'dy-up'}>{money(Math.max(0, budget - pay))}</dd></div>
+        </dl>
+        <p className="dy-small">
+          Boosters: <b className={boost >= 0 ? 'dy-up' : 'dy-down'}>{boost >= 0 ? '+' : ''}{Math.round(boost * 100)}%</b> this year, from how the team finished. Winning adds more; a losing season costs some.
+          {donor && <> A big donor backs the program.</>}
+        </p>
+        {mine && !readOnly && (
+          <Check checked={!!d.nil?.auto} onChange={(x) => void commit({ ...d, nil: { ...d.nil!, auto: x } })}>
+            Let the CPU manage NIL <span className="dy-dim">(it sets the amount on each new recruiting offer, within your room)</span>
+          </Check>
+        )}
+      </div>
+      <SubHead>Highest paid</SubHead>
+      {paid.length === 0 ? <p className="dy-dim">No one on this roster has an NIL deal yet.</p> : (
+        <Table figures>
+          <thead><tr><th className="ui-left">Pos</th><th className="ui-left">Player</th><th>OVR</th><th>Pay</th><th className="ui-left dy-wide">How he got here</th></tr></thead>
+          <tbody>
+            {paid.map((p) => (
+              <tr key={p.id}>
+                <td className="ui-left">{p.pos}</td>
+                <td className="ui-left"><a href={href(`player/${p.id}`)}>{playerName(p)}</a></td>
+                <td>{p.ovr}</td>
+                <td>{money(p.nil ?? 0)}</td>
+                <td className="ui-left ui-text dy-wide">{origin(p)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </Table>
+      )}
+      <p className="dy-small dy-dim">Deals run one season; the offseason renews them at each player's new price.</p>
+    </>
+  );
+}
 
 /** The season's leaders of a team (user, 2026-11-18: passing, rushing and receiving yards, tackles, sacks, interceptions). */
 const LEADERS: { cat: StatCategory; key: string; what: string; more?: [string, string] }[] = [
@@ -595,7 +656,7 @@ export function Team({ team, tab = 'overview' }: { team: number; tab?: TeamTab }
       </header>
 
       <div className="dy-teamtabs">
-        <Tabs label={`${t.school} sections`} value={tab} onChange={(x) => go(teamHref(team, x).slice(1))} tabs={TEAM_TABS.map((x) => ({ value: x, label: TEAM_TAB_LABELS[x] }))} />
+        <Tabs label={`${t.school} sections`} value={tab} onChange={(x) => go(teamHref(team, x).slice(1))} tabs={TEAM_TABS.filter((x) => x !== 'nil' || hasNil(d)).map((x) => ({ value: x, label: TEAM_TAB_LABELS[x] }))} />
       </div>
 
       {tab === 'overview' && <>
@@ -654,6 +715,7 @@ export function Team({ team, tab = 'overview' }: { team: number; tab?: TeamTab }
         {lines.some((l) => Object.values(l.s).some((x) => x > 0)) ? <StatTables lines={lines} /> : <p className="dy-dim">No stats yet.</p>}
       </>}
 
+      {tab === 'nil' && hasNil(d) && <TeamNil team={team} />}
       {tab === 'uniforms' && <UniformsBox team={team} />}
 
       {tab === 'roster' && <div className="ui-sided">
@@ -892,13 +954,16 @@ export function Player({ id }: { id: number }) {
             {team !== null && <a href={href(`team/${team}`)}>{d.teams[team].school}</a>}
             {p.hometown && <span>{hometownText(p)}</span>}
             {(p.transfers ?? []).filter((x) => x.to !== null && !(x.to === team && experience.label === 'TR')).map((x) => <span key={`${x.year}-${x.from}`}>Transferred from {d.teams[x.from].school} ({x.year + 1})</span>)}
+            {p.fcs && <span>Came up from {p.fcs.school} (FCS)</span>}
           </p>
         </div>
         </div>
         <div className="dy-player-side">
-          {shownSlots.length > 0 && (
+          {(shownSlots.length > 0 || (hasNil(d) && (p.nil ?? 0) > 0)) && (
             <dl className={`dy-teamovr${team !== null && onColor(c) === '#000' ? ' dy-on-light' : ''}`}>
-              <div><dt>OVR</dt><dd>{playerOvr(shownSlots[0], rated(shownSlots[0]))}</dd></div>
+              {shownSlots.length > 0 && <div><dt>OVR</dt><dd>{playerOvr(shownSlots[0], rated(shownSlots[0]))}</dd></div>}
+              {/* His NIL pay this season (NIL dynasties; user-approved mockup 2026-11-23). */}
+              {hasNil(d) && (p.nil ?? 0) > 0 && <div><dt>NIL</dt><dd className="dy-nil-pay">{money(p.nil!)}</dd></div>}
             </dl>
           )}
           {/* The team's logo (user, 2026-11-12: "the team logo should go in the header too"). */}

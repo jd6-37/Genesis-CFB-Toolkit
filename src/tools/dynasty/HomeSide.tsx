@@ -2,6 +2,7 @@
 // the side column, the playoff picture (1994: the bowl games), the national leaders and your conference in a band across the page
 // below; in the offseason, your commitments and the class rankings in the side column.
 
+import { hasNil, money } from '../../core/dynasty/nil';
 import { SubHead, Table } from '../../ui';
 import { useMemo } from 'react';
 import { bowlOf, bowlWeek, INDEPENDENT, leaders, playerLines, playerName, standings, statValue, weekName, type PlayerLine, type StatCategory } from '../../core/dynasty/derive';
@@ -41,9 +42,34 @@ export function OffseasonSide() {
   if (!d.offseason) return null;
   return (
     <>
+      <NilBox />
       <Commitments />
       <ClassRankings events={d.offseason.events} />
     </>
+  );
+}
+
+/**
+ * Your teams' NIL in the offseason (NIL dynasties; user-approved mockup 2026-11-23: "the booster line in What's next"):
+ * next season's budget and the boosters' change.
+ */
+function NilBox() {
+  const { d } = useDyn();
+  const sn = d.offseason?.nil;
+  if (!hasNil(d) || !sn) return null;
+  return (
+    <section>
+      <SubHead level={2}>NIL</SubHead>
+      {d.userTeams.map((t) => {
+        const b = sn.boost[t] ?? 0;
+        return (
+          <p key={t} className="dy-small">
+            <a href={href(`team/${t}/nil`)}><b>{d.teams[t].school}</b></a>: {money(sn.budget[t] ?? 0)} for {d.offseason!.year}.
+            {' '}Boosters <b className={b >= 0 ? 'dy-up' : 'dy-down'}>{b >= 0 ? '+' : ''}{Math.round(b * 100)}%</b>{(sn.donor?.[t] ?? 0) > 0 ? ', and a big donor backs the program' : ''}.
+          </p>
+        );
+      })}
+    </section>
   );
 }
 

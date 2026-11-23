@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react';
 import { useState } from 'react';
-import { Button, Check, Combobox, Segments, Field, LinkSwitch, FileButton, DataTable, Empty, Masthead, Meter, Modal, NavBar, Note, Num, PageHead, Row, Select, Stat, Steps, SubHead, Table, Tabs, ThemeToggle } from './index';
+import { Button, Check, Combobox, Segments, Stepper, Field, LinkSwitch, FileButton, DataTable, Empty, Masthead, Meter, Modal, NavBar, Note, Num, PageHead, Row, Select, Stat, Steps, SubHead, Table, Tabs, ThemeToggle } from './index';
 
 const meta: Meta = { title: 'Components' };
 export default meta;
@@ -279,6 +279,22 @@ export const SegmentsStory: Story = {
           <thead><tr><th className="ui-left">Name</th><th>OVR</th></tr></thead>
           <tbody><tr><td className="ui-left">Marcus Hale ({g})</td><td>90</td></tr><tr><td className="ui-left">Dorian Webb ({g})</td><td>85</td></tr></tbody>
         </Table>
+      </div>
+    );
+  },
+};
+
+/** A value a step at a time (an NIL offer): − and +, ◀ ▶ on a controller. At the limits a button turns off. */
+export const StepperStory: Story = {
+  name: 'Stepper',
+  render: () => {
+    const [v, setV] = useState(1_200_000);
+    const fmt = (x: number) => `$${(x / 1e6).toFixed(2).replace(/0$/, '')}M`;
+    return (
+      <div style={{ display: 'grid', gap: 16, maxWidth: 360 }}>
+        <Stepper label="NIL offer" value={fmt(v)} onDown={() => setV(Math.max(0, v - 100_000))} onUp={() => setV(Math.min(3_000_000, v + 100_000))} downLabel="$100,000 less" upLabel="$100,000 more" atMin={v <= 0} atMax={v >= 3_000_000} />
+        <Stepper label="At the top" value="$3M" onDown={() => {}} onUp={() => {}} downLabel="less" upLabel="more" atMax />
+        <Stepper label="Off" value="$0" onDown={() => {}} onUp={() => {}} downLabel="less" upLabel="more" disabled />
       </div>
     );
   },

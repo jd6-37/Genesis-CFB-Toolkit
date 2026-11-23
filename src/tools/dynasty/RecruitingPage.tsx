@@ -1,5 +1,5 @@
 // Full recruiting: five weeks of points and offers for the user teams' boards, then signing day.
-import { Button, Check, Field, Meter, Note, Select, SubHead, Table, Tabs } from '../../ui';
+import { Button, Check, Field, Meter, Note, Segments, Select, Stepper, SubHead, Table, Tabs } from '../../ui';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Dynasty } from '../../core/dynasty/model';
 import {
@@ -14,11 +14,12 @@ import { rulesOf } from '../../core/dynasty/rules';
 import { hasTransfers } from '../../core/dynasty/edition';
 import { academicGrade, academicsOf, gradeOf } from '../../core/dynasty/academics';
 import { conferencePrestige } from '../../core/dynasty/confPrestige';
-import { costOf, interestRank, isTransfer, newOffers, offerCap, offersOut, pipelineStates, planCost, pointCost, withdrawOffer } from '../../core/dynasty/recruiting';
+import { costOf, interestRank, isTransfer, newOffers, nilRoom, nilSuggest, offerCap, offersOut, pipelineStates, pitchesOf, planCost, pointCost, valueOf, withdrawOffer } from '../../core/dynasty/recruiting';
+import { money } from '../../core/dynasty/nil';
 import { fcsLabel } from '../../core/dynasty/fcs';
 import { SCHOOL_STATE, stateCode } from '../../core/dynasty/schoolStates';
 import { GROUP_OF_ROLE, roleOfPos, shownAt } from '../../core/dynasty/ratings';
-import { Empty, Headshot, heightText, hometownText, inkColor, mainColor, onColor, useDyn } from './ui';
+import { Empty, Headshot, heightText, hometownText, href, inkColor, mainColor, onColor, useDyn } from './ui';
 import { SimOffseason, getTemplates, type OffseasonActions } from './OffseasonPage';
 
 const ordinal = (n: number) => `${n}${n % 100 >= 11 && n % 100 <= 13 ? 'th' : ['th', 'st', 'nd', 'rd'][n % 10] ?? 'th'}`;
@@ -133,6 +134,12 @@ interface Hub {
   /** Takes an offer back: one made this week leaves the plan, an older one is withdrawn at once. */
   withdraw: (id: number) => void;
   scout: (id: number, level: ScoutLevel) => void;
+  /** NIL dynasties: the dollars a year on an offer (new, or a changed amount). */
+  setNil: (id: number, dollars: number) => void;
+  /** NIL: dollars still free after this week's plan (null without NIL). */
+  nilLeft: number | null;
+  /** NIL: the CPU sets the amounts (Dynasty.nil.auto). */
+  nilAuto: boolean;
 }
 
 export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy: string | null }) {
@@ -142,7 +149,7 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
   const [team, setTeam] = useState(users[0]);
   const [tab, setTab] = useState<Tab>('board');
   const [plans, setPlans] = useState<Record<number, TeamPlan>>(() =>
-    Object.fromEntries(users.map((u) => [u, rs.plans[u] ? { points: { ...rs.plans[u].points }, offers: [], pitches: { ...rs.plans[u].pitches } } : { points: {}, offers: [] }])));
+    Object.fromEntries(users.map((u) => [u, rs.plans[u] ? { points: { ...rs.plans[u].points }, offers: [], pitches: { ...rs.plans[u].pitches }, nil: {} } : { points: {}, offers: [], nil: {} }])));
   const [err, setErr] = useState<string | null>(null);
   const byId = useMemo(() => new Map(rs.prospects.map((p) => [p.id, p])), [rs]);
   const plan = plans[team] ?? { points: {}, offers: [] };
@@ -159,6 +166,9 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
   // Offers out, this week's new ones included, against the cap (open spots plus the rules' extra).
   const offers = offersOut(rs, team) + newOffers(rs, team, plan).length;
   const cap = offerCap(R, rs, team);
+  // NIL: the room after this week's offers (a changed amount counts its difference).
+  const nilAuto = !!d.nil?.auto;
+  const nilLeft = rs.nil ? nilRoom(rs, team) - Object.entries(plan.nil ?? {}).reduce((a, [id, x]) => a + x - (byId.get(Number(id))?.offers.includes(team) ? rs.nil!.offers[team]?.[Number(id)] ?? 0 : 0), 0) : null;
 
   const setPlan = (f: (p: TeamPlan) => TeamPlan) => {
     setErr(null);
@@ -170,9 +180,15 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
     remove: (id) => setPlan((p) => { const points = { ...p.points }; delete points[id]; const pitches = { ...p.pitches }; delete pitches[id]; return { ...p, points, pitches }; }),
     setPoints: (id, v) => setPlan((p) => ({ ...p, points: { ...p.points, [id]: Math.max(0, Math.min(R.maxPerProspect, Math.round(v) || 0)) } })),
     setPitch: (id, k) => setPlan((p) => { const pitches = { ...p.pitches }; if (k) pitches[id] = k; else delete pitches[id]; return { ...p, pitches }; }),
-    offer: (id) => setPlan((p) => ({ ...p, offers: p.offers.includes(id) ? p.offers : [...p.offers, id] })),
+    // An offer starts at the amount the CPU would put on it (NIL dynasties), within the room left.
+    offer: (id) => setPlan((p) => ({
+      ...p, offers: p.offers.includes(id) ? p.offers : [...p.offers, id],
+      ...(rs.nil && p.nil?.[id] === undefined ? { nil: { ...p.nil, [id]: Math.max(0, Math.min(nilSuggest(rs, team, byId.get(id)!), Math.floor((nilLeft ?? 0) / 1e4) * 1e4)) } } : {}),
+    })),
+    setNil: (id, dollars) => setPlan((p) => ({ ...p, nil: { ...p.nil, [id]: Math.max(0, Math.round(dollars / 1e4) * 1e4) } })),
+    nilLeft, nilAuto,
     withdraw: (id) => {
-      setPlan((p) => ({ ...p, offers: p.offers.filter((x) => x !== id) }));
+      setPlan((p) => { const nil = { ...p.nil }; delete nil[id]; return { ...p, offers: p.offers.filter((x) => x !== id), nil }; });
       if (byId.get(id)?.offers.includes(team)) void actions.run('Withdrawing the offer…', async () => actions.commit(withdrawOffer(d, team, id)));
     },
     scout: (id, level) => void actions.run('Scouting…', async () => actions.commit(scoutProspect(d, team, id, level, spent))),
@@ -184,14 +200,16 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
       const p = plans[u] ?? { points: {}, offers: [] };
       const points = Object.fromEntries(Object.entries(p.points).filter(([id]) => byId.get(Number(id))?.committed === null));
       const pitches = Object.fromEntries(Object.entries(p.pitches ?? {}).filter(([id]) => id in points));
-      return [u, { points, offers: p.offers, pitches }];
+      // NIL: amounts on offers still open (new ones and changed ones); the CPU fills any missing when it manages NIL.
+      const nil = Object.fromEntries(Object.entries(p.nil ?? {}).filter(([id]) => byId.get(Number(id))?.committed === null && (p.offers.includes(Number(id)) || byId.get(Number(id))?.offers.includes(u))));
+      return [u, { points, offers: p.offers, pitches, ...(rs.nil ? { nil } : {}) }];
     }));
     const ctx = weekContext(d, rs);
     const bad = users.flatMap((u) => planProblems(R, send[u], rs.scoutSpent?.[u] ?? 0, planCost(d, ctx, rs, u, send[u])).map((m) => `${d.teams[u].school}: ${m}`));
     if (bad.length) return setErr(bad.join(' '));
     void actions.run(`Recruiting week ${rs.week + 1}…`, async () => {
       await actions.commit(recruitingWeek(d, send));
-      setPlans((all) => Object.fromEntries(Object.entries(all).map(([u, p]) => [u, { ...p, offers: [] }])));
+      setPlans((all) => Object.fromEntries(Object.entries(all).map(([u, p]) => [u, { ...p, offers: [], nil: {} }])));
     });
   };
   /** The computer recruits for the user teams for `weeks` weeks (the board isn't used). */
@@ -211,6 +229,7 @@ export function Recruiting({ actions, busy }: { actions: OffseasonActions; busy:
         <dl className="dy-hub-stats">
           {open && <div><dt>Points left</dt><dd className={left < 0 ? 'dy-hub-over' : undefined}>{left}<small> of {R.userPoints.toLocaleString('en-US')}</small></dd></div>}
           {open && <div><dt>On board</dt><dd>{board.length}<small> of {R.boardSize}</small></dd></div>}
+          {rs.nil && nilLeft !== null && <div><dt>NIL room</dt><dd className={nilLeft < 0 ? 'dy-hub-over' : undefined}>{money(Math.max(0, nilLeft))}<small> of {money(rs.nil.room[team])}</small></dd></div>}
           <div><dt>Commits</dt><dd>{commits.length}<small> of {spots} spots</small></dd></div>
           {open && <div><dt>Offers out</dt><dd className={offers > cap ? 'dy-hub-over' : undefined}>{offers}<small> of {cap}</small></dd></div>}
         </dl>
@@ -299,7 +318,7 @@ function BoardTab({ hub, board, commits, toProspects }: { hub: Hub; board: Prosp
                   <Select label="Sort" value={sort} onChange={setSort} options={[{ value: 'interest', label: 'Interest in you' }, { value: 'stars', label: 'Stars' }, { value: 'pos', label: 'Position' }, { value: 'points', label: 'Points this week' }]} />
                 </div>
                 <Table className="dy-board-table">
-                  <thead><tr><th className="ui-left">Prospect</th><th className="ui-left">Pos</th><th className="dy-wide">Stars</th><th className="ui-left dy-wide">From</th><th className="ui-left">You</th><th className="ui-left dy-col-meter">Interest in you</th><th className="ui-left dy-wide">Pitch</th><th>Points</th></tr></thead>
+                  <thead><tr><th className="ui-left">Prospect</th><th className="ui-left">Pos</th><th className="dy-wide">Stars</th><th className="ui-left dy-wide">From</th><th className="ui-left">You</th><th className="ui-left dy-col-meter">Interest in you</th><th className="ui-left dy-wide">Pitch</th>{rs.nil && <th className="dy-wide">Ask</th>}<th>Points</th></tr></thead>
                   <tbody>
                     {rows.map((p) => {
                       const i = rank(p);
@@ -315,6 +334,7 @@ function BoardTab({ hub, board, commits, toProspects }: { hub: Hub; board: Prosp
                           <td className="ui-left">{i < 0 ? '-' : ordinal(i + 1)}</td>
                           <td className="ui-left dy-col-meter"><span className="dy-meter-cell"><Meter value={share(R, p, team)} label={`${playerName(p.player)}'s interest in you`} /><span>{pct(share(R, p, team))}</span></span></td>
                           <td className="ui-left dy-wide">{pitch ? `${PITCH[pitch]}${x ? ` ${REACT[x].mark}` : ''}` : <span className="dy-dim">No pitch</span>}</td>
+                          {rs.nil && <td className="ui-num dy-wide">{money(Math.round(valueOf(p, rs.nil.market) / 1e4) * 1e4)}</td>}
                           <td className="ui-num">{plan.points[p.id] ?? 0}</td>
                         </tr>
                       );
@@ -338,6 +358,38 @@ function BoardTab({ hub, board, commits, toProspects }: { hub: Hub; board: Prosp
         </>
       )}
     </>
+  );
+}
+
+/**
+ * The dollars on an offer (NIL dynasties; user-approved mockup 2026-11-23): what he asks (his market value), the offer
+ * with − and + (◀ ▶ on a controller), and the room left. With the CPU managing NIL, its amount, read-only.
+ */
+function NilOffer({ p, hub }: { p: Prospect; hub: Hub }) {
+  const { d } = useDyn();
+  const rs = d.offseason!.recruiting!;
+  const ask = Math.round(valueOf(p, rs.nil!.market) / 1e4) * 1e4;
+  const set = hub.plan.nil?.[p.id] ?? rs.nil!.offers[hub.team]?.[p.id] ?? nilSuggest(rs, hub.team, p);
+  const step = set >= 1e6 ? 1e5 : 25e3;
+  const left = hub.nilLeft ?? 0;
+  const vs = set >= ask * 1.05 ? 'Over his ask: his interest grows faster.' : set >= ask * 0.95 ? 'About his ask.' : 'Under his ask: his interest grows slower.';
+  return (
+    <div className="dy-card-part">
+      <h5>NIL offer</h5>
+      <p className="dy-small">He asks about <b>{money(ask)}</b> a year. Deals run one season.</p>
+      {hub.nilAuto
+        ? <p>The CPU sets your offers: <b>{money(set)}</b> a year. To set them yourself, turn that off on your team's <a href={href(`team/${hub.team}/nil`)}>NIL tab</a>.</p>
+        : (
+          <>
+            <Stepper
+              label={`NIL offer to ${playerName(p.player)}`} value={`${money(set)} a year`}
+              onDown={() => hub.setNil(p.id, set - step)} onUp={() => hub.setNil(p.id, set + step)}
+              downLabel={`${money(step)} less`} upLabel={`${money(step)} more`} atMin={set <= 0} atMax={left < step}
+            />
+            <p className="dy-small dy-dim">{vs} Room left after your offers: {money(Math.max(0, left))}.</p>
+          </>
+        )}
+    </div>
   );
 }
 
@@ -407,10 +459,12 @@ function ProspectCard({ p, hub }: { p: Prospect; hub: Hub }) {
               {cost !== pts && <p className="dy-small">Costs <b>{cost}</b> ({tag.toLowerCase()})</p>}
             </div>
             <Select label="Pitch" value={plan.pitches?.[p.id] ?? ''} onChange={(v) => hub.setPitch(p.id, v as PitchKey | '')}
-              options={[{ value: '', label: 'No pitch' }, ...PITCHES.map((k) => ({ value: k, label: `${PITCH[k]}${got[k] ? ` (${REACT[got[k]!].mark})` : ''}` }))]} />
+              options={[{ value: '', label: 'No pitch' }, ...pitchesOf(d).map((k) => ({ value: k, label: `${PITCH[k]}${got[k] ? ` (${REACT[got[k]!].mark})` : ''}` }))]} />
           </div>
         </div>
       )}
+
+      {rs.nil && hub.open && offered && p.committed === null && <NilOffer p={p} hub={hub} />}
 
       <div className="dy-card-part">
         <h5>What you have learned about him</h5>
@@ -418,12 +472,12 @@ function ProspectCard({ p, hub }: { p: Prospect; hub: Hub }) {
           ? <p className="dy-dim">Nothing yet. Pitch something and he reacts after the week.</p>
           : (
             <ul className="dy-learned">
-              {PITCHES.filter((k) => got[k]).map((k) => {
+              {pitchesOf(d).filter((k) => got[k]).map((k) => {
                 const x = REACT[got[k]!];
                 const r = got[k] === 'no' ? 0 : interestRank(R, p, k);
                 return <li key={k} className={x.cls}><b>{x.mark}</b> {PITCH[k]}: {r === 1 ? 'his main interest, ' : r > 1 ? 'a minor interest, ' : ''}{r ? x.text.replace(/^interested,? (and |but )?/, '') : x.text}</li>;
               })}
-              {PITCHES.some((k) => !got[k]) && <li className="dy-learned-open">Not tried: {PITCHES.filter((k) => !got[k]).map((k) => PITCH[k]).join(', ')}</li>}
+              {pitchesOf(d).some((k) => !got[k]) && <li className="dy-learned-open">Not tried: {pitchesOf(d).filter((k) => !got[k]).map((k) => PITCH[k]).join(', ')}</li>}
             </ul>
           )}
       </div>
@@ -658,6 +712,13 @@ function ClassesTab({ team }: { team: number }) {
   const rs = d.offseason!.recruiting!;
   const [sel, setSel] = useState(team);
   const [all, setAll] = useState(false);
+  // Recruiting classes or transfer classes (portal and FCS players; user, 2026-11-22).
+  const [kind, setKind] = useState<'recruits' | 'transfers'>('recruits');
+  const trows = useMemo(() => d.teams.map((t) => {
+    const c = rs.prospects.filter((p) => p.committed === t.index && isTransfer(p));
+    const out = rs.prospects.filter((p) => p.from === t.index && p.committed !== null && p.committed !== t.index).length;
+    return { t: t.index, n: c.length, out, pts: c.reduce((a, p) => a + STAR_POINTS[p.stars], 0) };
+  }).filter((r) => r.n || r.out).sort((a, b) => b.pts - a.pts || b.n - a.n || d.teams[a.t].school.localeCompare(d.teams[b.t].school)), [d, rs]);
   const rows = useMemo(() => d.teams.map((t) => {
     const c = rs.prospects.filter((p) => p.committed === t.index);
     const by = (s: number) => c.filter((p) => p.stars === s).length;
@@ -672,6 +733,29 @@ function ClassesTab({ team }: { team: number }) {
     <div className="dy-split dy-split-both">
       <div className="dy-split-list">
         <SubHead>Classes so far</SubHead>
+        {hasTransfers(d) && (
+          <Segments label="Classes" value={kind} onChange={setKind} options={[{ value: 'recruits', label: 'Recruiting classes' }, { value: 'transfers', label: 'Transfer classes' }]} />
+        )}
+        {kind === 'transfers' ? (
+          <>
+            <p className="dy-small dy-dim">Portal and FCS players who committed, ranked by their points (stars by OVR); Out = this school's own portal players who committed elsewhere.</p>
+            {trows.length === 0 ? <p className="dy-dim">No transfer has committed yet.</p> : (
+              <Table figures>
+                <thead><tr><th>Rank</th><th className="ui-left">School</th><th>In</th><th>Out</th><th>Points</th></tr></thead>
+                <tbody>
+                  {trows.slice(0, all ? undefined : 25).map((r, i) => (
+                    <tr key={r.t} className={r.t === team ? 'ui-row-mine' : undefined}>
+                      <td>{r.n ? i + 1 : ''}</td>
+                      <td className="ui-left"><Button variant="link" strong={r.t === sel} onClick={() => setSel(r.t)}>{d.teams[r.t].school}</Button></td>
+                      <td>{r.n}</td><td>{r.out || ''}</td><td>{r.pts}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            )}
+            {!all && trows.length > 25 && <Button variant="quiet" onClick={() => setAll(true)}>Show all {trows.length} schools</Button>}
+          </>
+        ) : <>
         <p className="dy-small dy-dim">Commitments only, ranked by class points ({[5, 4, 3, 2].map((s) => `${s} stars ${STAR_POINTS[s]}`).join(', ')}). Pick a school to see its class.</p>
         <Table figures>
           <thead><tr><th>Rank</th><th className="ui-left">School</th><th>Commits</th><th className="dy-wide">5★</th><th className="dy-wide">4★</th><th className="dy-wide">3★</th><th className="dy-wide">2★ or less</th><th className="dy-wide">Transfers</th><th>Points</th></tr></thead>
@@ -686,6 +770,7 @@ function ClassesTab({ team }: { team: number }) {
           </tbody>
         </Table>
         {!all && rows.length > list.length && <Button variant="quiet" onClick={() => setAll(true)}>Show all {rows.length} schools</Button>}
+        </>}
       </div>
       <div className="dy-split-card">
         <section className="dy-card" aria-label={`${d.teams[sel].school}'s class`}>

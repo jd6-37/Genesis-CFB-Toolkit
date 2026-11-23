@@ -639,4 +639,29 @@ export function Segments<T extends string>({ label, options, value, onChange, si
   );
 }
 
+/**
+ * A value changed a step at a time: − and + around the value (◀ ▶ on a controller too, through `data-pad-adjust`).
+ * The value is text (a dollar amount, say); the caller does the steps.
+ */
+export function Stepper({ label, value, onDown, onUp, downLabel, upLabel, atMin, atMax, disabled }: {
+  label: string;
+  value: ReactNode;
+  onDown: () => void;
+  onUp: () => void;
+  /** The buttons' names for screen readers ("$25,000 less"). */
+  downLabel: string;
+  upLabel: string;
+  atMin?: boolean;
+  atMax?: boolean;
+  disabled?: boolean;
+}) {
+  return (
+    <div className="ui-stepper" role="group" aria-label={label}>
+      <button type="button" aria-label={downLabel} disabled={disabled || atMin} onClick={onDown}>−</button>
+      <output className="ui-stepper-value" aria-live="polite">{value}</output>
+      <button type="button" aria-label={upLabel} disabled={disabled || atMax} onClick={onUp}>+</button>
+    </div>
+  );
+}
+
 export { AppBar, MenuDrawer, StepNav } from './shell';

@@ -228,6 +228,32 @@ export function nilRoom(rs: RecruitingState, team: number): number {
   return n.room[team] - held;
 }
 
+/** What the CPU would put on an offer to him: his value at the school's offer rate, to $10,000. */
+export function nilSuggest(rs: RecruitingState, team: number, pr: Prospect): number {
+  const n = rs.nil;
+  if (!n) return 0;
+  return Math.round((valueOf(pr, n.market) * (n.offerRate ?? n.rate)[team]) / 1e4) * 1e4;
+}
+
+/**
+ * The CPU manages a user team's NIL (Dynasty.nil.auto): each new offer without dollars gets the suggested amount, while the
+ * room lasts (the most valuable prospects first); amounts the user set stay.
+ */
+export function withAutoNil(rs: RecruitingState, team: number, plan: TeamPlan): TeamPlan {
+  if (!rs.nil) return plan;
+  const fresh = plan.offers.filter((id) => plan.nil?.[id] === undefined && rs.nil!.offers[team]?.[id] === undefined);
+  if (!fresh.length) return plan;
+  const byId = new Map(rs.prospects.map((p) => [p.id, p]));
+  let free = nilRoom(rs, team) - Object.values(plan.nil ?? {}).reduce((a, x) => a + x, 0);
+  const nil = { ...(plan.nil ?? {}) };
+  for (const id of fresh.slice().sort((a, b) => valueOf(byId.get(b)!, rs.nil!.market) - valueOf(byId.get(a)!, rs.nil!.market))) {
+    const want = nilSuggest(rs, team, byId.get(id)!);
+    const dollars = Math.max(0, Math.min(want, free));
+    nil[id] = dollars; free -= dollars;
+  }
+  return { ...plan, nil };
+}
+
 /** Interest a prospect needs from a school to commit (portal players less: rules). */
 export const commitNeed = (R: OffseasonRules, pr: Pick<Prospect, 'stars' | 'id' | 'fcs'>) => R.commitThreshold[pr.stars] * (isTransfer(pr) ? R.portalThreshold : 1);
 
@@ -631,6 +657,8 @@ export function runRecruitingWeek(d: Dynasty, rs0: RecruitingState, userPlans: R
   const r = seeded(seed, 100 + rs0.week);
   const rs: RecruitingState = { ...rs0, prospects: rs0.prospects.map((p) => ({ ...p, interest: { ...p.interest }, offers: p.offers.slice() })), log: rs0.log.slice(), plans: { ...rs0.plans, ...userPlans }, scouted: rs0.scouted ?? {}, scoutSpent: {}, reactions: JSON.parse(JSON.stringify(rs0.reactions ?? {})), ...(rs0.nil ? { nil: { ...rs0.nil, offers: Object.fromEntries(Object.entries(rs0.nil.offers).map(([t, o]) => [t, { ...o }])) } } : {}) };
   const ctx = weekContext(d, rs);
+  // The CPU manages the user teams' NIL (Dynasty.nil.auto): their new offers get its amounts.
+  if (rs0.nil && d.nil?.auto) userPlans = Object.fromEntries(Object.entries(userPlans).map(([t, p]) => [t, withAutoNil(rs0, Number(t), p)]));
   for (const [t, p] of Object.entries(userPlans)) {
     const bad = planProblems(R, p, rs0.scoutSpent?.[Number(t)] ?? 0, planCost(d, ctx, rs, Number(t), p));
     const fresh = newOffers(rs, Number(t), p).length, cap = offerCap(R, rs, Number(t)), out = offersOut(rs, Number(t));
