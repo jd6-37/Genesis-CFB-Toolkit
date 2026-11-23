@@ -247,14 +247,14 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
     await saveArt(d.id, pics);
     setArt(pics);
   }, [d]);
+  // The app menu on smaller screens (AppBar's button, Start on a controller); closes on a page change too.
+  const [menu, setMenu] = useState(false);
+  const closeMenu = useCallback(() => setMenu(false), []);
   const up = useUpgrade(d, commit, (y) => dlRef.current(y), refreshArt);
   const upLine = d ? upgradeLine(d, up.info) : null;
   // Light or dark: the reader's choice, kept in this browser (it's a preference, not part of a dynasty).
   const [dark, setDarkState] = useState(() => { try { return localStorage.getItem(THEME_KEY) === 'dark'; } catch { return false; } });
   const setDark = (on: boolean) => { setDarkState(on); try { localStorage.setItem(THEME_KEY, on ? 'dark' : 'light'); } catch { /* private mode: the choice lasts for this visit */ } };
-  // The app menu on smaller screens (AppBar's button, Start on a controller); closes on a page change too.
-  const [menu, setMenu] = useState(false);
-  const closeMenu = useCallback(() => setMenu(false), []);
   // The team picked in the masthead's team menu (with several of your teams), kept in this browser per dynasty.
   const [focus, setFocusState] = useState<number | undefined>(undefined);
   useEffect(() => {
