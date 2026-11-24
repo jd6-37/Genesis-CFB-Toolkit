@@ -924,11 +924,16 @@ export function uniformRom(d: Dynasty, rom: Uint8Array): Uint8Array {
   return out.data;
 }
 
-/** A season ROM's file name: the dynasty, the year and the season's ID (user, 2026-11-18: "…-my_dynasty-fxh834"). */
+/** A season ROM's file name: the base ROM's name, then the dynasty, the year and the season's ID (user, 2026-11-18:
+ *  "…-my_dynasty-fxh834"; 2026-11-23: "Bill Walsh College Football 95 (USA) [Elevated 2026 Season v2.2.0-rc.3]
+ *  ndsu_dynasty-2026-eqqavz.zip"). A season downloaded before keeps the name it had (romFile fixed with romId). */
 export const seasonRomName = (d: Dynasty, season: DSeason) => {
   const slug = d.name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'dynasty';
-  return `${slug}-${season.year}${season.romId ? `-${season.romId}` : ''}.md`;
+  const base = season.romId ? season.romFile : d.romFile;
+  return `${base ? `${base} ` : ''}${slug}-${season.year}-${season.romId ?? 'xxxxxx'}.md`;
 };
+/** A ROM file's name without its folder and extension ("… [Elevated 2026 Season v2.2.0-rc.3]"). */
+export const romStem = (fileName: string) => fileName.split(/[\\/]/).pop()!.replace(/\.(zip|md|bin|gen|smd)$/i, '').replace(/ \(\d+\)$/, '').trim();
 /** A new file name ID: six lowercase letters and digits. */
 export const newRomId = (rand: () => number = Math.random) => Array.from({ length: 6 }, () => 'abcdefghjkmnpqrstuvwxyz23456789'[Math.floor(rand() * 31)]).join('');
 

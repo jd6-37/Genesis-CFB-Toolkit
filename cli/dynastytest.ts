@@ -1590,4 +1590,17 @@ if (hasKits(rom)) {
   }
 }
 
+{
+  // Season ROM file names (user, 2026-11-23): the base ROM's name first; a season downloaded keeps its name.
+  const base = 'Bill Walsh College Football 95 (USA) [Elevated 2026 Season v2.2.0-rc.3]';
+  assert.equal(Off.romStem(`${base}.zip`), base);
+  assert.equal(Off.romStem(`C:\\roms\\${base} (1).md`), base);
+  const s0 = { year: 2026 } as any;
+  const dn = { name: 'NDSU Dynasty', romFile: base } as any;
+  assert.equal(Off.seasonRomName(dn, { ...s0, romId: 'eqqavz', romFile: base }), `${base} ndsu_dynasty-2026-eqqavz.md`);
+  assert.equal(Off.seasonRomName(dn, s0), `${base} ndsu_dynasty-2026-xxxxxx.md`);
+  assert.equal(Off.seasonRomName(dn, { ...s0, romId: 'eqqavz' }), 'ndsu_dynasty-2026-eqqavz.md');
+  ok('season ROM names: the base ROM first, a downloaded season keeps its name');
+}
+
 console.log(`\n${passed} passed`);

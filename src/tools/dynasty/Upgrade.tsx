@@ -6,7 +6,8 @@ import { Button, FileButton, Modal, Note } from '../../ui';
 import { readManifest } from '../../core/manifest';
 import { sha1Hex } from '../../core/bytes';
 import { openRom } from '../../core/romfile';
-import { applyListed, fetchPatchFile, fetchPatchList, offered, patchBase, PATCH_REPO_URL, refFromPage, type PatchList } from '../../core/patches';
+import { applyListed, fetchPatchFile, fetchPatchList, offered, patchBase, PATCH_REPO_URL, refFromPage, romFileName, type PatchList } from '../../core/patches';
+import { romStem } from '../../core/dynasty/offseason';
 import type { Dynasty } from '../../core/dynasty/model';
 import { editionOf } from '../../core/dynasty/edition';
 import { refreshRomAssets } from '../../core/dynasty/assets';
@@ -77,12 +78,13 @@ export function useUpgrade(d: Dynasty | null, commit: (next: Dynasty) => Promise
     try {
       const kept = await loadRom(d.id);
       let next: Uint8Array;
+      let nextName = '';
       let original: Uint8Array | null = null;
       if (file) {
         setWorking('Reading the ROM…');
         const rom = await openRom(file.name, new Uint8Array(await file.arrayBuffer()));
         if (rom.sha1 === ORIGINAL_SHA1) original = rom.data;
-        else next = rom.data;
+        else { next = rom.data; nextName = romStem(file.name); }
       } else {
         original = await loadOriginal();
         if (!original) throw new Error('Load the new ROM, or the original game.');
@@ -93,6 +95,7 @@ export function useUpgrade(d: Dynasty | null, commit: (next: Dynasty) => Promise
         const p = info?.offer?.patch ?? (list ? offered(list).find((x) => x.content === PATCH_CONTENT[edition] && x.fatigue === 'fixed') : undefined);
         if (!list || !p) throw new Error("The list of Elevated releases can't be read right now. Try again in a moment, or load the new Elevated ROM itself.");
         next = (await applyListed(original, p, await fetchPatchFile(patchBase(refFromPage(window.location.search)), p))).data;
+        nextName = romStem(romFileName(p.file!));
       }
       setWorking('Building your ROM…');
       const problem = upgradeRomProblem(d, kept, next!);
@@ -101,7 +104,8 @@ export function useUpgrade(d: Dynasty | null, commit: (next: Dynasty) => Promise
       if (original && file) await saveOriginal(original);
       setMidSeason(seasonStarted(d));
       // The new version's logos, helmets, colors and uniforms (assets.ts; the user's uniform changes stay on top).
-      await commit(refreshRomAssets(applyUpgrade(d, kept, next!), next!));
+      // Season ROM names follow the new version from the next season's first download (romFile, offseason.ts).
+      await commit({ ...refreshRomAssets(applyUpgrade(d, kept, next!), next!), ...(nextName ? { romFile: nextName } : {}) });
       await refreshArt?.(next!);
       setMade(readManifest(next!)?.name ?? 'the new version');
       setStage('done');

@@ -150,6 +150,9 @@ export interface DSeason {
   kitsEdited?: boolean;
   /** The season ROM's file name ID (user, 2026-11-18: "…-my_dynasty-fxh834"), made at the first download; the same for the season's later downloads, so the save stays with the file. */
   romId?: string;
+  /** The base ROM's file name (without extension) this season's ROM file name starts with, fixed with romId at its
+   *  first download so a re-download keeps the same name (user, 2026-11-23). Older seasons have none. */
+  romFile?: string;
   /** The base ROM's build (H-033): at creation for the first season, at each download of the season ROM after. */
   romBuild?: RomBuild;
   /** A newer Elevated version taken mid-season (upgrade.ts): waits until a save from the new ROM is imported. */
@@ -204,6 +207,10 @@ export interface BwSlot {
 }
 
 export interface Dynasty {
+  /** The file name (without extension) of the ROM the dynasty builds on, e.g. "Bill Walsh College Football 95 (USA)
+   *  [Elevated 2026 Season v2.2.0-rc.3]": season ROMs are named after it (user, 2026-11-23). Set at creation, upgrade
+   *  and Manage's "Update logos and uniforms from a ROM". */
+  romFile?: string;
   app: typeof DYNASTY_FILE.app;
   tool: typeof DYNASTY_FILE.tool;
   version: number;
