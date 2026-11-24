@@ -172,6 +172,9 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
   // The v8 numbers for a dynasty made on a v8 ROM (ratings.ts), set before any page renders a rating.
   setRatingScale(d?.ratingsV === 8);
   const [art, setArt] = useState<TeamArt[] | null>(null);
+  // A dynasty file opened in a browser that has neither its logos nor its ROM (user, 2026-11-24: moved to another
+  // browser, then no logos; "it's not intuitive to do it after the fact"): a window asks for the ROM right away.
+  const [askRom, setAskRom] = useState(false);
   const [note, setNote] = useState<Note>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -326,7 +329,10 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       await saveRom(d.id, rom);
       setArt(pics);
       await commit({ ...refreshRomAssets(d, rom), romFile: romStem(romFile.name) });
-      setNote({ kind: 'ok', text: `Logos, helmets, colors and uniforms updated from ${romFile.name}. They reach the game with the next ROM you download from the app.` });
+      setAskRom(false);
+      setNote({ kind: 'ok', text: art
+        ? `Logos, helmets, colors and uniforms updated from ${romFile.name}. They reach the game with the next ROM you download from the app.`
+        : `Team logos added from ${romFile.name}, and the app builds your season ROMs on it.` });
     }),
     exportFile: () => { if (d) void backupRef.current(d); },
     importFile: (f) => run('Opening the dynasty file…', async () => {
@@ -334,7 +340,9 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       await saveDynasty(dyn);
       await open(dyn.id);
       await refresh();
-      setNote({ kind: 'ok', text: `${dyn.name} opened. Load your ROM below to show the team logos.` });
+      const [pics, rom] = await Promise.all([loadArt(dyn.id), loadRom(dyn.id).catch(() => null)]);
+      setNote({ kind: 'ok', text: `${dyn.name} opened.` });
+      if (!pics || !rom) setAskRom(true);
     }),
     open: (id) => run('Opening…', async () => {
       await open(id);
@@ -538,7 +546,23 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
         {note && page !== 'manage' && <Note kind={note.kind}>{note.text}</Note>}
         <Ctx.Provider value={ctx}>{body}</Ctx.Provider>
         {up.modal}
-        {d && !d.offseason && (d.seasons.length > 1 || d.seasonOneRom) && page !== 'setup' && (() => {
+        {d && askRom && (
+          <Modal
+            title="Load your ROM"
+            onClose={() => setAskRom(false)}
+            actions={<>
+              <FileButton label="Load ROM" accept=".md,.bin,.gen,.zip" disabled={!!busy} onFile={actions.addArt} />
+              <Button variant="quiet" onClick={() => setAskRom(false)}>Later</Button>
+            </>}
+          >
+            <p>
+              A dynasty file doesn't carry the team logos or the ROM the app builds your season ROMs on, so this browser
+              doesn't have them yet. Load the Elevated ROM {d.name} plays on (the release .zip works).
+            </p>
+            <p className="dy-small dy-dim">Later: Manage, Team logos and uniforms, Load ROM for logos.</p>
+          </Modal>
+        )}
+        {d && !askRom && !d.offseason && (d.seasons.length > 1 || d.seasonOneRom) && page !== 'setup' && (() => {
           // The new season's ROM (user, 2026-11-12: the download "needs to be VERY obvious, like a modal window"):
           // asks until it's downloaded or the season's first save is imported; "Later" hides it until the next visit.
           const s = d.seasons[d.seasons.length - 1];
@@ -562,7 +586,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
             </Modal>
           );
         })()}
-        {d && stale && staleAt !== null && staleAt !== here && staleLater !== stale.key && page !== 'offseason' && page !== 'setup' && (() => {
+        {d && !askRom && stale && staleAt !== null && staleAt !== here && staleLater !== stale.key && page !== 'offseason' && page !== 'setup' && (() => {
           const s = d.seasons[d.seasons.length - 1];
           const name = seasonRomName(d, s);
           return (

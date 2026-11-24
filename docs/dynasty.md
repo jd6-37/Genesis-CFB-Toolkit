@@ -597,3 +597,7 @@ Name, image and likeness money, for the 2026 edition only (`src/core/dynasty/nil
 - Team page **NIL** tab: budget, payroll, room, boosters and donor, the CPU switch, the highest paid players. Player pages: his NIL pay, and "Came up from X (FCS)" for FCS transfers. Home (offseason): next season's budget per user team. Top classes: **Recruiting classes / Transfer classes**.
 - Walsh Reports mention NIL only when notable: the richest school, and the top-paid player of a position group (`moneyWords`, as the game font has no $).
 - `npm run test:nil -- ELEVATED_2026_138`: on and off, CPU-managed offers within the room, an offer over the room refused, pay after signing day.
+
+## Opening a dynasty file in another browser (2026-11-24)
+
+The dynasty file carries neither the team art nor the base ROM (both stay in the browser's IndexedDB). The user moved a new dynasty to another browser, imported a save and saw no logos; chose to be asked right away ("it's not intuitive to do it after the fact") over putting the art in the file (+~1 MB). `importFile` in `DynastyApp.tsx`: after opening, if `loadArt` or `loadRom` has nothing for the dynasty, the **Load your ROM** window opens (`askRom`): Load ROM runs `addArt` (logos, the kept ROM, colors and uniforms; `assetRomProblem` still refuses another build: use Upgrade), Later closes it (Manage's Team logos and uniforms still offers it). The season ROM download and out-of-date windows wait while it's open.
