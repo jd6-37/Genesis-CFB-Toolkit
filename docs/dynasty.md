@@ -84,7 +84,7 @@ RetroArch's Genesis Plus GX core writes a 65,456-byte `.srm`: cartridge save RAM
 
 A record still all FF has never been cleared and reads as zeros. Passing and receiving add up across the league but not always per team (the game sometimes credits a catch without a completion).
 
-Week names follow the game: with the Real 2026 schedule the first week is Week 0; after the regular season come the conference championships and then the playoff rounds (1, 2, 4 or 5 rounds for 2, 4, 12 or 24 teams).
+Week names start at Week 0, always (user, 2026-11-26: "Let's use week 0 everywhere"; the game does the same from the ROM lane's H-061 build); after the regular season come the conference championships and then the playoff rounds (1, 2, 4 or 5 rounds for 2, 4, 12 or 24 teams).
 
 ## The dynasty
 
@@ -617,3 +617,10 @@ User: "We should show all teams on the Top 25 page. But make #26 and beyond a di
 ## Team page Stats tab: View all (2026-11-26)
 
 User: "On the Team page, Stats page, below each section have a View All link that takes you to the main Stats page respective category, filtered by the team". `StatTables` takes `team` (only the Team page passes it; the player page doesn't): each table ends with **View all** to `#stats/players/<cat>/team=<team>`.
+
+## Week 0 everywhere, a light Week 0 and the Kickoff Classic (2026-11-26)
+
+User: "Let's use week 0 everywhere. But can you make week 0 a light week (not a lot of games) like it is IRL when you generate schedules in the app?", then "Can we have a Kickoff Classic game in Week 0? … I think it's usually a big sec vs big ten or big 12 team" (the 1983-2002 Kickoff Classic at Giants Stadium had big programs of any conference: Nebraska-Penn State, Alabama-Ohio State, Miami-Ohio State, Notre Dame-Maryland …; today's Week 0 has 8 FBS games, 2026's opener North Carolina-TCU in Dublin).
+- `weekName`: regular weeks are `Week <index>`, whatever the save's real-schedule flag. Schedule editor, protected-rivalry messages and Walsh Reports' "Week N brings …" use the same numbers. Until H-061, the game itself still numbers a dynasty schedule (SCH1) from Week 1 (DYNGEN clears SB_FLAGS bit 1) and Random from Week 1.
+- `makeSchedule` (`addWeekZero`): the app's usual 12 (1994: 11) weeks move a week later; the Kickoff Classic (one of the four strongest SEC teams by prestige against one of the four strongest Big Ten / Big 12 teams, 1994 Big Ten / Big Eight / Southwest; site at random) and 7 (1994: 3) more non-conference games, weighted toward teams outside the power conferences, move to Week 0; each of those teams has a bye in the week its game left (the Classic's teams' opponents that week play each other), so every team still plays 12 (11). `DSchedule.week0`, `DSchedule.kickoff`; `weeks` 13 (12). Rivalries' wanted weeks (RivalriesEditor) count the weeks after Week 0, so a wanted "Week 4" is index 4. Scores names the Classic on its card.
+- Emulator: a season-2 ROM on 2026 v2.2.0-rc.3 with such a schedule (13 regular weeks): New Season plays it, Week 0's 8 games and Week 1's 67 simmed; the postseason follows (18 weeks in all).

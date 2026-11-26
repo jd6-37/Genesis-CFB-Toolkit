@@ -262,6 +262,9 @@ export function Scores({ week: asked }: { week?: number }) {
   // Ranks as the teams went into this week's games (user, 2026-11-26), not today's. A week no imported save covers
   // shows today's ranks in another color (user: "I'd rather show something than nothing").
   const kick = kickoffRanks(d, v.season)[week] ?? null;
+  // Week 0's Kickoff Classic (schedule.ts addWeekZero), named on its card.
+  const ko = v.season.schedule?.kickoff;
+  const isKickoff = (g: { week: number; home: number | null; visitor: number | null }) => !!ko && g.week === 0 && ((g.home === ko.home && g.visitor === ko.visitor) || (g.home === ko.visitor && g.visitor === ko.home));
   const ranks = kick ?? v.rank;
   return (
     <section>
@@ -285,7 +288,7 @@ export function Scores({ week: asked }: { week?: number }) {
                 </div>
               );
             })}
-            <div className="dy-game-state">{g.vs !== null ? 'Final' : 'Not played yet'}</div>
+            <div className="dy-game-state">{isKickoff(g) && <><strong>Kickoff Classic</strong>, </>}{g.vs !== null ? 'Final' : 'Not played yet'}</div>
           </div>
         ))}
       </div>

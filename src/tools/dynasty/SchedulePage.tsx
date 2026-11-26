@@ -58,13 +58,13 @@ export function ScheduleEditor({ arg, setup }: { arg?: string; /** In setup (Set
     const old = rows[week]?.opp ?? null;
     const oldOfNew = teamSchedule(sched, opp)[week]?.opp ?? null;
     void change((s) => setOpponent(s, week, team, opp), () =>
-      `Week ${week + 1}: ${name(team)} plays ${name(opp)}; ` +
+      `Week ${week}: ${name(team)} plays ${name(opp)}; ` +
       (old !== null && oldOfNew !== null ? `${name(old)} plays ${name(oldOfNew)} instead.` : `${name(old ?? oldOfNew!)} has the bye instead.`));
   };
   const pickWeek = (from: number, to: number) => {
     const a = rows[from]!.opp, b = rows[to]!.opp;
     void change((s) => moveGame(s, team, from, to), () =>
-      `${name(a)} moves to week ${to + 1} and ${name(b)} to week ${from + 1}; their other games those weeks switch too.`);
+      `${name(a)} moves to week ${to} and ${name(b)} to week ${from}; their other games those weeks switch too.`);
   };
   const remake = async () => {
     setConfirmNew(false);
@@ -84,7 +84,7 @@ export function ScheduleEditor({ arg, setup }: { arg?: string; /** In setup (Set
       />
       <p className="dy-small dy-dim">
         {sched.real ? `The real ${season.year} schedule: teams play 10 to 12 games in 14 weeks, with byes.` : 'Made with the game\'s rules for random schedules, with the traditional rivalries kept every season.'}
-        {lock ? '' : ' Change an opponent, a week or home and away: the teams your change leaves without a game that week play each other, so everyone still plays every week.'}
+        {lock ? '' : ' Change an opponent, a week or home and away: the teams your change leaves without a game that week play each other, so everyone keeps the same number of games. Week 0 is a light week: most teams have it off.'}
       </p>
       {lock && <Note>{lock}</Note>}
       {note && <Note kind={note.kind}>{note.text}</Note>}
@@ -101,7 +101,7 @@ export function ScheduleEditor({ arg, setup }: { arg?: string; /** In setup (Set
         <span>{check.homeGames[team]} at home</span>
       </p>
       {myMissing.length > 0 && <Note>Not on the schedule: {myMissing.map(([a, b]) => rivalryOf(name(a), name(b)) ?? `${name(a)} vs. ${name(b)}`).join(', ')}.</Note>}
-      {myOffWeek.length > 0 && <Note>Not in its week: {myOffWeek.map(([a, b, w]) => `${rivalryOf(name(a), name(b)) ?? `${name(a)} vs. ${name(b)}`} (week ${w + 1})`).join(', ')}.</Note>}
+      {myOffWeek.length > 0 && <Note>Not in its week: {myOffWeek.map(([a, b, w]) => `${rivalryOf(name(a), name(b)) ?? `${name(a)} vs. ${name(b)}`} (week ${w})`).join(', ')}.</Note>}
       {myRepeats.length > 0 && <Note>Plays twice: {myRepeats.map(([a, b]) => name(a === team ? b : a)).join(', ')}.</Note>}
 
       <ol className="dy-sched-list">
@@ -110,11 +110,11 @@ export function ScheduleEditor({ arg, setup }: { arg?: string; /** In setup (Set
             // A bye (the 1994 Season Edition's 107 teams leave one team out each week): the user may still give his team a game.
             return (
               <li key={w}>
-                <span className="dy-sched-week">Week {w + 1}</span>
+                <span className="dy-sched-week">Week {w}</span>
                 {lock ? <span className="dy-dim">Bye</span> : (
                   <div className="dy-sched-game">
                     <Select
-                      label={`Week ${w + 1} opponent`} hideLabel value={-1}
+                      label={`Week ${w} opponent`} hideLabel value={-1}
                       options={[
                         { value: -1, label: 'Bye' },
                         ...confTeams.map((t) => ({ value: t.index, label: t.school, group: 'Conference' })),
@@ -133,15 +133,15 @@ export function ScheduleEditor({ arg, setup }: { arg?: string; /** In setup (Set
           if (riv) tags.push(isProtected.has(`${Math.min(team, g.opp)}-${Math.max(team, g.opp)}`) ? `${riv} (every season)` : riv);
           return (
             <li key={w}>
-              <span className="dy-sched-week">Week {w + 1}</span>
+              <span className="dy-sched-week">Week {w}</span>
               <div className="dy-sched-game">
                 {lock ? (
                   <span>{g.home ? 'vs.' : 'at'} <TeamLink team={g.opp} rank={false} /></span>
                 ) : (
                   <div className="dy-sched-edit">
-                    <Button variant="quiet" label={`Week ${w + 1}: ${g.home ? 'home' : 'away'}, switch`} onClick={() => void change((s) => flipHome(s, w, team), () => `Week ${w + 1}: ${g.home ? 'at' : 'vs.'} ${name(g.opp)}.`)}>{g.home ? 'vs.' : 'at'}</Button>
+                    <Button variant="quiet" label={`Week ${w}: ${g.home ? 'home' : 'away'}, switch`} onClick={() => void change((s) => flipHome(s, w, team), () => `Week ${w}: ${g.home ? 'at' : 'vs.'} ${name(g.opp)}.`)}>{g.home ? 'vs.' : 'at'}</Button>
                     <Select
-                      label={`Week ${w + 1} opponent`} hideLabel value={g.opp}
+                      label={`Week ${w} opponent`} hideLabel value={g.opp}
                       options={[
                         ...confTeams.map((t) => ({ value: t.index, label: t.school, group: 'Conference' })),
                         ...restTeams.map((t) => ({ value: t.index, label: t.school, group: 'Other teams' })),
@@ -149,8 +149,8 @@ export function ScheduleEditor({ arg, setup }: { arg?: string; /** In setup (Set
                       onChange={(x) => pickOpponent(w, Number(x))}
                     />
                     <Select
-                      label={`Move the week ${w + 1} game`} hideLabel value={w}
-                      options={Array.from({ length: weeksOf(sched) }, (_, k) => k).filter((k) => k === w || rows[k]).map((k) => ({ value: k, label: k === w ? `Week ${k + 1}` : `Move to week ${k + 1}` }))}
+                      label={`Move the week ${w} game`} hideLabel value={w}
+                      options={Array.from({ length: weeksOf(sched) }, (_, k) => k).filter((k) => k === w || rows[k]).map((k) => ({ value: k, label: k === w ? `Week ${k}` : `Move to week ${k}` }))}
                       onChange={(x) => pickWeek(w, Number(x))}
                     />
                   </div>

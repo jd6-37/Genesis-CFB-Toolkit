@@ -886,6 +886,8 @@ export function finishOffseason(d: Dynasty): Dynasty {
       edition: editionOf(d).id,
       rivalries: rivalriesOf(d),
       divisions: seasonDivisions(d, prev),
+      strength: st.prestige ?? seasonPrestige(d, prev),
+      confNames: prev.confNames,
     }),
     ...depthChart(withNumbers),
     prestige: st.prestige ?? seasonPrestige(d, prev),

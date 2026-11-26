@@ -7,6 +7,7 @@
 // (seasonRom → writeConferences), so the game's standings, title games and, in the 1994 edition, bowl invitations
 // follow them. Each season keeps its own conferences, so earlier seasons' standings stay as they were.
 
+import { seasonPrestige } from './prestige';
 import { readWideSeason, wideSeasonIssues, wideSeasonProblems, writeWideSeason, type WideSeason } from '../seasonWide';
 export { SEC_EAST_1994 } from '../seasonWide';
 import { editionOf } from './edition';
@@ -107,6 +108,8 @@ export function setConferences(d: Dynasty, next: ConfSetup): Dynasty {
       edition: editionOf(d).id,
       rivalries: rivalriesOf(d),
       divisions: seasonDivisions(d, season),
+      strength: seasonPrestige(d, s),
+      confNames: season.confNames,
     });
   }
   return { ...d, seasons: [...d.seasons.slice(0, -1), season] };
