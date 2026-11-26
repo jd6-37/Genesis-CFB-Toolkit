@@ -16,6 +16,7 @@ import { offseasonStories, stories, type Story } from '../../core/dynasty/news';
 import { preseasonPoll } from '../../core/dynasty/poll';
 import { kickoffRanks } from '../../core/dynasty/kickoffRanks';
 import { kickoffOf } from '../../core/dynasty/schedule';
+import { StoryLink } from './StoryWindows';
 import { OffseasonSide, PreseasonTop25, SeasonMore, SeasonSide } from './HomeSide';
 import { AddPlayer, EditLook, EditPlayer } from './EditPlayer';
 import { prestigeStars } from '../../core/dynasty/offseason';
@@ -90,44 +91,6 @@ function Ticker() {
   );
 }
 
-/**
- * A story's headline as a link (user, 2026-11-12): a player of the week opens a window with his game; stories
- * about a player (stat leaders, milestones) go to his page; the rest to the team.
- */
-function StoryLink({ s }: { s: Story }) {
-  const [open, setOpen] = useState(false);
-  if (s.box && s.player) {
-    return (
-      <>
-        <a href={href(`player/${s.player}`)} onClick={(e) => { e.preventDefault(); setOpen(true); }}>{s.headline}</a>
-        {open && <StoryBox s={s} onClose={() => setOpen(false)} />}
-      </>
-    );
-  }
-  return <a href={href(s.player ? `player/${s.player}` : `team/${s.teams[0]}`)}>{s.headline}</a>;
-}
-
-/** A player of the week's game: the result and his stat lines, with a link to his page. */
-function StoryBox({ s, onClose }: { s: Story; onClose: () => void }) {
-  const { d, v } = useDyn();
-  const p = d.players[s.player! - 1];
-  return (
-    <Modal
-      title={playerName(p)} onClose={onClose} media={<Headshot p={p} size={64} />}
-      sub={<>#{p.jersey} {p.pos}, <TeamLink team={s.teams[0]} rank={false} size={16} /></>}
-      actions={<><Button href={href(`player/${p.id}`)} onClick={onClose}>Player page</Button><Button variant="quiet" onClick={onClose}>Close</Button></>}
-    >
-        <p className="dy-small">{s.headline}{s.box!.result ? `: ${s.box!.result}` : ''}.</p>
-        {s.box!.lines.map((l) => (
-          <Table key={l.cat} figures className="dy-box-table">
-            <thead><tr><th className="ui-left">{l.cat}</th>{l.cells.map(([k]) => <th key={k}>{k}</th>)}</tr></thead>
-            <tbody><tr><td className="ui-left dy-dim">{weekName(v, s.week)}</td>{l.cells.map(([k, v]) => <td key={k}>{v}</td>)}</tr></tbody>
-          </Table>
-        ))}
-    </Modal>
-  );
-}
-
 export function Home() {
   const { d, v } = useDyn();
   // In the offseason (and before the first game of a season) the news is the offseason's.
@@ -164,19 +127,7 @@ export function Home() {
           {v.save && <HomePoll />}
         </div>
         <aside className="dy-front-side">
-          {heads.length > 0 && (
-            <section>
-              <SubHead level={2}>Headlines</SubHead>
-              <ul className="dy-headlines">
-                {heads.map((s) => (
-                  <li key={s.id}>
-                    <StoryLink s={s} />
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-          <YourTeams />
+          <SideHeads heads={heads} />
           <SeasonSide />
           <OffseasonSide />
         </aside>
@@ -186,6 +137,41 @@ export function Home() {
       <WhatsNext />
     </>
   );
+}
+
+/**
+ * The sidebar's headlines. Your teams' stories keep their place and are highlighted like your team everywhere else
+ * (the ticker, standings): the highlight color, a bar and the team's logo (user, 2026-11-26, option B).
+ */
+function SideHeads({ heads }: { heads: Story[] }) {
+  const { d } = useDyn();
+  return (
+    <>
+      {heads.length > 0 && (
+        <section>
+          <SubHead level={2}>Headlines</SubHead>
+          <ul className="dy-headlines">
+            {heads.map((s) => {
+              const t = mineOf(d.userTeams, s);
+              return (
+                <li key={s.id} className={t !== null ? 'dy-head-mine' : undefined}>
+                  {t !== null && <TeamMark team={t} size={16} />}
+                  <StoryLink s={s} />
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
+      <YourTeams />
+    </>
+  );
+}
+
+/** The user team a story is about, if any: either team of a game; otherwise the story's own team. */
+export function mineOf(users: number[], s: Story): number | null {
+  const own = s.game !== undefined || s.kind === 'unbeaten' ? s.teams : s.teams.slice(0, 1);
+  return own.find((t) => users.includes(t)) ?? null;
 }
 
 /** The Top 25 on the front page: on wider screens the top four as cards, the rest in columns. */
