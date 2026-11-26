@@ -80,8 +80,10 @@ export function seasonView(d: Dynasty, season: DSeason): SeasonView {
 /** The name of a week as the game shows it. */
 export function weekName(v: SeasonView, week: number): string {
   const s = v.save?.season;
-  if (!s) return `Week ${week + 1}`;
-  if (week <= s.lastRegularWeek) return `Week ${s.realSchedule ? week : week + 1}`;
+  // Week 0 first, always (user, 2026-11-26: "Let's use week 0 everywhere"), as the real calendar and, from the ROM
+  // lane's H-061 build, the game's every schedule.
+  if (!s) return `Week ${week}`;
+  if (week <= s.lastRegularWeek) return `Week ${week}`;
   // 1994: the bowl week last; before it (test31 on) the title game week: the ROM's name for it is "SEC Championship"
   // when the SEC's is the only title game (the default), else conference title games (test33's switches, H-011).
   if (v.bowls) {

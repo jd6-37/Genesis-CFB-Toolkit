@@ -15,7 +15,7 @@ import { setSim, simOf, setStats } from '../src/core/dynasty/seasonSim';
 import { STATS_DEFAULTS, readSimStats } from '../src/core/simStats';
 import { SIM_DEFAULTS, readSimSettings, simForRom, type SimSettings } from '../src/core/simSettings';
 import { careerRecords, teamRecords } from '../src/core/dynasty/records';
-import { checkSchedule, editSchedule, flipHome, moveGame, protectedPairs, remakeSchedule, SCHED_WEEKS, setOpponent, teamSchedule, type SchedGame } from '../src/core/dynasty/schedule';
+import { checkSchedule, editSchedule, flipHome, moveGame, protectedPairs, remakeSchedule, SCHED_WEEKS, weeksOf, setOpponent, teamSchedule, type SchedGame } from '../src/core/dynasty/schedule';
 import { AWARD_SPOTS, AWARD_STATS_WEIGHT, POSITION_AWARDS, awardsOf, candidates, playerHonors, seasonAwards } from '../src/core/dynasty/awards';
 import { readFileSync, writeFileSync } from 'node:fs';
 import type { CoachData } from '../src/core/dynasty/coachData';
@@ -941,8 +941,10 @@ ok(`sim: a recruiting week, the rest, the cuts, the whole offseason (${act(g4).f
   const sc = r1.seasons[1].schedule!;
   const at = (n: string) => schools.indexOf(n);
   const inWeek = (a: string, b: string, w: number) => sc.games.some((x) => x.week === w && [x.visitor, x.home].sort().join() === [at(a), at(b)].sort().join());
-  assert.ok(inWeek('Alabama', 'Auburn', 3), 'Alabama-Auburn in week 4');
-  assert.ok(inWeek('Oregon', 'Hawaii', 0), 'a new rivalry in week 1');
+  // A rivalry's week counts the app's weeks without Week 0, so a schedule with Week 0 has it a week later.
+  const z = sc.week0 ? 1 : 0;
+  assert.ok(inWeek('Alabama', 'Auburn', 3 + z), 'Alabama-Auburn in week 4');
+  assert.ok(inWeek('Oregon', 'Hawaii', 0 + z), 'a new rivalry in week 1');
   const ck = checkSchedule(sc, schools, r1.seasons[1].conf, undefined, rivalriesOf(r1));
   assert.deepEqual(ck.broken, []);
   assert.deepEqual(ck.missing, []);
@@ -1098,8 +1100,20 @@ ok('season rosters written to the dynasty area and read back');
   assert.ok(ck.repeats.length <= 2, `repeats ${ck.repeats.length}`);
   const pairs = protectedPairs(schools);
   assert.ok(pairs.length >= 40, `protected pairs (${pairs.length})`);
-  const inLast = (a: number, b: number) => sc.games.some((g) => g.week === SCHED_WEEKS - 1 && ((g.visitor === a && g.home === b) || (g.visitor === b && g.home === a)));
+  const inLast = (a: number, b: number) => sc.games.some((g) => g.week === weeksOf(sc) - 1 && ((g.visitor === a && g.home === b) || (g.visitor === b && g.home === a)));
   const finales = pairs.filter((p) => p.week === SCHED_WEEKS - 1);
+  // Week 0 and the Aflac Kickoff Game (user, 2026-11-26): 8 Week 0 games; Week 1's SEC team against an ACC (or Big Ten /
+  // Big 12) team; nobody short of 12 games.
+  assert.ok(sc.week0 && weeksOf(sc) === 13 && sc.games.filter((g) => g.week === 0).length === 8, 'a light Week 0 of 8 games');
+  assert.equal(sc.kickoffs?.length, 1, 'one Aflac Kickoff Game a season');
+  const ko = sc.kickoffs?.[0];
+  assert.ok(ko && ko.name === 'Aflac Kickoff Game' && ko.week === 1, 'the Aflac Kickoff Game in Week 1');
+  const kc = [next.confNames[next.conf[ko!.visitor]], next.confNames[next.conf[ko!.home]]];
+  assert.ok(kc.includes('SEC') && kc.some((c) => ['ACC', 'Big Ten', 'Big 12'].includes(c)), `its conferences (${kc.join(' / ')})`);
+  assert.ok(sc.games.some((g) => g.week === 1 && [g.visitor, g.home].sort().join() === [ko!.visitor, ko!.home].sort().join()));
+  const per = new Map<number, number>();
+  for (const g of sc.games) for (const t of [g.visitor, g.home]) per.set(t, (per.get(t) ?? 0) + 1);
+  assert.ok([...per.values()].every((n) => n === 12), 'every team 12 games');
   assert.ok(finales.every((p) => inLast(p.a, p.b)), 'the finales in the last week');
   const cw = next.confWeeks!;
   const short = schools.filter((_, t) => next.conf[t] !== INDEPENDENT && ck.confGames[t] < cw.games[next.conf[t]] - 1);

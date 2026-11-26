@@ -196,7 +196,7 @@ assert.equal(imp.warning, undefined);
 const d1 = imp.dynasty;
 const v = seasonView(d1, d1.seasons[0]);
 assert.ok(v.bowls && playoffSize(v) === 0, 'bowls, no playoff');
-assert.equal(weekName(v, 0), save.season!.realSchedule ? 'Week 0' : 'Week 1');
+assert.equal(weekName(v, 0), 'Week 0'); // Week 0 first, always (user, 2026-11-26)
 const post = v.weeks - 1 - v.lastRegularWeek; // 1: the bowls; 2: the SEC Championship Game, then the bowls (test31 on)
 if (save.season!.postseason) {
   assert.ok(post === 1 || post === 2, 'one or two postseason weeks');
@@ -232,28 +232,41 @@ assert.ok(pairs.length >= 40, 'the 1994 protected rivalries');
 let finalesIn = 0, finales = 0;
 for (let seed = 1; seed <= 20; seed++) {
   const sc = makeSchedule({ schools: schoolList, conf: season.conf, confWeeks: { start: season.start, games: season.games }, seed, weeks: 11, edition: '1994' });
-  assert.equal(weeksOf(sc), 11);
+  assert.equal(weeksOf(sc), 12, 'Week 0 and the 11');
   const chk = checkSchedule(sc, schoolList, season.conf, '1994');
   assert.deepEqual(chk.broken, [], 'one game a week, one bye a week (107 teams)');
   assert.deepEqual(chk.missing, [], 'every protected rivalry');
   assert.equal(sc.games.length, 11 * 53);
   for (const p of pairs.filter((x) => x.week === 10)) {
     finales++;
-    if (sc.games.some((g) => g.week === 10 && ((g.visitor === p.a && g.home === p.b) || (g.visitor === p.b && g.home === p.a)))) finalesIn++;
+    if (sc.games.some((g) => g.week === 11 && ((g.visitor === p.a && g.home === p.b) || (g.visitor === p.b && g.home === p.a)))) finalesIn++;
   }
   const set = scheduleSet(sc);
-  assert.equal(set[4], 11, 'the set says 11 weeks');
+  assert.equal(set[4], 12, 'the set says 12 weeks (Week 0 and 11)');
+  // The Kickoff Classic in Week 0 (user, 2026-11-26): two strong programs from different conferences, 4 Week 0 games.
+  const sk = makeSchedule({ schools: schoolList, conf: season.conf, confWeeks: { start: season.start, games: season.games }, seed, weeks: 11, edition: '1994', strength: season.conf.map((_, t) => (t * 37) % 6 + 1), confNames: season.names });
+  const kc = sk.kickoffs?.[0];
+  assert.ok(kc && kc.name === 'Kickoff Classic' && kc.week === 0 && season.conf[kc.visitor] !== season.conf[kc.home], 'the Kickoff Classic');
+  assert.equal(sk.games.filter((g) => g.week === 0).length, 4);
+  // Both from the top half of their conferences (fewer stronger teams than half of it).
+  const st = season.conf.map((_, t) => (t * 37) % 6 + 1);
+  for (const t of [kc!.visitor, kc!.home]) {
+    const mates = season.conf.map((c, u) => (c === season.conf[t] ? u : -1)).filter((u) => u >= 0);
+    assert.ok(mates.filter((u) => st[u] > st[t]).length < Math.ceil(mates.length / 2), `Kickoff Classic team ${t} in its conference's top half`);
+  }
+  assert.deepEqual(checkSchedule(sk, schoolList, season.conf, '1994').broken, []);
 }
 assert.ok(finalesIn / finales > 0.95, `finales in week 11 (${finalesIn} of ${finales})`);
 // A bye: the user's team takes a game in its bye week; the other team's old opponent gets the bye.
 const sc = makeSchedule({ schools: schoolList, conf: season.conf, confWeeks: { start: season.start, games: season.games }, seed: 3, weeks: 11, edition: '1994' });
-const byeTeam = schoolList.findIndex((_, t) => teamSchedule(sc, t).some((x) => x === null));
-const byeWeek = teamSchedule(sc, byeTeam).findIndex((x) => x === null);
-const opp = schoolList.findIndex((_, t) => t !== byeTeam && teamSchedule(sc, t)[byeWeek] !== null && !teamSchedule(sc, t).some((x) => x?.opp === byeTeam));
+// (Week 0 aside: most teams don't play then; take a bye in the 11 weeks of a team that doesn't.)
+const byeTeam = schoolList.findIndex((_, t) => teamSchedule(sc, t)[0] === null && teamSchedule(sc, t).some((x, w) => w > 0 && x === null));
+const byeWeek = teamSchedule(sc, byeTeam).findIndex((x, w) => w > 0 && x === null);
+const opp = schoolList.findIndex((_, t) => t !== byeTeam && teamSchedule(sc, t)[0] === null && teamSchedule(sc, t)[byeWeek] !== null && !teamSchedule(sc, t).some((x) => x?.opp === byeTeam));
 const sc2 = setOpponent(sc, byeWeek, byeTeam, opp);
 assert.equal(teamSchedule(sc2, byeTeam)[byeWeek]!.opp, opp);
 assert.deepEqual(checkSchedule(sc2, schoolList, season.conf, '1994').broken, []);
-ok(`schedules: 11 weeks with a bye a week, the 1994 rivalries, ${finalesIn} of ${finales} finales in week 11, bye edits`);
+ok(`schedules: Week 0 and 11 weeks with a bye a week, the 1994 rivalries, ${finalesIn} of ${finales} finales in week 11, bye edits`);
 
 // ---- the offseason and the 1995 season
 const o = Off.startOffseason(d1, { seed: 21, force: true });
@@ -261,12 +274,12 @@ const d2 = Sim.simOffseason(o, Off.recruitTemplates(o));
 coachChecks(d1, ok, { seasonRom: (x) => Off.seasonRom(x, x.seasons[0], rom, 1_800_000_000_000), offseason: { at: o, finish: (x) => Sim.simOffseason(x, Off.recruitTemplates(x)) } });
 const s2 = d2.seasons[1];
 assert.equal(s2.year, 1995);
-assert.equal(weeksOf(s2.schedule), 11);
+assert.equal(weeksOf(s2.schedule), 12);
 assert.deepEqual(checkSchedule(s2.schedule!, schoolList, s2.conf, '1994').broken, []);
 assert.ok(d2.players.filter((p) => p.recruit && p.recruit.year === 1995).every((p) => p.first && p.last), 'new players have names');
 const out2 = Off.seasonRom(d2, s2, rom, 1_800_000_100_000);
 const sa = scheduleAddress(out2)!;
-assert.equal(out2[sa + 4], 11);
+assert.equal(out2[sa + 4], 12);
 assert.equal(readStamp(out2.subarray(DYN_AREA, DYN_AREA + 16))!.season, 2);
 // Walsh Reports and the preseason poll for 1995 (the 1994 edition's bowls, its 107 teams), in the season ROM.
 {
@@ -336,11 +349,12 @@ ok(`offseason: ${d2.players.filter((p) => p.status === 'active').length} players
   const sc = r1.seasons[1].schedule!;
   const at = (n: string) => schoolList.indexOf(n);
   const inWeek = (a: string, b: string, w: number) => sc.games.some((x) => x.week === w && [x.visitor, x.home].sort().join() === [at(a), at(b)].sort().join());
-  assert.ok(inWeek('Nebraska', 'Oklahoma', 2) && inWeek('Pacific', 'Hawaii', 5));
+  const z = sc.week0 ? 1 : 0; // a rivalry's week counts the weeks without Week 0
+  assert.ok(inWeek('Nebraska', 'Oklahoma', 2 + z) && inWeek('Pacific', 'Hawaii', 5 + z));
   const ck = checkSchedule(sc, schoolList, r1.seasons[1].conf, '1994', rivalriesOf(r1));
   assert.deepEqual(ck.broken, []);
   assert.deepEqual(ck.missing, []);
-  assert.equal(weeksOf(sc), 11);
+  assert.equal(weeksOf(sc), 12);
   ok(`rivalries: Nebraska-Oklahoma in week 3, Pacific-Hawaii in week 6 (${ck.offWeek.length} out of their week)`);
 }
 
@@ -364,14 +378,14 @@ ok(`offseason: ${d2.players.filter((p) => p.status === 'active').length} players
   assert.ok(Conf.confIssues(d2, tooLate).some((x) => /run past week 11/.test(x)), '11 weeks');
   const d3 = Conf.setConferences(d2, c1);
   const s3 = d3.seasons[1];
-  assert.equal(weeksOf(s3.schedule), 11);
+  assert.equal(weeksOf(s3.schedule), 12);
   assert.deepEqual(checkSchedule(s3.schedule!, schoolList, s3.conf, '1994').broken, []);
   const ps = at('Penn State');
   const psSec = s3.schedule!.games.filter((x) => (x.visitor === ps || x.home === ps) && s3.conf[x.visitor === ps ? x.home : x.visitor] === 0).length;
   assert.ok(psSec >= 7, `Penn State plays an SEC schedule (${psSec}; 13 teams: a bye in one of the 8 rounds)`);
   const out3 = Off.seasonRom(d3, s3, rom, 1_800_000_100_000);
   assert.deepEqual(readWideSeason(out3).conf, c1.conf);
-  assert.equal(out3[scheduleAddress(out3)! + 4], 11);
+  assert.equal(out3[scheduleAddress(out3)! + 4], 12);
   // Title game switches (H-011): a Big Ten title game, the SEC's without divisions; no new schedule for them.
   const c2 = { ...c1, titleGames: c1.titleGames.slice() };
   c2.titleGames[1] = TG_ON; c2.titleGames[0] = TG_ON;

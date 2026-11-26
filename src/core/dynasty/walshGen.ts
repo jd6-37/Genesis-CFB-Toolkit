@@ -356,7 +356,7 @@ function factsOf(L: WalshLeague, T: number): Facts {
     const opp = g.home === T ? g.visitor : g.home;
     const rv = L.rivals.find((x) => (x.a === T && x.b === opp) || (x.b === T && x.a === opp));
     const r = L.pollRank.get(opp) ?? null;
-    if ((r !== null && r <= 15) || rv) bigGames.push({ opp, week: g.week + 1, home: g.home === T, rank: r !== null && r <= 25 ? r : null, rivalry: rv ? rv.name ?? '' : null });
+    if ((r !== null && r <= 15) || rv) bigGames.push({ opp, week: g.week, home: g.home === T, rank: r !== null && r <= 25 ? r : null, rivalry: rv ? rv.name ?? '' : null });
   }
 
   const pe = L.poll?.find((p) => p.team === T);

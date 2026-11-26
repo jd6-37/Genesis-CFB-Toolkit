@@ -84,7 +84,7 @@ RetroArch's Genesis Plus GX core writes a 65,456-byte `.srm`: cartridge save RAM
 
 A record still all FF has never been cleared and reads as zeros. Passing and receiving add up across the league but not always per team (the game sometimes credits a catch without a completion).
 
-Week names follow the game: with the Real 2026 schedule the first week is Week 0; after the regular season come the conference championships and then the playoff rounds (1, 2, 4 or 5 rounds for 2, 4, 12 or 24 teams).
+Week names start at Week 0, always (user, 2026-11-26: "Let's use week 0 everywhere"; the game does the same from the ROM lane's H-061 build); after the regular season come the conference championships and then the playoff rounds (1, 2, 4 or 5 rounds for 2, 4, 12 or 24 teams).
 
 ## The dynasty
 
@@ -617,3 +617,16 @@ User: "We should show all teams on the Top 25 page. But make #26 and beyond a di
 ## Team page Stats tab: View all (2026-11-26)
 
 User: "On the Team page, Stats page, below each section have a View All link that takes you to the main Stats page respective category, filtered by the team". `StatTables` takes `team` (only the Team page passes it; the player page doesn't): each table ends with **View all** to `#stats/players/<cat>/team=<team>`.
+
+## Week 0 everywhere, a light Week 0 and the opening games (2026-11-26)
+
+User: "Let's use week 0 everywhere. But can you make week 0 a light week (not a lot of games) like it is IRL when you generate schedules in the app?"; then a Kickoff Classic, meaning the Aflac Kickoff Game (Atlanta, Labor Day weekend, since 2008: usually SEC vs ACC; Boise State, Washington, Oregon, West Virginia, Baylor now and then); "But Kickoff Classic can be for 1994 rom dynasties" (1983-2002 at Giants Stadium, big programs of any conference; 1994's was Nebraska-West Virginia, in Week 0 of the real 1994 schedule); "Be sure to highlight these kickoff games in the headlines after week 0. Call them by name."
+- `weekName`: regular weeks are `Week <index>`, whatever the save's real-schedule flag; the schedule editor, protected-rivalry messages and Walsh Reports' "Week N brings …" use the same numbers. Until H-061, the game itself still numbers a dynasty schedule (SCH1) from Week 1 (DYNGEN clears SB_FLAGS bit 1) and Random from Week 1.
+- `makeSchedule` → `addWeekZero`: the app's usual 12 (1994: 11) weeks move a week later (`weeks` 13 / 12, `week0`).
+  - Who plays (user, 2026-11-26, after the real matchups: usually one strong team against an average one, now and then two average ones): a headliner from its conference's top 4 by prestige (`ScheduleInput.strength`, `seasonPrestige`) against a team from the top half of its conference; one season in five the headliner is just from the top half too.
+  - 1994: the **Kickoff Classic**, Week 0: the two teams from different conferences; their games in one week give way (their opponents play each other), so they have that week off.
+  - 2026: the **Aflac Kickoff Game**, Week 1, never more than one a season (user, 2026-11-26): the headliner from the SEC, the other from the ACC (one season in five the Big Ten or Big 12); their Week 1 opponents play each other instead.
+  - Then Week 0's other games (8 in all, 1994: 4): non-conference, not protected, weighted toward teams outside the power conferences (`POWER`); each of their teams has a bye in the week its game left. Every team still plays 12 (11).
+  - `DSchedule.kickoffs` [{ name, week, visitor, home }], `kickoffOf(season, game)`. Rivalries' wanted weeks (RivalriesEditor) count the weeks after Week 0.
+- Scores names the game on its card; `stories` makes it the week's lead story (weight 88, "#2 Georgia holds off #12 Clemson in the Aflac Kickoff Game") instead of its upset / top game / rout story.
+- Emulator, 2026 v2.2.0-rc.3: season-2 ROMs with such schedules (13 regular weeks) play; Week 0's 8 games and Week 1's 67 sim; the postseason follows (18 weeks in all); the imported 2-week save's lead headline is the Aflac Kickoff Game.

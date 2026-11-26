@@ -30,6 +30,18 @@ export interface DSchedule {
   edited?: boolean;
   /** The ROM's real schedule (REALTAB; setup, user 2026-11-20), teams moved with conference swaps: weeks 14, byes. */
   real?: boolean;
+  /**
+   * A light Week 0 before the app's 12 (1994: 11) weeks (user, 2026-11-26: "make week 0 a light week (not a lot of
+   * games) like it is IRL"): about 8 (1994: 4) non-conference games moved there; their teams have a bye in the week the
+   * game left, so every team still plays 12 (11). weeks counts Week 0. Rivalries' wanted weeks are a week later.
+   */
+  week0?: boolean;
+  /**
+   * The season's named opening games (user, 2026-11-26): the 1994 edition's **Kickoff Classic** in Week 0 (1983-2002 at
+   * Giants Stadium) and the 2026 edition's **Aflac Kickoff Game** in Week 1 (Atlanta, Labor Day weekend: SEC against ACC,
+   * now and then another conference; one a season). Like the real ones, usually a strong team against an average one. The game gives one of the two home field; the app names it on Scores and in the headlines.
+   */
+  kickoffs?: { name: string; week: number; visitor: number; home: number }[];
 }
 
 /** Per conference 0-9: first conference week (0-based) and conference games, as the ROM's CWS/CWN tables. */
@@ -55,6 +67,10 @@ export interface ScheduleInput {
    * then the other division's teams for the rest of its conference games (user, 2026-11-20).
    */
   divisions?: { conf: number; east: number[]; west: number[] } | null;
+  /** For the named opening game (DSchedule.kickoffs): each team's strength (prestige stars) and the conference names.
+   *  Without them, there's none. */
+  strength?: number[];
+  confNames?: string[];
 }
 
 const key = (a: number, b: number) => (a < b ? a * 1000 + b : b * 1000 + a);
@@ -265,7 +281,99 @@ export function makeSchedule(inp: ScheduleInput): DSchedule {
     }
   }
   games.sort((x, y) => x.week - y.week || x.home - y.home);
-  return { games, seed: inp.seed, ...(WEEKS !== SCHED_WEEKS ? { weeks: WEEKS } : {}) };
+  return addWeekZero({ games, seed: inp.seed, weeks: WEEKS }, inp, isProt, r);
+}
+
+/** The conferences counted as power ones for Week 0 (its games lean to the others). */
+const POWER = ['SEC', 'Big Ten', 'ACC', 'Big 12', 'Big Eight', 'Southwest', 'Pac-10', 'Big East'];
+
+/** Week 0 (see DSchedule.week0) and the season's named opening game (DSchedule.kickoffs). */
+function addWeekZero(s: DSchedule, inp: ScheduleInput, isProt: Set<number>, r: () => number): DSchedule {
+  const W = weeksOf(s) + 1;
+  const last = W - 1;
+  const games = s.games.map((x) => ({ ...x, week: x.week + 1 }));
+  const conf = inp.conf;
+  const names = inp.confNames ?? [];
+  const confsNamed = (list: string[]) => new Set(names.map((nm, c) => (list.includes(nm) ? c : -1)).filter((c) => c >= 0));
+  const power = confsNamed(POWER);
+  const nonConf = (x: SchedGame) => conf[x.visitor] !== conf[x.home] || conf[x.home] === INDEPENDENT;
+  const movable = (x: SchedGame) => x.week >= 1 && x.week < last && nonConf(x) && !isProt.has(key(x.visitor, x.home));
+  const met = new Set(games.map((x) => key(x.visitor, x.home)));
+  const gameOf = (t: number, w: number) => games.find((x) => x.week === w && (x.visitor === t || x.home === t));
+  const other = (x: SchedGame, t: number) => (x.visitor === t ? x.home : x.visitor);
+  // A conference's teams, strongest first; its top n, or its top half.
+  const ranked = (c: number) => conf.map((cc, t) => (cc === c ? t : -1)).filter((t) => t >= 0)
+    .sort((a, b) => inp.strength![b] - inp.strength![a]);
+  const topOf = (cs: Set<number>, n?: number) => [...cs].flatMap((c) => { const t = ranked(c); return t.slice(0, n ?? Math.ceil(t.length / 2)); });
+  const zero = new Set<number>();
+  const kickoffs: NonNullable<DSchedule['kickoffs']> = [];
+  const site = (a: number, b: number) => (r() < 0.5 ? { visitor: a, home: b } : { visitor: b, home: a });
+
+  if (inp.strength && names.length && inp.edition === '1994') {
+    // The Kickoff Classic, Week 0: as in the real series, a headliner (a top-4 team in its conference) against a team
+    // from the top half of another; one season in five, both just from the top half. Their games in one week give
+    // way (their opponents play each other then), so they have that week off.
+    const all = new Set(conf);
+    const heads = shuffle(topOf(all, r() < 0.2 ? undefined : 4), r), opps = shuffle(topOf(all), r);
+    search: for (const a of heads) for (const b of opps) {
+      if (a === b || conf[a] === conf[b] || met.has(key(a, b))) continue;
+      for (const w of shuffle(Array.from({ length: last - 1 }, (_, k) => k + 1), r)) {
+        const ga = gameOf(a, w), gb = gameOf(b, w);
+        if (!ga || !gb || ga === gb || !movable(ga) || !movable(gb)) continue;
+        const x = other(ga, a), y = other(gb, b);
+        if (x === y || met.has(key(x, y))) continue;
+        games.splice(games.indexOf(ga), 1);
+        games.splice(games.indexOf(gb), 1);
+        games.push(ga.home === x ? { week: w, visitor: y, home: x } : { week: w, visitor: x, home: y });
+        const k = { name: 'Kickoff Classic', week: 0, ...site(a, b) };
+        games.push({ week: 0, visitor: k.visitor, home: k.home });
+        kickoffs.push(k);
+        zero.add(a).add(b);
+        break search;
+      }
+    }
+  }
+  if (inp.strength && names.length && inp.edition !== '1994') {
+    // The Aflac Kickoff Game, Week 1, one a season: as in the real series, a top-4 SEC team against a team from the
+    // top half of the ACC (one season in five, of the Big Ten or Big 12); one season in five, the SEC team is just
+    // from the top half too. Both teams' Week 1 games give way: their opponents play each other that week.
+    const B = confsNamed(r() < 0.2 ? ['Big Ten', 'Big 12'] : ['ACC']);
+    const A = shuffle(topOf(confsNamed(['SEC']), r() < 0.2 ? undefined : 4), r), Bt = shuffle(topOf(B), r);
+    search: for (const a of A) for (const b of Bt) {
+      const ga = gameOf(a, 1), gb = gameOf(b, 1);
+      if (met.has(key(a, b)) || !ga || !gb || ga === gb || !movable(ga) || !movable(gb)) continue;
+      const x = other(ga, a), y = other(gb, b);
+      if (x === y || met.has(key(x, y))) continue;
+      games.splice(games.indexOf(ga), 1);
+      games.splice(games.indexOf(gb), 1);
+      games.push(ga.home === x ? { week: 1, visitor: y, home: x } : { week: 1, visitor: x, home: y });
+      const k = { name: 'Aflac Kickoff Game', week: 1, ...site(a, b) };
+      games.push({ week: 1, visitor: k.visitor, home: k.home });
+      kickoffs.push(k);
+      break search;
+    }
+  }
+  // Week 0's other games, mostly between teams outside the power conferences, one game a team; not the named game's.
+  const named = new Set(kickoffs.flatMap((k) => [k.visitor, k.home]));
+  let want = (inp.edition === '1994' ? 4 : 8) - kickoffs.filter((k) => k.week === 0).length;
+  const pool = shuffle(games.filter((x) => movable(x) && !named.has(x.visitor) && !named.has(x.home)), r);
+  const weight = (x: SchedGame) => 1 + (power.has(conf[x.visitor]) ? 0 : 2) + (power.has(conf[x.home]) ? 0 : 2);
+  while (want > 0) {
+    const open = pool.filter((x) => x.week > 0 && !zero.has(x.visitor) && !zero.has(x.home));
+    if (!open.length) break;
+    let pick = r() * open.reduce((a, x) => a + weight(x), 0);
+    const x = open.find((y) => (pick -= weight(y)) < 0) ?? open[0];
+    x.week = 0;
+    zero.add(x.visitor).add(x.home);
+    want--;
+  }
+  games.sort((x, y) => x.week - y.week || x.home - y.home);
+  return { ...s, games, weeks: W, week0: true, ...(kickoffs.length ? { kickoffs } : {}) };
+}
+
+/** A game's name when it is the season's named opening game (DSchedule.kickoffs), else undefined. */
+export function kickoffOf(season: { schedule?: DSchedule }, g: { week: number; visitor: number | null; home: number | null }) {
+  return season.schedule?.kickoffs?.find((k) => k.week === g.week && g.visitor !== null && g.home !== null && key(k.visitor, k.home) === key(g.visitor, g.home));
 }
 
 // ---- reading and editing
@@ -370,21 +478,25 @@ export function checkSchedule(s: DSchedule, schools: string[], conf: number[], e
   }
   const broken: string[] = [];
   // Every team plays once a week; with an odd number of teams (the 1994 Season Edition's 107) one team a week has a bye.
+  // Week 0 (week0): its teams have one bye later; nobody else plays then.
+  const inZero = new Set(s.week0 ? s.games.filter((x) => x.week === 0).flatMap((x) => [x.visitor, x.home]) : []);
   for (let w = 0; w < weeksOf(s); w++) {
     const free: number[] = [];
     for (let t = 0; t < n; t++) {
-      if (count[w][t] > 1) broken.push(`${schools[t]} has ${count[w][t]} games in week ${w + 1}`);
-      else if (!count[w][t]) free.push(t);
+      if (count[w][t] > 1) broken.push(`${schools[t]} has ${count[w][t]} games in week ${w}`);
+      else if (!count[w][t] && !(s.week0 && (w === 0 || inZero.has(t)))) free.push(t);
     }
     // The real schedule has byes (teams play 10-12 games in 14 weeks).
-    if (!s.real && free.length > n % 2) for (const t of free) broken.push(`${schools[t]} has no game in week ${w + 1}`);
+    if (!s.real && free.length > n % 2) for (const t of free) broken.push(`${schools[t]} has no game in week ${w}`);
   }
   const repeats = [...met].filter(([, c]) => c > 1).map(([k]) => [Math.floor(k / 1000), k % 1000] as [number, number]);
   const prot = protectedPairs(schools, edition, rivalries);
   const missing = prot.filter((p) => !met.has(key(p.a, p.b))).map((p) => [p.a, p.b] as [number, number]);
+  // A rivalry's wanted week counts the app's weeks without Week 0 (RivalriesEditor), so it's a week later with one.
+  const at = (p: { week: number | null }) => (p.week === null ? null : p.week + (s.week0 ? 1 : 0));
   const offWeek = prot
-    .filter((p) => p.week !== null && p.week < weeksOf(s) && met.has(key(p.a, p.b)) && !s.games.some((x) => x.week === p.week && key(x.visitor, x.home) === key(p.a, p.b)))
-    .map((p) => [p.a, p.b, p.week!] as [number, number, number]);
+    .filter((p) => at(p) !== null && at(p)! < weeksOf(s) && met.has(key(p.a, p.b)) && !s.games.some((x) => x.week === at(p) && key(x.visitor, x.home) === key(p.a, p.b)))
+    .map((p) => [p.a, p.b, at(p)!] as [number, number, number]);
   return { broken, repeats, missing, offWeek, confGames, homeGames };
 }
 
@@ -469,6 +581,7 @@ export function scheduleSet(s: DSchedule): Uint8Array {
 import type { DSeason, Dynasty } from './model';
 import { editionOf } from './edition';
 import { divisionsOf, SEC_EAST_1994 } from '../seasonWide';
+import { seasonPrestige } from './prestige';
 
 /** A season's East list: its own, else the 1994 East schools (the ROM's list as released). */
 export const seasonEast = (d: Dynasty, s: Pick<DSeason, 'secEast'>): number[] | null =>
@@ -521,6 +634,8 @@ export function remakeSchedule(d: Dynasty, seed: number): Dynasty {
     edition: editionOf(d).id,
     rivalries,
     divisions: seasonDivisions(d, s),
+    strength: seasonPrestige(d, s),
+    confNames: s.confNames,
   }));
 }
 

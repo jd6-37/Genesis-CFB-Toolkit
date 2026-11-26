@@ -1,6 +1,7 @@
 // Starting a dynasty in steps (user, 2026-11-20, mockups approved): after the ROM and the dynasty's name, the first
 // season's coaches, rosters, conferences and schedule, then one download. The first season is played on a ROM the app
 // builds (`Dynasty.seasonOneRom`), so everything set here is in the game from week 1.
+import { seasonPrestige } from './prestige';
 import type { Dynasty, DSeason } from './model';
 import type { DCoach } from './coaches';
 import { coachOvr } from './coaches';
@@ -129,6 +130,8 @@ export function setupSchedule(d: Dynasty, rom: Uint8Array, kind: 'real' | 'new',
     edition: editionOf(d).id,
     rivalries: rivalriesOf(d),
     divisions: seasonDivisions(d, s),
+    strength: seasonPrestige(d, s),
+    confNames: s.confNames,
   });
   return withSeason(d, () => ({ schedule: sched }));
 }

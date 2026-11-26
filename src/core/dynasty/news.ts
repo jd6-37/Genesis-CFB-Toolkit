@@ -1,6 +1,7 @@
 // Stories for the Dynasty's news homepage, written from the season's results with templates.
 // Pure functions: the same season gives the same stories.
 
+import { kickoffOf } from './schedule';
 import { fcsLabel } from './fcs';
 import { hasNil, money, NIL } from './nil';
 import { bowlOf, bowlWeek, INDEPENDENT, leaders, playerLabel, playerLines, playerName, RECORD_STATS, seasonView, standings, statValue, weekName, type SeasonView } from './derive';
@@ -115,7 +116,9 @@ export function stories(d: Dynasty, v: SeasonView = seasonView(d, d.seasons[d.se
       });
       continue;
     }
-    if (rl && (!rw || rw > rl + 10)) {
+    // The named opening game has its own story (below), not an upset / top game / rout one.
+    const named = !!kickoffOf(v.season, g);
+    if (named) { /* its own story */ } else if (rl && (!rw || rw > rl + 10)) {
       out.push({
         id: `${id}-upset`, kind: 'upset', week, weight: 60 + (26 - rl), teams: [w, l],
         headline: pick(id, [`${rk(rw)}${name(w)} stuns ${rk(rl)}${name(l)}, ${ws}-${ls}`, `Upset: ${rk(rw)}${name(w)} knocks off ${rk(rl)}${name(l)} ${ws}-${ls}`, `${rk(rl)}${name(l)} falls to ${rk(rw)}${name(w)}, ${ws}-${ls}`]),
@@ -264,6 +267,24 @@ export function stories(d: Dynasty, v: SeasonView = seasonView(d, d.seasons[d.se
     out.push({ id, kind: 'rivalry', week, weight: 44 + (mine ? 14 : 0) + (pre[w] <= 25 || pre[l] <= 25 ? 6 : 0), teams: [w, l],
       headline: pick(id, [`${name(w)} takes ${rivalry}, ${ws}-${ls}`, `${rivalry[0].toUpperCase()}${rivalry.slice(1)} goes to ${name(w)}`, `${name(w)} beats ${name(l)} in ${rivalry}`]),
       dek: `${full(w)} ${ws}, ${full(l)} ${ls}. ${name(w)} is ${v.records[w].w}-${v.records[w].l}, ${name(l)} ${v.records[l].w}-${v.records[l].l}.` });
+  }
+
+  // The season's named opening game (user, 2026-11-26: "highlight these kickoff games in the headlines … Call them by
+  // name"): the Kickoff Classic (1994, Week 0) or the Aflac Kickoff Game (2026, Week 1).
+  for (const g of weekGames as (SaveGame & { visitor: number; home: number; vs: number; hs: number })[]) {
+    const k = kickoffOf(v.season, g);
+    if (!k || g.vs === g.hs) continue;
+    const [w, l, ws, ls] = g.vs > g.hs ? [g.visitor, g.home, g.vs, g.hs] : [g.home, g.visitor, g.hs, g.vs];
+    const id = `${year}-${week}-${g.index}-kickoff`;
+    const close = ws - ls <= 7, big = ws - ls >= 21;
+    const rw = pre[w] <= 25 ? pre[w] : 0, rl = pre[l] <= 25 ? pre[l] : 0;
+    const W = `${rk(rw)}${name(w)}`, L = `${rk(rl)}${name(l)}`;
+    out.push({ id, kind: 'topgame', week, weight: 88, teams: [w, l], // the week's lead story
+      headline: pick(id, close
+        ? [`${W} edges ${L} in the ${k.name}, ${ws}-${ls}`, `${W} holds off ${L} in the ${k.name}`]
+        : big ? [`${W} routs ${L} in the ${k.name}, ${ws}-${ls}`, `${W} rolls past ${L} in the ${k.name}`]
+          : [`${W} beats ${L} in the ${k.name}, ${ws}-${ls}`, `${W} opens with a win over ${L} in the ${k.name}`]),
+      dek: `The season's ${k.week === 0 ? 'first big game' : 'opening-weekend showcase'}: ${full(w)} ${ws}, ${full(l)} ${ls}.` });
   }
 
   // Conference races over the last three regular-season weeks: a clinched title, a shared lead, or a lead.

@@ -15,6 +15,7 @@ import { impactLock, ownImpact, teamImpact } from '../../core/dynasty/impact';
 import { offseasonStories, stories, type Story } from '../../core/dynasty/news';
 import { preseasonPoll } from '../../core/dynasty/poll';
 import { kickoffRanks } from '../../core/dynasty/kickoffRanks';
+import { kickoffOf } from '../../core/dynasty/schedule';
 import { OffseasonSide, PreseasonTop25, SeasonMore, SeasonSide } from './HomeSide';
 import { AddPlayer, EditLook, EditPlayer } from './EditPlayer';
 import { prestigeStars } from '../../core/dynasty/offseason';
@@ -262,6 +263,9 @@ export function Scores({ week: asked }: { week?: number }) {
   // Ranks as the teams went into this week's games (user, 2026-11-26), not today's. A week no imported save covers
   // shows today's ranks in another color (user: "I'd rather show something than nothing").
   const kick = kickoffRanks(d, v.season)[week] ?? null;
+  // The season's named opening game (Kickoff Classic, Aflac Kickoff Game; schedule.ts), named on its card.
+  const kickoffName = (g: { week: number; home: number | null; visitor: number | null }) =>
+    kickoffOf(v.season, g)?.name ?? null;
   const ranks = kick ?? v.rank;
   return (
     <section>
@@ -285,7 +289,7 @@ export function Scores({ week: asked }: { week?: number }) {
                 </div>
               );
             })}
-            <div className="dy-game-state">{g.vs !== null ? 'Final' : 'Not played yet'}</div>
+            <div className="dy-game-state">{kickoffName(g) && <><strong>{kickoffName(g)}</strong>, </>}{g.vs !== null ? 'Final' : 'Not played yet'}</div>
           </div>
         ))}
       </div>
