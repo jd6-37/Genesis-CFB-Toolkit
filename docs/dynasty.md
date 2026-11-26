@@ -613,3 +613,7 @@ User: "separate the Stats section into Player (what we have now) and Team tabs â
 ## Top 25 page lists every team (2026-11-26)
 
 User: "We should show all teams on the Top 25 page. But make #26 and beyond a different style, smaller logo and rank number font size so the row is not as tall. Don't show rank beyond 25 where we show ranks elsewhere in the app". The game ranks every team (the save's power and lastRanks run 1 to 138 / 107). `Top25` (pages.tsx) and `PreseasonTop25` (HomeSide.tsx, the page view; Home's compact lists stay at 25) list them all; rows 26 and on are `li.dy-top-rest` (20 px logo in a 28 px box, `--fs-3` number in gray, 2 px padding: 33 px tall vs 53-65), with a strong rule before 26; the preseason rows past 25 show no points and "Was No. N". `rankText` and Scores' `rankAt` still show only 1-25.
+
+## Team page Stats tab: View all (2026-11-26)
+
+User: "On the Team page, Stats page, below each section have a View All link that takes you to the main Stats page respective category, filtered by the team". `StatTables` takes `team` (only the Team page passes it; the player page doesn't): each table ends with **View all** to `#stats/players/<cat>/team=<team>`.

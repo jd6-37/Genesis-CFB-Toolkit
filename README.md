@@ -408,7 +408,7 @@ The pages:
 - **Team pages** show the school's academic grade (a cap and the grade) beside its conference. Under the team's header are four tabs, each with its own link (`#team/12`, `#team/12/roster`, `#team/12/stats`, `#team/12/uniforms`):
   - **Overview:** impact players, head coach, goals and hot seat, stat leaders (passing, rushing and receiving yards, tackles, sacks and interceptions, with headshots), schedule, history.
   - **Roster:** the Active Roster with your position menus, backups and Add a player. Click a column header to sort by it (again to reverse; Pos goes back to the game's roster order).
-  - **Stats:** the full season stats.
+  - **Stats:** the full season stats; each table's **View all** opens that category on the Stats page, filtered to the team.
   - **Uniforms:** the uniforms and their editor.
 
   A team page always opens on Overview. The depth chart buttons in the offseason go straight to Roster.
