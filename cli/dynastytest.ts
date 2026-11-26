@@ -1105,6 +1105,7 @@ ok('season rosters written to the dynasty area and read back');
   // Week 0 and the Aflac Kickoff Game (user, 2026-11-26): 8 Week 0 games; Week 1's SEC team against an ACC (or Big Ten /
   // Big 12) team; nobody short of 12 games.
   assert.ok(sc.week0 && weeksOf(sc) === 13 && sc.games.filter((g) => g.week === 0).length === 8, 'a light Week 0 of 8 games');
+  assert.equal(sc.kickoffs?.length, 1, 'one Aflac Kickoff Game a season');
   const ko = sc.kickoffs?.[0];
   assert.ok(ko && ko.name === 'Aflac Kickoff Game' && ko.week === 1, 'the Aflac Kickoff Game in Week 1');
   const kc = [next.confNames[next.conf[ko!.visitor]], next.confNames[next.conf[ko!.home]]];

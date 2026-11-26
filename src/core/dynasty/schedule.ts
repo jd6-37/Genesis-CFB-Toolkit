@@ -38,9 +38,8 @@ export interface DSchedule {
   week0?: boolean;
   /**
    * The season's named opening games (user, 2026-11-26): the 1994 edition's **Kickoff Classic** in Week 0 (1983-2002 at
-   * Giants Stadium: two of the strongest programs, from different conferences) and the 2026 edition's **Aflac Kickoff
-   * Game** in Week 1 (Atlanta, Labor Day weekend: a top SEC team against a top ACC team, now and then another
-   * conference's). The game gives one of the two home field; the app names it on Scores and in the headlines.
+   * Giants Stadium) and the 2026 edition's **Aflac Kickoff Game** in Week 1 (Atlanta, Labor Day weekend: SEC against ACC,
+   * now and then another conference; one a season). Like the real ones, usually a strong team against an average one. The game gives one of the two home field; the app names it on Scores and in the headlines.
    */
   kickoffs?: { name: string; week: number; visitor: number; home: number }[];
 }
@@ -302,19 +301,22 @@ function addWeekZero(s: DSchedule, inp: ScheduleInput, isProt: Set<number>, r: (
   const met = new Set(games.map((x) => key(x.visitor, x.home)));
   const gameOf = (t: number, w: number) => games.find((x) => x.week === w && (x.visitor === t || x.home === t));
   const other = (x: SchedGame, t: number) => (x.visitor === t ? x.home : x.visitor);
-  const strongest = (cs: Set<number>, n: number) => conf.map((c, t) => (cs.has(c) ? t : -1)).filter((t) => t >= 0)
-    .sort((a, b) => inp.strength![b] - inp.strength![a]).slice(0, n);
+  // A conference's teams, strongest first; its top n, or its top half.
+  const ranked = (c: number) => conf.map((cc, t) => (cc === c ? t : -1)).filter((t) => t >= 0)
+    .sort((a, b) => inp.strength![b] - inp.strength![a]);
+  const topOf = (cs: Set<number>, n?: number) => [...cs].flatMap((c) => { const t = ranked(c); return t.slice(0, n ?? Math.ceil(t.length / 2)); });
   const zero = new Set<number>();
   const kickoffs: NonNullable<DSchedule['kickoffs']> = [];
   const site = (a: number, b: number) => (r() < 0.5 ? { visitor: a, home: b } : { visitor: b, home: a });
 
   if (inp.strength && names.length && inp.edition === '1994') {
-    // The Kickoff Classic, Week 0: two of the eight strongest programs, from different conferences. Their games in
-    // one week give way (their opponents play each other then), so they have that week off.
-    const top = shuffle(strongest(new Set(conf.filter((c) => c !== INDEPENDENT)), 8), r);
-    search: for (let i = 0; i < top.length; i++) for (let j = i + 1; j < top.length; j++) {
-      const [a, b] = [top[i], top[j]];
-      if (conf[a] === conf[b] || met.has(key(a, b))) continue;
+    // The Kickoff Classic, Week 0: as in the real series, a headliner (a top-4 team in its conference) against a team
+    // from the top half of another; one season in five, both just from the top half. Their games in one week give
+    // way (their opponents play each other then), so they have that week off.
+    const all = new Set(conf);
+    const heads = shuffle(topOf(all, r() < 0.2 ? undefined : 4), r), opps = shuffle(topOf(all), r);
+    search: for (const a of heads) for (const b of opps) {
+      if (a === b || conf[a] === conf[b] || met.has(key(a, b))) continue;
       for (const w of shuffle(Array.from({ length: last - 1 }, (_, k) => k + 1), r)) {
         const ga = gameOf(a, w), gb = gameOf(b, w);
         if (!ga || !gb || ga === gb || !movable(ga) || !movable(gb)) continue;
@@ -332,10 +334,11 @@ function addWeekZero(s: DSchedule, inp: ScheduleInput, isProt: Set<number>, r: (
     }
   }
   if (inp.strength && names.length && inp.edition !== '1994') {
-    // The Aflac Kickoff Game, Week 1: a top SEC team against a top ACC team (one season in five, a top Big Ten or
-    // Big 12 team). Both teams' Week 1 games give way: their opponents play each other that week.
+    // The Aflac Kickoff Game, Week 1, one a season: as in the real series, a top-4 SEC team against a team from the
+    // top half of the ACC (one season in five, of the Big Ten or Big 12); one season in five, the SEC team is just
+    // from the top half too. Both teams' Week 1 games give way: their opponents play each other that week.
     const B = confsNamed(r() < 0.2 ? ['Big Ten', 'Big 12'] : ['ACC']);
-    const A = shuffle(strongest(confsNamed(['SEC']), 4), r), Bt = shuffle(strongest(B, 4), r);
+    const A = shuffle(topOf(confsNamed(['SEC']), r() < 0.2 ? undefined : 4), r), Bt = shuffle(topOf(B), r);
     search: for (const a of A) for (const b of Bt) {
       const ga = gameOf(a, 1), gb = gameOf(b, 1);
       if (met.has(key(a, b)) || !ga || !gb || ga === gb || !movable(ga) || !movable(gb)) continue;

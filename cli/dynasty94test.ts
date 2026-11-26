@@ -248,6 +248,12 @@ for (let seed = 1; seed <= 20; seed++) {
   const kc = sk.kickoffs?.[0];
   assert.ok(kc && kc.name === 'Kickoff Classic' && kc.week === 0 && season.conf[kc.visitor] !== season.conf[kc.home], 'the Kickoff Classic');
   assert.equal(sk.games.filter((g) => g.week === 0).length, 4);
+  // Both from the top half of their conferences (fewer stronger teams than half of it).
+  const st = season.conf.map((_, t) => (t * 37) % 6 + 1);
+  for (const t of [kc!.visitor, kc!.home]) {
+    const mates = season.conf.map((c, u) => (c === season.conf[t] ? u : -1)).filter((u) => u >= 0);
+    assert.ok(mates.filter((u) => st[u] > st[t]).length < Math.ceil(mates.length / 2), `Kickoff Classic team ${t} in its conference's top half`);
+  }
   assert.deepEqual(checkSchedule(sk, schoolList, season.conf, '1994').broken, []);
 }
 assert.ok(finalesIn / finales > 0.95, `finales in week 11 (${finalesIn} of ${finales})`);
