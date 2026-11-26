@@ -29,6 +29,7 @@ import { CLASSES, createDynasty, fromBase64, importSave, latestSave, rng, starti
 import { champions, INDEPENDENT, playerName, leaders, playerLines, seasonRecords, RECORD_STATS, seasonView, standings, teamHistory, weekName } from '../src/core/dynasty/derive';
 import { offseasonStories, stories } from '../src/core/dynasty/news';
 import { rivalryOf } from '../src/core/dynasty/rivalries';
+import { meetings, seriesStory } from '../src/core/dynasty/series';
 import { teamArt } from '../src/core/dynasty/art';
 import { dynastyFileName, dynastyFileText, readDynastyFile } from '../src/core/dynasty/storage';
 import { CFB27_LATEST } from '../src/core/cfb27Latest';
@@ -342,6 +343,26 @@ assert.equal(new Set(st.map((x) => x.id)).size, st.length, 'story ids are unique
 assert.ok(st.every((x) => x.teams.every((t) => t >= 0 && t < 138)));
 assert.deepEqual(stories(d1), st, 'the same season gives the same stories');
 ok(`news: ${st.length} stories, lead "${st[0].headline}"`);
+// Headline windows (user, 2026-11-26): a game's story names its game; "holds off" only for close games; a user
+// team's rivalry game gets one story; stat stories name their stat.
+{
+  const v1 = seasonView(d1, d1.seasons[0]);
+  for (const x of st.filter((y) => y.game !== undefined)) {
+    const g = v1.games.find((y) => y.index === x.game)!;
+    assert.ok(g && g.vs !== null && g.week === x.week && x.teams.slice(0, 2).every((t) => t === g.visitor || t === g.home), `story ${x.id} names its game`);
+    if (/holds off/.test(x.headline)) assert.ok(Math.abs(g.vs! - g.hs!) <= 7, `holds off only when close: ${x.headline}`);
+  }
+  assert.ok(st.filter((x) => ['upset', 'topgame', 'rout', 'yours', 'rivalry'].includes(x.kind) && !x.id.includes('hot')).every((x) => x.game !== undefined), 'game stories name their game');
+  const games = new Map<number, string[]>();
+  for (const x of st) if (x.game !== undefined) games.set(x.game, [...(games.get(x.game) ?? []), x.kind]);
+  for (const kinds of games.values()) assert.ok(!(kinds.includes('yours') && kinds.includes('rivalry')), 'no second story for a user rivalry game');
+  assert.ok(st.filter((x) => x.kind === 'leader').every((x) => x.stat), 'leader stories name their stat');
+  const g0 = v1.games.find((g) => g.vs !== null && g.visitor !== null && g.home !== null)!;
+  const ss = seriesStory(d1, g0.visitor!, g0.home!, { year: v1.season.year, week: g0.week }, (t) => d1.teams[t].school);
+  assert.equal(ss.record, 'First meeting in this dynasty');
+  assert.equal(ss.last.length, 0);
+  ok(`headline windows: ${games.size} game stories name their game`);
+}
 
 // ---- dynasty files
 const text = dynastyFileText(d1);
@@ -1224,6 +1245,18 @@ ok('a new season refuses the last season\'s save');
     const rec = stories(b2).filter((x) => x.kind === 'record');
     assert.ok(rec.length > 0 && rec.length <= RECORD_STATS.length && rec.every((x) => x.player && /sets the record/.test(x.headline)), `records broken (${rec.length})`);
     assert.equal(new Set(rec.map((x) => x.headline.replace(/^.* sets /, ''))).size, rec.length, 'one new holder per record');
+    // The series across two seasons: a pair that met in both.
+    const va = seasonView(b2, b2.seasons[0]), vb = seasonView(b2, b2.seasons[1]);
+    const key = (g: { visitor: number | null; home: number | null }) => [g.visitor, g.home].sort().join('/');
+    const met = new Set(va.games.filter((g) => g.vs !== null && g.vs !== g.hs).map(key));
+    const again = vb.games.find((g) => g.vs !== null && g.vs !== g.hs && met.has(key(g)));
+    if (again) {
+      const all = meetings(b2, again.visitor!, again.home!, { year: vb.season.year, week: again.week });
+      assert.ok(all.length >= 2 && all[0].year === va.season.year, 'meetings across seasons');
+      const ss = seriesStory(b2, again.visitor!, again.home!, { year: vb.season.year, week: again.week }, (t) => b2.teams[t].school);
+      assert.ok(/leads|Tied/.test(ss.record) && ss.last.length === all.length - 1, ss.record);
+      ok(`series: ${ss.record}${ss.facts.length ? `; ${ss.facts.join('; ')}` : ''}`);
+    }
     ok(`more stories: ${late.length} conference races late in the season, e.g. "${late[0].headline}"; ${rec.length} records broken, e.g. "${rec[0].headline}" (${rec[0].dek})`);
   }
   {

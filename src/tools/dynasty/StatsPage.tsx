@@ -71,6 +71,9 @@ const CATS: { cat: StatCategory; label: string; sort: string; base: string; cols
 ];
 const catOf = (c: string | undefined) => CATS.find((x) => x.cat === c) ?? CATS[0];
 
+/** The Stats page's full list of a category, sorted by one stat (headline windows, user 2026-11-26). */
+export const statsHref = (cat: StatCategory, key: string) => href(`stats/players/${cat}/${writeQ({ ...readQ('', ''), sort: key }, catOf(cat).sort)}`.replace(/\/$/, ''));
+
 /** The leader boards (as before), each with View all. */
 const BOARDS: { title: string; cat: StatCategory; key: string }[] = [
   { title: 'Passing yards', cat: 'passing', key: 'yds' },

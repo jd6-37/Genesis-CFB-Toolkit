@@ -109,9 +109,10 @@
 
 .ui-modal-back { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: var(--sp-4); background: var(--scrim); }
 .ui-modal {
-  width: 100%; max-width: 480px; max-height: 90vh; overflow: auto; padding: var(--sp-5);
+  box-sizing: border-box; width: 100%; max-width: 480px; max-height: 90vh; overflow: auto; padding: var(--sp-5);
   border: var(--rule-w-strong) solid var(--rule-strong); border-radius: var(--radius); background: var(--surface-raised); color: var(--text);
 }
+.ui-modal-wide { max-width: 720px; }
 .ui-modal h2 { margin: 0 0 var(--sp-3); font: 900 var(--fs-6)/1.05 var(--font-display); text-transform: uppercase; }
 .ui-modal-actions { margin-top: var(--sp-4); }
 .ui-modal-head { display: flex; gap: var(--sp-3); align-items: center; margin-bottom: var(--sp-3); }

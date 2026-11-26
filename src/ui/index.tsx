@@ -411,8 +411,10 @@ export function Meter({ value, label, color }: { value: number; label: string; c
 export const Empty = ({ children }: { children: ReactNode }) => <div className="ui-empty">{children}</div>;
 
 /** A window over the page for one decision. Escape or a click outside closes it when onClose is given. */
-export function Modal({ title, children, actions, onClose, media, sub }: {
+export function Modal({ title, children, actions, onClose, media, sub, wide = false }: {
   title: string; children: ReactNode; actions: ReactNode; onClose?: () => void;
+  /** Wider on big screens (720 px; a game's window, user 2026-11-26). */
+  wide?: boolean;
   /** A picture beside the title (a headshot, a logo). */
   media?: ReactNode;
   /** One line under the title. */
@@ -427,7 +429,7 @@ export function Modal({ title, children, actions, onClose, media, sub }: {
   }, [onClose]);
   return (
     <div className="ui-modal-back" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose?.(); }}>
-      <div className="ui-modal" role="dialog" aria-modal="true" aria-labelledby={id}>
+      <div className={`ui-modal${wide ? ' ui-modal-wide' : ''}`} role="dialog" aria-modal="true" aria-labelledby={id}>
         {media || sub ? (
           <div className="ui-modal-head">
             {media}

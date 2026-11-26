@@ -163,6 +163,16 @@ function ModalDemo() {
 }
 export const Modals: Story = { render: () => <ModalDemo /> };
 
+/** A wide window (720 px on big screens): a headline's game, two teams side by side (user, 2026-11-26). */
+export const ModalWide: Story = {
+  render: () => (
+    <Modal wide title="The Battle for the Bell goes to Tulane" sub="Week 4, the Battle for the Bell" onClose={() => {}} actions={<><Button>Week 4 scores</Button><Button variant="quiet">Close</Button></>}>
+      <p>Southern Miss 17, Tulane 24. Final, at Tulane.</p>
+      <p>Tulane has won 3 straight in the series. Biggest win: Tulane 45-10 (2028).</p>
+    </Modal>
+  ),
+};
+
 /** A window with a picture beside the title and a line under it (the box score of a player's game). */
 export const ModalWithMedia: Story = {
   render: () => (
