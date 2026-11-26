@@ -259,8 +259,10 @@ export function Scores({ week: asked }: { week?: number }) {
   if (!v.save) return <NoResults />;
   const week = asked !== undefined && asked >= 0 && asked < v.weeks ? asked : latestWeek(v.games);
   const games = v.games.filter((g) => g.week === week);
-  // Ranks as the teams went into this week's games (user, 2026-11-26), not today's; none when no save has them.
-  const ranks = kickoffRanks(d, v.season)[week] ?? null;
+  // Ranks as the teams went into this week's games (user, 2026-11-26), not today's. A week no imported save covers
+  // shows today's ranks in another color (user: "I'd rather show something than nothing").
+  const kick = kickoffRanks(d, v.season)[week] ?? null;
+  const ranks = kick ?? v.rank;
   return (
     <section>
       <PageHead title="Scores" />
@@ -277,7 +279,7 @@ export function Scores({ week: asked }: { week?: number }) {
               const won = pts !== null && other !== null && pts > other;
               return (
                 <div key={k} className={`dy-game-row${won ? ' dy-won' : ''}`}>
-                  {t !== null ? <TeamLink team={t} rankAt={ranks?.[t] ?? 0} /> : <span className="dy-dim">To be decided</span>}
+                  {t !== null ? <TeamLink team={t} rankAt={ranks[t] ?? 0} rankNow={!kick} /> : <span className="dy-dim">To be decided</span>}
                   {t !== null && <span className="dy-dim dy-small">{recordText(v.records[t])}</span>}
                   <span className="dy-game-pts">{pts ?? ''}</span>
                 </div>
@@ -287,6 +289,7 @@ export function Scores({ week: asked }: { week?: number }) {
           </div>
         ))}
       </div>
+      {!kick && games.length > 0 && <p className="dy-small dy-dim">Ranks in gold are today's: no save you imported has the ranks these teams had going into this week.</p>}
     </section>
   );
 }

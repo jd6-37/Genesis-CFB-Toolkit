@@ -120,17 +120,19 @@ export function TeamMark({ team, size = 24, kind = 'logo', exact = false }: { te
 }
 
 /** A team name that links to its page, with its logo and rank. */
-export function TeamLink({ team, mark = true, rank = true, full = false, size = 20, rankAt }: {
+export function TeamLink({ team, mark = true, rank = true, full = false, size = 20, rankAt, rankNow = false }: {
   team: number; mark?: boolean; rank?: boolean; full?: boolean; size?: number;
   /** A rank to show in place of today's (Scores: the rank going into the game); 0 or over 25 shows none. */
   rankAt?: number;
+  /** rankAt is today's rank standing in for one no save has (Scores; user, 2026-11-26): drawn in another color. */
+  rankNow?: boolean;
 }) {
   const { d, v } = useDyn();
   const r = !rank ? '' : rankAt !== undefined ? (rankAt >= 1 && rankAt <= 25 ? String(rankAt) : '') : rankText(v, team);
   return (
     <a className="dy-team" href={href(`team/${team}`)}>
       {mark && <TeamMark team={team} size={size} />}
-      {r && <span className="dy-rank">{r}</span>}
+      {r && <span className={rankNow ? 'dy-rank dy-rank-now' : 'dy-rank'} title={rankNow ? 'Current rank: no save from that week has the ranks' : undefined}>{r}</span>}
       <span>{full ? `${d.teams[team].school} ${d.teams[team].nickname}` : d.teams[team].school}</span>
     </a>
   );
