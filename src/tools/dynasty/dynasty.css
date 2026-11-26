@@ -174,6 +174,13 @@
 .dy-team-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 40px; }
 .dy-stat-tables { display: grid; gap: 24px; }
 .dy-boards { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 32px 40px; }
+/* Stats (StatsPage.tsx): team leader boards four across on wide screens; filters in a row; View all under a board. */
+.dy-boards-4 { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); margin-bottom: var(--sp-6); }
+.dy-viewall { font-weight: 700; }
+.dy-sfilters { display: grid; gap: var(--sp-2); margin: var(--sp-4) 0 var(--sp-3); }
+.dy-sfilters-main { display: grid; gap: var(--sp-3); }
+@media (min-width: 640px) { .dy-sfilters-main { grid-template-columns: repeat(auto-fill, minmax(200px, 260px)); } }
+.dy-stable td, .dy-stable th { white-space: nowrap; }
 
 /* Manage */
 .dy-manage { max-width: 760px; margin-top: 32px; }

@@ -11,7 +11,8 @@ import { navClick } from '../../appNav';
 import { Ctx, href, TeamMark, type DynCtx } from './ui';
 import { Awards } from './AwardsPage';
 import { Records } from './RecordsPage';
-import { History, Home, Leaders, Player, Rankings, Scores, Standings, Team, teamRoute, Teams } from './pages';
+import { History, Home, Player, Rankings, Scores, Standings, Team, teamRoute, Teams } from './pages';
+import { Stats } from './StatsPage';
 import { Coach, Coaches } from './CoachPages';
 import { Rosters } from './RostersPage';
 import { PadLayer } from '../../ui/pad';
@@ -108,7 +109,7 @@ export default function SnapshotApp({ id, toolkitHref }: { id: string; toolkitHr
       case 'coach': return num !== undefined ? <Coach id={num} /> : <Coaches />;
       case 'team': { const tr = teamRoute(arg); return tr ? <Team team={tr.team} tab={tr.tab} /> : <Teams />; }
       case 'player': return num !== undefined ? <Player id={num} /> : <Home />;
-      case 'stats': return <Leaders />;
+      case 'stats': return <Stats key={(arg ?? '').split('/').slice(0, 2).join('/')} arg={arg} />;
       case 'history': return <History />;
       case 'awards': return <Awards arg={arg} />;
       case 'records': return <Records arg={arg} />;
