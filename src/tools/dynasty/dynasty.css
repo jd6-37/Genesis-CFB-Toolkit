@@ -123,6 +123,12 @@
 .dy-team-index li { padding: 4px 0; }
 .dy-team-index .dy-team, .dy-top25:not(.dy-compact) .dy-team { gap: 12px; }
 .dy-team-index .dy-mark, .dy-top25:not(.dy-compact) .dy-mark { width: 104px; flex: none; }
+/* Top 25 page: 26 and on (every team the game ranks) in short rows: small logo, small number. */
+.dy-top25 li.dy-top-rest { padding: 2px 0; font-size: var(--fs-3); }
+.dy-top25 li.dy-top-rest .dy-top-n { font-size: var(--fs-3); font-weight: 400; color: var(--gray); }
+.dy-top25:not(.dy-compact) li.dy-top-rest .dy-mark { width: 28px; }
+.dy-top25:not(.dy-compact) li.dy-top-rest .dy-team { gap: var(--sp-2); }
+.dy-top25 li.dy-top-rest-first { border-top: var(--rule-w-strong) solid var(--rule-strong); margin-top: var(--sp-3); }
 .dy-teamhead {
   display: flex; flex-direction: column; gap: 16px; padding: 20px 16px; margin: 20px calc(-1 * var(--dy-pad)) 0; background: var(--wash);
 }
