@@ -120,9 +120,13 @@ export function TeamMark({ team, size = 24, kind = 'logo', exact = false }: { te
 }
 
 /** A team name that links to its page, with its logo and rank. */
-export function TeamLink({ team, mark = true, rank = true, full = false, size = 20 }: { team: number; mark?: boolean; rank?: boolean; full?: boolean; size?: number }) {
+export function TeamLink({ team, mark = true, rank = true, full = false, size = 20, rankAt }: {
+  team: number; mark?: boolean; rank?: boolean; full?: boolean; size?: number;
+  /** A rank to show in place of today's (Scores: the rank going into the game); 0 or over 25 shows none. */
+  rankAt?: number;
+}) {
   const { d, v } = useDyn();
-  const r = rank ? rankText(v, team) : '';
+  const r = !rank ? '' : rankAt !== undefined ? (rankAt >= 1 && rankAt <= 25 ? String(rankAt) : '') : rankText(v, team);
   return (
     <a className="dy-team" href={href(`team/${team}`)}>
       {mark && <TeamMark team={team} size={size} />}

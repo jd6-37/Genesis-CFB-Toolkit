@@ -14,6 +14,7 @@ import { editionOf } from '../../core/dynasty/edition';
 import { impactLock, ownImpact, teamImpact } from '../../core/dynasty/impact';
 import { offseasonStories, stories, type Story } from '../../core/dynasty/news';
 import { preseasonPoll } from '../../core/dynasty/poll';
+import { kickoffRanks } from '../../core/dynasty/kickoffRanks';
 import { OffseasonSide, PreseasonTop25, SeasonMore, SeasonSide } from './HomeSide';
 import { AddPlayer, EditLook, EditPlayer } from './EditPlayer';
 import { prestigeStars } from '../../core/dynasty/offseason';
@@ -258,6 +259,8 @@ export function Scores({ week: asked }: { week?: number }) {
   if (!v.save) return <NoResults />;
   const week = asked !== undefined && asked >= 0 && asked < v.weeks ? asked : latestWeek(v.games);
   const games = v.games.filter((g) => g.week === week);
+  // Ranks as the teams went into this week's games (user, 2026-11-26), not today's; none when no save has them.
+  const ranks = kickoffRanks(d, v.season)[week] ?? null;
   return (
     <section>
       <PageHead title="Scores" />
@@ -274,7 +277,7 @@ export function Scores({ week: asked }: { week?: number }) {
               const won = pts !== null && other !== null && pts > other;
               return (
                 <div key={k} className={`dy-game-row${won ? ' dy-won' : ''}`}>
-                  {t !== null ? <TeamLink team={t} /> : <span className="dy-dim">To be decided</span>}
+                  {t !== null ? <TeamLink team={t} rankAt={ranks?.[t] ?? 0} /> : <span className="dy-dim">To be decided</span>}
                   {t !== null && <span className="dy-dim dy-small">{recordText(v.records[t])}</span>}
                   <span className="dy-game-pts">{pts ?? ''}</span>
                 </div>
