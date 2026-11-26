@@ -375,14 +375,19 @@ export function PreseasonTop25({ compact = false }: { compact?: boolean }) {
   if (!poll) return null;
   return (
     <ol className={`dy-top25${compact ? ' dy-compact' : ''}`}>
-      {poll.slice(0, 25).map((p) => (
-        <li key={p.team}>
-          <span className="dy-top-n">{p.rank}</span>
-          <TeamLink team={p.team} rank={false} size={compact ? 20 : 48} />
-          {!p.real && <span className="dy-num">{p.points}{p.firstVotes > 0 && !compact ? ` (${p.firstVotes})` : ''}</span>}
-          {!compact && <span className="dy-move">{p.lastRank === null ? '' : p.lastRank <= 25 ? `Was No. ${p.lastRank}` : 'Was unranked'}</span>}
-        </li>
-      ))}
+      {(compact ? poll.slice(0, 25) : poll).map((p, i) => {
+        // The page lists every team (user, 2026-11-26), 26 and on in shorter rows with no points.
+        const rest = i >= 25;
+        return (
+          <li key={p.team} className={rest ? `dy-top-rest${i === 25 ? ' dy-top-rest-first' : ''}` : undefined}>
+            <span className="dy-top-n">{p.rank}</span>
+            <TeamLink team={p.team} rank={false} size={compact || rest ? 20 : 48} />
+            {!p.real && !rest && <span className="dy-num">{p.points}{p.firstVotes > 0 && !compact ? ` (${p.firstVotes})` : ''}</span>}
+            {(p.real || rest) && <span />}
+            {!compact && <span className="dy-move">{p.lastRank === null ? '' : p.lastRank <= 25 || rest ? `Was No. ${p.lastRank}` : 'Was unranked'}</span>}
+          </li>
+        );
+      })}
     </ol>
   );
 }

@@ -342,17 +342,19 @@ function Top25({ compact = false }: { compact?: boolean }) {
   const prev = v.save?.season?.lastRanks ?? [];
   return (
     <ol className={`dy-top25${compact ? ' dy-compact' : ''}`}>
-      {v.order.slice(0, 25).map((t, i) => {
+      {/* The page lists every team the game ranks (user, 2026-11-26), 26 and on in shorter rows; Home keeps 25. */}
+      {(compact ? v.order.slice(0, 25) : v.order).map((t, i) => {
         const was = prev[t];
         const move = was ? was - (i + 1) : 0;
+        const rest = i >= 25;
         return (
-          <li key={t}>
+          <li key={t} className={rest ? `dy-top-rest${i === 25 ? ' dy-top-rest-first' : ''}` : undefined}>
             <span className="dy-top-n">{i + 1}</span>
-            <TeamLink team={t} rank={false} size={compact ? 20 : 48} />
+            <TeamLink team={t} rank={false} size={compact || rest ? 20 : 48} />
             <span className="dy-num">{recordText(v.records[t])}</span>
             {!compact && (
               <span className={`dy-move${move > 0 ? ' dy-up' : move < 0 ? ' dy-down' : ''}`}>
-                {!was || was > 25 ? 'New' : move > 0 ? `Up ${move}` : move < 0 ? `Down ${-move}` : ''}
+                {!rest && (!was || was > 25) ? 'New' : move > 0 ? `Up ${move}` : move < 0 ? `Down ${-move}` : ''}
               </span>
             )}
           </li>
@@ -390,7 +392,7 @@ export function Rankings() {
   if (!v.save) return <NoResults />;
   return (
     <section>
-      <PageHead title="Top 25">The game's own poll as of your latest save.</PageHead>
+      <PageHead title="Top 25">The game's own poll as of your latest save, then every other team as the game ranks it.</PageHead>
       <Top25 />
     </section>
   );
