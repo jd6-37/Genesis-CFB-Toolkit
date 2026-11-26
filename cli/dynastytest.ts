@@ -3,6 +3,7 @@
 // The ROM is the 138-team 2026 Season Edition with the dynasty support (Elevated v2.0.1-test9 or later). The
 // save is a Genesis Plus GX (RetroArch) .srm of the 138-team edition with a season started and at least one week
 // played; the test puts its dynasty's mark (the ID block New Season copies) into it.
+import { kickoffRanks } from '../src/core/dynasty/kickoffRanks';
 import { hasV8 } from '../src/core/ratingsV8';
 import { fromScale, toScale } from '../src/core/dynasty/ratings';
 import { editionOfSig, layoutOfSig } from '../src/core/dynasty/edition';
@@ -280,6 +281,16 @@ assert.equal(r1.season.imports.length, 1);
 assert.deepEqual(d1.userTeams, s.userTeams);
 assert.deepEqual(latestSave(r1.season)!.season, s);
 assert.equal(r1.season.imports[0].weeksDone, weeksDone(save));
+{
+  // Scores' ranks at kickoff (kickoffRanks): the save's lastRanks are the last week played's; a complete week's
+  // power ranks the next week's (user, 2026-11-26).
+  const kr = kickoffRanks(d1, r1.season);
+  let last = -1;
+  for (const g of s.games) if (g.vs !== null && g.week > last) last = g.week;
+  if (last >= 0 && s.lastRanks.some((x) => x > 0)) assert.deepEqual(kr[last], s.lastRanks);
+  assert.ok(kr[0], 'week 0 has ranks (a save or the preseason poll)');
+  ok('Scores ranks at kickoff come from the save (lastRanks; power for the next week) and the preseason poll');
+}
 // The same save again replaces the import for that week.
 const d2 = importSave(d1, srm).dynasty;
 assert.equal(d2.seasons[0].imports.length, 1);

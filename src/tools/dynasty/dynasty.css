@@ -82,6 +82,8 @@
 }
 .dy-team { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; }
 .dy-rank { color: var(--gray); font: 400 var(--fs-num-tiny)/1 var(--font-num-tiny); }
+/* Scores: today's rank standing in for a week no save covers (pages.tsx Scores). */
+.dy-rank.dy-rank-now { color: var(--star); }
 
 /* Page heads and tables */
 .dy-weeknav { display: flex; gap: 8px; align-items: center; }
