@@ -243,6 +243,12 @@ for (let seed = 1; seed <= 20; seed++) {
   }
   const set = scheduleSet(sc);
   assert.equal(set[4], 12, 'the set says 12 weeks (Week 0 and 11)');
+  // The Kickoff Classic in Week 0 (user, 2026-11-26): two strong programs from different conferences, 4 Week 0 games.
+  const sk = makeSchedule({ schools: schoolList, conf: season.conf, confWeeks: { start: season.start, games: season.games }, seed, weeks: 11, edition: '1994', strength: season.conf.map((_, t) => (t * 37) % 6 + 1), confNames: season.names });
+  const kc = sk.kickoffs?.[0];
+  assert.ok(kc && kc.name === 'Kickoff Classic' && kc.week === 0 && season.conf[kc.visitor] !== season.conf[kc.home], 'the Kickoff Classic');
+  assert.equal(sk.games.filter((g) => g.week === 0).length, 4);
+  assert.deepEqual(checkSchedule(sk, schoolList, season.conf, '1994').broken, []);
 }
 assert.ok(finalesIn / finales > 0.95, `finales in week 11 (${finalesIn} of ${finales})`);
 // A bye: the user's team takes a game in its bye week; the other team's old opponent gets the bye.

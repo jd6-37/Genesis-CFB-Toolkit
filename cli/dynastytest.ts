@@ -1102,6 +1102,17 @@ ok('season rosters written to the dynasty area and read back');
   assert.ok(pairs.length >= 40, `protected pairs (${pairs.length})`);
   const inLast = (a: number, b: number) => sc.games.some((g) => g.week === weeksOf(sc) - 1 && ((g.visitor === a && g.home === b) || (g.visitor === b && g.home === a)));
   const finales = pairs.filter((p) => p.week === SCHED_WEEKS - 1);
+  // Week 0 and the Aflac Kickoff Game (user, 2026-11-26): 8 Week 0 games; Week 1's SEC team against an ACC (or Big Ten /
+  // Big 12) team; nobody short of 12 games.
+  assert.ok(sc.week0 && weeksOf(sc) === 13 && sc.games.filter((g) => g.week === 0).length === 8, 'a light Week 0 of 8 games');
+  const ko = sc.kickoffs?.[0];
+  assert.ok(ko && ko.name === 'Aflac Kickoff Game' && ko.week === 1, 'the Aflac Kickoff Game in Week 1');
+  const kc = [next.confNames[next.conf[ko!.visitor]], next.confNames[next.conf[ko!.home]]];
+  assert.ok(kc.includes('SEC') && kc.some((c) => ['ACC', 'Big Ten', 'Big 12'].includes(c)), `its conferences (${kc.join(' / ')})`);
+  assert.ok(sc.games.some((g) => g.week === 1 && [g.visitor, g.home].sort().join() === [ko!.visitor, ko!.home].sort().join()));
+  const per = new Map<number, number>();
+  for (const g of sc.games) for (const t of [g.visitor, g.home]) per.set(t, (per.get(t) ?? 0) + 1);
+  assert.ok([...per.values()].every((n) => n === 12), 'every team 12 games');
   assert.ok(finales.every((p) => inLast(p.a, p.b)), 'the finales in the last week');
   const cw = next.confWeeks!;
   const short = schools.filter((_, t) => next.conf[t] !== INDEPENDENT && ck.confGames[t] < cw.games[next.conf[t]] - 1);
