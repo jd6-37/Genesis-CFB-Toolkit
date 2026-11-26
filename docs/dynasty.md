@@ -601,3 +601,11 @@ Name, image and likeness money, for the 2026 edition only (`src/core/dynasty/nil
 ## Opening a dynasty file in another browser (2026-11-24)
 
 The dynasty file carries neither the team art nor the base ROM (both stay in the browser's IndexedDB). The user moved a new dynasty to another browser, imported a save and saw no logos; chose to be asked right away ("it's not intuitive to do it after the fact") over putting the art in the file (+~1 MB). `importFile` in `DynastyApp.tsx`: after opening, if `loadArt` or `loadRom` has nothing for the dynasty, the **Load your ROM** window opens (`askRom`): Load ROM runs `addArt` (logos, the kept ROM, colors and uniforms; `assetRomProblem` still refuses another build: use Upgrade), Later closes it (Manage's Team logos and uniforms still offers it). The season ROM download and out-of-date windows wait while it's open.
+
+## Stats page: Players and Teams (2026-11-26)
+
+User: "separate the Stats section into Player (what we have now) and Team tabs … the player stats leaderboards [get] a 'view all' button that shows a data grid of all players, sortable … showcase all of the data we have for stats"; prototype approved ("Good idea on adding player stats to make team stats. Those mockups look good. Proceed"). `src/tools/dynasty/StatsPage.tsx` (the old `Leaders` in pages.tsx is gone):
+- `#stats`: Players tab, the ten leader boards, each with **View all**.
+- `#stats/players/<cat>[/<query>]`: every slot line of a category with any non-zero number; columns `CATS` (derived: completion %, yards per attempt, NCAA passer rating, yards per carry / catch / punt, FG %); search, team, conference, per game (divides counts by the team's games), sort, page (50), all in the address (`replaceState`).
+- `#stats/teams[/<view>[/<query>]]`: `teamTotals` adds each team's slot lines up (passing, rushing, fumbles from runs and catches, drops, tackles, sacks, interceptions, kicking, punting) with W, L, points for and against from `v.records`; four boards (points per game, fewest points allowed, total yards per game, sacks) and views Overview / Passing / Rushing / Defense / Kicking; the user's teams' rows marked.
+- Not in the save, so not shown: yards, turnovers or first downs a defense allowed, penalties, time of possession.

@@ -1201,46 +1201,6 @@ function BwRatings({ team, slot, name, bench = false, player }: { team: number; 
 
 // ---- leaders
 
-const LEADER_BOARDS: { title: string; cat: StatCategory; key: string }[] = [
-  { title: 'Passing yards', cat: 'passing', key: 'yds' },
-  { title: 'Passing touchdowns', cat: 'passing', key: 'td' },
-  { title: 'Rushing yards', cat: 'rushing', key: 'yds' },
-  { title: 'Rushing touchdowns', cat: 'rushing', key: 'td' },
-  { title: 'Receiving yards', cat: 'receiving', key: 'yds' },
-  { title: 'Receptions', cat: 'receiving', key: 'rec' },
-  { title: 'Tackles', cat: 'defense', key: 'tkl' },
-  { title: 'Sacks', cat: 'defense', key: 'sacks' },
-  { title: 'Interceptions', cat: 'defense', key: 'int' },
-  { title: 'Field goals', cat: 'kicking', key: 'fgm' },
-];
-
-export function Leaders() {
-  const { d, v } = useDyn();
-  const lines = useMemo(() => playerLines(v), [v]);
-  if (!v.save) return <NoResults />;
-  return (
-    <section>
-      <PageHead title="Stat leaders">{v.season.year} season to date.</PageHead>
-      <div className="dy-boards">
-        {LEADER_BOARDS.map((b) => (
-          <Table key={b.title} figures className="dy-board">
-            <caption>{b.title}</caption>
-            <tbody>
-              {leaders(lines, b.cat, b.key, 10).map((l, i) => (
-                <tr key={`${l.team}-${l.slot}`}>
-                  <td className="dy-dim">{i + 1}</td>
-                  <td className="ui-left"><PlayerCell line={l} /> <span className="dy-dim dy-small">{d.teams[l.team].school}</span></td>
-                  <td className="dy-strong"><Num value={statValue(l, b.key)} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 // ---- history
 
 export function History() {

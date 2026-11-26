@@ -25,7 +25,8 @@ import { SharePanel } from './SharePanel';
 import { Awards } from './AwardsPage';
 import { Records } from './RecordsPage';
 import { ScheduleEditor } from './SchedulePage';
-import { History, Home, Leaders, Player, Rankings, Scores, Standings, Team, teamRoute, Teams } from './pages';
+import { History, Home, Player, Rankings, Scores, Standings, Team, teamRoute, Teams } from './pages';
+import { Stats } from './StatsPage';
 import { Offseason, type OffseasonActions } from './OffseasonPage';
 import { Coach, Coaches } from './CoachPages';
 import { Rosters } from './RostersPage';
@@ -487,7 +488,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       case 'coach': return num !== undefined ? <Coach id={num} /> : <Coaches />;
       case 'team': { const tr = teamRoute(arg); return tr ? <Team team={tr.team} tab={tr.tab} /> : <Teams />; }
       case 'player': return num !== undefined ? <Player id={num} /> : <Home />;
-      case 'stats': return <Leaders />;
+      case 'stats': return <Stats key={(arg ?? '').split('/').slice(0, 2).join('/')} arg={arg} />;
       case 'history': return <History />;
       case 'awards': return <Awards arg={arg} />;
       case 'records': return <Records arg={arg} />;
