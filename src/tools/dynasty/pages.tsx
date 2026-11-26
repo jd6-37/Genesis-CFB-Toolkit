@@ -415,7 +415,9 @@ function PlayerCell({ line }: { line: PlayerLine }) {
   return p ? <a href={href(`player/${p.id}`)}>{p.jersey >= 0 && (p.first || p.last) && `#${p.jersey} `}{playerName(p)}</a> : <span className="dy-dim">Unknown player</span>;
 }
 
-function StatTables({ lines }: { lines: PlayerLine[] }) {
+/** The season's stat tables. With team (the Team page's Stats tab), each ends with View all: that category on the
+ *  Stats page, filtered to the team (user, 2026-11-26). */
+function StatTables({ lines, team }: { lines: PlayerLine[]; team?: number }) {
   const { d, v } = useDyn();
   return (
     <div className="dy-stat-tables">
@@ -436,6 +438,9 @@ function StatTables({ lines }: { lines: PlayerLine[] }) {
                 </tr>
               ))}
             </tbody>
+            {team !== undefined && (
+              <tfoot><tr><td colSpan={t.cols.length + 2} className="ui-left"><a className="dy-viewall" href={href(`stats/players/${t.cat}/team=${team}`)}>View all</a></td></tr></tfoot>
+            )}
           </Table>
         );
       })}
@@ -720,7 +725,7 @@ export function Team({ team, tab = 'overview' }: { team: number; tab?: TeamTab }
 
       {tab === 'stats' && <>
         <SubHead>Season stats</SubHead>
-        {lines.some((l) => Object.values(l.s).some((x) => x > 0)) ? <StatTables lines={lines} /> : <p className="dy-dim">No stats yet.</p>}
+        {lines.some((l) => Object.values(l.s).some((x) => x > 0)) ? <StatTables lines={lines} team={team} /> : <p className="dy-dim">No stats yet.</p>}
       </>}
 
       {tab === 'nil' && hasNil(d) && <TeamNil team={team} />}
