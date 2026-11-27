@@ -376,6 +376,8 @@ ok(`news: ${st.length} stories, lead "${st[0].headline}"`);
     assert.equal(inn.length, 1); assert.match(inn[0].headline, /Top 25|ranked/); assert.match(inn[0].dek!, /No\. 18/);
     assert.equal(outt.length, 1); assert.match(outt[0].headline, /Top 25|poll/); assert.match(outt[0].dek!, /No\. 22/);
     assert.equal(fake(12, 9).length + fake(40, 33).length, 0, 'no story inside or outside the poll');
+    // Every headline opens a window (user, 2026-11-27): these open the poll around the team.
+    assert.deepEqual(inn[0].poll, { was: 31, now: 18 }); assert.deepEqual(outt[0].poll, { was: 22, now: 30 });
     ok(`news: Top 25 in / out for your team ("${inn[0].headline}" / "${outt[0].headline}")`);
   }
 }

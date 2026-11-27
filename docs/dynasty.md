@@ -664,3 +664,6 @@ User: keep the last few (10) save files the user uploads, in the dynasty file, w
 - Snapshots (`makeSnapshot`) leave the kept files out.
 - Upgrades: a season's ROM name is fixed at its first download (`DSeason.romFile` + `romId`), so a mid-season upgrade keeps it and the save needs no rename. The card says so (safe timing); the "Upgraded" window and the re-download window show the exact file name (`RomName`) with the " (1)" warning.
 - `test:dynasty`: kept saves check (byte-for-byte back, 10 kept, delete keeps the results).
+
+## Every headline opens a window (2026-11-27)
+User (rule, keep it): "every headline should open to a modal". The Top 25 in / out story linked to the team page. `windowOf` (StoryWindows.tsx) never returns "no window" now: `Story.poll { was, now }` opens `RankWindow` (the bottom of the poll with the team, moves, its week's result and next game); any story without a window of its own opens `TeamWindow` (the story's text, each team's record, rank, result that week and next game, a Team page or Player page button). A new kind of story gets a window of its own or falls to `TeamWindow`; never a plain link. `test:dynasty` checks the poll field.

@@ -1,7 +1,8 @@
 // Headline windows (user, 2026-11-26: "make every headline open a modal like the player game stats headlines do …
 // Even just the opponent and score would be useful"). A game's story opens its box score as far as the app knows it;
 // a ranking story the poll; a stat story that stat's top five; a race the standings; the playoff field or the bowls.
-// Stories about a coach and the offseason's stay links.
+// Every headline opens a window (user, 2026-11-27: "every headline should open to a modal"): a Top 25 move the poll
+// around the team; any other story without its own window the team's (or player's) week.
 import { useState } from 'react';
 import { Button, Modal, Table } from '../../ui';
 import type { Story } from '../../core/dynasty/news';
@@ -16,9 +17,9 @@ import { statsHref } from './StatsPage';
 import { Headshot, TeamLink, TeamMark, href, recordText, useDyn, Ranked } from './ui';
 
 type Played = SaveGame & { visitor: number; home: number; vs: number; hs: number };
-type Win = 'game' | 'potw' | 'poll' | 'unbeaten' | 'stat' | 'race' | 'field' | null;
+type Win = 'game' | 'potw' | 'poll' | 'unbeaten' | 'stat' | 'race' | 'field' | 'rank' | 'team';
 
-/** Which window a story opens, if any. */
+/** Which window a story opens: every story opens one. */
 export function windowOf(s: Story, played: boolean): Win {
   if (s.box && s.player) return 'potw';
   if (s.game !== undefined && played) return 'game';
@@ -27,17 +28,17 @@ export function windowOf(s: Story, played: boolean): Win {
   if (s.stat) return 'stat';
   if (s.conf !== undefined) return 'race';
   if (s.kind === 'cfp') return 'field';
-  return null;
+  if (s.poll) return 'rank';
+  return 'team';
 }
 
-/** A story's headline as a link: a window when it has one, else its player's or team's page. */
+/** A story's headline: it opens the story's window (the link's address is the team's or player's page, for a new tab). */
 export function StoryLink({ s }: { s: Story }) {
   const { v } = useDyn();
   const [open, setOpen] = useState(false);
   const g = s.game !== undefined ? (v.games.find((x) => x.index === s.game && x.vs !== null && x.visitor !== null && x.home !== null) as Played | undefined) : undefined;
   const win = windowOf(s, !!g);
   const page = href(s.player ? `player/${s.player}` : `team/${s.teams[0]}`);
-  if (!win) return <a href={page}>{s.headline}</a>;
   const close = () => setOpen(false);
   return (
     <>
@@ -49,7 +50,9 @@ export function StoryLink({ s }: { s: Story }) {
               : win === 'unbeaten' ? <UnbeatenWindow s={s} onClose={close} />
                 : win === 'stat' ? <StatWindow s={s} onClose={close} />
                   : win === 'race' ? <RaceWindow s={s} onClose={close} />
-                    : <FieldWindow s={s} onClose={close} />
+                    : win === 'field' ? <FieldWindow s={s} onClose={close} />
+                      : win === 'rank' ? <RankWindow s={s} onClose={close} />
+                        : <TeamWindow s={s} onClose={close} />
       )}
     </>
   );
@@ -292,6 +295,86 @@ function FieldWindow({ s, onClose }: { s: Story; onClose: () => void }) {
           ))}
         </ol>
       )}
+    </Modal>
+  );
+}
+
+/** A team's result in a week ("W 31-10 vs. Iowa"), or null. */
+function resultIn(v: ReturnType<typeof useDyn>['v'], name: (t: number) => string, t: number, week: number) {
+  const g = v.games.find((x) => x.week === week && (x.visitor === t || x.home === t) && x.vs !== null && x.hs !== null);
+  if (!g) return null;
+  const mine = g.visitor === t ? g.vs! : g.hs!, theirs = g.visitor === t ? g.hs! : g.vs!, o = g.visitor === t ? g.home : g.visitor;
+  return `${mine > theirs ? 'W' : mine < theirs ? 'L' : 'T'} ${Math.max(mine, theirs)}-${Math.min(mine, theirs)} ${g.visitor === t ? 'at' : 'vs.'} ${o === null ? 'TBD' : name(o)}`;
+}
+/** A team's next game after a week, or null. */
+function nextAfter(v: ReturnType<typeof useDyn>['v'], name: (t: number) => string, t: number, week: number) {
+  const n = v.games.find((x) => x.week > week && (x.visitor === t || x.home === t) && x.vs === null);
+  if (!n) return null;
+  const o = n.visitor === t ? n.home : n.visitor;
+  return `${weekName(v, n.week)}, ${n.visitor === t ? 'at' : 'vs.'} ${o === null ? 'to be decided' : name(o)}`;
+}
+
+/** A team's move into or out of the Top 25: the bottom of the poll with the team, its week and its next game. */
+function RankWindow({ s, onClose }: { s: Story; onClose: () => void }) {
+  const { d, v } = useDyn();
+  const t = s.teams[0], { was, now } = s.poll!;
+  const name = (x: number) => d.teams[x].school;
+  const before = kickoffRanks(d, v.season)[s.week];
+  const from = Math.max(1, Math.min(was || 26, now, 26) - 4);
+  const rows = v.order.slice(from - 1, 25);
+  if (now > 25) rows.push(t);
+  const res = resultIn(v, name, t, s.week), nx = nextAfter(v, name, t, s.week);
+  return (
+    <Modal title={s.headline} onClose={onClose} sub={<>The poll after {weekName(v, s.week)}</>}
+      actions={<><Button href={href(`team/${t}`)} onClick={onClose}>Team page</Button><CloseButton onClose={onClose} /></>}>
+      <p>{s.dek}</p>
+      <ol className="dy-gw-list">
+        {rows.map((x) => {
+          const r = v.rank[x], w = before?.[x] ?? 0, mv = w && w <= 25 && r <= 25 ? w - r : 0;
+          return (
+            <li key={x} className={x === t ? 'dy-gw-hot' : ''}>
+              <span className="dy-gw-n">{r}</span><TeamMark team={x} size={20} /><a href={href(`team/${x}`)}>{name(x)}</a>
+              <span className="dy-dim">{recordText(v.records[x])}</span>
+              <span className={`dy-gw-move${mv > 0 || (r <= 25 && (!w || w > 25)) ? ' dy-up' : mv < 0 || (r > 25 && w <= 25) ? ' dy-down' : ''}`}>
+                {r <= 25 && (!w || w > 25) ? 'New' : r > 25 ? (w && w <= 25 ? `Out (was ${w})` : '') : mv > 0 ? `Up ${mv}` : mv < 0 ? `Down ${-mv}` : 'No change'}
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+      <ul className="dy-gw-facts">
+        {res && <li><span className="dy-gw-cat">{weekName(v, s.week)}</span><span>{res}</span></li>}
+        <li><span className="dy-gw-cat">Next</span><span>{nx ?? 'Season over'}</span></li>
+      </ul>
+    </Modal>
+  );
+}
+
+/** Any other story: the story's text, then its team's week (record, rank, result, next game) and its links. */
+function TeamWindow({ s, onClose }: { s: Story; onClose: () => void }) {
+  const { d, v } = useDyn();
+  const name = (x: number) => d.teams[x].school;
+  const teams = s.teams.slice(0, 2);
+  return (
+    <Modal title={s.headline} onClose={onClose} sub={<>{v.season.year}, {weekName(v, s.week)}</>}
+      actions={<>
+        {s.player ? <Button href={href(`player/${s.player}`)} onClick={onClose}>Player page</Button>
+          : teams[0] !== undefined && <Button href={href(`team/${teams[0]}`)} onClick={onClose}>Team page</Button>}
+        <CloseButton onClose={onClose} />
+      </>}>
+      {s.dek && <p>{s.dek}</p>}
+      {teams.map((t) => {
+        const res = resultIn(v, name, t, s.week), nx = nextAfter(v, name, t, s.week);
+        return (
+          <div key={t} className="dy-gw-teamweek">
+            <div className="dy-gw-row"><TeamMark team={t} size={32} /><span className="dy-gw-team"><a href={href(`team/${t}`)}><Ranked team={t} /></a></span><span className="dy-dim">{recordText(v.records[t])}</span></div>
+            <ul className="dy-gw-facts">
+              {res && <li><span className="dy-gw-cat">{weekName(v, s.week)}</span><span>{res}</span></li>}
+              <li><span className="dy-gw-cat">Next</span><span>{nx ?? 'Season over'}</span></li>
+            </ul>
+          </div>
+        );
+      })}
     </Modal>
   );
 }
