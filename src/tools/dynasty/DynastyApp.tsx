@@ -8,7 +8,8 @@ import { Rules } from './RulesPage';
 import { useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { openRom } from '../../core/romfile';
 import { fetchCfb27Latest } from '../../core/cfb27Latest';
-import { createDynasty, DYNASTY_FILE, importSave, OLD_DYNASTY, romBuildOf, type Dynasty, type DSeason } from '../../core/dynasty/model';
+import { TrophyArtPanel, TrophyRoomPage } from './TrophyPages';
+import { createDynasty, DYNASTY_FILE, importSave, OLD_DYNASTY, rememberUser, romBuildOf, type Dynasty, type DSeason } from '../../core/dynasty/model';
 import { createDynasty1994 } from '../../core/dynasty/create1994';
 import { editionOf, editionOfRom } from '../../core/dynasty/edition';
 import { fetchRosters1994 } from '../../core/dynasty/rosters1994';
@@ -233,7 +234,9 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
     })();
   }, [refresh, open]);
 
-  const commit = useCallback(async (next: Dynasty) => {
+  const commit = useCallback(async (raw: Dynasty) => {
+    // Every team the user ever controlled, and every coach managed, season by season (the trophy room).
+    const next = rememberUser(raw);
     setD(next);
     await saveDynasty(next);
     await refresh();
@@ -491,6 +494,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       case 'stats': return <Stats key={(arg ?? '').split('/').slice(0, 2).join('/')} arg={arg} />;
       case 'history': return <History />;
       case 'awards': return <Awards arg={arg} />;
+      case 'trophies': return <TrophyRoomPage />;
       case 'records': return <Records arg={arg} />;
       case 'schedule': return <ScheduleEditor arg={arg} />;
       case 'offseason': return <Offseason actions={offActions} busy={busy} arg={arg} />;
@@ -504,7 +508,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       default: return <Home />;
     }
   })();
-  const navPage = page === 'team' || page === 'player' || page === 'schedule' ? (page === 'player' ? 'stats' : 'teams') : page === 'rules' || page === 'guide' || page === 'start' || page === 'setup' ? 'manage' : page === 'training' ? 'offseason' : page === 'awards' || page === 'records' ? 'history' : page;
+  const navPage = page === 'team' || page === 'player' || page === 'schedule' ? (page === 'player' ? 'stats' : 'teams') : page === 'rules' || page === 'guide' || page === 'start' || page === 'setup' ? 'manage' : page === 'training' ? 'offseason' : page === 'awards' || page === 'records' || page === 'trophies' ? 'history' : page;
   const navItems = PAGES.map((p) => ({ label: p.label, href: href(p.id), current: navPage === p.id, off: !ctx && p.id !== 'manage' }));
   const week = d?.offseason ? 'Offseason' : v && v.save ? (v.currentWeek < v.weeks ? weekName(v, v.currentWeek) : 'Season complete') : d && d.seasons.length > 1 ? 'Preseason' : null;
   const mastSub = d ? `${d.offseason ? d.offseason.year : d.seasons[d.seasons.length - 1].year}${week ? `, ${week}` : ''}` : undefined;
@@ -692,6 +696,7 @@ const MANAGE_SECTIONS = [
   { id: 'dy-m-teams', label: 'Your teams' },
   { id: 'dy-m-players', label: 'Players' },
   { id: 'dy-m-files', label: 'Files' },
+  { id: 'dy-m-trophies', label: 'Trophy art' },
   { id: 'dy-m-share', label: 'Share' },
   { id: 'dy-m-help', label: 'Rules' },
   { id: 'dy-m-pad', label: 'Controller' },
@@ -822,6 +827,11 @@ function Manage({ d, art, list, busy, note, actions, focus, ctx, up }: {
             <h2>Players</h2>
             {canReplaceBench(d) && <BenchChoice onRandom={actions.randomBench} busy={!!busy} source={benchSource(editionOf(d).id)} />}
             <PlayersCsv d={d} actions={actions} />
+          </section>
+
+          <section className="dy-panel" id="dy-m-trophies">
+            <h2>Trophy art</h2>
+            <TrophyArtPanel d={d} onSave={actions.commit} />
           </section>
 
           <section className="dy-panel" id="dy-m-files">

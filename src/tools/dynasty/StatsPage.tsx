@@ -6,6 +6,7 @@
 //   #stats/teams[/<q>]            every team, from the same player lines added up per team, plus the scores
 // What the save has: each team's players' season lines by category (passing, rushing, receiving, kicking, punting,
 // defense) and every game's score. Not in it: yards or turnovers allowed, first downs, penalties, time of possession.
+import { AwardWatch } from './TrophyPages';
 import { useMemo, useState } from 'react';
 import { Button, Check, Field, Num, PageHead, Segments, Select, Table, Tabs } from '../../ui';
 import { INDEPENDENT, leaders, playerLines, playerName, statValue, type PlayerLine, type StatCategory } from '../../core/dynasty/derive';
@@ -109,13 +110,13 @@ const PAGE = 50;
 
 export function Stats({ arg }: { arg?: string }) {
   const [part, cat, q] = (arg ?? '').split('/');
-  const tab = part === 'teams' ? 'teams' : 'players';
+  const tab = part === 'teams' ? 'teams' : part === 'awards' ? 'awards' : 'players';
   return (
     <section>
-      <PageHead title="Stats">{tab === 'teams' ? 'Every team this season: totals added up from its players, and points from its games.' : 'This season so far.'}</PageHead>
-      <Tabs label="Stats" value={tab} onChange={(x) => { window.location.hash = x === 'teams' ? 'stats/teams' : 'stats'; }}
-        tabs={[{ value: 'players', label: 'Players' }, { value: 'teams', label: 'Teams' }]} />
-      {tab === 'teams' ? <TeamStats key={arg} q={cat} /> : part === 'players' ? <AllPlayers key={arg} cat={catOf(cat).cat} q={q} /> : <Boards />}
+      <PageHead title="Stats">{tab === 'teams' ? 'Every team this season: totals added up from its players, and points from its games.' : tab === 'awards' ? 'Who is in the running for each award.' : 'This season so far.'}</PageHead>
+      <Tabs label="Stats" value={tab} onChange={(x) => { window.location.hash = x === 'teams' ? 'stats/teams' : x === 'awards' ? 'stats/awards' : 'stats'; }}
+        tabs={[{ value: 'players', label: 'Players' }, { value: 'teams', label: 'Teams' }, { value: 'awards', label: 'Award watch' }]} />
+      {tab === 'teams' ? <TeamStats key={arg} q={cat} /> : tab === 'awards' ? <AwardWatch /> : part === 'players' ? <AllPlayers key={arg} cat={catOf(cat).cat} q={q} /> : <Boards />}
     </section>
   );
 }

@@ -342,7 +342,7 @@ function factsOf(L: WalshLeague, T: number): Facts {
     const h = L.awards.heisman[0];
     if (h && here(h.player)) honors.push({ p: d.players[h.player - 1], what: 'the Heisman Trophy', heisman: true });
     for (const a of L.awards.position) if (a.winner && here(a.winner.player) && !honors.some((x) => x.p.id === a.winner!.player)) {
-      honors.push({ p: d.players[a.winner.player - 1], what: `the award for the ${a.label.replace(/^Best /, 'best ')}`, heisman: false });
+      honors.push({ p: d.players[a.winner.player - 1], what: `the ${a.label}`, heisman: false });
     }
     for (const c of L.awards.allAmerican[0]) if (here(c.player) && !honors.some((x) => x.p.id === c.player)) {
       honors.push({ p: d.players[c.player - 1], what: 'All-American', heisman: false });

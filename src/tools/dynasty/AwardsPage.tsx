@@ -2,7 +2,8 @@
 // conference's first team, for any finished season. Mobile first: one column of tables on phones.
 import { PageHead, Select, SubHead, Table } from '../../ui';
 import { useMemo, useState } from 'react';
-import { AWARD_SPOTS, seasonAwards, type Candidate } from '../../core/dynasty/awards';
+import { AWARD_SPOTS, COACH_AWARDS, HEISMAN, POSITION_AWARDS, seasonAwards, type Candidate } from '../../core/dynasty/awards';
+import { Trophy } from './TrophyPages';
 import { playerName } from '../../core/dynasty/derive';
 import { Empty, TeamLink, href, playerOf, useDyn } from './ui';
 
@@ -53,6 +54,7 @@ export function Awards({ arg }: { arg?: string }) {
       <p className="dy-dim dy-small">Worked out from the season's stats and the players' OVR: the leaders by stats are considered, then the better players win out (offensive linemen, who have no stats, by OVR and team wins).</p>
       {wp && winner && (
         <div className="dy-heisman">
+          <Trophy art={HEISMAN.art} size={2} label="" />
           <p className="dy-heisman-title">Heisman Trophy</p>
           <p className="dy-heisman-name"><a href={href(`player/${wp.id}`)}>{playerName(wp)}</a></p>
           <p className="dy-heisman-team"><TeamLink team={winner.team} rank={false} /><span className="dy-dim">{wp.pos}</span></p>
@@ -61,8 +63,35 @@ export function Awards({ arg }: { arg?: string }) {
           )}
         </div>
       )}
-      <SubHead>Position awards</SubHead>
-      <TeamTable list={a.position.flatMap((x) => (x.winner ? [{ ...x.winner, role: x.label }] : []))} />
+      <SubHead>The awards</SubHead>
+      <ul className="dy-award-list">
+        {a.position.map((x) => {
+          const p = x.winner ? playerOf(d, x.winner.player) : undefined;
+          const na = POSITION_AWARDS.find((y) => y.key === x.key);
+          return (
+            <li key={x.key}>
+              <Trophy art={na?.art ?? 'poy'} size={2} />
+              <div>
+                <p className="dy-award-name">{x.label}<span className="dy-small dy-dim"> {na?.what}</span></p>
+                {x.winner ? <p>{p ? <a href={href(`player/${p.id}`)}>{playerName(p)}</a> : 'Unknown player'} <TeamLink team={x.winner.team} rank={false} size={16} /><span className="dy-small dy-dim dy-award-line">{x.winner.line}</span></p> : <p className="dy-dim">Not given</p>}
+              </div>
+            </li>
+          );
+        })}
+        {a.coach.map((x) => {
+          const c = x.coach !== null ? d.coaches?.find((k) => k.id === x.coach) : undefined;
+          const ca = COACH_AWARDS.find((y) => y.key === x.key)!;
+          return (
+            <li key={x.key}>
+              <Trophy art={ca.art} size={2} />
+              <div>
+                <p className="dy-award-name">{x.label}<span className="dy-small dy-dim"> {ca.what}</span></p>
+                {x.team >= 0 ? <p>{c ? <a href={href(`coach/${c.id}`)}>{c.name}</a> : 'Head coach'} <TeamLink team={x.team} rank={false} size={16} /></p> : <p className="dy-dim">Not given</p>}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
       <div className="dy-team-cols">
         <div>
           <SubHead>All-American first team</SubHead>

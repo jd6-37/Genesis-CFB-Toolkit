@@ -10,6 +10,7 @@ import { INDEPENDENT, playerLines, seasonView, statValue, type PlayerLine, type 
 import type { DSeason, Dynasty } from './model';
 import { playerOvr, roleOfSlot } from './ovr';
 import { heismanWatch } from './outlook';
+import { kickoffRanks } from './kickoffRanks';
 
 /** The spots on an All-American or All-Conference team, in order (11 on offense, 11 on defense, 2 kickers). */
 export const AWARD_SPOTS: { label: string; roles: string[]; n: number }[] = [
@@ -26,15 +27,37 @@ export const AWARD_SPOTS: { label: string; roles: string[]; n: number }[] = [
   { label: 'P', roles: ['P'], n: 1 },
 ];
 
-/** Position awards (named for what they are, not after real trophies, except the Heisman). */
-export const POSITION_AWARDS: { key: string; label: string; spot: string }[] = [
-  { key: 'qb', label: 'Best quarterback', spot: 'QB' },
-  { key: 'rb', label: 'Best running back', spot: 'RB' },
-  { key: 'wr', label: 'Best receiver', spot: 'WR' },
-  { key: 'ol', label: 'Best offensive lineman', spot: 'OL' },
-  { key: 'def', label: 'Best defensive player', spot: 'DEF' },
-  { key: 'k', label: 'Best kicker', spot: 'K' },
+/**
+ * The real awards (user, 2026-11-27: "Use the real names, eg. Davey O'Brien Award (best QB), Doak Walker Award (best
+ * RB), etc. and watches"), each with the year it was first given: a 1994 dynasty gets the Biletnikoff from 1994, the
+ * Mackey and the Ray Guy from 2000, and so on. `roles` is who's in the running; 'poy' takes the Heisman watch's
+ * players (the player-of-the-year awards), 'interior' the Outland's offensive linemen and defensive tackles.
+ * `weight` is the stats share of the blend (AWARD_STATS_WEIGHT unless set): the player-of-the-year awards differ
+ * that way, so they can go to different players.
+ */
+export interface NamedAward { key: string; name: string; what: string; roles: string[] | 'poy' | 'interior'; since: number; art: string; weight?: number }
+export const POSITION_AWARDS: NamedAward[] = [
+  { key: 'maxwell', name: 'Maxwell Award', what: 'Best all-around player', roles: 'poy', since: 1937, art: 'maxwell', weight: 0.5 },
+  { key: 'camp', name: 'Walter Camp Award', what: 'Player of the year', roles: 'poy', since: 1967, art: 'camp', weight: 0.7 },
+  { key: 'obrien', name: "Davey O'Brien Award", what: 'Best quarterback', roles: ['QB'], since: 1981, art: 'qb' },
+  { key: 'walker', name: 'Doak Walker Award', what: 'Best running back', roles: ['HB', 'FB'], since: 1990, art: 'rb' },
+  { key: 'biletnikoff', name: 'Biletnikoff Award', what: 'Best receiver', roles: ['WR'], since: 1994, art: 'wr' },
+  { key: 'mackey', name: 'John Mackey Award', what: 'Best tight end', roles: ['TE'], since: 2000, art: 'te' },
+  { key: 'outland', name: 'Outland Trophy', what: 'Best interior lineman (Off. or Def.)', roles: 'interior', since: 1946, art: 'ol' },
+  { key: 'nagurski', name: 'Bronko Nagurski Trophy', what: 'Best defensive player', roles: ['DE', 'DT', 'LB', 'CB', 'S'], since: 1993, art: 'def' },
+  { key: 'bednarik', name: 'Chuck Bednarik Award', what: 'Defensive player of the year', roles: ['DE', 'DT', 'LB', 'CB', 'S'], since: 1995, art: 'def2', weight: 0.7 },
+  { key: 'butkus', name: 'Butkus Award', what: 'Best linebacker', roles: ['LB'], since: 1985, art: 'lb' },
+  { key: 'thorpe', name: 'Jim Thorpe Award', what: 'Best defensive back', roles: ['CB', 'S'], since: 1986, art: 'db' },
+  { key: 'groza', name: 'Lou Groza Award', what: 'Best place-kicker', roles: ['K'], since: 1992, art: 'k' },
+  { key: 'guy', name: 'Ray Guy Award', what: 'Best punter', roles: ['P'], since: 2000, art: 'p' },
 ];
+export const HEISMAN = { key: 'heisman', name: 'Heisman Trophy', what: 'Most outstanding player', since: 1935, art: 'heisman' };
+/** Coach of the year (user, 2026-11-27): the Bear Bryant Award and the AFCA Coach of the Year. */
+export const COACH_AWARDS = [
+  { key: 'bryant', name: 'Bear Bryant Award', what: 'Coach of the year', since: 1986, art: 'coach' },
+  { key: 'afca', name: 'AFCA Coach of the Year', what: "The coaches' coach of the year", since: 1935, art: 'coach2' },
+] as const;
+export const awardsIn = (year: number) => POSITION_AWARDS.filter((a) => a.since <= year);
 
 export interface Candidate {
   player: number;
@@ -53,7 +76,10 @@ export interface Candidate {
 export interface SeasonAwards {
   year: number;
   heisman: { player: number; team: number; score: number }[];
+  /** The named awards given that year (`label` is the award's name). */
   position: { key: string; label: string; winner: Candidate | null }[];
+  /** Coach of the year awards: the coach's id (null when the dynasty has no coaches) and his team. */
+  coach: { key: string; label: string; coach: number | null; team: number }[];
   /** First and second team. */
   allAmerican: [Candidate[], Candidate[]];
   /** First team per conference (conference index → players), independents left out. */
@@ -154,7 +180,7 @@ export const AWARD_STATS_WEIGHT = 0.6;
 export const TEAM_STATS_WEIGHT = 0.7;
 const blend = (c: Candidate, w: number) => w * c.statPct + (1 - w) * c.ovrPct;
 /** The top `n` by stats, then ordered by the blend. */
-function shortlist(pool: Candidate[], n: number, w: number): Candidate[] {
+export function shortlist(pool: Candidate[], n: number, w: number): Candidate[] {
   return pool.filter((c) => c.score > 0).sort((a, b) => b.score - a.score).slice(0, n)
     .sort((a, b) => blend(b, w) - blend(a, w) || b.score - a.score);
 }
@@ -173,11 +199,11 @@ function pickTeam(pool: Candidate[], skip: Set<number>): Candidate[] {
 /** A finished season's awards, or null while games are left. */
 export function seasonAwards(d: Dynasty, season: DSeason): SeasonAwards | null {
   const v = seasonView(d, season);
-  return v.save && v.done ? awardsOf(v) : null;
+  return v.save && v.done ? awardsOf(v, kickoffRanks(d, season)[0] ?? null) : null;
 }
 
 /** The awards from a season's stats so far (seasonAwards hands them out only once it's over). */
-export function awardsOf(v: SeasonView): SeasonAwards {
+export function awardsOf(v: SeasonView, pre: number[] | null = null): SeasonAwards {
   const season = v.season;
   const all = candidates(v);
   const first = pickTeam(all, new Set());
@@ -187,11 +213,6 @@ export function awardsOf(v: SeasonView): SeasonAwards {
     if (c === INDEPENDENT) continue;
     allConference[c] = pickTeam(all.filter((x) => season.conf[x.team] === c), new Set());
   }
-  const bestOf = (roles: string[]) => shortlist(all.filter((c) => roles.includes(c.role)), 10, AWARD_STATS_WEIGHT)[0] ?? null;
-  const position = POSITION_AWARDS.map((a) => ({
-    key: a.key, label: a.label,
-    winner: a.spot === 'DEF' ? bestOf(['DE', 'DT', 'LB', 'CB', 'S']) : bestOf(AWARD_SPOTS.find((s) => s.label === a.spot)!.roles),
-  }));
   // The Heisman: the 15 at the top of the Heisman watch (stats and team wins), blended with OVR.
   const byPlayer = new Map(all.map((c) => [c.player, c]));
   const watch = heismanWatch(v, 15);
@@ -199,7 +220,79 @@ export function awardsOf(v: SeasonView): SeasonAwards {
     .map((h, i) => ({ player: h.player, team: h.team, score: h.score, r: AWARD_STATS_WEIGHT * (watch.length > 1 ? 1 - i / (watch.length - 1) : 1) + (1 - AWARD_STATS_WEIGHT) * (byPlayer.get(h.player)?.ovrPct ?? 0) }))
     .sort((a, b) => b.r - a.r || b.score - a.score).slice(0, 5)
     .map(({ player, team, score }) => ({ player, team, score }));
-  return { year: season.year, heisman, position, allAmerican: [first, second], allConference };
+  const position = awardsIn(season.year).map((a) => ({ key: a.key, label: a.name, winner: awardWatch(v, a, all, 1)[0] ?? null }));
+  return { year: season.year, heisman, position, coach: coachAwards(v, pre), allAmerican: [first, second], allConference };
+}
+
+/** How much the Outland leaders' margins tilt the odds (see awardWatch). */
+export const OUTLAND_TILT = 1.5;
+/** Tackles' margins run wider than linemen's (stats spread more than OVR): this evens the split out (measured on 13
+ * emulator seasons, 2026 v2.2.0-rc.3: about half each). */
+export const OUTLAND_OL_BIAS = 0.085;
+/** A number in [0, 1) from a string (FNV-1a), the same every time. */
+function hash01(x: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < x.length; i++) { h ^= x.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  return (h >>> 0) / 0x100000000;
+}
+
+/** Real stats (not just the OVR tie-break): an award's watch leaves out players who haven't done anything yet. */
+const hasStats = (c: Candidate) => c.role === 'OL' || c.score > c.ovr / 1000 + 1e-9;
+
+/**
+ * An award's top `n` so far (its watch; the first is the winner once the season is over). The Outland weighs the
+ * best offensive lineman against the best defensive tackle on how far each stands above his own group (each only
+ * against his own side: linemen have no stats, tackles do), so it goes to either side (user, 2026-11-27: "Be sure
+ * to balance that").
+ */
+export function awardWatch(v: SeasonView, a: NamedAward, all = candidates(v), n = 5): Candidate[] {
+  const w = a.weight ?? AWARD_STATS_WEIGHT;
+  if (a.roles === 'poy') {
+    const byPlayer = new Map(all.map((c) => [c.player, c]));
+    const pool = heismanWatch(v, 15).map((h) => byPlayer.get(h.player)).filter((c): c is Candidate => !!c && hasStats(c));
+    return pool.sort((x, y) => blend(y, w) - blend(x, w) || y.score - x.score).slice(0, n);
+  }
+  if (a.roles === 'interior') {
+    const side = (roles: string[]) => shortlist(all.filter((c) => roles.includes(c.role) && hasStats(c)), 10, w);
+    const ol = side(['OL']), dt = side(['DT']);
+    // The leader's margin over the next four of his side.
+    const edge = (xs: Candidate[]) => (xs.length ? blend(xs[0], w) - xs.slice(1, 5).reduce((t, c) => t + blend(c, w), 0) / Math.max(1, Math.min(4, xs.length - 1)) : -1);
+    // Each leader's margins usually differ by little, and tackles' stats spread wider than linemen's OVR, so the
+    // margin alone would nearly always pick a tackle. The margin sets the odds instead (an even split when they're
+    // even, at most 85/15), and a number from the season and the two leaders settles it: the same saves always
+    // give the same winner. Checked on 13 emulator seasons and the simulator (docs/dynasty.md).
+    const pOl = Math.max(0.15, Math.min(0.85, 0.5 + OUTLAND_OL_BIAS + (edge(ol) - edge(dt)) * OUTLAND_TILT));
+    const roll = ol[0] && dt[0] ? hash01(`${v.season.year}-${ol[0].player}-${dt[0].player}`) : 0;
+    const first = !dt.length || (ol.length && roll < pOl) ? ol : dt, second = first === ol ? dt : ol;
+    // Alternate the two sides' lists after the leader, best first.
+    const out: Candidate[] = [];
+    for (let i = 0; out.length < n && (i < first.length || i < second.length); i++) {
+      if (first[i]) out.push(first[i]);
+      if (out.length < n && second[i]) out.push(second[i]);
+    }
+    return out;
+  }
+  return shortlist(all.filter((c) => (a.roles as string[]).includes(c.role) && hasStats(c)), Math.max(10, n), w).slice(0, n);
+}
+
+/**
+ * Coach of the year: the head coaches whose teams did most beyond what was expected of them. Expected: the
+ * preseason rank (the season's first ranks). The Bear Bryant Award leans on wins, the AFCA's on the climb.
+ */
+export function coachWatch(v: SeasonView, key: 'bryant' | 'afca', pre: number[] | null, n = 5): { team: number; coach: number | null; score: number; line: string }[] {
+  const out = v.records.map((r, team) => {
+    const climb = pre ? Math.max(-30, Math.min(60, (pre[team] || 70) - (v.rank[team] || 70))) : 0;
+    const score = key === 'bryant' ? 3 * r.w - 2 * r.l + climb / 3 : 1.5 * r.w - r.l + climb / 1.5;
+    return { team, coach: v.season.coach?.[team] ?? null, score, line: `${r.w}-${r.l}${!pre ? '' : pre[team] && pre[team] <= 25 ? `, ranked No. ${pre[team]} before the season` : ', unranked before the season'}` };
+  });
+  return out.filter((x) => (v.records[x.team].w + v.records[x.team].l) > 0).sort((a, b) => b.score - a.score).slice(0, n);
+}
+
+function coachAwards(v: SeasonView, pre: number[] | null): SeasonAwards['coach'] {
+  return COACH_AWARDS.filter((a) => a.since <= v.season.year).map((a) => {
+    const top = coachWatch(v, a.key, pre, 1)[0];
+    return { key: a.key, label: a.name, coach: top?.coach ?? null, team: top?.team ?? -1 };
+  });
 }
 
 export interface PlayerHonor { year: number; label: string }

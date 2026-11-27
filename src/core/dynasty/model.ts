@@ -138,6 +138,14 @@ export interface DSeason {
   teamOvr?: TeamRating[];
   /** Imports of this season's save, oldest first; one per number of completed weeks (the newest kept). */
   imports: SaveImport[];
+  /**
+   * Every team the user controlled at any time this season, and every coach the user managed (user, 2026-11-27:
+   * "make sure the dynasty file remembers everything about every team I've ever user controlled"): the trophy room
+   * counts these teams' seasons and these coaches' awards. Kept by rememberUser; older files get the user's teams
+   * of the moment for the seasons they already have.
+   */
+  userTeams?: number[];
+  userCoaches?: number[];
   /** What happened in the offseason before this season (departures, transfers, signings …), for the news. */
   events?: OffseasonEvent[];
   /** A user changed a team's lineup after the ROM was last written (download it again). */
@@ -231,6 +239,8 @@ export interface Dynasty {
   /** The year of the real coaches it started with, when it isn't the starting year (coaches.ts withCoaches). */
   coachYear?: number;
   userTeams: number[];
+  /** The user's own pictures for trophies, by art key (Manage → Trophy art): data URLs (user, 2026-11-27). */
+  trophyArt?: Record<string, string>;
   teams: DTeam[];
   players: DPlayer[];
   seasons: DSeason[];
@@ -620,3 +630,30 @@ export function dynastyFromFile(json: unknown): Dynasty {
   }
   return d;
 }
+
+/**
+ * Adds the user's teams and managed coaches of the moment to the current season's lists (they only grow), and gives
+ * seasons from before the lists existed the user's teams and coaches as they are now. Returns the same object when
+ * nothing changes.
+ */
+export function rememberUser(d: Dynasty): Dynasty {
+  const coaches = (d.coaches ?? []).filter((c) => c.manageXp).map((c) => c.id);
+  const last = d.seasons.length - 1;
+  let changed = false;
+  const union = (a: number[] | undefined, b: number[]) => {
+    const out = [...new Set([...(a ?? []), ...b])].sort((x, y) => x - y);
+    if (!a || out.length !== a.length) changed = true;
+    return out;
+  };
+  const seasons = d.seasons.map((s, i) => {
+    if (i === last) return { ...s, userTeams: union(s.userTeams, d.userTeams), userCoaches: union(s.userCoaches, coaches) };
+    if (s.userTeams && s.userCoaches) return s;
+    return { ...s, userTeams: s.userTeams ?? (changed = true, d.userTeams.slice()), userCoaches: s.userCoaches ?? (changed = true, coaches.slice()) };
+  });
+  return changed ? { ...d, seasons } : d;
+}
+
+/** The teams the user controlled in a season (any time during it). */
+export const userTeamsOf = (d: Dynasty, s: DSeason): number[] => s.userTeams ?? d.userTeams;
+/** The coaches the user managed in a season. */
+export const userCoachesOf = (d: Dynasty, s: DSeason): number[] => s.userCoaches ?? (d.coaches ?? []).filter((c) => c.manageXp).map((c) => c.id);

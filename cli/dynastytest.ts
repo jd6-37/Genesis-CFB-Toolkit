@@ -16,7 +16,7 @@ import { STATS_DEFAULTS, readSimStats } from '../src/core/simStats';
 import { SIM_DEFAULTS, readSimSettings, simForRom, type SimSettings } from '../src/core/simSettings';
 import { careerRecords, teamRecords } from '../src/core/dynasty/records';
 import { checkSchedule, editSchedule, flipHome, moveGame, protectedPairs, remakeSchedule, SCHED_WEEKS, weeksOf, setOpponent, teamSchedule, type SchedGame } from '../src/core/dynasty/schedule';
-import { AWARD_SPOTS, AWARD_STATS_WEIGHT, POSITION_AWARDS, awardsOf, candidates, playerHonors, seasonAwards } from '../src/core/dynasty/awards';
+import { AWARD_SPOTS, AWARD_STATS_WEIGHT, POSITION_AWARDS, awardsIn, awardsOf, candidates, playerHonors, seasonAwards } from '../src/core/dynasty/awards';
 import { readFileSync, writeFileSync } from 'node:fs';
 import type { CoachData } from '../src/core/dynasty/coachData';
 import { withCoaches } from '../src/core/dynasty/coaches';
@@ -25,11 +25,13 @@ import { basename } from 'node:path';
 import { strict as assert } from 'node:assert';
 import { openRom } from '../src/core/romfile';
 import { openSave, readDynastySave, ranksFromPower, STAT_SLOTS } from '../src/core/dynasty/save';
-import { CLASSES, createDynasty, fromBase64, importSave, latestSave, rng, startingClass, weeksDone } from '../src/core/dynasty/model';
+import { CLASSES, createDynasty, fromBase64, importSave, latestSave, rememberUser, rng, startingClass, weeksDone } from '../src/core/dynasty/model';
 import { champions, INDEPENDENT, playerName, leaders, playerLines, seasonRecords, RECORD_STATS, seasonView, standings, teamHistory, weekName } from '../src/core/dynasty/derive';
 import { offseasonStories, stories } from '../src/core/dynasty/news';
 import { rivalryOf } from '../src/core/dynasty/rivalries';
 import { meetings, seriesStory } from '../src/core/dynasty/series';
+import { REAL_THROUGH, TROPHIES, trophyOf } from '../src/core/dynasty/trophies';
+import { trophyRoom } from '../src/core/dynasty/trophyRoom';
 import { teamArt } from '../src/core/dynasty/art';
 import { dynastyFileName, dynastyFileText, readDynastyFile } from '../src/core/dynasty/storage';
 import { CFB27_LATEST } from '../src/core/cfb27Latest';
@@ -1267,7 +1269,7 @@ ok('a new season refuses the last season\'s save');
     assert.ok(first.length === spots && second.length === spots, `full All-American teams (${first.length}, ${second.length} of ${spots})`);
     assert.equal(new Set([...first, ...second].map((c) => c.player)).size, 2 * spots, 'nobody on both teams');
     for (const x of AWARD_SPOTS) assert.equal(first.filter((c) => x.roles.includes(c.role)).length, x.n, `${x.label} spots`);
-    const qb = aw.position[0].winner!;
+    const qb = aw.position.find((x) => x.key === 'obrien')!.winner!;
     // Stats and OVR (user: "stats are very important … they aren't everything"): the winner is among the top 10 QBs
     // by stats and has the best 60/40 blend of them.
     const qbs = candidates(v2).filter((c) => c.role === 'QB' && c.score > 0).sort((a, b) => b.score - a.score).slice(0, 10);
@@ -1278,7 +1280,9 @@ ok('a new season refuses the last season\'s save');
       // How the blend changed the picks (stats alone vs stats and OVR), for the log.
       const all = candidates(v2), diffs: string[] = [];
       for (const pa of aw.position) {
-        const roles = pa.key === 'def' ? ['DE', 'DT', 'LB', 'CB', 'S'] : AWARD_SPOTS.find((x) => x.label === POSITION_AWARDS.find((y) => y.key === pa.key)!.spot)!.roles;
+        const na = POSITION_AWARDS.find((y) => y.key === pa.key)!;
+        if (!Array.isArray(na.roles)) continue;
+        const roles = na.roles;
         const top = all.filter((c) => roles.includes(c.role) && c.score > 0).sort((a, b) => b.score - a.score)[0];
         if (top && pa.winner && top.player !== pa.winner.player) diffs.push(`${pa.label}: ${playerName(w2.players[pa.winner.player - 1])} (${pa.winner.ovr} OVR) over stat leader ${playerName(w2.players[top.player - 1])} (${top.ovr} OVR)`);
       }
@@ -1289,10 +1293,35 @@ ok('a new season refuses the last season\'s save');
     const confs = Object.keys(aw.allConference).map(Number);
     assert.ok(confs.length > 5 && !confs.includes(INDEPENDENT) && confs.every((c) => aw.allConference[c].every((x) => w2.seasons[0].conf[x.team] === c)), 'All-Conference teams by conference');
     assert.equal(seasonAwards(w2, w2.seasons[0]), null, 'no awards before the season ends');
+    // The real awards (user, 2026-11-27), each from its first year; the Outland to an OL or a DT.
+    assert.deepEqual(aw.position.map((x) => x.key), POSITION_AWARDS.map((x) => x.key), 'every award in 2026');
+    assert.ok(['OL', 'DT'].includes(aw.position.find((x) => x.key === 'outland')!.winner?.role ?? 'OL'), 'the Outland: an interior lineman');
+    assert.equal(awardsIn(1994).some((x) => x.key === 'mackey' || x.key === 'guy' || x.key === 'bednarik'), false, 'no Mackey, Ray Guy or Bednarik in 1994');
+    assert.ok(awardsIn(1994).some((x) => x.key === 'biletnikoff'), 'the Biletnikoff from 1994');
+    assert.equal(aw.coach.length, 2, 'two coach of the year awards');
+    {
+      // Every trophy game's schools are in the 2026 edition; the real records add up.
+      const schools = new Set(w2.teams.map((t) => t.school));
+      for (const t of TROPHIES) {
+        assert.ok(schools.has(t.a) && schools.has(t.b), `trophy schools: ${t.a} / ${t.b}`);
+        assert.match(t.real.rec, /^\d+-\d+(-\d+)?$/, t.trophy);
+        assert.ok(!t.real.last || /^20[0-2]\d /.test(t.real.last) && Number(t.real.last.slice(0, 4)) <= REAL_THROUGH, `no result after ${REAL_THROUGH}: ${t.real.last}`);
+      }
+      assert.equal(trophyOf('Southern Miss', 'Tulane')?.trophy, 'The Bell');
+      // The user's teams per season, kept even when the user drops a team; the trophy room counts them.
+      const r1 = rememberUser({ ...w2, userTeams: [5] });
+      assert.deepEqual(r1.seasons[0].userTeams, [5]);
+      const r2 = rememberUser({ ...r1, userTeams: [9] });
+      assert.deepEqual(r2.seasons[0].userTeams, [5, 9], 'a dropped team stays in the season');
+      assert.equal(rememberUser(r2), r2, 'nothing new: the same object');
+      const room = trophyRoom(r2);
+      assert.ok(room.stints.some((x) => x.team === 5) && room.stints.some((x) => x.team === 9), 'both teams in the trophy room');
+      ok(`trophies: ${TROPHIES.length} rivalry trophies; trophy room ${room.items.length} items for teams 5 and 9`);
+    }
     const h = playerHonors(w2, qb.player, [aw]);
     // The teams lean more on stats (70/30) than the position awards (60/40), so the best QB can miss them; when he
     // makes a team, his page lists it too.
-    assert.ok(h.some((x) => x.label === 'Best quarterback'), `honors on the player page: ${h.map((x) => x.label).join(', ')}`);
+    assert.ok(h.some((x) => x.label === "Davey O'Brien Award"), `honors on the player page: ${h.map((x) => x.label).join(', ')}`);
     const onTeam = [...first, ...Object.values(aw.allConference).flat()].some((c) => c.player === qb.player);
     assert.equal(h.some((x) => x.label.startsWith('All-')), onTeam, 'his All- honors on the player page');
     ok(`awards: Heisman ${aw.heisman[0] ? playerName(w2.players[aw.heisman[0].player - 1]) : '-'}; best QB ${playerName(w2.players[qb.player - 1])} (${qb.line}); ${confs.length} All-Conference teams; honors ${h.map((x) => x.label).join(', ')}`);
