@@ -36,7 +36,7 @@ import { playerOvr, roleOfSlot } from '../../core/dynasty/ovr';
 import { UniformsBox } from './UniformsBox';
 import { POS_GROUPS } from './RostersPage';
 import { hasNil, money, payroll } from '../../core/dynasty/nil';
-import { accentOn, Empty, Headshot, ImpactDot, Locked, StoryArt, TeamLink, TeamMark, href, heightText, hometownText, inkColor, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn } from './ui';
+import { accentOn, Empty, Headshot, ImpactDot, Locked, StoryArt, TeamLink, TeamMark, href, heightText, hometownText, inkColor, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn, Ranked } from './ui';
 
 // ---- front page
 
@@ -471,7 +471,7 @@ export function Teams() {
               {d.teams
                 .filter((t) => v.season.conf[t.index] === c)
                 .sort((a, b) => a.school.localeCompare(b.school))
-                .map((t) => <li key={t.index}><TeamLink team={t.index} rank={false} size={48} /></li>)}
+                .map((t) => <li key={t.index}><TeamLink team={t.index} size={48} /></li>)}
             </ul>
           </div>
         ))}
@@ -956,7 +956,7 @@ export function Player({ id }: { id: number }) {
             <Experience p={p} />
             {p.recruit && <span title={`Signed in ${p.recruit.year}`}>{p.recruit.stars ? `${'★'.repeat(p.recruit.stars)} recruit` : 'Walk-on'} ({p.recruit.year})</span>}
             <span>{heightText(p.heightIn)}, {p.weight} lb</span>
-            {team !== null && <a href={href(`team/${team}`)}>{d.teams[team].school}</a>}
+            {team !== null && <a href={href(`team/${team}`)}><Ranked team={team} /></a>}
             {p.hometown && <span>{hometownText(p)}</span>}
             {(p.transfers ?? []).filter((x) => x.to !== null && !(x.to === team && experience.label === 'TR')).map((x) => <span key={`${x.year}-${x.from}`}>Transferred from {d.teams[x.from].school} ({x.year + 1})</span>)}
             {p.fcs && <span>Came up from {p.fcs.school} (FCS)</span>}

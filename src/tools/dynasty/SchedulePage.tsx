@@ -136,7 +136,7 @@ export function ScheduleEditor({ arg, setup }: { arg?: string; /** In setup (Set
               <span className="dy-sched-week">Week {w}</span>
               <div className="dy-sched-game">
                 {lock ? (
-                  <span>{g.home ? 'vs.' : 'at'} <TeamLink team={g.opp} rank={false} /></span>
+                  <span>{g.home ? 'vs.' : 'at'} <TeamLink team={g.opp} /></span>
                 ) : (
                   <div className="dy-sched-edit">
                     <Button variant="quiet" label={`Week ${w}: ${g.home ? 'home' : 'away'}, switch`} onClick={() => void change((s) => flipHome(s, w, team), () => `Week ${w}: ${g.home ? 'at' : 'vs.'} ${name(g.opp)}.`)}>{g.home ? 'vs.' : 'at'}</Button>

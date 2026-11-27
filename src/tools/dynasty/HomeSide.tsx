@@ -9,7 +9,7 @@ import { bowlOf, bowlWeek, INDEPENDENT, leaders, playerLines, playerName, standi
 import { bigGames, heismanWatch, playoffPicture } from '../../core/dynasty/outlook';
 import { preseasonHeisman } from '../../core/dynasty/heismanPre';
 import { classRankings, STAR_POINTS } from '../../core/dynasty/offseason';
-import { TeamLink, href, playerOf, recordText, useDyn } from './ui';
+import { TeamLink, href, playerOf, recordText, useDyn, Ranked } from './ui';
 import { preseasonPoll } from '../../core/dynasty/poll';
 
 export function SeasonSide() {
@@ -107,7 +107,7 @@ function PreseasonHeisman() {
             <span className="dy-side-n">{i + 1}</span>
             <span>
               <PlayerLink id={h.player} />
-              <span className="dy-side-meta">{v.season.bw?.[h.team]?.[h.slot]?.label ?? h.role}, {d.teams[h.team].school}: OVR {h.ovr}{h.last ? `; last year ${h.last}` : ''}</span>
+              <span className="dy-side-meta">{v.season.bw?.[h.team]?.[h.slot]?.label ?? h.role}, <Ranked team={h.team} />: OVR {h.ovr}{h.last ? `; last year ${h.last}` : ''}</span>
             </span>
           </li>
         ))}
@@ -236,7 +236,7 @@ function Heisman() {
             <span className="dy-side-n">{i + 1}</span>
             <span>
               <PlayerLink id={e.player} />
-              <span className="dy-side-meta">{v.season.bw?.[e.team]?.[e.lines[0].slot]?.label ?? playerOf(d, e.player)?.pos}, {d.teams[e.team].school}: {keyLine(e.lines)}</span>
+              <span className="dy-side-meta">{v.season.bw?.[e.team]?.[e.lines[0].slot]?.label ?? playerOf(d, e.player)?.pos}, <Ranked team={e.team} />: {keyLine(e.lines)}</span>
             </span>
           </li>
         ))}
@@ -266,7 +266,7 @@ function NationalLeaders() {
                   <span className="dy-side-n">{i + 1}</span>
                   <span>
                     <PlayerLink id={l.player} />
-                    <span className="dy-side-meta">{d.teams[l.team].school}</span>
+                    <span className="dy-side-meta"><Ranked team={l.team} /></span>
                   </span>
                   <span className="dy-num">{statValue(l, 'yds').toLocaleString('en-US')}</span>
                 </li>
@@ -359,7 +359,7 @@ function ClassRankings({ events }: { events: Parameters<typeof classRankings>[0]
         {rows.slice(0, 10).map((r, i) => (
           <li key={r.team}>
             <span className="dy-side-n">{i + 1}</span>
-            <TeamLink team={r.team} rank={false} />
+            <TeamLink team={r.team} />
             <span className="dy-num">{r.n} {r.n === 1 ? 'player' : 'players'}</span>
           </li>
         ))}
