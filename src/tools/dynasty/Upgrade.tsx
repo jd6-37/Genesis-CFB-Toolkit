@@ -2,7 +2,7 @@
 // offer after a save import (Manage), the upgrade window, Manage's Game version rows, the What's next line and the
 // offseason's version choice.
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { Button, FileButton, Modal, Note } from '../../ui';
+import { Button, Check, FileButton, Modal, Note } from '../../ui';
 import { readManifest } from '../../core/manifest';
 import { sha1Hex } from '../../core/bytes';
 import { openRom } from '../../core/romfile';
@@ -239,7 +239,7 @@ export function UpgradeCard({ d, up }: { d: Dynasty; up: Upgrader }) {
       <p className="dy-upgrade-bar"><span>{test ? 'Test build' : 'New version'}</span><span>Elevated {version}</span></p>
       <div className="dy-upgrade-body">
         <h2 id="dy-upgrade-h">Elevated {version} is out</h2>
-        {test && <p className="dy-small">A release candidate or test build, offered because experimental build prompts are on (Manage, Rules). Download your dynasty file first, to go back if something's wrong.</p>}
+        {test && <p className="dy-small">A release candidate or test build, offered because experimental build prompts are on (Manage, This season, Game version). Download your dynasty file first, to go back if something's wrong.</p>}
         {i.timing === 'later' ? (
           <>
             <p className="dy-upgrade-safe is-wait"><strong>Not mid-season.</strong> {version} can't continue a season started on {i.current ?? 'your version'}. Finish the {s.year} season: the offseason's last step builds the {s.year + 1} ROM on {version}. What's new: {notes}.</p>
@@ -267,7 +267,7 @@ export function UpgradeCard({ d, up }: { d: Dynasty; up: Upgrader }) {
 }
 
 /** Manage, This season: the game version, the kept original game and an upgrade waiting for its save (mockup 5). */
-export function VersionRows({ d, up, busy }: { d: Dynasty; up: Upgrader; busy: boolean }) {
+export function VersionRows({ d, up, busy, commit }: { d: Dynasty; up: Upgrader; busy: boolean; commit: (next: Dynasty) => Promise<void> }) {
   const i = up.info;
   const pend = pendingUpgrade(d);
   const s = d.seasons[d.seasons.length - 1];
@@ -296,6 +296,12 @@ export function VersionRows({ d, up, busy }: { d: Dynasty; up: Upgrader; busy: b
           ? <>The original game is kept in this browser (about 2 MB), so a new version is patched without a file. <Button variant="link" onClick={up.removeOriginal}>Remove it</Button></>
           : <>An upgrade asks for the new ROM or the original game once; the app then keeps the original game for the next one.</>}
       </p>
+      {/* Release candidates and test builds in the upgrade prompts (user, 2026-11-27): last in Game version, beside the
+          check it changes; turning it on checks right away. */}
+      <div className="dy-setup-switch">
+        <Check checked={!!d.experimentalBuilds} disabled={busy} onChange={(on) => { void commit({ ...d, experimentalBuilds: on || undefined }).then(up.check); }}><strong>Enable experimental build upgrade prompts</strong></Check>
+        <p className="dy-small">Also offers release candidates and test builds of Elevated (such as v2.2.0-rc.5) when they come out, here, in What's next and at the offseason's last step. Mid-season only when the build can continue the season you're playing. Test builds aren't finished: download your dynasty file before you switch, to go back if something's wrong.</p>
+      </div>
     </>
   );
 }
