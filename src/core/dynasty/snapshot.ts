@@ -87,7 +87,9 @@ async function gunzip(bytes: Uint8Array): Promise<string> {
 
 /** The snapshot's file for a dynasty at this moment, following one of its user teams. */
 export async function makeSnapshot(d: Dynasty, team: number, label: string, art: TeamArt[] | null, now = new Date()): Promise<Uint8Array> {
-  const { snapshots: _keys, ...dynasty } = d;
+  const { snapshots: _keys, ...whole } = d;
+  // Kept save files (keptSaves.ts) stay private: a shared snapshot doesn't need them.
+  const dynasty = { ...whole, seasons: whole.seasons.map((s) => ({ ...s, ...(s.imports ? { imports: s.imports.map(({ file: _f, fileName: _n, ...i }) => i) } : {}) })) };
   const file = {
     ...SNAPSHOT_FILE,
     sharedAt: now.toISOString(),
