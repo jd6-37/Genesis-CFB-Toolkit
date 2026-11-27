@@ -17,6 +17,7 @@ import { preseasonPoll } from '../../core/dynasty/poll';
 import { kickoffRanks } from '../../core/dynasty/kickoffRanks';
 import { kickoffOf } from '../../core/dynasty/schedule';
 import { StoryLink } from './StoryWindows';
+import { TeamRivalries } from './TrophyPages';
 import { OffseasonSide, PreseasonTop25, SeasonMore, SeasonSide } from './HomeSide';
 import { AddPlayer, EditLook, EditPlayer } from './EditPlayer';
 import { prestigeStars } from '../../core/dynasty/offseason';
@@ -481,12 +482,12 @@ export function Teams() {
 
 /** The team page's tabs (user, 2026-11-18: "The team page is getting kind of long ... Stats on the main page could just
  * be the stat leaders. Rosters can go to its own tab. uniforms on its own"); each has its own address, team/12/roster. */
-export const TEAM_TABS = ['overview', 'roster', 'stats', 'nil', 'uniforms'] as const;
+export const TEAM_TABS = ['overview', 'roster', 'stats', 'rivalries', 'nil', 'uniforms'] as const;
 export type TeamTab = (typeof TEAM_TABS)[number];
-const TEAM_TAB_LABELS: Record<TeamTab, string> = { overview: 'Overview', roster: 'Roster', stats: 'Stats', nil: 'NIL', uniforms: 'Uniforms' };
+const TEAM_TAB_LABELS: Record<TeamTab, string> = { overview: 'Overview', roster: 'Roster', stats: 'Stats', rivalries: 'Rivalries', nil: 'NIL', uniforms: 'Uniforms' };
 /** "12" or "12/roster" → the team and tab (null when it isn't one). */
 export function teamRoute(arg: string | undefined): { team: number; tab: TeamTab } | null {
-  const m = /^(\d+)(?:\/(roster|stats|nil|uniforms))?$/.exec(arg ?? '');
+  const m = /^(\d+)(?:\/(roster|stats|rivalries|nil|uniforms))?$/.exec(arg ?? '');
   return m ? { team: Number(m[1]), tab: (m[2] as TeamTab | undefined) ?? 'overview' } : null;
 }
 export const teamHref = (team: number, tab: TeamTab = 'overview') => href(`team/${team}${tab === 'overview' ? '' : `/${tab}`}`);
@@ -720,6 +721,7 @@ export function Team({ team, tab = 'overview' }: { team: number; tab?: TeamTab }
 
       {tab === 'nil' && hasNil(d) && <TeamNil team={team} />}
       {tab === 'uniforms' && <UniformsBox team={team} />}
+      {tab === 'rivalries' && <TeamRivalries team={team} />}
 
       {tab === 'roster' && <div className="ui-sided">
       <Segments
@@ -1207,7 +1209,7 @@ export function History() {
   return (
     <section>
       <PageHead title="History">Every season of this dynasty since {d.startYear}.</PageHead>
-      <div className="dy-row"><Button variant="quiet" href={href('records')}>Records book</Button>{hasAwards && <Button variant="quiet" href={href('awards')}>Season awards</Button>}</div>
+      <div className="dy-row"><Button variant="quiet" href={href('trophies')}>Your trophy room</Button><Button variant="quiet" href={href('records')}>Records book</Button>{hasAwards && <Button variant="quiet" href={href('awards')}>Season awards</Button>}</div>
       <div className="dy-team-cols">
         <div>
           <SubHead>National champions</SubHead>

@@ -1,6 +1,7 @@
 // A shared dynasty snapshot (/dynasty/s/<id>; user, 2026-11-17): the dynasty's pages as they were when it was
 // shared, read-only. The active team heads it (its logo in the masthead, its news first) and everything else can
 // be browsed; Offseason and Manage aren't here, and editors are disabled with a line that says why (ui.tsx Locked).
+import { TrophyRoomPage } from './TrophyPages';
 import { setRatingScale } from '../../core/dynasty/ratings';
 import { useEffect, useMemo, useState } from 'react';
 import { seasonView, weekName } from '../../core/dynasty/derive';
@@ -112,11 +113,12 @@ export default function SnapshotApp({ id, toolkitHref }: { id: string; toolkitHr
       case 'stats': return <Stats key={(arg ?? '').split('/').slice(0, 2).join('/')} arg={arg} />;
       case 'history': return <History />;
       case 'awards': return <Awards arg={arg} />;
+      case 'trophies': return <TrophyRoomPage />;
       case 'records': return <Records arg={arg} />;
       default: return <Home />;
     }
   })();
-  const navPage = page === 'team' ? 'teams' : page === 'player' ? 'stats' : page === 'coach' ? 'coaches' : page === 'awards' || page === 'records' ? 'history' : page;
+  const navPage = page === 'team' ? 'teams' : page === 'player' ? 'stats' : page === 'coach' ? 'coaches' : page === 'awards' || page === 'records' || page === 'trophies' ? 'history' : page;
   const [menu, setMenu] = useState(false);
   const navItems = PAGES.map((p) => ({ label: p.label, href: href(p.id), current: navPage === p.id }));
   const week = d?.offseason ? 'Offseason' : v && v.save ? (v.currentWeek < v.weeks ? weekName(v, v.currentWeek) : 'Season complete') : 'Preseason';

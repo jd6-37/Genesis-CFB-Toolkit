@@ -942,7 +942,7 @@
 .dy-manage[data-sec='dy-m-season'] > #dy-m-season, .dy-manage[data-sec='dy-m-teams'] > #dy-m-teams,
 .dy-manage[data-sec='dy-m-players'] > #dy-m-players, .dy-manage[data-sec='dy-m-files'] > #dy-m-files,
 .dy-manage[data-sec='dy-m-share'] > #dy-m-share, .dy-manage[data-sec='dy-m-help'] > #dy-m-help,
-.dy-manage[data-sec='dy-m-pad'] > #dy-m-pad, .dy-manage[data-sec='dy-m-others'] > #dy-m-others { display: block; }
+.dy-manage[data-sec='dy-m-pad'] > #dy-m-pad, .dy-manage[data-sec='dy-m-trophies'] > #dy-m-trophies, .dy-manage[data-sec='dy-m-others'] > #dy-m-others { display: block; }
 .dy-manage[data-sec] > .dy-panel { border-bottom: 0; }
 
 /* Front page on a wide, short screen (the Odin 2 Portal): a lower lead picture and title, so the lead story, the
@@ -1053,3 +1053,57 @@
 .dy-gw-move.dy-up { color: var(--win); }
 .dy-gw-move.dy-down { color: var(--loss); }
 @media (min-width: 640px) { .dy-gw-leaders { grid-template-columns: 1fr 1fr; } }
+
+
+/* Trophies (TrophyPages.tsx; user, 2026-11-27): pixel art stays sharp. */
+.dy-trophy { image-rendering: pixelated; flex: none; object-fit: contain; }
+/* Stats → Award watch: a card per award. */
+.dy-watch { display: grid; gap: var(--sp-4); margin-top: var(--sp-3); }
+.dy-watch-card { border: var(--rule-w) solid var(--rule); padding: var(--sp-3); }
+.dy-watch-card header { display: flex; gap: var(--sp-3); align-items: center; }
+.dy-watch-card h3 { margin: 0; font-size: var(--fs-4); }
+.dy-watch-card header p { margin: var(--sp-1) 0 0; }
+.dy-watch-list { list-style: none; margin: var(--sp-2) 0 0; padding: 0; }
+.dy-watch-list li { display: grid; grid-template-columns: 1.5em 24px 1fr; gap: var(--sp-2); align-items: center; min-height: 44px; border-top: var(--rule-w) solid var(--rule); }
+.dy-watch-mine { background: var(--highlight); box-shadow: inset 4px 0 0 var(--bar-on); }
+.dy-watch-n { font-weight: 800; text-align: right; }
+.dy-watch-line { display: block; }
+@media (min-width: 700px) { .dy-watch { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1200px) { .dy-watch { grid-template-columns: repeat(3, 1fr); } }
+/* The trophy room. */
+.dy-room-totals { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-2); margin: var(--sp-3) 0; }
+.dy-room-totals p { margin: 0; border: var(--rule-w) solid var(--rule); padding: var(--sp-2) var(--sp-3); font-size: var(--fs-2); }
+.dy-room-totals strong { display: block; font-family: var(--font-num); font-size: var(--fs-num-3); }
+.dy-room-stints { display: grid; gap: var(--sp-2); }
+.dy-room-stint { display: flex; gap: var(--sp-3); align-items: center; border: var(--rule-w) solid var(--rule); padding: var(--sp-2) var(--sp-3); }
+.dy-room-stint p { margin: 0; }
+.dy-room-stint-name { font-weight: 800; font-size: var(--fs-4); }
+.dy-room-shelf { list-style: none; margin: 0; padding: var(--sp-3) var(--sp-2) var(--sp-4); display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-3) var(--sp-2); border-bottom: var(--sp-2) solid var(--rule); }
+.dy-room-shelf li { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.dy-room-cap { margin: var(--sp-1) 0 0; font-size: var(--fs-2); display: flex; gap: var(--sp-1); align-items: center; justify-content: center; flex-wrap: wrap; }
+@media (min-width: 640px) { .dy-room-shelf { grid-template-columns: repeat(4, 1fr); } .dy-room-stints { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 700px) { .dy-room-totals { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1200px) { .dy-room-shelf { grid-template-columns: repeat(6, 1fr); } .dy-room-totals { grid-template-columns: repeat(6, 1fr); } }
+/* Team → Rivalries. */
+.dy-rivals { display: grid; gap: var(--sp-4); margin-top: var(--sp-3); }
+.dy-rival { display: flex; flex-direction: column; gap: var(--sp-3); align-items: flex-start; border: var(--rule-w) solid var(--rule); padding: var(--sp-3); }
+@media (min-width: 640px) { .dy-rival { flex-direction: row; } }
+.dy-rival-body { width: 100%; }
+.dy-rival-body { flex: 1; min-width: 0; }
+.dy-rival-body h3 { margin: 0; font-size: var(--fs-4); }
+.dy-rival-body > p { margin: var(--sp-1) 0; }
+/* Manage → Trophy art. */
+.dy-artlist { list-style: none; padding: 0; margin: var(--sp-3) 0; display: grid; gap: 0 var(--sp-4); }
+.dy-artlist li { display: flex; align-items: center; gap: var(--sp-3); border-top: var(--rule-w) solid var(--rule); padding: var(--sp-2) 0; }
+.dy-artlist-name { flex: 1; min-width: 0; }
+.dy-artlist-name .dy-dim { display: block; }
+.dy-artlist-actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); justify-content: flex-end; }
+@media (min-width: 900px) { .dy-artlist { grid-template-columns: repeat(2, 1fr); } }
+/* History → awards: a row per award with its trophy. */
+.dy-award-list { list-style: none; padding: 0; margin: var(--sp-2) 0 var(--sp-4); display: grid; gap: 0 var(--sp-4); }
+.dy-award-list li { display: flex; gap: var(--sp-3); align-items: center; border-top: var(--rule-w) solid var(--rule); padding: var(--sp-2) 0; }
+.dy-award-list p { margin: 0; }
+.dy-award-name { font-weight: 700; }
+.dy-award-line { display: block; }
+@media (min-width: 900px) { .dy-award-list { grid-template-columns: repeat(2, 1fr); } }
+.dy-heisman > .dy-trophy { float: right; margin-left: var(--sp-3); }
