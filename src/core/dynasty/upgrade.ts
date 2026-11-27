@@ -44,7 +44,7 @@ export function findUpgrade(list: PatchList, keptSha1: string, edition: EditionI
 }
 
 /**
- * The newest build for a dynasty whose prompts include release candidates and test builds (Manage → Rules): the
+ * The newest build for a dynasty whose prompts include release candidates and test builds (Manage → This season, Game version): the
  * newer of the current release and the experimental list's newest build of the edition, by build serial. The kept
  * ROM may be a test build itself (not in the release list). An experimental build without a serial isn't offered.
  */
