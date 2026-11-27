@@ -887,6 +887,12 @@ function Manage({ d, art, list, busy, note, actions, focus, ctx, up }: {
                 <p className="dy-small">{NIL_TEXT}{d.offseason ? ' It can be turned on or off once the offseason is done.' : hasNil(d) ? ' Turning it off drops every budget and deal.' : ''}</p>
               </div>
             )}
+            {/* Release candidates and test builds in the upgrade prompts (user, 2026-11-27): at the bottom, marked experimental. */}
+            <div className="dy-setup-switch dy-experimental">
+              <h3>Experimental builds</h3>
+              <Check checked={!!d.experimentalBuilds} disabled={!!busy} onChange={(on) => void actions.commit({ ...d!, experimentalBuilds: on || undefined })}><strong>Enable experimental build upgrade prompts</strong></Check>
+              <p className="dy-small">Also offers release candidates and test builds of Elevated (such as v2.2.0-rc.5) when they come out, in Manage, What's next and the offseason's last step. Mid-season only when the build can continue the season you're playing. Test builds aren't finished: download your dynasty file before you switch, to go back if something's wrong.</p>
+            </div>
           </section>
         </>
       )}

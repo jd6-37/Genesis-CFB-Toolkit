@@ -7,6 +7,8 @@
 //   release and an unlisted build get none.
 // - Timing: a running season (the first is played on the user's ROM) is "safe" when the new build continues it,
 //   "later" when not; between seasons "free".
+// - Experimental builds (Manage → Rules): the experimental list's newest build of the edition when its serial is
+//   newer; a release beats an older test build; from a test build, the newer release; shown mid-season only when safe.
 // - The ROM checks: another edition, the same version and an older one are refused.
 // - applyUpgrade: the season waits for a save from the new ROM; a save still from the old ROM says so and keeps it
 //   waiting; a save from the new ROM (its ELVB's last build) ends it.
@@ -18,7 +20,7 @@ import { readManifest } from '../src/core/manifest';
 import { createDynasty, importSave } from '../src/core/dynasty/model';
 import { assetRomProblem, refreshRomAssets, teamColorsOf } from '../src/core/dynasty/assets';
 import { CFB27_LATEST } from '../src/core/cfb27Latest';
-import { applyUpgrade, findUpgrade, pendingUpgrade, upgradeRomProblem, upgradeTiming } from '../src/core/dynasty/upgrade';
+import { applyUpgrade, findUpgrade, findUpgradeAny, offerShown, pendingUpgrade, upgradeRomProblem, upgradeTiming } from '../src/core/dynasty/upgrade';
 import type { PatchList } from '../src/core/patches';
 
 let n = 0;
@@ -45,6 +47,25 @@ assert.equal(findUpgrade(list, sNew, '2026'), null, 'the current release: no off
 assert.equal(findUpgrade(list, '1'.repeat(40), '2026'), null, 'an unlisted build: no offer');
 assert.equal(findUpgrade(list, sOld, '1994'), null, 'another edition: no offer');
 ok(`release list: ${mOld.name} is offered ${mNew.name}`);
+
+// The experimental list: release candidates and test builds, with their serial and mid-season-from.
+const expPatch = (serial: number, midSeasonFrom: number) => ({ ...patch('2'.repeat(40), true), serial, midSeasonFrom });
+const exp: PatchList = { ...list, releases: [{ version: 'rc.9', name: 'rc', notes: 'https://example.com/rc9', patches: [expPatch(mNew.serial + 2, mOld.serial)] }] };
+const kOld = { sha1: sOld, serial: mOld.serial };
+assert.equal(findUpgradeAny(list, null, kOld, '2026')?.version, mNew.name, 'setting off: the release');
+const e1 = findUpgradeAny(list, exp, kOld, '2026');
+assert.ok(e1?.experimental && e1.version === 'rc.9' && e1.build?.serial === mNew.serial + 2 && e1.notes, 'a newer test build wins');
+const older: PatchList = { ...exp, releases: [{ version: 'rc.0', name: 'rc', patches: [expPatch(mNew.serial - 1, mOld.serial)] }] };
+assert.equal(findUpgradeAny(list, older, kOld, '2026')?.version, mNew.name, 'the release beats an older test build');
+assert.equal(findUpgradeAny(list, exp, { sha1: sNew, serial: mNew.serial }, '2026')?.version, 'rc.9', 'from the current release: the newer test build');
+assert.equal(findUpgradeAny(list, older, { sha1: '3'.repeat(40), serial: mNew.serial - 1 }, '2026')?.version, mNew.name, 'from a test build: the newer release');
+assert.equal(findUpgradeAny(list, exp, { sha1: '3'.repeat(40), serial: mNew.serial + 2 }, '2026'), null, 'on the newest build: nothing');
+assert.equal(findUpgradeAny(list, exp, kOld, '1994')?.experimental, undefined, 'no test build of another edition');
+const noSerial: PatchList = { ...exp, releases: [{ version: 'rc.x', name: 'rc', patches: [patch('4'.repeat(40), true)] }] };
+assert.equal(findUpgradeAny(list, noSerial, kOld, '2026')?.version, mNew.name, 'a test build without a serial is not offered');
+assert.ok(offerShown(e1, 'free') && offerShown(e1, 'safe') && !offerShown(e1, 'later') && !offerShown(e1, 'unknown'), 'test builds mid-season only when safe');
+assert.ok(offerShown(findUpgradeAny(list, null, kOld, '2026'), 'later'), 'a release is still shown (as "not mid-season")');
+ok('experimental list: newest build by serial, mid-season only when safe');
 
 // A dynasty on the old ROM, in its first season (played on the user's ROM: counts as started).
 let d = createDynasty(oldRom, readFileSync('public/data/ea-cfb27-ratings-2026-week9.csv', 'utf8'), { name: 'x', seed: 1 });

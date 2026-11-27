@@ -299,6 +299,8 @@ export interface Dynasty {
   benchGenerated?: boolean;
   /** "Not now" on the offer of this Elevated version (upgrade.ts): not offered again after an import. */
   upgradeLater?: string;
+  /** Manage → Rules: offer release candidates and test builds too (the experimental list; user, 2026-11-27). */
+  experimentalBuilds?: boolean;
   /** Shared snapshots (Manage, Share), at most SNAPSHOT_LIMIT, newest first, with their delete keys. */
   snapshots?: DSnapshot[];
 }
