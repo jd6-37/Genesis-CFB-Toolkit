@@ -30,7 +30,7 @@ import { champions, INDEPENDENT, playerName, leaders, playerLines, seasonRecords
 import { offseasonStories, stories } from '../src/core/dynasty/news';
 import { rivalryOf } from '../src/core/dynasty/rivalries';
 import { meetings, seriesStory } from '../src/core/dynasty/series';
-import { REAL_THROUGH, TROPHIES, trophyOf } from '../src/core/dynasty/trophies';
+import { REAL94_THROUGH, REAL_THROUGH, TROPHIES, realSeries, trophyOf } from '../src/core/dynasty/trophies';
 import { trophyRoom } from '../src/core/dynasty/trophyRoom';
 import { teamArt } from '../src/core/dynasty/art';
 import { dynastyFileName, dynastyFileText, readDynastyFile } from '../src/core/dynasty/storage';
@@ -1308,6 +1308,20 @@ ok('a new season refuses the last season\'s save');
         assert.ok(!t.real.last || /^20[0-2]\d /.test(t.real.last) && Number(t.real.last.slice(0, 4)) <= REAL_THROUGH, `no result after ${REAL_THROUGH}: ${t.real.last}`);
       }
       assert.equal(trophyOf('Southern Miss', 'Tulane')?.trophy, 'The Bell');
+      // The 1994 edition's real series, to 1993: 44 trophy games, names as the 1994 ROM has them.
+      const r94 = TROPHIES.filter((t) => t.real94);
+      assert.equal(r94.length, 44, 'real94 for the 44 trophy games in the 1994 edition');
+      for (const t of r94) {
+        const r = t.real94!, sides = [t.a, t.b].map((x) => (x === 'Cal' ? 'California' : x));
+        assert.match(r.rec, /^\d+-\d+(-\d+)?$/, t.trophy);
+        assert.ok(r.last && /^1[89]\d\d /.test(r.last) && Number(r.last.slice(0, 4)) <= REAL94_THROUGH, `no result after ${REAL94_THROUGH}: ${r.last}`);
+        assert.ok((!r.lead || sides.includes(r.lead)) && (!r.holder || sides.includes(r.holder)), `real94 names: ${t.trophy}`);
+        assert.ok(!r.holder || t.since === null || t.since <= REAL94_THROUGH, `no holder before the trophy: ${t.trophy}`);
+      }
+      assert.equal(trophyOf('California', 'Stanford')?.trophy, 'Stanford Axe', 'the 1994 names find their trophy');
+      assert.equal(realSeries(trophyOf('Indiana', 'Purdue')!, 1994)?.series.rec, '58-32-6');
+      assert.equal(realSeries(trophyOf('Indiana', 'Purdue')!, 2026)?.through, REAL_THROUGH);
+      assert.equal(realSeries(trophyOf('Indiana', 'Purdue')!, 1999), null, 'no real series for another start');
       // The user's teams per season, kept even when the user drops a team; the trophy room counts them.
       const r1 = rememberUser({ ...w2, userTeams: [5] });
       assert.deepEqual(r1.seasons[0].userTeams, [5]);
@@ -1316,7 +1330,7 @@ ok('a new season refuses the last season\'s save');
       assert.equal(rememberUser(r2), r2, 'nothing new: the same object');
       const room = trophyRoom(r2);
       assert.ok(room.stints.some((x) => x.team === 5) && room.stints.some((x) => x.team === 9), 'both teams in the trophy room');
-      ok(`trophies: ${TROPHIES.length} rivalry trophies; trophy room ${room.items.length} items for teams 5 and 9`);
+      ok(`trophies: ${TROPHIES.length} rivalry trophies (${r94.length} with the real series to 1993); trophy room ${room.items.length} items for teams 5 and 9`);
     }
     const h = playerHonors(w2, qb.player, [aw]);
     // The teams lean more on stats (70/30) than the position awards (60/40), so the best QB can miss them; when he

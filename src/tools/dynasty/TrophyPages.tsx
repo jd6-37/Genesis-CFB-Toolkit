@@ -7,7 +7,7 @@ import { COACH_AWARDS, HEISMAN, POSITION_AWARDS, awardWatch, awardsIn, candidate
 import { heismanWatch } from '../../core/dynasty/outlook';
 import { kickoffRanks } from '../../core/dynasty/kickoffRanks';
 import { playerName } from '../../core/dynasty/derive';
-import { REAL_THROUGH, TROPHIES, trophiesOf, type RivalryTrophy } from '../../core/dynasty/trophies';
+import { TROPHIES, isSide, realSeries, trophiesOf, type RivalryTrophy } from '../../core/dynasty/trophies';
 import { trophyRoom, type TrophyItem } from '../../core/dynasty/trophyRoom';
 import { meetings } from '../../core/dynasty/series';
 import type { Dynasty } from '../../core/dynasty/model';
@@ -144,34 +144,40 @@ export function TrophyRoomPage() {
 
 // ---- Team → Rivalries
 
-/** The holder of a trophy now: the winner of the dynasty's last meeting, else the real holder (2026 edition). */
+/** A trophy game in this dynasty: every meeting (the series), and the meetings played for the trophy (since `since`). */
 function dynastyHistory(d: Dynasty, t: RivalryTrophy) {
-  const ia = d.teams.findIndex((x) => x.school === t.a), ib = d.teams.findIndex((x) => x.school === t.b);
+  const ia = d.teams.findIndex((x) => isSide(x.school, t.a)), ib = d.teams.findIndex((x) => isSide(x.school, t.b));
   if (ia < 0 || ib < 0) return null;
   const last = d.seasons[d.seasons.length - 1];
-  const all = meetings(d, ia, ib, { year: last.year, week: 99 }).filter((m) => t.since === null || m.year >= t.since);
+  const all = meetings(d, ia, ib, { year: last.year, week: 99 });
+  const forIt = all.filter((m) => t.since === null || m.year >= t.since);
   const w = (x: number) => all.filter((m) => m.winner === x).length;
   const ties = all.filter((m) => m.winner === null).length;
-  return { ia, ib, all, wa: w(ia), wb: w(ib), ties };
+  return { ia, ib, all, forIt, wa: w(ia), wb: w(ib), ties };
 }
 
 export function TeamRivalries({ team }: { team: number }) {
   const { d } = useDyn();
   const school = d.teams[team].school;
-  const list = trophiesOf(school).filter((t) => d.teams.some((x) => x.school === (t.a === school ? t.b : t.a)));
-  const real = d.startYear > REAL_THROUGH;
+  const list = trophiesOf(school).filter((t) => d.teams.some((x) => isSide(x.school, isSide(school, t.a) ? t.b : t.a)));
   if (!list.length) return <p className="dy-dim">{school} plays for no rivalry trophy the app knows.</p>;
   return (
     <div className="dy-rivals">
       {list.map((t) => {
         const h = dynastyHistory(d, t);
         if (!h) return null;
-        const opp = t.a === school ? t.b : t.a;
-        const oi = d.teams.findIndex((x) => x.school === opp);
+        const oi = team === h.ia ? h.ib : h.ia;
+        const opp = d.teams[oi].school;
+        const r = realSeries(t, d.startYear);
         const mineW = team === h.ia ? h.wa : h.wb, theirW = team === h.ia ? h.wb : h.wa;
-        const lastM = h.all[h.all.length - 1];
-        const holder = lastM ? (lastM.winner === null ? null : d.teams[lastM.winner].school) : real ? t.real.holder : null;
-        const dynRec = h.all.length ? (mineW === theirW ? `Tied ${mineW}-${theirW}` : `${mineW > theirW ? school : opp} leads ${Math.max(mineW, theirW)}-${Math.min(mineW, theirW)}`) + (h.ties ? `-${h.ties}` : '') : 'Not played yet';
+        const won = [...h.forIt].reverse().find((m) => m.winner !== null); // a tie leaves the trophy where it was
+        const holder = won ? d.teams[won.winner!].school : r ? r.series.holder : null;
+        const rec = (a: number, b: number, ties: number) => (a === b ? `Tied ${a}-${b}` : `${a > b ? school : opp} leads ${Math.max(a, b)}-${Math.min(a, b)}`) + (ties ? `-${ties}` : '');
+        const dynRec = h.all.length ? rec(mineW, theirW, h.ties) : 'Not played yet';
+        // All-time: the real series plus this dynasty's games.
+        const rn = r?.series.rec.split('-').map(Number) ?? [];
+        const realMine = r ? (r.series.lead === school ? rn[0] : r.series.lead === opp ? rn[1] : rn[0]) : 0;
+        const allTime = r && h.all.length ? rec(realMine + mineW, rn[0] + rn[1] - realMine + theirW, (rn[2] ?? 0) + h.ties) : null;
         const notYet = t.since !== null && d.seasons[d.seasons.length - 1].year < t.since;
         return (
           <article key={t.trophy + opp} className="dy-rival">
@@ -184,11 +190,11 @@ export function TeamRivalries({ team }: { team: number }) {
                 <Table className="dy-rival-table">
                   <thead><tr><th className="ui-left" /><th className="ui-left">Series</th><th className="ui-left">The trophy</th></tr></thead>
                   <tbody>
-                    {real && (
+                    {r && (
                       <tr>
-                        <td className="ui-left dy-dim">Real, to {REAL_THROUGH}</td>
-                        <td className="ui-left">{t.real.lead ? `${t.real.lead} leads ${t.real.rec}` : `Tied ${t.real.rec}`}</td>
-                        <td className="ui-left">{t.real.holder ? `${t.real.holder} holds it` : ''}{t.real.last ? ` (last met ${t.real.last})` : ''}</td>
+                        <td className="ui-left dy-dim">Real, to {r.through}</td>
+                        <td className="ui-left">{r.series.lead ? `${r.series.lead} leads ${r.series.rec}` : `Tied ${r.series.rec}`}</td>
+                        <td className="ui-left">{r.series.holder ? `${r.series.holder} holds it` : ''}{r.series.last ? `${r.series.holder ? ' (' : ''}last met ${r.series.last}${r.series.holder ? ')' : ''}` : ''}</td>
                       </tr>
                     )}
                     <tr>
@@ -196,6 +202,13 @@ export function TeamRivalries({ team }: { team: number }) {
                       <td className="ui-left">{dynRec}</td>
                       <td className="ui-left">{holder ? `${holder} holds it` : notYet ? '' : '—'}</td>
                     </tr>
+                    {allTime && (
+                      <tr>
+                        <td className="ui-left dy-dim">All-time</td>
+                        <td className="ui-left">{allTime}</td>
+                        <td className="ui-left" />
+                      </tr>
+                    )}
                   </tbody>
                 </Table>
               </div>
