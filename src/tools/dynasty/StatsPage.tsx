@@ -10,7 +10,7 @@ import { AwardWatch } from './TrophyPages';
 import { useMemo, useState } from 'react';
 import { Button, Check, Field, Num, PageHead, Segments, Select, Table, Tabs } from '../../ui';
 import { INDEPENDENT, leaders, playerLines, playerName, statValue, type PlayerLine, type StatCategory } from '../../core/dynasty/derive';
-import { href, playerOf, TeamLink, useDyn } from './ui';
+import { href, playerOf, TeamLink, useDyn, Ranked } from './ui';
 
 type Val = (s: Record<string, number>) => number | null;
 interface Col { key: string; label: string; title: string; val: Val; digits?: number }
@@ -140,7 +140,7 @@ function Boards() {
             {leaders(lines, b.cat, b.key, 10).map((l, i) => (
               <tr key={`${l.team}-${l.slot}`}>
                 <td className="dy-dim">{i + 1}</td>
-                <td className="ui-left"><PlayerLink l={l} /> <span className="dy-dim dy-small">{d.teams[l.team].school}</span></td>
+                <td className="ui-left"><PlayerLink l={l} /> <span className="dy-dim dy-small"><Ranked team={l.team} /></span></td>
                 <td className="dy-strong"><Num value={statValue(l, b.key)} /></td>
               </tr>
             ))}
@@ -273,7 +273,7 @@ function AllPlayers({ cat, q: given }: { cat: StatCategory; q?: string }) {
                 <td className="dy-dim">{page * PAGE + i + 1}</td>
                 <td className="ui-left dy-rname"><PlayerLink l={l} /></td>
                 <td className="ui-left">{label(l)}</td>
-                <td className="ui-left"><TeamLink team={l.team} rank={false} /></td>
+                <td className="ui-left"><TeamLink team={l.team} /></td>
                 {def.cols.map((c) => {
                   const x = c.val(l.s as never);
                   const shown = x === null ? null : q.per && perGame(c.key) ? x / Math.max(1, games[l.team]) : x;

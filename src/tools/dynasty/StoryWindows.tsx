@@ -13,7 +13,7 @@ import { rivalryOf } from '../../core/dynasty/rivalries';
 import { gameLeaders } from '../../core/dynasty/gameBox';
 import { seriesStory } from '../../core/dynasty/series';
 import { statsHref } from './StatsPage';
-import { Headshot, TeamLink, TeamMark, href, recordText, useDyn } from './ui';
+import { Headshot, TeamLink, TeamMark, href, recordText, useDyn, Ranked } from './ui';
 
 type Played = SaveGame & { visitor: number; home: number; vs: number; hs: number };
 type Win = 'game' | 'potw' | 'poll' | 'unbeaten' | 'stat' | 'race' | 'field' | null;
@@ -162,7 +162,7 @@ function PlayerGameWindow({ s, onClose }: { s: Story; onClose: () => void }) {
   return (
     <Modal
       title={playerName(p)} onClose={onClose} media={<Headshot p={p} size={64} />}
-      sub={<>#{p.jersey} {p.pos}, <TeamLink team={s.teams[0]} rank={false} size={16} /></>}
+      sub={<>#{p.jersey} {p.pos}, <TeamLink team={s.teams[0]} size={16} /></>}
       actions={<><Button href={href(`player/${p.id}`)} onClick={onClose}>Player page</Button><CloseButton onClose={onClose} /></>}
     >
       <p className="dy-small">{s.headline}{s.box!.result ? `: ${s.box!.result}` : ''}.</p>
@@ -189,7 +189,7 @@ function PollWindow({ s, onClose }: { s: Story; onClose: () => void }) {
           const mv = was ? was - (i + 1) : 0;
           return (
             <li key={t} className={t === s.teams[0] ? 'dy-gw-hot' : ''}>
-              <span className="dy-gw-n">{i + 1}</span><TeamMark team={t} size={20} /><a href={href(`team/${t}`)}>{d.teams[t].school}</a>
+              <span className="dy-gw-n">{i + 1}</span><TeamMark team={t} size={20} /><a href={href(`team/${t}`)}><Ranked team={t} /></a>
               <span className="dy-dim">{recordText(v.records[t])}</span>
               <span className={`dy-gw-move${mv > 0 ? ' dy-up' : mv < 0 ? ' dy-down' : ''}`}>{!was || was > 25 ? 'New' : mv > 0 ? `Up ${mv}` : mv < 0 ? `Down ${-mv}` : 'No change'}</span>
             </li>
@@ -209,7 +209,7 @@ function UnbeatenWindow({ s, onClose }: { s: Story; onClose: () => void }) {
       <ol className="dy-gw-list dy-gw-list-plain">
         {s.teams.map((t) => (
           <li key={t}>
-            <span className="dy-gw-n">{v.rank[t] <= 25 ? v.rank[t] : ''}</span><TeamMark team={t} size={20} /><a href={href(`team/${t}`)}>{d.teams[t].school}</a>
+            <span className="dy-gw-n">{v.rank[t] <= 25 ? v.rank[t] : ''}</span><TeamMark team={t} size={20} /><a href={href(`team/${t}`)}><Ranked team={t} /></a>
             <span className="dy-dim">{recordText(v.records[t])}</span><span />
           </li>
         ))}
@@ -232,7 +232,7 @@ function StatWindow({ s, onClose }: { s: Story; onClose: () => void }) {
           return (
             <li key={`${l.team}-${l.slot}`} className={l.player === s.player ? 'dy-gw-hot' : ''}>
               <span className="dy-gw-n">{i + 1}</span><TeamMark team={l.team} size={20} />
-              <span>{p ? <a href={href(`player/${p.id}`)}>{playerName(p)}</a> : 'Unknown'} <span className="dy-dim dy-small">{d.teams[l.team].school}</span></span>
+              <span>{p ? <a href={href(`player/${p.id}`)}>{playerName(p)}</a> : 'Unknown'} <span className="dy-dim dy-small"><Ranked team={l.team} /></span></span>
               <span />
               <span className="dy-gw-move dy-strong">{statValue(l, st.key).toLocaleString('en-US')}</span>
             </li>
@@ -286,7 +286,7 @@ function FieldWindow({ s, onClose }: { s: Story; onClose: () => void }) {
         <ol className="dy-gw-list dy-gw-list-plain">
           {seeds.map((t, i) => (
             <li key={t}>
-              <span className="dy-gw-n">{i + 1}</span><TeamMark team={t} size={20} /><a href={href(`team/${t}`)}>{d.teams[t].school}</a>
+              <span className="dy-gw-n">{i + 1}</span><TeamMark team={t} size={20} /><a href={href(`team/${t}`)}><Ranked team={t} /></a>
               <span className="dy-dim">{recordText(v.records[t])}</span><span />
             </li>
           ))}

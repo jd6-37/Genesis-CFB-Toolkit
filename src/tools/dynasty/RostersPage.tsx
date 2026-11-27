@@ -9,7 +9,7 @@ import { INDEPENDENT } from '../../core/dynasty/derive';
 import { spotLabel } from '../../core/dynasty/lineup';
 import { roleOfPos, shownAt } from '../../core/dynasty/ratings';
 import type { Attr } from '../../core/rosterLayouts';
-import { Headshot, ImpactDot, href, heightText, useDyn } from './ui';
+import { Headshot, ImpactDot, TeamLink, href, heightText, useDyn } from './ui';
 
 const RATING_COLS: { key: Attr; label: string }[] = [
   { key: 'Speed', label: 'SPD' },
@@ -258,7 +258,7 @@ export function Rosters({ arg }: { arg?: string }) {
                     </span>
                   </td>
                   <td className="ui-num">{r.p.jersey < 0 ? '' : r.p.jersey}</td>
-                  <td className="ui-left"><a href={href(`team/${r.team}`)}>{r.school}</a></td>
+                  <td className="ui-left"><TeamLink team={r.team} mark={false} /></td>
                   <td className="ui-left dy-strong">{r.impact && <ImpactDot />}{r.slot >= 0 ? r.label : <span className="dy-dim" title="Backup">{r.p.pos}</span>}</td>
                   <td>{r.p.cls}</td>
                   <td className="ui-num dy-strong">{r.p.ovr}</td>

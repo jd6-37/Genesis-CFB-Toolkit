@@ -11,7 +11,7 @@ import { TROPHIES, isSide, realSeries, trophiesOf, type RivalryTrophy } from '..
 import { trophyRoom, type TrophyItem } from '../../core/dynasty/trophyRoom';
 import { meetings } from '../../core/dynasty/series';
 import type { Dynasty } from '../../core/dynasty/model';
-import { Empty, TeamLink, TeamMark, href, playerOf, useDyn } from './ui';
+import { Empty, TeamLink, TeamMark, href, playerOf, useDyn, Ranked } from './ui';
 
 /** A trophy's picture: the user's, else the app's pixel art (32×40, scaled by whole steps so it stays sharp). */
 export function Trophy({ art, size = 2, label = '' }: { art: string; size?: number; label?: string }) {
@@ -49,7 +49,7 @@ export function AwardWatch() {
                   return (
                     <li key={x.player} className={mine(x.team) ? 'dy-watch-mine' : undefined}>
                       <span className="dy-watch-n">{i + 1}</span><TeamMark team={x.team} size={20} />
-                      <span>{p ? <a href={href(`player/${p.id}`)}>{playerName(p)}</a> : 'Unknown player'} <span className="dy-small dy-dim">{d.teams[x.team].school}</span><span className="dy-small dy-dim dy-watch-line">{x.line}</span></span>
+                      <span>{p ? <a href={href(`player/${p.id}`)}>{playerName(p)}</a> : 'Unknown player'} <span className="dy-small dy-dim"><Ranked team={x.team} /></span><span className="dy-small dy-dim dy-watch-line">{x.line}</span></span>
                     </li>
                   );
                 })}
@@ -66,7 +66,7 @@ export function AwardWatch() {
                 return (
                   <li key={x.team} className={mine(x.team) ? 'dy-watch-mine' : undefined}>
                     <span className="dy-watch-n">{i + 1}</span><TeamMark team={x.team} size={20} />
-                    <span>{c ? <a href={href(`coach/${c.id}`)}>{c.name}</a> : 'Head coach'} <span className="dy-small dy-dim">{d.teams[x.team].school}</span><span className="dy-small dy-dim dy-watch-line">{x.line}</span></span>
+                    <span>{c ? <a href={href(`coach/${c.id}`)}>{c.name}</a> : 'Head coach'} <span className="dy-small dy-dim"><Ranked team={x.team} /></span><span className="dy-small dy-dim dy-watch-line">{x.line}</span></span>
                   </li>
                 );
               })}
@@ -184,7 +184,7 @@ export function TeamRivalries({ team }: { team: number }) {
             <Trophy art={t.art} size={3} label={t.trophy} />
             <div className="dy-rival-body">
               <h3>{t.trophy}</h3>
-              <p className="dy-small dy-dim">{t.game.includes(t.trophy) ? '' : `${t.game} `}vs. <TeamLink team={oi} rank={false} size={16} />, first played {t.first}{t.since ? `; for the trophy since ${t.since}` : ''}</p>
+              <p className="dy-small dy-dim">{t.game.includes(t.trophy) ? '' : `${t.game} `}vs. <TeamLink team={oi} size={16} />, first played {t.first}{t.since ? `; for the trophy since ${t.since}` : ''}</p>
               {notYet && <p className="dy-small">The trophy comes in {t.since}: games before then count for the series, not for it.</p>}
               <div className="dy-scroll-x">
                 <Table className="dy-rival-table">
