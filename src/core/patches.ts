@@ -26,12 +26,18 @@ export interface Patch {
   sha256?: string;
   /** SHA-1 of the patched ROM. */
   rom: string;
+  /** The patched ROM's build serial and mid-season-from (its manifest), so the app can tell before patching whether
+   * it continues a running season. Required in the experimental list (release candidates and test builds). */
+  serial?: number;
+  midSeasonFrom?: number;
 }
 
 export interface Release {
   version: string;
   name: string;
   date?: string;
+  /** Where to read what's new, if not the GitHub release of `version` (the experimental list's builds have none). */
+  notes?: string;
   patches: Patch[];
 }
 
@@ -81,6 +87,7 @@ export function patchListProblems(v: unknown): string[] {
         if (!contents.has(p?.content)) out.push(`${at}: content "${p?.content}" isn't in contents`);
         if (!fatigue.has(p?.fatigue)) out.push(`${at}: fatigue "${p?.fatigue}" isn't in fatigue`);
         if (!SHA1.test(p?.rom ?? '')) out.push(`${at}: rom must be the patched ROM's SHA-1 (40 lowercase hex digits)`);
+        if ((p?.serial !== undefined || p?.midSeasonFrom !== undefined) && !(Number.isInteger(p.serial) && Number.isInteger(p.midSeasonFrom))) out.push(`${at}: serial and midSeasonFrom go together, as whole numbers`);
         if (p?.file !== undefined) {
           if (!isStr(p.file) || p.file.startsWith('/') || p.file.includes('..')) out.push(`${at}: file must be a path in the repo`);
           if (!SHA256.test(p.sha256 ?? '')) out.push(`${at}: a patch with a file needs its sha256`);
@@ -110,10 +117,13 @@ export function refFromPage(search: string): string {
   return ref && /^[A-Za-z0-9._/-]+$/.test(ref) && !ref.includes('..') ? ref : 'main';
 }
 
-export async function fetchPatchList(base: string): Promise<PatchList> {
+/** The experimental list: release candidates and test builds, newest first, same format (user, 2026-11-27). */
+export const EXPERIMENTAL_LIST = 'experimental.json';
+
+export async function fetchPatchList(base: string, file = 'patches.json'): Promise<PatchList> {
   let res: Response;
   try {
-    res = await fetch(`${base}patches.json`, { cache: 'no-cache' });
+    res = await fetch(`${base}${file}`, { cache: 'no-cache' });
   } catch {
     throw new Error("couldn't reach GitHub");
   }

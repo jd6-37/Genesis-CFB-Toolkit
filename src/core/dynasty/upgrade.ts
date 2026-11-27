@@ -22,6 +22,10 @@ export interface UpgradeOffer {
   patch: Patch;
   /** The release's build, when the app knows it (KNOWN_BUILDS), for the mid-season check before patching. */
   build?: { serial: number; midSeasonFrom: number };
+  /** From the experimental list (a release candidate or test build). */
+  experimental?: boolean;
+  /** What's new, when not the GitHub release of `version`. */
+  notes?: string;
 }
 
 /**
@@ -38,6 +42,40 @@ export function findUpgrade(list: PatchList, keptSha1: string, edition: EditionI
   const known = Object.entries(KNOWN_BUILDS[Number(edition)] ?? {}).find(([, b]) => b.name === version);
   return { version, patch, ...(known ? { build: { serial: Number(known[0]), midSeasonFrom: known[1].midSeasonFrom } } : {}) };
 }
+
+/**
+ * The newest build for a dynasty whose prompts include release candidates and test builds (Manage → Rules): the
+ * newer of the current release and the experimental list's newest build of the edition, by build serial. The kept
+ * ROM may be a test build itself (not in the release list). An experimental build without a serial isn't offered.
+ */
+export function findUpgradeAny(list: PatchList | null, exp: PatchList | null, kept: { sha1: string; serial: number | null }, edition: EditionId): UpgradeOffer | null {
+  const content = PATCH_CONTENT[edition];
+  const official = list ? findUpgrade(list, kept.sha1, edition) : null;
+  if (!exp) return official;
+  const keptPatch = (list && findRelease(list, kept.sha1)?.patch) ?? findRelease(exp, kept.sha1)?.patch;
+  const pick = (ps: Patch[]) => ps.find((p) => p.fatigue === (keptPatch?.fatigue ?? 'fixed')) ?? ps.find((p) => p.fatigue === 'fixed') ?? ps[0];
+  const offers: UpgradeOffer[] = [];
+  if (official) offers.push(official);
+  else if (list && kept.serial !== null && !findRelease(list, kept.sha1)) {
+    // A test build: the current release, when it's newer (its serial from KNOWN_BUILDS).
+    const p = pick(offered(list).filter((x) => x.content === content));
+    const version = list.releases[0].version;
+    const known = Object.entries(KNOWN_BUILDS[Number(edition)] ?? {}).find(([, b]) => b.name === version);
+    if (p && known && Number(known[0]) > kept.serial) offers.push({ version, patch: p, build: { serial: Number(known[0]), midSeasonFrom: known[1].midSeasonFrom } });
+  }
+  for (const r of exp.releases) {
+    const p = pick(r.patches.filter((x) => x.content === content && x.file && x.serial !== undefined && x.midSeasonFrom !== undefined));
+    if (!p) continue;
+    if (kept.serial === null || p.serial! > kept.serial) offers.push({ version: r.version, patch: p, build: { serial: p.serial!, midSeasonFrom: p.midSeasonFrom! }, experimental: true, ...(r.notes ? { notes: r.notes } : {}) });
+    break; // the newest build of the edition only
+  }
+  // The newest; a release whose serial the app doesn't know yet wins over a test build.
+  return offers.sort((a, b) => (b.build?.serial ?? Infinity) - (a.build?.serial ?? Infinity))[0] ?? null;
+}
+
+/** Whether an offer is shown now: a test build only between seasons or when it continues the running season. */
+export const offerShown = (o: UpgradeOffer | null, timing: ReturnType<typeof upgradeTiming>): boolean =>
+  !!o && (!o.experimental || timing === 'free' || timing === 'safe');
 
 /** The season a ROM change would affect: the newest one, unless the dynasty is in its offseason. */
 const running = (d: Dynasty): DSeason | null => (d.offseason ? null : d.seasons[d.seasons.length - 1]);
