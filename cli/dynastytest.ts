@@ -351,8 +351,8 @@ ok(`news: ${st.length} stories, lead "${st[0].headline}"`);
   if (u !== undefined && v0.save) {
     const fake = (was: number, now: number) => {
       const rank = v0.rank.slice(); rank[u] = now;
-      const lastRanks = v0.save!.season.lastRanks.slice(); lastRanks[u] = was;
-      return stories(d1, { ...v0, rank, save: { ...v0.save!, season: { ...v0.save!.season, lastRanks } } }).filter((x) => x.id.includes(`-top25-${u}`));
+      const sv = v0.save!, season = sv.season!, lastRanks = season.lastRanks.slice(); lastRanks[u] = was;
+      return stories(d1, { ...v0, rank, save: { ...sv, season: { ...season, lastRanks } } }).filter((x) => x.id.includes(`-top25-${u}`));
     };
     const inn = fake(31, 18), outt = fake(22, 30);
     assert.equal(inn.length, 1); assert.match(inn[0].headline, /Top 25|ranked/); assert.match(inn[0].dek!, /No\. 18/);
