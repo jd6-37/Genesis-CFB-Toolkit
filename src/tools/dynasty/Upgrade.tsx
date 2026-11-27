@@ -7,7 +7,9 @@ import { readManifest } from '../../core/manifest';
 import { sha1Hex } from '../../core/bytes';
 import { openRom } from '../../core/romfile';
 import { applyListed, EXPERIMENTAL_LIST, fetchPatchFile, fetchPatchList, offered, patchBase, PATCH_REPO_URL, refFromPage, romFileName, type PatchList } from '../../core/patches';
-import { romStem } from '../../core/dynasty/offseason';
+import { romStem, seasonRomName } from '../../core/dynasty/offseason';
+import { zipName } from '../../core/zip';
+import { RomName } from './KeptSaves';
 import type { Dynasty } from '../../core/dynasty/model';
 import { editionOf } from '../../core/dynasty/edition';
 import { refreshRomAssets } from '../../core/dynasty/assets';
@@ -204,9 +206,9 @@ export function useUpgrade(d: Dynasty | null, commit: (next: Dynasty) => Promise
               <p>Your dynasty now plays on {made}. Your save, players and stats stay as they are.</p>
               <ol className="dy-steps">
                 <li>Download the {s.year} ROM.</li>
-                <li>{first
+                <li>{first || !s.romId
                   ? <>Put it in place of the ROM you play the {s.year} season on and give it <strong>that ROM's file name</strong>, so the game finds your save.</>
-                  : <>Put it in place of the one you have, with <strong>the same file name</strong> (if your browser saved it as "… (1).zip", rename it), so the game finds your save.</>}</li>
+                  : <>Put it in place of the one you have. It keeps your {s.year} ROM's name (the new version shows in the name from next season), so your save keeps working.<RomName name={zipName(seasonRomName(d, s))} /></>}</li>
                 <li>Load your save with it and keep playing{s.imports.length || first ? '' : ' (or start the New Season with it)'}. Your next import confirms the upgrade.</li>
               </ol>
             </>}
@@ -253,6 +255,7 @@ export function UpgradeCard({ d, up }: { d: Dynasty; up: Upgrader }) {
               {i.timing === 'free' && <><strong>Safe to switch now:</strong> no season is running in the game. </>}
               {i.timing === 'unknown' && <><strong>The app checks</strong> that {version} can continue your {s.year} season before it builds anything. </>}
               Your save, players and stats stay as they are.
+              {i.timing === 'safe' && s.romId && <> Your ROM keeps its file name, so your save keeps working: the new version shows in the name from next season.</>}
             </p>
             <div className="dy-row">
               <Button onClick={up.open}>Upgrade to {version}</Button>

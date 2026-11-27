@@ -24,6 +24,7 @@ import { hotSeat, tenure } from '../src/core/dynasty/carousel';
 import { basename } from 'node:path';
 import { strict as assert } from 'node:assert';
 import { openRom } from '../src/core/romfile';
+import { deleteKept, KEEP_SAVES, keepFile, keptBytes, keptName, trimKept } from '../src/core/dynasty/keptSaves';
 import { openSave, readDynastySave, ranksFromPower, STAT_SLOTS } from '../src/core/dynasty/save';
 import { CLASSES, createDynasty, fromBase64, importSave, latestSave, rememberUser, rng, startingClass, weeksDone } from '../src/core/dynasty/model';
 import { champions, INDEPENDENT, playerName, leaders, playerLines, seasonRecords, RECORD_STATS, seasonView, standings, teamHistory, weekName } from '../src/core/dynasty/derive';
@@ -293,6 +294,23 @@ assert.equal(r1.season.imports[0].weeksDone, weeksDone(save));
   if (last >= 0 && s.lastRanks.some((x) => x > 0)) assert.deepEqual(kr[last], s.lastRanks);
   assert.ok(kr[0], 'week 0 has ranks (a save or the preseason poll)');
   ok('Scores ranks at kickoff come from the save (lastRanks; power for the next week) and the preseason poll');
+}
+{
+  // Kept saves (user, 2026-11-27): the file itself on the last 10 imports, downloadable, deletable; stats stay.
+  const k1 = await keepFile(d1, r1.season.imports[0].at, srm, 'mine.srm');
+  const imp = k1.seasons[0].imports[0];
+  assert.ok(imp.file && imp.fileName === 'mine.srm');
+  assert.deepEqual(await keptBytes(imp), srm, 'the kept file comes back byte for byte');
+  assert.ok(imp.file!.length < srm.length / 2, 'gzipped');
+  assert.equal(keptName(k1, { ...k1.seasons[0] }, imp), 'mine.srm', 'no season ROM name yet: the uploaded name');
+  assert.match(keptName({ ...k1, name: 'NDSU Dynasty' }, { ...k1.seasons[0], romId: 'eqqavz' }, imp), /ndsu_dynasty-\d{4}-eqqavz\.srm$/);
+  const many = { ...k1, seasons: [{ ...k1.seasons[0], imports: Array.from({ length: 13 }, (_, n) => ({ ...imp, at: `2026-01-${String(n + 1).padStart(2, '0')}T00:00:00.000Z` })) }] };
+  const t = trimKept(many);
+  assert.equal(t.seasons[0].imports.filter((i) => i.file).length, KEEP_SAVES);
+  assert.ok(!t.seasons[0].imports[0].file && t.seasons[0].imports[12].file, 'the oldest lose their file first');
+  const del = deleteKept(k1, k1.seasons[0].year, imp.at);
+  assert.ok(!del.seasons[0].imports[0].file && del.seasons[0].imports[0].data === imp.data, 'delete keeps the results');
+  ok(`kept saves: last ${KEEP_SAVES} files, gzipped, download names, delete keeps the stats`);
 }
 // The same save again replaces the import for that week.
 const d2 = importSave(d1, srm).dynasty;

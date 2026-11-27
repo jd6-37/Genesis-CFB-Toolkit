@@ -1115,3 +1115,15 @@
 .dy-award-line { display: block; }
 @media (min-width: 900px) { .dy-award-list { grid-template-columns: repeat(2, 1fr); } }
 .dy-heisman > .dy-trophy { float: right; margin-left: var(--sp-3); }
+
+/* Kept saves and the ROM name at a download step (user, 2026-11-27) */
+.dy-save-acts { display: inline-flex; flex-wrap: wrap; gap: var(--sp-1); }
+.dy-imports-weeks { display: none; }
+@media (min-width: 600px) {
+  .dy-imports-weeks { display: table-cell; }
+  .dy-save-acts { flex-wrap: nowrap; }
+}
+.dy-romname { margin: var(--sp-3) 0; padding: var(--sp-2) var(--sp-3); background: var(--surface-sunken); border-left: 4px solid var(--star); }
+.dy-romname p { margin: 0 0 var(--sp-1); }
+.dy-romname-label { font-weight: 700; }
+.dy-romname-name code { font-size: var(--fs-4); overflow-wrap: anywhere; background: var(--highlight); padding: 0 var(--sp-1); }

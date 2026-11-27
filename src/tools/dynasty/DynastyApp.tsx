@@ -22,6 +22,8 @@ import {
   type DynastySummary, type TeamArt,
 } from '../../core/dynasty/storage';
 import { Ctx, href, TeamMark, type DynCtx } from './ui';
+import { ImportsTable, RomName } from './KeptSaves';
+import { keepFile } from '../../core/dynasty/keptSaves';
 import { SharePanel } from './SharePanel';
 import { Awards } from './AwardsPage';
 import { Records } from './RecordsPage';
@@ -297,8 +299,9 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
     importSave: (f, allowOlder) => run('Importing the save…', async () => {
       if (!d) return;
       let r: ReturnType<typeof importSave>;
+      const bytes = await readFile(f), at = new Date().toISOString();
       try {
-        r = importSave(d, await readFile(f), { allowOlder });
+        r = importSave(d, bytes, { allowOlder, at });
       } catch (e) {
         // A first season that wasn't started on the dynasty's ROM (setup): the way to that ROM (user, 2026-11-20).
         if (d.seasonOneRom && d.seasons.length === 1 && !d.seasons[0].imports.length) {
@@ -307,7 +310,8 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
         }
         throw e;
       }
-      await commit(r.dynasty);
+      // The file itself too, for the last 10 imports (keptSaves.ts; user, 2026-11-27).
+      await commit(await keepFile(r.dynasty, at, bytes, f.name).catch(() => r.dynasty));
       const nv = seasonView(r.dynasty, r.season);
       const added = r.newUserTeams.map((t) => r.dynasty.teams[t].school);
       setNote({
@@ -607,7 +611,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
                 <li>Download the ROM.</li>
                 {stale.first
                   ? <li>Put it in place of the ROM you play the {s.year} season on and give it <b>that ROM's file name</b>, so the game finds your save.</li>
-                  : <li>Put it in place of the one you have. Its name must stay <b>{s.romId ? zipName(name) : 'the same'}</b>{s.romId ? '' : ' as the ROM you have'}: if your browser saved it as "… (1).zip", rename it. Then the game finds your save.</li>}
+                  : <li>Put it in place of the one you have{s.romId ? <>, with the same name.<RomName name={zipName(name)} /></> : <>, with the same name as the ROM you have, so the game finds your save.</>}</li>}
                 <li>{stale.uniformsOnly ? 'Keep playing: your season goes on, the save keeps no uniform.' : `Load your save with it and play on${s.imports.length ? '' : ` (or start the New Season with it if you haven't yet)`}.`}</li>
               </ol>
             </Modal>
@@ -756,21 +760,7 @@ function Manage({ d, art, list, busy, note, actions, focus, ctx, up }: {
               <FileButton label="Import save" accept=".srm,.sav,.bin" disabled={!!busy} onFile={(f) => actions.importSave(f, older)} />
               <Check checked={older} onChange={setOlder}>Allow a save with fewer results than the last one</Check>
             </div>
-            {season.imports.length > 0 && (
-              <Table figures>
-                <caption>{season.year} imports</caption>
-                <thead><tr><th className="ui-left">Imported</th><th>Games played</th><th>Weeks complete</th></tr></thead>
-                <tbody>
-                  {season.imports.slice().reverse().map((i) => (
-                    <tr key={i.at}>
-                      <td className="ui-left">{when(i.at)}</td>
-                      <td>{i.played}</td>
-                      <td>{i.weeksDone}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
-            )}
+            <ImportsTable d={d} commit={actions.commit} busy={!!busy} />
             <Renumbered d={d} />
             <VersionRows d={d} up={up} busy={!!busy} commit={actions.commit} />
             <h3>Season ROM</h3>

@@ -98,6 +98,11 @@ export interface SaveImport {
   data: string;
   /** The save's build stamp at import (save layout 2; H-033), when the ROM wrote one. */
   elvb?: Elvb;
+  /** The uploaded file itself, gzipped, base64: kept on the 10 newest imports so it can be downloaded again
+   *  (keptSaves.ts; user, 2026-11-27). The stats come from `data`, which every import keeps. */
+  file?: string;
+  /** The uploaded file's name. */
+  fileName?: string;
 }
 
 /** The base ROM's build a season ROM was written from (H-033), from its manifest. */
