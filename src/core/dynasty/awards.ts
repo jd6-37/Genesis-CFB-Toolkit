@@ -54,8 +54,8 @@ export const POSITION_AWARDS: NamedAward[] = [
 export const HEISMAN = { key: 'heisman', name: 'Heisman Trophy', what: 'Most outstanding player', since: 1935, art: 'heisman' };
 /** Coach of the year (user, 2026-11-27): the Bear Bryant Award and the AFCA Coach of the Year. */
 export const COACH_AWARDS = [
-  { key: 'bryant', name: 'Bear Bryant Award', what: 'Coach of the year', since: 1986, art: 'coach' },
-  { key: 'afca', name: 'AFCA Coach of the Year', what: "The coaches' coach of the year", since: 1935, art: 'coach2' },
+  { key: 'bryant', name: 'Bear Bryant Award', what: 'Coach of the best team', how: 'the best season at the top: record, rank, title games and postseason wins', since: 1986, art: 'coach' },
+  { key: 'afca', name: 'AFCA Coach of the Year', what: 'Coach who beat expectations', how: 'the most wins beyond what the team was expected to win, from where it started in the preseason poll', since: 1935, art: 'coach2' },
 ] as const;
 export const awardsIn = (year: number) => POSITION_AWARDS.filter((a) => a.since <= year);
 
@@ -276,14 +276,28 @@ export function awardWatch(v: SeasonView, a: NamedAward, all = candidates(v), n 
 }
 
 /**
- * Coach of the year: the head coaches whose teams did most beyond what was expected of them. Expected: the
- * preseason rank (the season's first ranks). The Bear Bryant Award leans on wins, the AFCA's on the climb.
+ * Coach of the year (user, 2026-11-27: make the two differ). The Bear Bryant Award goes to a contender's coach: the
+ * record, the rank now (the final rank once the season is over) and postseason wins (title games, playoff or bowl
+ * games). The AFCA's goes to the biggest overachiever: wins, and the climb from the preseason rank (unranked = 70).
  */
 export function coachWatch(v: SeasonView, key: 'bryant' | 'afca', pre: number[] | null, n = 5): { team: number; coach: number | null; score: number; line: string }[] {
+  const post = new Array<number>(v.records.length).fill(0);
+  for (const g of v.games) {
+    if (g.week <= v.lastRegularWeek || g.vs === null || g.hs === null || g.visitor === null || g.home === null || g.vs === g.hs) continue;
+    post[g.vs > g.hs ? g.visitor : g.home]++;
+  }
   const out = v.records.map((r, team) => {
-    const climb = pre ? Math.max(-30, Math.min(60, (pre[team] || 70) - (v.rank[team] || 70))) : 0;
-    const score = key === 'bryant' ? 3 * r.w - 2 * r.l + climb / 3 : 1.5 * r.w - r.l + climb / 1.5;
-    return { team, coach: v.season.coach?.[team] ?? null, score, line: `${r.w}-${r.l}${!pre ? '' : pre[team] && pre[team] <= 25 ? `, ranked No. ${pre[team]} before the season` : ', unranked before the season'}` };
+    const rank = v.rank[team] || 99;
+    let score: number, line: string;
+    if (key === 'bryant') {
+      score = 3 * r.w - 3 * r.l + Math.max(0, 26 - rank) * 0.8 + 4 * post[team];
+      line = `${r.w}-${r.l}${rank <= 25 ? `, No. ${rank}` : ''}${post[team] ? `, ${post[team]} postseason ${post[team] === 1 ? 'win' : 'wins'}` : ''}`;
+    } else {
+      const climb = pre ? Math.max(-30, Math.min(60, (pre[team] || 70) - (v.rank[team] || 70))) : 0;
+      score = 2 * r.w - 2 * r.l + climb / 2;
+      line = `${r.w}-${r.l}${!pre ? '' : pre[team] && pre[team] <= 25 ? `, ranked No. ${pre[team]} before the season` : ', unranked before the season'}${rank <= 25 ? `, No. ${rank} now` : ''}`;
+    }
+    return { team, coach: v.season.coach?.[team] ?? null, score, line };
   });
   return out.filter((x) => (v.records[x.team].w + v.records[x.team].l) > 0).sort((a, b) => b.score - a.score).slice(0, n);
 }
