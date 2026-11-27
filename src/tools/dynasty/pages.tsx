@@ -5,7 +5,7 @@ import { playerHonors, seasonAwards } from '../../core/dynasty/awards';
 import { academicGrade } from '../../core/dynasty/academics';
 import { scheduleLock } from '../../core/dynasty/schedule';
 import { Button, Check, Modal, Note, Num, PageHead, Segments, Select, SubHead, Table, Tabs } from '../../ui';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   champions, leaders, playerLines, playerName, seasonView, standings, statValue, teamHistory, weekName,
   INDEPENDENT, type PlayerLine, type StatCategory,
@@ -100,6 +100,29 @@ export function Home() {
     () => (offEvents?.length ? offseasonStories(d, offEvents, d.offseason ? d.offseason.year : v.season.year - 1) : stories(d, v)),
     [d, v, offEvents],
   );
+  // A side column much longer than the main one (many headlines, big games, the Heisman watch) would leave a gap
+  // under the main column (user, 2026-11-27: "make the layout a little more intelligent and adaptable"). When the gap
+  // is bigger than most of what's below (the playoff picture, leaders, conference: their height across the page), that
+  // goes under the main column, beside the side column; otherwise it stays across the page. One column on a phone,
+  // in the same order as before.
+  const mainRef = useRef<HTMLDivElement>(null), sideRef = useRef<HTMLElement>(null), restRef = useRef<HTMLDivElement>(null);
+  const restWide = useRef(0);
+  const [tall, setTall] = useState(false);
+  useLayoutEffect(() => {
+    const m = mainRef.current, sd = sideRef.current, r = restRef.current;
+    if (!m || !sd || !r || typeof ResizeObserver === 'undefined') return;
+    const check = () => {
+      const two = window.matchMedia('(min-width: 901px)').matches;
+      const front = r.parentElement;
+      if (front && !front.classList.contains('is-tall')) restWide.current = r.offsetHeight;
+      const gap = sd.offsetHeight - m.offsetHeight;
+      setTall(two && restWide.current > 0 && gap > Math.max(300, 0.6 * restWide.current));
+    };
+    const ro = new ResizeObserver(check);
+    ro.observe(m); ro.observe(sd); ro.observe(r);
+    check();
+    return () => ro.disconnect();
+  }, [list.length]);
   if (!list.length) return <WhatsNext />;
   const [lead, ...rest] = list;
   const second = rest.slice(0, 3);
@@ -107,8 +130,8 @@ export function Home() {
   return (
     <>
       {v.save && !d.offseason && <Ticker />}
-      <div className="dy-front">
-        <div className="dy-front-main">
+      <div className={tall ? 'dy-front is-tall' : 'dy-front'}>
+        <div className="dy-front-main" ref={mainRef}>
           {lead && (
             <article className="dy-lead">
               <StoryArt teams={lead.teams} big />
@@ -127,13 +150,13 @@ export function Home() {
           </div>
           {v.save && <HomePoll />}
         </div>
-        <aside className="dy-front-side">
+        <aside className="dy-front-side" ref={sideRef}>
           <SideHeads heads={heads} />
           <SeasonSide />
           <OffseasonSide />
         </aside>
+        <div className="dy-front-rest" ref={restRef}><SeasonMore /></div>
       </div>
-      <SeasonMore />
       {/* With headlines on the page, What's next goes to the bottom (user, 2026-11-17); with none, it's the whole page. */}
       <WhatsNext />
     </>
