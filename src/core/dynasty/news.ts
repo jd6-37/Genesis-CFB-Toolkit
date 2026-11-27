@@ -174,6 +174,29 @@ export function stories(d: Dynasty, v: SeasonView = seasonView(d, d.seasons[d.se
       dek: `${full(one)} (${v.records[one].w}-${v.records[one].l}) moves past ${name(wasOne)} at the top of the poll.`,
     });
   }
+  // Your teams in and out of the Top 25 (user, 2026-11-27: "a news headline for when a user controlled team breaks into
+  // (or falls out of) the top 25"): the rank going into the week against the new one; unknown before the first save.
+  if (!post && !nextStarted) {
+    for (const u of d.userTeams) {
+      const was = s.lastRanks[u] || (pollRank ? pollRank[u] || 99 : 0), now = v.rank[u];
+      if (!was || !now || (was <= 25) === (now <= 25)) continue;
+      const g = weekGames.find((x) => x.visitor === u || x.home === u);
+      const res = g && g.vs !== null && g.hs !== null ? (() => {
+        const mine = g.visitor === u ? g.vs : g.hs, theirs = g.visitor === u ? g.hs : g.vs, opp = g.visitor === u ? g.home! : g.visitor!;
+        return `${mine > theirs ? 'beat' : mine < theirs ? 'lost to' : 'tied'} ${name(opp)} ${Math.max(mine, theirs)}-${Math.min(mine, theirs)}`;
+      })() : null;
+      const rec = `${v.records[u].w}-${v.records[u].l}`;
+      const id = `${year}-${week}-top25-${u}`;
+      out.push(now <= 25
+        ? { id, kind: 'yours', week, weight: 64, teams: [u],
+            headline: pick(id, [`${name(u)} breaks into the Top 25 at No. ${now}`, `${name(u)} is ranked: No. ${now}`, `${name(u)} cracks the Top 25`]),
+            dek: `${full(u)} (${rec})${res ? ` ${res} in ${wk}` : ''} and moves into the poll at No. ${now}.` }
+        : { id, kind: 'yours', week, weight: 60, teams: [u],
+            headline: pick(id, [`${name(u)} falls out of the Top 25`, `${name(u)} drops out of the poll`, `${name(u)} loses its spot in the Top 25`]),
+            dek: `${full(u)} (${rec})${res ? ` ${res} in ${wk}` : ''} and drops from No. ${was} out of the poll.` });
+    }
+  }
+
   const unbeaten = v.records.filter((r) => r.l === 0 && r.w > 0);
   if (!post && week >= 3 && unbeaten.length > 0 && unbeaten.length <= 8) {
     const list = unbeaten.sort((a, b) => v.rank[a.team] - v.rank[b.team]);

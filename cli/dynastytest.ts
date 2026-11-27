@@ -345,6 +345,22 @@ assert.equal(new Set(st.map((x) => x.id)).size, st.length, 'story ids are unique
 assert.ok(st.every((x) => x.teams.every((t) => t >= 0 && t < 138)));
 assert.deepEqual(stories(d1), st, 'the same season gives the same stories');
 ok(`news: ${st.length} stories, lead "${st[0].headline}"`);
+// A user team in or out of the Top 25 (user, 2026-11-27): the rank going into the week against the new one.
+{
+  const v0 = seasonView(d1, d1.seasons[0]), u = d1.userTeams[0];
+  if (u !== undefined && v0.save) {
+    const fake = (was: number, now: number) => {
+      const rank = v0.rank.slice(); rank[u] = now;
+      const lastRanks = v0.save!.season.lastRanks.slice(); lastRanks[u] = was;
+      return stories(d1, { ...v0, rank, save: { ...v0.save!, season: { ...v0.save!.season, lastRanks } } }).filter((x) => x.id.includes(`-top25-${u}`));
+    };
+    const inn = fake(31, 18), outt = fake(22, 30);
+    assert.equal(inn.length, 1); assert.match(inn[0].headline, /Top 25|ranked/); assert.match(inn[0].dek!, /No\. 18/);
+    assert.equal(outt.length, 1); assert.match(outt[0].headline, /Top 25|poll/); assert.match(outt[0].dek!, /No\. 22/);
+    assert.equal(fake(12, 9).length + fake(40, 33).length, 0, 'no story inside or outside the poll');
+    ok(`news: Top 25 in / out for your team ("${inn[0].headline}" / "${outt[0].headline}")`);
+  }
+}
 // Headline windows (user, 2026-11-26): a game's story names its game; "holds off" only for close games; a user
 // team's rivalry game gets one story; stat stories name their stat.
 {
