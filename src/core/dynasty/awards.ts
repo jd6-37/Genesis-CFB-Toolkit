@@ -68,6 +68,8 @@ export interface Candidate {
   score: number;
   /** Where his stat score and his OVR rank among the players of his award spot, 0 (last) to 1 (first). */
   statPct: number;
+  /** The stats score against the best at the award spot's (0-1): how far ahead or behind, not just the order. */
+  statRel: number;
   ovrPct: number;
   /** A short line of his season ("1,204 rushing yards, 14 TD"). */
   line: string;
@@ -150,14 +152,15 @@ export function candidates(v: SeasonView): Candidate[] {
     }
     // Ties (common for linemen) go to the better OVR.
     if (role !== 'OL' && ovr) line += `; ${ovr} OVR`;
-    out.push({ player, team, slot, role, ovr, score: score + ovr / 1000, statPct: 0, ovrPct: 0, line });
+    out.push({ player, team, slot, role, ovr, score: score + ovr / 1000, statPct: 0, statRel: 0, ovrPct: 0, line });
   }));
   // Percentiles within each award spot (HB and FB together, all linemen together, and so on).
   for (const spot of AWARD_SPOTS) {
     const group = out.filter((c) => spot.roles.includes(c.role));
     const scores = group.filter((c) => c.score > 0).map((c) => c.score).sort((a, b) => a - b);
     const ovrs = group.map((c) => c.ovr).sort((a, b) => a - b);
-    for (const c of group) { c.statPct = pct(c.score, scores); c.ovrPct = pct(c.ovr, ovrs); }
+    const top = scores[scores.length - 1] || 0;
+    for (const c of group) { c.statPct = pct(c.score, scores); c.statRel = top > 0 ? Math.max(0, c.score) / top : 0; c.ovrPct = pct(c.ovr, ovrs); }
   }
   return out;
 }
@@ -178,7 +181,12 @@ function pct(x: number, sorted: number[]): number {
  */
 export const AWARD_STATS_WEIGHT = 0.6;
 export const TEAM_STATS_WEIGHT = 0.7;
-const blend = (c: Candidate, w: number) => w * c.statPct + (1 - w) * c.ovrPct;
+// The stats part: mostly the percentile, a quarter how close to the spot's best (user, 2026-11-27: a back with 1,608
+// rushing yards led the Heisman race but missed the Doak Walker top 5 behind 89+ OVR backs with ~650; the leaders'
+// percentiles are all near 1, so OVR decided). "I'd still make OVR matter … but someone with those stats deserves top
+// 5": on the sample dynasty a back with 2.2x the leader's stats and 84 OVR lands 3rd, behind two 90 OVR backs.
+const statPart = (c: Candidate) => (3 * c.statPct + Math.sqrt(c.statRel)) / 4;
+const blend = (c: Candidate, w: number) => w * statPart(c) + (1 - w) * c.ovrPct;
 /** The top `n` by stats, then ordered by the blend. */
 export function shortlist(pool: Candidate[], n: number, w: number): Candidate[] {
   return pool.filter((c) => c.score > 0).sort((a, b) => b.score - a.score).slice(0, n)
