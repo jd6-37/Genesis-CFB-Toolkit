@@ -59,7 +59,7 @@ export function AwardWatch() {
         ))}
         {COACH_AWARDS.filter((a) => a.since <= year).map((a) => (
           <article key={a.key} className="dy-watch-card">
-            <header><Trophy art={a.art} size={2} /><div><h3>{a.name}</h3><p className="dy-small dy-dim">{a.what}: the most wins beyond what the team was expected to win</p></div></header>
+            <header><Trophy art={a.art} size={2} /><div><h3>{a.name}</h3><p className="dy-small dy-dim">{a.what}: {a.how}</p></div></header>
             <ol className="dy-watch-list">
               {coachWatch(v, a.key, pre, 5).map((x, i) => {
                 const c = x.coach !== null ? d.coaches?.find((k) => k.id === x.coach) : undefined;
