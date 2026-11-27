@@ -16,7 +16,7 @@ import { STATS_DEFAULTS, readSimStats } from '../src/core/simStats';
 import { SIM_DEFAULTS, readSimSettings, simForRom, type SimSettings } from '../src/core/simSettings';
 import { careerRecords, teamRecords } from '../src/core/dynasty/records';
 import { checkSchedule, editSchedule, flipHome, moveGame, protectedPairs, remakeSchedule, SCHED_WEEKS, weeksOf, setOpponent, teamSchedule, type SchedGame } from '../src/core/dynasty/schedule';
-import { AWARD_SPOTS, AWARD_STATS_WEIGHT, POSITION_AWARDS, awardsIn, awardsOf, candidates, playerHonors, seasonAwards } from '../src/core/dynasty/awards';
+import { AWARD_SPOTS, AWARD_STATS_WEIGHT, POSITION_AWARDS, awardsIn, awardsOf, candidates, playerHonors, seasonAwards, shortlist } from '../src/core/dynasty/awards';
 import { readFileSync, writeFileSync } from 'node:fs';
 import type { CoachData } from '../src/core/dynasty/coachData';
 import { withCoaches } from '../src/core/dynasty/coaches';
@@ -380,6 +380,22 @@ ok(`news: ${st.length} stories, lead "${st[0].headline}"`);
     assert.deepEqual(inn[0].poll, { was: 31, now: 18 }); assert.deepEqual(outt[0].poll, { was: 22, now: 30 });
     ok(`news: Top 25 in / out for your team ("${inn[0].headline}" / "${outt[0].headline}")`);
   }
+}
+// A stats runaway makes the award top 5, but OVR still counts (user, 2026-11-27: a 1,608-yard, 84 OVR back led the
+// Heisman race but missed the Doak Walker top 5; "I'd still make OVR matter … but someone with those stats deserves
+// top 5"). Ten backs as in the sample dynasty's race; the runaway has 2.2x the next back's stats.
+{
+  const mk = (i: number, ovr: number, ovrPct: number, score: number, statPct: number) =>
+    ({ player: i, team: i, slot: 0, role: 'HB', ovr, score, statPct, statRel: 0, ovrPct, line: '' });
+  const pool = [mk(0, 84, 0.79, 233, 1), mk(1, 90, 0.976, 85, 0.993), mk(2, 90, 0.976, 79, 0.988), mk(3, 90, 0.976, 75, 0.981),
+    mk(4, 88, 0.941, 79, 0.99), mk(5, 88, 0.941, 77, 0.985), mk(6, 87, 0.909, 106, 0.998), mk(7, 88, 0.941, 75, 0.978),
+    mk(8, 87, 0.909, 99, 0.997), mk(9, 85, 0.845, 76, 0.983)];
+  for (const c of pool) c.statRel = c.score / 233;
+  const order = shortlist(pool, 10, AWARD_STATS_WEIGHT).map((c) => c.player);
+  const at = order.indexOf(0) + 1;
+  assert.ok(at >= 2 && at <= 5, `the runaway is in the top 5 but not ahead of every 90 OVR (#${at})`);
+  assert.ok(order.indexOf(6) < order.indexOf(5), 'the 87 OVR back with the most stats after him moves up too');
+  ok(`awards: a stats runaway at 84 OVR is #${at} of the Doak Walker race (OVR still counts)`);
 }
 // Headline windows (user, 2026-11-26): a game's story names its game; "holds off" only for close games; a user
 // team's rivalry game gets one story; stat stories name their stat.
@@ -1309,7 +1325,8 @@ ok('a new season refuses the last season\'s save');
     // Stats and OVR (user: "stats are very important … they aren't everything"): the winner is among the top 10 QBs
     // by stats and has the best 60/40 blend of them.
     const qbs = candidates(v2).filter((c) => c.role === 'QB' && c.score > 0).sort((a, b) => b.score - a.score).slice(0, 10);
-    const bl = (c: { statPct: number; ovrPct: number }) => AWARD_STATS_WEIGHT * c.statPct + (1 - AWARD_STATS_WEIGHT) * c.ovrPct;
+    // The stats part is mostly the percentile, a quarter how close to the best (2026-11-27).
+    const bl = (c: { statPct: number; statRel: number; ovrPct: number }) => AWARD_STATS_WEIGHT * (3 * c.statPct + Math.sqrt(c.statRel)) / 4 + (1 - AWARD_STATS_WEIGHT) * c.ovrPct;
     assert.ok(qbs.some((c) => c.player === qb.player) && qbs.every((c) => bl(c) <= bl(qb) + 1e-9), 'best quarterback: top 10 by stats, best blend');
     const leader = qbs[0];
     {
@@ -1372,7 +1389,7 @@ ok('a new season refuses the last season\'s save');
     // The teams lean more on stats (70/30) than the position awards (60/40), so the best QB can miss them; when he
     // makes a team, his page lists it too.
     assert.ok(h.some((x) => x.label === "Davey O'Brien Award"), `honors on the player page: ${h.map((x) => x.label).join(', ')}`);
-    const onTeam = [...first, ...Object.values(aw.allConference).flat()].some((c) => c.player === qb.player);
+    const onTeam = [...first, ...second, ...Object.values(aw.allConference).flat()].some((c) => c.player === qb.player);
     assert.equal(h.some((x) => x.label.startsWith('All-')), onTeam, 'his All- honors on the player page');
     ok(`awards: Heisman ${aw.heisman[0] ? playerName(w2.players[aw.heisman[0].player - 1]) : '-'}; best QB ${playerName(w2.players[qb.player - 1])} (${qb.line}); ${confs.length} All-Conference teams; honors ${h.map((x) => x.label).join(', ')}`);
   }
