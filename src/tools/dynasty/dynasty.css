@@ -839,6 +839,8 @@
 .dy-rtable td, .dy-rtable th { white-space: nowrap; }
 .dy-rname { position: sticky; left: 0; z-index: 1; }
 .dy-rtable tbody tr:nth-child(even) td.dy-rname { background: var(--surface); }
+/* Your teams' rows: the highlight over the same opaque ground, so the sticky name keeps it too (user, 2026-11-28). */
+.dy-rtable tbody tr.ui-row-mine:nth-child(n) td.dy-rname { background: linear-gradient(var(--highlight), var(--highlight)), var(--surface); }
 .dy-rtable thead th:first-child { position: sticky; left: 0; z-index: 2; background: var(--surface); }
 /* Phones: the filters fold behind a button; from tablets up they're always shown. */
 .dy-rfilters-toggle { align-self: flex-start; }
