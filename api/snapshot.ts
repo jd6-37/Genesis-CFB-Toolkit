@@ -7,9 +7,11 @@
 //   GET    /api/snapshot?id=<id>     { url } of the snapshot's file, or 404
 //   GET    /api/snapshot?status=1    { storage: "connected", uploads: "ready" } or what's missing (for checking a deployment)
 //   DELETE /api/snapshot             body { key }: deletes that key's snapshot
+//   PATCH  /api/snapshot             body { key }: extends that key's snapshot to SNAPSHOT_DAYS from now (re-saves the
+//                                    file, which resets its upload time); { expires }
 //   GET    /api/snapshot?cleanup=1   the daily cron (vercel.json; Authorization: Bearer CRON_SECRET): deletes the
 //                                    snapshots older than SNAPSHOT_DAYS. A link stops answering at 90 days either way.
-import { BlobNotFoundError, del, head, list } from '@vercel/blob';
+import { BlobNotFoundError, copy, del, head, list } from '@vercel/blob';
 import { handleUpload, type HandleUploadBody } from '@vercel/blob/client';
 import { isSnapshotId, isSnapshotKey, snapshotExpired, snapshotExpires, snapshotIdOf, snapshotPath, SNAPSHOT_MAX_BYTES, SNAPSHOT_TYPE } from '../src/core/dynasty/snapshotId.js'; // .js: Node runs the function as ESM and needs the extension
 
@@ -88,6 +90,36 @@ export async function DELETE(request: Request): Promise<Response> {
     await del(snapshotPath(await snapshotIdOf(key)));
     return json({ deleted: true });
   } catch {
+    return json({ error: 'The snapshot storage is not available right now.' }, 503);
+  }
+}
+
+/**
+ * Extends a snapshot (user, 2026-11-28: "Extend expiration … to 90 days from now"). Expiry runs from the file's upload
+ * time, so the file is copied to a temporary name and back over itself, which gives it a new upload time; the link
+ * and the file's content stay the same. Only the key extends, and only a snapshot that hasn't expired.
+ */
+export async function PATCH(request: Request): Promise<Response> {
+  let key: unknown;
+  try {
+    key = ((await request.json()) as { key?: unknown }).key;
+  } catch {
+    return json({ error: 'Bad request.' }, 400);
+  }
+  if (!isSnapshotKey(key)) return json({ error: 'Not a snapshot key.' }, 400);
+  const path = snapshotPath(await snapshotIdOf(key));
+  const opts = { access: 'public' as const, addRandomSuffix: false, contentType: SNAPSHOT_TYPE, cacheControlMaxAge: 3600 };
+  try {
+    const blob = await head(path);
+    if (snapshotExpired(blob.uploadedAt)) return json({ error: 'This snapshot has expired.', expired: true }, 410);
+    const tmp = `${path}.renew-${Date.now()}`;
+    const copied = await copy(blob.url, tmp, opts);
+    const back = await copy(copied.url, path, { ...opts, allowOverwrite: true });
+    await del(copied.url);
+    const now = await head(back.url).catch(() => null);
+    return json({ expires: snapshotExpires(now?.uploadedAt ?? new Date()).toISOString() });
+  } catch (e) {
+    if (e instanceof BlobNotFoundError) return json({ error: 'This snapshot is gone.' }, 404);
     return json({ error: 'The snapshot storage is not available right now.' }, 503);
   }
 }

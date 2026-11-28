@@ -49,11 +49,12 @@ async function fetchSnapshot(id: string): Promise<Snapshot | null> {
   const r = await fetch(`/api/snapshot?id=${encodeURIComponent(id)}`);
   if (r.status === 404 || r.status === 400) return null;
   if (!r.ok) throw new Error("The snapshot can't be loaded right now. Try again in a moment.");
-  const { url } = (await r.json()) as { url: string };
+  const { url, expires } = (await r.json()) as { url: string; expires?: string };
   const file = await fetch(url);
   if (file.status === 404) return null;
   if (!file.ok) throw new Error("The snapshot can't be loaded right now. Try again in a moment.");
-  return readSnapshot(new Uint8Array(await file.arrayBuffer()));
+  // The server's end date counts an extension (the file keeps its first sharedAt).
+  return { ...(await readSnapshot(new Uint8Array(await file.arrayBuffer()))), ...(expires ? { expires } : {}) };
 }
 
 export default function SnapshotApp({ id, toolkitHref }: { id: string; toolkitHref: string }) {
@@ -123,7 +124,7 @@ export default function SnapshotApp({ id, toolkitHref }: { id: string; toolkitHr
   const navItems = PAGES.map((p) => ({ label: p.label, href: href(p.id), current: navPage === p.id }));
   const week = d?.offseason ? 'Offseason' : v && v.save ? (v.currentWeek < v.weeks ? weekName(v, v.currentWeek) : 'Season complete') : 'Preseason';
   const shared = snap ? new Date(snap.sharedAt).toLocaleDateString('en-US', { dateStyle: 'medium' }) : '';
-  const until = snap ? snapshotExpires(snap.sharedAt).toLocaleDateString('en-US', { dateStyle: 'medium' }) : '';
+  const until = snap ? (snap.expires ? new Date(snap.expires) : snapshotExpires(snap.sharedAt)).toLocaleDateString('en-US', { dateStyle: 'medium' }) : '';
 
   return (
     <div className="dy" data-brand="dynasty" data-theme={dark ? 'dark' : 'light'}>
