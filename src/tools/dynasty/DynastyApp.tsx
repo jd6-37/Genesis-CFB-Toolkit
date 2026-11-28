@@ -247,6 +247,14 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
     await refresh();
   }, [refresh]);
 
+  // A dynasty whose title-games save came in before the awards were frozen at import (before #180) gets its
+  // awards, and so its Heisman ceremony, when it's opened (user, 2026-11-28).
+  useEffect(() => {
+    if (!d) return;
+    const fz = freezeAwards(d);
+    if (fz.froze) void commit(fz.dynasty);
+  }, [d, commit]);
+
   const dlRef = useRef<(year: number) => void>(() => {});
   const backupRef = useRef<(dyn: Dynasty) => Promise<void>>(async () => {});
   const romRef = useRef<() => Promise<Uint8Array | null>>(async () => null);
