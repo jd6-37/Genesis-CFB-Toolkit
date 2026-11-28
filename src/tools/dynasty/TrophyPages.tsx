@@ -3,7 +3,7 @@
 // pictures replace the app's pixel art.
 import { BOWL_TROPHIES, bowlArt, CFP_TITLE_ART } from '../../core/dynasty/bracket';
 import { useMemo, useRef, useState } from 'react';
-import { Button, Modal, PageHead, SubHead, Table } from '../../ui';
+import { Button, Modal, PageHead, SubHead, Table, Tag } from '../../ui';
 import { COACH_AWARDS, HEISMAN, POSITION_AWARDS, awardWatch, awardsIn, candidates, coachWatch, type Candidate } from '../../core/dynasty/awards';
 import { heismanWatch } from '../../core/dynasty/outlook';
 import { kickoffRanks } from '../../core/dynasty/kickoffRanks';
@@ -34,15 +34,31 @@ export function AwardWatch() {
   // Once the awards are handed out (after the conference championships), their final top fives, so playoff and bowl
   // games don't reshuffle a race that's over.
   const fin = v.season.awards?.watch ? v.season.awards : null;
-  const cards: { key: string; name: string; what: string; art: string; list: Candidate[] }[] = [
-    ...(HEISMAN.since <= year ? [{ ...HEISMAN, list: fin?.watch?.heisman ?? heis }] : []),
-    ...awardsIn(year).map((a) => ({ key: a.key, name: a.name, what: a.what, art: a.art, list: fin?.watch?.[a.key] ?? awardWatch(v, a, all, 5) })),
+  // Once handed out, the watch turns into the results: the winner first and marked, the Heisman by the vote
+  // (user, 2026-11-28).
+  const winFirst = (list: Candidate[], w: number | undefined): Candidate[] => {
+    if (w === undefined) return list;
+    const win = list.find((x) => x.player === w) ?? (fin?.position.find((p) => p.winner?.player === w)?.winner ?? undefined);
+    return win ? [win, ...list.filter((x) => x.player !== w)].slice(0, 5) : list;
+  };
+  const votes = fin?.votes?.slice(0, 5);
+  const points = new Map(votes?.map((x) => [x.player, x]) ?? []);
+  const heisList: Candidate[] = votes
+    ? votes.map((x) => ({ ...(byP.get(x.player) ?? fin!.watch!.heisman?.find((c) => c.player === x.player) ?? ({ player: x.player, team: x.team } as Candidate)), line: x.line }))
+    : fin?.watch?.heisman ?? heis;
+  const cards: { key: string; name: string; what: string; art: string; list: Candidate[]; win?: number }[] = [
+    ...(HEISMAN.since <= year ? [{ ...HEISMAN, list: heisList, win: fin ? (votes?.[0]?.player ?? fin.heisman[0]?.player) : undefined }] : []),
+    ...awardsIn(year).map((a) => {
+      const w = fin?.position.find((p) => p.key === a.key)?.winner?.player;
+      return { key: a.key, name: a.name, what: a.what, art: a.art, list: winFirst(fin?.watch?.[a.key] ?? awardWatch(v, a, all, 5), w), win: w };
+    }),
   ];
   const mine = (t: number) => d.userTeams.includes(t);
+  const cls = (team: number, win: boolean) => [mine(team) ? 'dy-watch-mine' : '', win ? 'dy-watch-win' : ''].filter(Boolean).join(' ') || undefined;
   return (
     <>
       <p className="dy-small dy-dim">{fin
-        ? <>The awards were handed out after the conference championships: these are the final top fives. <a href={href(`awards/${year}`)}>The {year} awards</a></>
+        ? <>The {year} awards were handed out after the conference championships. The winners are marked, then the rest of each final top five; the Heisman by the voters' points. <a href={href(`awards/${year}`)}>The {year} awards</a></>
         : "The players in the running for each award, from the stats so far and the players' OVR. The winners are named after the conference championships."}</p>
       <div className="dy-watch">
         {cards.map((c) => (
@@ -52,10 +68,13 @@ export function AwardWatch() {
               <ol className="dy-watch-list">
                 {c.list.map((x, i) => {
                   const p = playerOf(d, x.player);
+                  const win = c.win === x.player;
+                  const vote = c.key === HEISMAN.key ? points.get(x.player) : undefined;
                   return (
-                    <li key={x.player} className={mine(x.team) ? 'dy-watch-mine' : undefined}>
+                    <li key={x.player} className={cls(x.team, win)}>
                       <span className="dy-watch-n">{i + 1}</span><TeamMark team={x.team} size={20} />
-                      <span>{p ? <a href={href(`player/${p.id}`)}>{playerTag(p)}</a> : 'Unknown player'} <span className="dy-small dy-dim"><Ranked team={x.team} /></span><span className="dy-small dy-dim dy-watch-line">{x.line}</span></span>
+                      <span>{p ? <a href={href(`player/${p.id}`)}>{playerTag(p)}</a> : 'Unknown player'} <span className="dy-small dy-dim"><Ranked team={x.team} /></span>{win && <> <Tag tone="accent">Winner</Tag></>}<span className="dy-small dy-dim dy-watch-line">{x.line}</span></span>
+                      {vote && <span className="dy-watch-pts"><strong>{vote.points.toLocaleString('en-US')}</strong><span className="dy-small dy-dim">{vote.first.toLocaleString('en-US')} first</span></span>}
                     </li>
                   );
                 })}
@@ -63,22 +82,28 @@ export function AwardWatch() {
             ) : <p className="dy-small dy-dim">Nobody yet: the watch starts with the first stats.</p>}
           </article>
         ))}
-        {COACH_AWARDS.filter((a) => a.since <= year).map((a) => (
-          <article key={a.key} className="dy-watch-card">
-            <header><Trophy art={a.art} size={2} /><div><h3>{a.name}</h3><p className="dy-small dy-dim">{a.what}: {a.how}</p></div></header>
-            <ol className="dy-watch-list">
-              {(fin?.coachWatch?.[a.key] ?? coachWatch(v, a.key, pre, 5)).map((x, i) => {
-                const c = x.coach !== null ? d.coaches?.find((k) => k.id === x.coach) : undefined;
-                return (
-                  <li key={x.team} className={mine(x.team) ? 'dy-watch-mine' : undefined}>
-                    <span className="dy-watch-n">{i + 1}</span><TeamMark team={x.team} size={20} />
-                    <span>{c ? <a href={href(`coach/${c.id}`)}>{c.name}</a> : 'Head coach'} <span className="dy-small dy-dim"><Ranked team={x.team} /></span><span className="dy-small dy-dim dy-watch-line">{x.line}</span></span>
-                  </li>
-                );
-              })}
-            </ol>
-          </article>
-        ))}
+        {COACH_AWARDS.filter((a) => a.since <= year).map((a) => {
+          const winTeam = fin?.coach.find((k) => k.key === a.key)?.team;
+          const list0 = fin?.coachWatch?.[a.key] ?? coachWatch(v, a.key, pre, 5);
+          const list = winTeam === undefined ? list0 : [...list0.filter((x) => x.team === winTeam), ...list0.filter((x) => x.team !== winTeam)];
+          return (
+            <article key={a.key} className="dy-watch-card">
+              <header><Trophy art={a.art} size={2} /><div><h3>{a.name}</h3><p className="dy-small dy-dim">{a.what}: {a.how}</p></div></header>
+              <ol className="dy-watch-list">
+                {list.map((x, i) => {
+                  const c = x.coach !== null ? d.coaches?.find((k) => k.id === x.coach) : undefined;
+                  const win = winTeam === x.team;
+                  return (
+                    <li key={x.team} className={cls(x.team, win)}>
+                      <span className="dy-watch-n">{i + 1}</span><TeamMark team={x.team} size={20} />
+                      <span>{c ? <a href={href(`coach/${c.id}`)}>{c.name}</a> : 'Head coach'} <span className="dy-small dy-dim"><Ranked team={x.team} /></span>{win && <> <Tag tone="accent">Winner</Tag></>}<span className="dy-small dy-dim dy-watch-line">{x.line}</span></span>
+                    </li>
+                  );
+                })}
+              </ol>
+            </article>
+          );
+        })}
       </div>
     </>
   );

@@ -172,6 +172,9 @@
   --row: #f2f2f2;
   --dither: rgba(0, 0, 0, 0.06);
   --bar-on: #ffdb49;
+  /* The Winner tag on award results: yellow in both themes (user, 2026-11-28). */
+  --win-tag: #ffdb49;
+  --on-win-tag: #000000;
   --accent: #242424;
   --on-accent: #ffffff;
   --field: #ffffff;

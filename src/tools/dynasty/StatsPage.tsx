@@ -110,12 +110,13 @@ const PAGE = 50;
 
 export function Stats({ arg }: { arg?: string }) {
   const [part, cat, q] = (arg ?? '').split('/');
+  const { v } = useDyn();
   const tab = part === 'teams' ? 'teams' : part === 'awards' ? 'awards' : 'players';
   return (
     <section>
-      <PageHead title="Stats">{tab === 'teams' ? 'Every team this season: totals added up from its players, and points from its games.' : tab === 'awards' ? 'Who is in the running for each award.' : 'This season so far.'}</PageHead>
+      <PageHead title="Stats">{tab === 'teams' ? 'Every team this season: totals added up from its players, and points from its games.' : tab === 'awards' ? (v.season.awards?.watch ? 'Who won each award, and the rest of the final top fives.' : 'Who is in the running for each award.') : 'This season so far.'}</PageHead>
       <Tabs label="Stats" value={tab} onChange={(x) => { window.location.hash = x === 'teams' ? 'stats/teams' : x === 'awards' ? 'stats/awards' : 'stats'; }}
-        tabs={[{ value: 'players', label: 'Players' }, { value: 'teams', label: 'Teams' }, { value: 'awards', label: 'Award watch' }]} />
+        tabs={[{ value: 'players', label: 'Players' }, { value: 'teams', label: 'Teams' }, { value: 'awards', label: v.season.awards?.watch ? 'Award results' : 'Award watch' }]} />
       {tab === 'teams' ? <TeamStats key={arg} q={cat} /> : tab === 'awards' ? <AwardWatch /> : part === 'players' ? <AllPlayers key={arg} cat={catOf(cat).cat} q={q} /> : <Boards />}
     </section>
   );
