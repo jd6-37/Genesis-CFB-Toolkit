@@ -6,7 +6,7 @@ import { Button, Modal, PageHead, SubHead, Table } from '../../ui';
 import { COACH_AWARDS, HEISMAN, POSITION_AWARDS, awardWatch, awardsIn, candidates, coachWatch, type Candidate } from '../../core/dynasty/awards';
 import { heismanWatch } from '../../core/dynasty/outlook';
 import { kickoffRanks } from '../../core/dynasty/kickoffRanks';
-import { playerName } from '../../core/dynasty/derive';
+import { playerTag } from '../../core/dynasty/derive';
 import { TROPHIES, isSide, realSeries, trophiesOf, type RivalryTrophy } from '../../core/dynasty/trophies';
 import { trophyRoom, type TrophyItem } from '../../core/dynasty/trophyRoom';
 import { meetings } from '../../core/dynasty/series';
@@ -49,7 +49,7 @@ export function AwardWatch() {
                   return (
                     <li key={x.player} className={mine(x.team) ? 'dy-watch-mine' : undefined}>
                       <span className="dy-watch-n">{i + 1}</span><TeamMark team={x.team} size={20} />
-                      <span>{p ? <a href={href(`player/${p.id}`)}>{playerName(p)}</a> : 'Unknown player'} <span className="dy-small dy-dim"><Ranked team={x.team} /></span><span className="dy-small dy-dim dy-watch-line">{x.line}</span></span>
+                      <span>{p ? <a href={href(`player/${p.id}`)}>{playerTag(p)}</a> : 'Unknown player'} <span className="dy-small dy-dim"><Ranked team={x.team} /></span><span className="dy-small dy-dim dy-watch-line">{x.line}</span></span>
                     </li>
                   );
                 })}
@@ -124,7 +124,7 @@ export function TrophyRoomPage() {
               {xs.map((it, i) => {
                 const p = it.player ? playerOf(d, it.player) : undefined;
                 const coach = it.coach != null ? d.coaches?.find((c) => c.id === it.coach) : undefined;
-                const note = p ? `${p.pos} ${playerName(p)}` : coach ? `${coach.name}, ${it.note}` : it.note;
+                const note = p ? playerTag(p) : coach ? `${coach.name}, ${it.note}` : it.note;
                 return (
                   <li key={`${it.kind}-${it.year}-${it.title}-${i}`}>
                     <Trophy art={it.art} size={3} label={it.title} />
