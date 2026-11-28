@@ -130,7 +130,7 @@ function BigGames() {
   if (!games.length) return null;
   return (
     <section>
-      <SubHead level={2}>{weekName(v, week)}'s big games</SubHead>
+      <SubHead level={2}>{bigGamesTitle(weekName(v, week))}</SubHead>
       <ul className="dy-side-list dy-side-games">
         {games.map((g) => (
           <li key={g.index}>
@@ -166,6 +166,9 @@ function Bowls() {
     </section>
   );
 }
+
+/** "Week 5's big games", "Quarterfinals' big games" (a plural round name takes the apostrophe alone). */
+const bigGamesTitle = (week: string) => `${week}${week.endsWith('s') ? "'" : "'s"} big games`;
 
 function Playoff() {
   const { d, v } = useDyn();
