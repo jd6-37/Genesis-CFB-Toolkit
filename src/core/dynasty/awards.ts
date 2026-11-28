@@ -35,7 +35,9 @@ export const AWARD_SPOTS: { label: string; roles: string[]; n: number }[] = [
  * `weight` is the stats share of the blend (AWARD_STATS_WEIGHT unless set): the player-of-the-year awards differ
  * that way, so they can go to different players.
  */
-export interface NamedAward { key: string; name: string; what: string; roles: string[] | 'poy' | 'interior'; since: number; art: string; weight?: number; defHandicap?: number }
+export interface NamedAward { key: string; name: string; what: string; roles: string[] | 'poy' | 'interior'; since: number; art: string; weight?: number; defHandicap?: number; teamDefense?: number; shortlist?: number }
+/** The Bednarik's share for the player's team defense (awardWatch). */
+export const TEAM_DEFENSE_SHARE = 0.2;
 export const POSITION_AWARDS: NamedAward[] = [
   { key: 'maxwell', name: 'Maxwell Award', what: 'Best all-around player', roles: 'poy', since: 1937, art: 'maxwell', weight: 0.5, defHandicap: 0.018 },
   { key: 'camp', name: 'Walter Camp Award', what: 'Player of the year', roles: 'poy', since: 1967, art: 'camp', weight: 0.7, defHandicap: 0.0125 },
@@ -45,7 +47,7 @@ export const POSITION_AWARDS: NamedAward[] = [
   { key: 'mackey', name: 'John Mackey Award', what: 'Best tight end', roles: ['TE'], since: 2000, art: 'te' },
   { key: 'outland', name: 'Outland Trophy', what: 'Best interior lineman (Off. or Def.)', roles: 'interior', since: 1946, art: 'ol' },
   { key: 'nagurski', name: 'Bronko Nagurski Trophy', what: 'Best defensive player', roles: ['DE', 'DT', 'LB', 'CB', 'S'], since: 1993, art: 'def' },
-  { key: 'bednarik', name: 'Chuck Bednarik Award', what: 'Defensive player of the year', roles: ['DE', 'DT', 'LB', 'CB', 'S'], since: 1995, art: 'def2', weight: 0.7 },
+  { key: 'bednarik', name: 'Chuck Bednarik Award', what: 'Defensive player of the year', roles: ['DE', 'DT', 'LB', 'CB', 'S'], since: 1995, art: 'def2', weight: 0.7, teamDefense: TEAM_DEFENSE_SHARE, shortlist: 15 },
   { key: 'butkus', name: 'Butkus Award', what: 'Best linebacker', roles: ['LB'], since: 1985, art: 'lb' },
   { key: 'thorpe', name: 'Jim Thorpe Award', what: 'Best defensive back', roles: ['CB', 'S'], since: 1986, art: 'db' },
   { key: 'groza', name: 'Lou Groza Award', what: 'Best place-kicker', roles: ['K'], since: 1992, art: 'k' },
@@ -294,7 +296,27 @@ export function awardWatch(v: SeasonView, a: NamedAward, all = candidates(v), n 
     }
     return out;
   }
-  return shortlist(all.filter((c) => (a.roles as string[]).includes(c.role) && hasStats(c)), Math.max(10, n), w).slice(0, n);
+  const list = shortlist(all.filter((c) => (a.roles as string[]).includes(c.role) && hasStats(c)), Math.max(a.shortlist ?? 10, n), w);
+  if (!a.teamDefense) return list.slice(0, n);
+  // The Bednarik also weighs the player's team defense (user, 2026-11-28: the Nagurski and the Bednarik had the same
+  // top five; real winners like Manti Te'o and Jordan Davis anchored the best defenses): points allowed a game, ranked
+  // among all teams (best = 1), 20% of the score, from the top 15 by stats. On 13 finished 2026 emulator seasons
+  // (cli/bednarikstudy.ts) the two winners differ in 6 and the top fives share about 3.8 players (was 12 of 13 and 5).
+  const td = teamDefenseRank(v), t = a.teamDefense;
+  const score = (c: Candidate) => (1 - t) * blend(c, w) + t * (td[c.team] ?? 0);
+  return list.sort((x, y) => score(y) - score(x) || y.score - x.score).slice(0, n);
+}
+
+/** Each team's points allowed a game so far, ranked among the teams that played (1 = the fewest, 0 = the most). */
+export function teamDefenseRank(v: SeasonView): number[] {
+  const pa = new Array<number>(v.records.length).fill(0), gp = new Array<number>(v.records.length).fill(0);
+  for (const g of v.games) {
+    if (g.vs === null || g.hs === null || g.visitor === null || g.home === null) continue;
+    pa[g.visitor] += g.hs; gp[g.visitor]++; pa[g.home] += g.vs; gp[g.home]++;
+  }
+  const per = pa.map((p, i) => (gp[i] ? p / gp[i] : null));
+  const played = per.filter((x): x is number => x !== null).sort((a, b) => a - b);
+  return per.map((x) => (x === null ? 0 : 1 - pct(x, played)));
 }
 
 /**
