@@ -488,10 +488,6 @@ def statue(c,pose,m='bronze'):
     c.rect(8,23,23,24,'black'); c.rect(7,25,24,31,'black'); c.rect(10,27,21,28,'gold')
     base(c,top=32,m='wood',plate=None,w=10)
 
-def bowl_tr(c):
-    football(c,16,9,8,5,'brown'); c.ell(16,17,9,3,'silver',ymin=16)
-    c.rect(14,19,17,25,'silver'); c.rect(11,26,20,28,'silver'); base(c,top=30)
-
 def whistle(c):
     c.ell(14,16,7,7,'gold'); c.rect(18,10,27,14,'gold'); c.rect(25,9,28,15,'gold')
     c.ell(14,16,2,2,'black')
@@ -600,14 +596,192 @@ def clipboard(c):
     c.px(13,9,'red'); c.px(17,13,'red')
     base(c,top=30,w=11)
 
+
+# ---- Bowl trophies (user, 2026-11-28: "unique trophies for each one (make the pixel art designs inspired by the real trophies)";
+# approved round by round). Drawn from the real trophies where a photo or description was found: Rose (Leishman Trophy:
+# silver football over a cage of gold rods, roses at the base), Sugar (an antique silver sugar bowl), Orange (a glass bowl
+# of oranges), Cotton (a silver football on intertwined metal, AT&T Stadium base), Fiesta (a lapis column, gold sunset, lit
+# dome), Peach (the Crumbley Trophy: a football raised from the base), the CFP's (gold brackets around a silver football,
+# black base), Liberty (a quarter-size Liberty Bell on a wooden yoke), Independence (an eagle with the 13-star flag on
+# intertwined metal), Las Vegas (a white football on three gold columns), Hall of Fame (the Outback Bowl's crystal and
+# boomerang), Carquest (the Pop-Tarts Bowl's football toaster), Copper (Tucson's blown glass and copper); the rest themed.
+MAT.update({
+ 'glass':((236,248,255),(190,222,240),(140,180,205)), 'orange':((255,190,90),(240,130,20),(180,80,10)),
+ 'lapis':((90,120,220),(38,62,160),(20,32,96)), 'peach':((255,205,160),(246,150,100),(200,96,64)),
+ 'rose':((255,120,140),(214,40,70),(140,20,40)), 'rose2':((235,90,110),(176,24,50),(110,12,30)), 'leaf':((120,200,110),(50,140,60),(26,90,34)),
+ 'sun1':((255,236,120),(250,200,50),(210,150,20)), 'sun2':((255,170,90),(240,110,40),(190,70,20)), 'sun3':((240,110,110),(200,50,60),(140,30,40)),
+ 'copper':((240,170,120),(196,110,62),(130,64,30)), 'sea':((140,210,240),(40,140,200),(20,80,140)), 'stone':((250,240,215),(225,205,165),(170,145,105)),
+ 'koa':((200,120,70),(150,80,40),(96,48,22)), 'flower':((255,170,200),(236,90,140),(170,40,90)), 'bbronze':((120,100,80),(72,58,44),(40,32,24)),
+})
+def ball(c,cx,cy,rx,ry,m,laces='cream'):
+    c.ell(cx,cy,rx,ry,m)
+    y=int(cy-ry*.25)
+    for x in range(int(cx-rx*.45),int(cx+rx*.45)+1): c.px(x,y,laces)
+    for x in (int(cx-2),int(cx),int(cx+2)): c.px(x,y-1,laces); c.px(x,y+1,laces)
+def b_rose(c):
+    c.poly([(8,9),(11,4),(17,1),(23,2),(25,5),(22,10),(16,12),(10,12)],'silver')
+    for x in (13,15,17,19): c.px(x,6,'silver_d')
+    c.rect(13,7,20,7,'silver_d')
+    c.rect(13,13,18,13,'gold'); c.rect(12,14,19,14,'silver'); c.rect(11,15,20,15,'gold')
+    for i in range(6):
+        xt=10.5+i*2.2
+        for y in range(16,29):
+            f=(y-16)/12; x=round(xt+(15.5-xt)*0.25*f); c.px(x,y,'gold' if i%2==0 else 'silver')
+    c.rect(11,29,20,29,'gold'); c.rect(10,30,21,30,'silver')
+    k=0
+    for row,(y,xs) in enumerate(((32,(6,11,16,21,26)),(35,(3,8,13,18,23,28)))):
+        for x in xs:
+            m='rose' if k%2==0 else 'rose2'; k+=1
+            c.ell(x,y+.5,2.6,2.2,m)
+            c.px(int(x)-1,y,'rose2' if m=='rose' else 'rose')
+    for x in (5,10,15,20,25): c.px(x,37,'leaf'); c.px(x+1,37,'leaf')
+def b_sugar(c):
+    c.rect(15,4,16,5,'silver'); c.ell(16,9,6,3,'silver',ymin=6)
+    c.rect(9,10,22,11,'silver')
+    c.ell(16,13,9,7,'silver',ymin=12)
+    c.ring(6,15,3,4,1.3,'silver'); c.ring(26,15,3,4,1.3,'silver')
+    c.rect(9,14,22,14,'silver_d')
+    c.rect(14,20,17,23,'silver'); c.ell(16,25,6,2,'silver')
+    base(c,top=29,plate='gold')
+def b_orange(c):
+    for (x,y) in ((11,8),(16,6),(21,8),(9,12),(14,11),(19,11),(23,12),(12,15),(17,15),(21,15)): c.ell(x,y,2.6,2.6,'orange')
+    c.ell(16,12,11,8,'glass',ymin=9)
+    for (x,y) in ((9,12),(14,11),(19,11),(23,12),(12,15),(17,15),(21,15)): c.ell(x,y,2.4,2.4,'orange',ymin=10)
+    c.rect(5,9,26,9,'glass')
+    c.rect(15,20,16,25,'silver'); c.ell(16,26,6,2,'silver')
+    c.px(10,5,'leaf'); c.px(17,3,'leaf')
+    base(c,top=29)
+def b_cotton(c):
+    ball(c,16,6,7,4,'silver')
+    for i,y in enumerate(range(10,26)):
+        o=int(3*math.sin(y/2.0)); c.px(16+o,y,'steel'); c.px(15+o,y,'steel'); c.px(16-o,y,'silver'); c.px(17-o,y,'silver')
+    c.ell(16,29,12,4,'silver',ymax=28); c.rect(4,28,27,31,'silver')
+    for x in range(6,26,3): c.px(x,29,'glass')
+    base(c,top=32,w=13,plate=None)
+def b_fiesta(c):
+    ball(c,16,4,6,3,'gold')
+    c.ell(16,11,7,5,'glass',ymax=11); c.rect(9,11,22,12,'gold')
+    c.poly([(10,13),(21,13),(19,27),(12,27)],'lapis')
+    c.rect(11,16,20,17,'sun1'); c.rect(11,18,20,19,'sun2'); c.rect(12,20,19,21,'sun3')
+    c.rect(9,27,22,28,'gold'); c.rect(7,29,24,31,'gold')
+    base(c,top=32,w=12,plate=None)
+def b_peach(c):
+    ball(c,16,6,8,5,'gold')
+    c.poly([(10,26),(13,26),(16,11),(15,11)],'silver'); c.poly([(19,26),(22,26),(17,11),(16,11)],'silver')
+    c.ell(16,22,3,3,'peach'); c.px(17,19,'leaf'); c.px(18,19,'leaf')
+    c.rect(8,26,23,28,'silver')
+    base(c,top=30,w=12)
+def b_cfp(c, silver_split=True):
+    # silver football cradled at the top
+    c.ell(16,8,4.5,7,'silver')
+    for y in (5,7,9,11): c.rect(15,y,17,y,'silver_d')
+    # gold petals: left and right halves of a tapered cone, open at the top
+    c.poly([(8,6),(11,2),(13,1),(12,4),(11.5,9),(14,15),(15.5,16),(15.5,28),(14,28)],'gold')
+    c.poly([(24,6),(21,2),(19,1),(20,4),(20.5,9),(18,15),(16.5,16),(16.5,28),(18,28)],'gold')
+    if silver_split: c.rect(16,16,16,28,'steel')
+    c.rect(14,29,18,29,'steel')
+    # black octagonal base with the mark
+    c.rect(10,30,21,38,'black'); c.rect(11,29,20,29,'black')
+    c.ring(16,33,1.6,2.2,0.7,'gold'); c.px(16,33,'cream')
+def b_citrus(c):
+    ball(c,16,6,7,4,'gold')
+    c.rect(15,10,16,12,'gold')
+    c.ell(16,17,8,6,'silver',ymin=12); c.rect(8,12,23,13,'silver')
+    c.ell(16,17,3,3,'orange'); c.px(17,13,'leaf'); c.px(18,14,'leaf'); c.px(14,14,'leaf')
+    c.rect(14,23,17,25,'silver'); c.rect(11,26,20,28,'silver'); base(c,top=30)
+def b_holiday(c):
+    ball(c,16,7,8,5,'silver')
+    c.rect(15,12,16,20,'silver')
+    c.poly([(5,28),(7,22),(11,20),(14,23),(17,20),(21,19),(25,22),(27,28)],'sea')
+    c.rect(4,28,27,30,'sea')
+    for x in (8,13,18,23): c.px(x,22,'glass'); c.px(x+1,21,'glass')
+    base(c,top=31,w=12,plate=None)
+def b_gator(c):
+    # a gator lying across the top: snout left, tail curling down right, bumpy back, legs
+    c.ell(16,9,8,3,'green'); c.poly([(2,9),(9,7),(9,11),(2,10)],'green'); c.poly([(23,8),(29,10),(28,14),(26,12),(23,11)],'green')
+    for x in range(10,23,2): c.px(x,6,'leaf')
+    c.px(7,8,'black'); c.px(3,10,'cream'); c.px(5,10,'cream')
+    c.rect(10,12,11,13,'green'); c.rect(20,12,21,13,'green')
+    c.ell(16,18,9,5,'silver',ymin=15); c.rect(7,14,24,15,'silver')
+    c.rect(14,23,17,25,'silver'); c.rect(11,26,20,28,'silver'); base(c,top=30)
+def b_sun(c):
+    ball(c,16,6,7,4,'silver')
+    for i in range(9):
+        a=math.pi+i*math.pi/8
+        for r in range(4,8): c.px(round(16+r*math.cos(a)),round(19+r*math.sin(a)),'silver')
+    c.rect(12,19,19,20,'silver'); c.rect(14,11,17,26,'silver'); c.rect(15,12,16,25,'steel')
+    c.rect(10,27,21,28,'silver'); base(c,top=30)
+def b_halloffame(c):
+    # all crystal with a boomerang (the Outback Bowl's trophy; the Hall of Fame Bowl became the Outback Bowl)
+    ball(c,16,6,7,4,'glass','steel')
+    c.poly([(8,14),(16,11),(24,14),(22,16),(16,14),(10,16)],'glass')
+    c.poly([(13,17),(19,17),(18,27),(14,27)],'glass')
+    c.rect(10,27,21,29,'glass'); base(c,top=30)
+def b_freedom(c):
+    c.poly([(2,6),(9,9),(14,8),(16,4),(18,8),(23,9),(30,6),(25,13),(18,14),(16,16),(14,14),(7,13)],'gold')
+    c.px(16,5,'cream')
+    ball(c,16,19,6,4,'silver')
+    c.rect(15,23,16,25,'gold'); c.rect(11,26,20,28,'gold'); base(c,top=30)
+def b_alamo(c):
+    c.poly([(5,28),(5,14),(9,12),(12,8),(14,6),(16,5),(18,6),(20,8),(23,12),(27,14),(27,28)],'stone')
+    c.ell(16,24,3,5,'black',ymin=19); c.rect(13,24,19,28,'black')
+    c.rect(9,16,10,19,'black'); c.rect(22,16,23,19,'black')
+    ball(c,16,12,3,2,'brown')
+    base(c,top=29,w=12)
+def b_copper(c):
+    # blown glass on copper (Tucson's later bowl trophy, the Arizona Bowl: blown glass and copper)
+    c.ell(16,10,7,9,'glass'); c.ell(14,8,2,4,'sea'); c.ell(18,13,2,3,'sun2')
+    c.rect(11,18,20,20,'copper'); c.poly([(12,21),(19,21),(17,26),(14,26)],'copper')
+    c.rect(10,27,21,28,'copper'); base(c,top=30)
+def b_aloha(c):
+    ball(c,16,8,8,5,'silver')
+    for i,x in enumerate(range(7,26,2)): c.px(x,15+(1 if 9<x<23 else 0),'flower' if i%2 else 'sun1')
+    c.rect(14,16,17,25,'koa')
+    c.ell(16,20,2,2,'flower')
+    c.rect(10,26,21,28,'koa'); base(c,top=30)
+def b_carquest(c):
+    # the bowl lives on as the Pop-Tarts Bowl, whose trophy is a toaster shaped like a silver football
+    c.ell(16,12,11,8,'silver')
+    c.rect(11,5,13,9,'black'); c.rect(18,5,20,9,'black')
+    c.rect(11,3,13,5,'peach'); c.rect(18,3,20,5,'peach')
+    for x in (12,16,20): c.px(x,13,'cream')
+    c.rect(26,12,27,14,'black')
+    c.rect(13,20,18,24,'silver'); c.rect(10,25,21,27,'silver'); base(c,top=29)
+def b_liberty(c):
+    c.rect(5,3,26,5,'wood')                       # the yoke
+    c.poly([(5,6),(7,6),(4,28),(2,28)],'wood'); c.poly([(25,6),(27,6),(30,28),(28,28)],'wood')  # legs
+    for y in (12,18,24): c.px(4 if y<20 else 3,y,'gold'); c.px(27 if y<20 else 28,y,'gold')
+    c.rect(15,6,16,7,'bbronze')
+    c.poly([(11,8),(21,8),(22,18),(25,22),(7,22),(10,18)],'bbronze')
+    c.rect(7,22,24,23,'bbronze')
+    for i,y in enumerate(range(12,23)): c.px(17+(i%3==1),y,'cream')   # the crack
+    base(c,top=29,w=14)
+def b_independence(c):
+    # eagle with the 13-star flag on top of intertwined metal
+    c.rect(19,1,19,10,'steel'); c.rect(20,1,27,5,'red')
+    for y in (2,4): c.rect(20,y,27,y,'cream')
+    c.rect(20,1,22,3,'sea')
+    c.poly([(6,8),(11,10),(14,8),(16,6),(18,8),(21,10),(19,13),(16,15),(13,13)],'gold'); c.px(16,7,'cream')
+    for y in range(15,27):
+        o=round(2.5*math.sin(y/1.8)); c.px(16+o,y,'silver'); c.px(15-o,y,'steel')
+    c.rect(10,27,21,28,'silver'); base(c,top=30)
+def b_lasvegas(c):
+    c.ell(16,7,8,5,'cream')
+    for (x,y) in ((10,5),(13,9),(17,4),(21,8),(15,6),(19,10),(12,7)): c.px(x,y,'glass')
+    for x in (14,16,18): c.px(x,6,'gold')
+    c.poly([(9,11),(11,11),(15,26),(13,26)],'gold'); c.poly([(23,11),(21,11),(17,26),(19,26)],'gold'); c.rect(15,12,16,26,'gold')
+    c.ell(16,27,7,2,'gold')
+    base(c,top=30)
+
 SPRITES={
- 'national':lambda c:cup(c,'gold',True),'conference':lambda c:cup(c,'silver',False),'bowl':bowl_tr,
+ 'national':lambda c:cup(c,'gold',True),'conference':lambda c:cup(c,'silver',False),
  # Every award statue is bronze, so none looks better than another (user, 2026-11-28).
  'heisman':heisman_tr,'maxwell':lambda c:statue(c,'maxwell','bronze'),'camp':lambda c:statue(c,'camp','bronze'),
  'qb':lambda c:statue(c,'qb','bronze'),'rb':lambda c:statue(c,'rb','bronze'),'wr':lambda c:statue(c,'wr','bronze'),'te':lambda c:statue(c,'te','bronze'),
  'ol':lambda c:statue(c,'ol','bronze'),'def':lambda c:statue(c,'def','bronze'),'def2':lambda c:statue(c,'def2','bronze'),'lb':lambda c:statue(c,'lb','bronze'),
  'db':lambda c:statue(c,'db','bronze'),'k':lambda c:statue(c,'k','bronze'),'p':lambda c:statue(c,'p','bronze'),
  'coach':whistle,'coach2':clipboard,'bell':bell,'jug':jug,'axe':axe,'bucket':bucket,'flag':flag,
+ **{'bowl-'+k:globals()['b_'+k] for k in ('rose','sugar','orange','cotton','fiesta','peach','cfp','citrus','holiday','gator','sun','halloffame','freedom','alamo','copper','aloha','carquest','liberty','independence','lasvegas')},
  'playoff':playoff,'cup':rcup,'hat':hat,'egg':egg,'boot':boot,'oar':oar,'shillelagh':shillelagh,'saddle':saddle,'skillet':skillet,'can':can,'cannon':cannon,'keg':keg,'belt':belt,'wheel':wheel,
 }
 out=sys.argv[1]; os.makedirs(out,exist_ok=True)
