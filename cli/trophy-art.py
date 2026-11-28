@@ -17,8 +17,9 @@ MAT={ # light, mid, dark
  'steel':((230,234,240),(170,178,190),(110,118,130)),
 }
 for _k in ('gold','silver','bronze'):
-    _l,_m,_d=MAT[_k]; MAT[_k+'_d']=(_m,_d,tuple(int(v*.7) for v in _d))
+    _l,_m,_d=MAT[_k]; MAT[_k+'_d']=(_d,tuple(int(v*.7) for v in _d),tuple(int(v*.5) for v in _d))
 OUT=(36,26,14)
+MAT['seam']=(OUT,OUT,OUT)
 class C:
     def __init__(s): s.g=[[None]*W for _ in range(H)]
     def px(s,x,y,m):
@@ -92,7 +93,7 @@ def football(c,cx,cy,rx,ry,m):
     for x in (int(cx-2),int(cx),int(cx+2)): c.px(x,int(cy-ry*.25)-1,'cream'); c.px(x,int(cy-ry*.25)+1,'cream')
 
 # The award figures (user, 2026-11-27: a pose of its own for each award, with a head; approved round by round),
-# 18x22: '#' the statue, 'o' the ball (the same metal, darker).
+# 18x22: '#' the statue, 'o' the ball (the same metal, much darker, so it shows).
 POSE={
 'heisman':[  # stiff-arm
  "..................",
@@ -190,53 +191,53 @@ POSE={
  "....##......##....",
  "....##......##....",
 ],
-'rb':[  # cutting back
+'rb':[  # sprinting, ball tucked high, free arm pumping, knee up
  "..................",
  "..................",
- "..................",
- "..................",
- ".....###..........",
- ".....###..........",
- ".....###..........",
- ".......#..........",
- "......######.###..",
- ".....##########...",
- "....ooo####.......",
- "....ooo.####......",
+ ".........###......",
+ ".........###......",
+ ".........###......",
+ "..........#.......",
+ ".........###......",
+ ".......#####......",
+ "......#######ooo..",
+ "......#######oo...",
+ ".....##.####.##...",
+ ".....##.###.......",
  "........####......",
- "........#####.....",
- ".......###.###....",
+ "........######....",
+ "........##.###....",
+ ".......###..##....",
+ ".......##...##....",
  "......###...###...",
- ".....###.....##...",
- "....###......##...",
- "...###.......##...",
- "..###........##...",
- "..#..........####.",
- "..............###.",
+ ".....###....###...",
+ ".....##...........",
+ "...###............",
+ "...#..............",
 ],
-'wr':[  # two-hand catch over the head on the run
+'wr':[  # one-handed grab on the run, the other arm straight back for balance
  "..................",
- ".........ooo......",
- "........#ooo......",
- "........##.##.....",
- ".......###.##.....",
- ".......######.....",
- ".......######.....",
- "........#####.....",
- "........####......",
- "........####......",
- "........###.......",
- "........###.......",
- "........###.......",
- "........####......",
- "........####..###.",
- "........########..",
- ".......###.####...",
- "......###...##....",
- "......##..........",
- "......##..........",
- "......##..........",
- "......##..........",
+ "..................",
+ "...............ooo",
+ "...............ooo",
+ "..............###.",
+ "........###...##..",
+ "........###..##...",
+ "........######....",
+ ".........####.....",
+ ".......#####......",
+ ".....######.......",
+ "...####.###.......",
+ "..###...###.......",
+ ".......####.......",
+ ".......####.......",
+ ".......####.......",
+ "......#####.......",
+ ".....###.###......",
+ "...#####..##......",
+ "...##.....##......",
+ "..........##......",
+ "...........###....",
 ],
 'te':[  # rumbling, shoulder lowered
  "..................",
@@ -262,53 +263,53 @@ POSE={
  "....##........##..",
  "....#.............",
 ],
-'ol':[  # pass set
+'ol':[  # three-point stance, back flat, one hand down
  "..................",
  "..................",
  "..................",
  "..................",
- "......###.........",
- "......###.........",
- "......###.........",
- ".......#..........",
- "......#####.###...",
- "......#########...",
- ".......########...",
- ".......########...",
- ".......###........",
- ".......###........",
- "......#####.......",
- ".....###.###......",
- "....###...###.....",
- "....##.....##.....",
- "....##.....##.....",
- "....##.....##.....",
- "....##.....##.....",
- "....###.....###...",
+ "..................",
+ "..................",
+ "..................",
+ ".............###..",
+ ".............###..",
+ "........####.###..",
+ "....##########....",
+ "....##########....",
+ "....##########....",
+ "....####.##.##....",
+ "...########.##....",
+ "...##..####.##....",
+ "...##..####.##....",
+ "...##..##...##....",
+ "..##...##...##....",
+ "..##...##...##....",
+ "..###..###...#....",
+ "..###..###...#....",
 ],
-'def':[  # swim move
+'def':[  # drive block / bull rush, arms locked out at two heights
  "..................",
  "..................",
- "...........#####..",
- "..........#####...",
- "..........###.....",
- "..........###.....",
- "..........###.....",
- "..........##......",
- "........####......",
- ".......#######....",
- ".......####.###...",
- "......####...###..",
- "......###.....##..",
+ "..................",
+ "..................",
+ "..................",
+ "...........###....",
+ "...........###....",
+ "...........###.##.",
+ ".........########.",
+ "........#######...",
+ "......#######.....",
+ ".....#####.######.",
+ ".....####...#####.",
  ".....####.........",
- ".....#####........",
- "....###.##........",
+ "....######........",
  "....##..###.......",
+ "...###..###.......",
  "...##....##.......",
- "...##....##.......",
- "..##......##......",
+ "..##.....##.......",
  ".###......##......",
- ".#........##......",
+ ".##.......###.....",
+ ".#........###.....",
 ],
 'def2':[  # fist punched up
  "..................",
@@ -431,9 +432,59 @@ POSE={
  "......###.........",
 ],
 }
+# The Heisman is the special one (user, 2026-11-28): its figure a size up (21x26, the stiff arm with an open hand),
+# on a tall black base with angled sides and a bronze plaque, over a wide stepped wood base. Approved step by step.
+HEISMAN_BIG=[
+ ".....................",
+ ".....................",
+ "...........###.......",
+ "...........###.......",
+ "...........###.......",
+ "............#........",
+ "...#......####.......",
+ "...#.....#####.......",
+ "...############......",
+ "....#####.######.....",
+ "..........###ooo#....",
+ "..........###ooo.....",
+ "..........####.......",
+ "..........####.......",
+ "..........######.....",
+ "..........#######....",
+ ".........###..###....",
+ ".........###..###....",
+ "........###...##.....",
+ "........##....##.....",
+ ".......###....##.....",
+ ".......##.....##.....",
+ "......###............",
+ ".....###.............",
+ "...####..............",
+ "....#................",
+]
+def figure(c,x0,y0,rows,m):
+    c.map(x0,y0,rows,m)
+    c.map(x0,y0,[r.replace('#','.').replace('o','#') for r in rows],m+'_d')
+    for y,r in enumerate(rows):
+        for x,ch in enumerate(r):
+            if ch=='#' and any(0<=y+dy<len(rows) and 0<=x+dx<len(r) and rows[y+dy][x+dx]=='o' for dx,dy in ((1,0),(-1,0),(0,1),(0,-1))):
+                c.px(x0+x,y0+y,'seam')
+def heisman_tr(c):
+    figure(c,5,-1,HEISMAN_BIG,'bronze')
+    c.rect(7,24,24,25,'bronze')
+    c.poly([(8,26),(24,26),(28,34),(4,34)],'black')
+    c.rect(11,28,20,31,'bronze'); c.rect(12,29,19,29,'bronze_d'); c.rect(12,30,17,30,'bronze_d')
+    c.rect(3,34,28,35,'wood'); c.rect(2,36,29,38,'wood')
+
 def statue(c,pose,m='bronze'):
     c.map(7,1,POSE[pose],m)
     c.map(7,1,[r.replace('#','.').replace('o','#') for r in POSE[pose]],m+'_d')
+    # A dark seam where the ball meets the body, so the ball reads on every metal (user, 2026-11-28).
+    rows=POSE[pose]
+    for y,r in enumerate(rows):
+        for x,ch in enumerate(r):
+            if ch=='#' and any(0<=y+dy<len(rows) and 0<=x+dx<len(r) and rows[y+dy][x+dx]=='o' for dx,dy in ((1,0),(-1,0),(0,1),(0,-1))):
+                c.px(7+x,1+y,'seam')
     c.rect(8,23,23,24,'black'); c.rect(7,25,24,31,'black'); c.rect(10,27,21,28,'gold')
     base(c,top=32,m='wood',plate=None,w=10)
 
@@ -551,10 +602,11 @@ def clipboard(c):
 
 SPRITES={
  'national':lambda c:cup(c,'gold',True),'conference':lambda c:cup(c,'silver',False),'bowl':bowl_tr,
- 'heisman':lambda c:statue(c,'heisman','bronze'),'maxwell':lambda c:statue(c,'maxwell','silver'),'camp':lambda c:statue(c,'camp','bronze'),
- 'qb':lambda c:statue(c,'qb','gold'),'rb':lambda c:statue(c,'rb','bronze'),'wr':lambda c:statue(c,'wr','silver'),'te':lambda c:statue(c,'te','bronze'),
- 'ol':lambda c:statue(c,'ol','gold'),'def':lambda c:statue(c,'def','silver'),'def2':lambda c:statue(c,'def2','gold'),'lb':lambda c:statue(c,'lb','bronze'),
- 'db':lambda c:statue(c,'db','silver'),'k':lambda c:statue(c,'k','gold'),'p':lambda c:statue(c,'p','silver'),
+ # Every award statue is bronze, so none looks better than another (user, 2026-11-28).
+ 'heisman':heisman_tr,'maxwell':lambda c:statue(c,'maxwell','bronze'),'camp':lambda c:statue(c,'camp','bronze'),
+ 'qb':lambda c:statue(c,'qb','bronze'),'rb':lambda c:statue(c,'rb','bronze'),'wr':lambda c:statue(c,'wr','bronze'),'te':lambda c:statue(c,'te','bronze'),
+ 'ol':lambda c:statue(c,'ol','bronze'),'def':lambda c:statue(c,'def','bronze'),'def2':lambda c:statue(c,'def2','bronze'),'lb':lambda c:statue(c,'lb','bronze'),
+ 'db':lambda c:statue(c,'db','bronze'),'k':lambda c:statue(c,'k','bronze'),'p':lambda c:statue(c,'p','bronze'),
  'coach':whistle,'coach2':clipboard,'bell':bell,'jug':jug,'axe':axe,'bucket':bucket,'flag':flag,
  'playoff':playoff,'cup':rcup,'hat':hat,'egg':egg,'boot':boot,'oar':oar,'shillelagh':shillelagh,'saddle':saddle,'skillet':skillet,'can':can,'cannon':cannon,'keg':keg,'belt':belt,'wheel':wheel,
 }
