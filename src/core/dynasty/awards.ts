@@ -35,10 +35,10 @@ export const AWARD_SPOTS: { label: string; roles: string[]; n: number }[] = [
  * `weight` is the stats share of the blend (AWARD_STATS_WEIGHT unless set): the player-of-the-year awards differ
  * that way, so they can go to different players.
  */
-export interface NamedAward { key: string; name: string; what: string; roles: string[] | 'poy' | 'interior'; since: number; art: string; weight?: number }
+export interface NamedAward { key: string; name: string; what: string; roles: string[] | 'poy' | 'interior'; since: number; art: string; weight?: number; defHandicap?: number }
 export const POSITION_AWARDS: NamedAward[] = [
-  { key: 'maxwell', name: 'Maxwell Award', what: 'Best all-around player', roles: 'poy', since: 1937, art: 'maxwell', weight: 0.5 },
-  { key: 'camp', name: 'Walter Camp Award', what: 'Player of the year', roles: 'poy', since: 1967, art: 'camp', weight: 0.7 },
+  { key: 'maxwell', name: 'Maxwell Award', what: 'Best all-around player', roles: 'poy', since: 1937, art: 'maxwell', weight: 0.5, defHandicap: 0.018 },
+  { key: 'camp', name: 'Walter Camp Award', what: 'Player of the year', roles: 'poy', since: 1967, art: 'camp', weight: 0.7, defHandicap: 0.0125 },
   { key: 'obrien', name: "Davey O'Brien Award", what: 'Best quarterback', roles: ['QB'], since: 1981, art: 'qb' },
   { key: 'walker', name: 'Doak Walker Award', what: 'Best running back', roles: ['HB', 'FB'], since: 1990, art: 'rb' },
   { key: 'biletnikoff', name: 'Biletnikoff Award', what: 'Best receiver', roles: ['WR'], since: 1994, art: 'wr' },
@@ -187,6 +187,13 @@ export const TEAM_STATS_WEIGHT = 0.7;
 // 5": on the sample dynasty a back with 2.2x the leader's stats and 84 OVR lands 3rd, behind two 90 OVR backs.
 const statPart = (c: Candidate) => (3 * c.statPct + Math.sqrt(c.statRel)) / 4;
 const blend = (c: Candidate, w: number) => w * statPart(c) + (1 - w) * c.ovrPct;
+const isDefense = (c: Candidate) => ['DE', 'DT', 'LB', 'CB', 'S'].includes(c.role);
+/** The stats-and-OVR blend of one candidate (studies). */
+export const blendOf = blend;
+/** The defenders in the Maxwell and Walter Camp races: the defensive player of the year race's top three. */
+export function poyDefenders(v: SeasonView, all = candidates(v)): Candidate[] {
+  return awardWatch(v, POSITION_AWARDS.find((a) => a.key === 'nagurski')!, all, 3);
+}
 /** The top `n` by stats, then ordered by the blend. */
 export function shortlist(pool: Candidate[], n: number, w: number): Candidate[] {
   return pool.filter((c) => c.score > 0).sort((a, b) => b.score - a.score).slice(0, n)
@@ -258,7 +265,14 @@ export function awardWatch(v: SeasonView, a: NamedAward, all = candidates(v), n 
   if (a.roles === 'poy') {
     const byPlayer = new Map(all.map((c) => [c.player, c]));
     const pool = heismanWatch(v, 15).map((h) => byPlayer.get(h.player)).filter((c): c is Candidate => !!c && hasStats(c));
-    return pool.sort((x, y) => blend(y, w) - blend(x, w) || y.score - x.score).slice(0, n);
+    // The Maxwell and the Walter Camp also take the defensive race's top three (user, 2026-11-28: "A defender should at
+    // least be able to win the Maxwell and Camp"; in real life about one defender in 15-20 years, e.g. Hugh Green,
+    // Charles Woodson, Manti Te'o). A handicap on their blend keeps it to runaway seasons: set on 13 finished 2026
+    // emulator seasons (cli/poystudy.ts), a defender wins each about once in 13 seasons there. The Heisman stays offense.
+    const h = a.defHandicap;
+    const score = (c: Candidate) => blend(c, w) - (h !== undefined && isDefense(c) ? h : 0);
+    const all2 = h === undefined ? pool : [...pool, ...poyDefenders(v, all).filter((c) => !pool.includes(c))];
+    return all2.sort((x, y) => score(y) - score(x) || y.score - x.score).slice(0, n);
   }
   if (a.roles === 'interior') {
     const side = (roles: string[]) => shortlist(all.filter((c) => roles.includes(c.role) && hasStats(c)), 10, w);
