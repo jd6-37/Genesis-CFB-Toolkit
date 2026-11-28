@@ -3,6 +3,7 @@
 // a ranking story the poll; a stat story that stat's top five; a race the standings; the playoff field or the bowls.
 // Every headline opens a window (user, 2026-11-27: "every headline should open to a modal"): a Top 25 move the poll
 // around the team; any other story without its own window the team's (or player's) week.
+import { createPortal } from 'react-dom';
 import { useState } from 'react';
 import { Button, Modal, Table } from '../../ui';
 import type { Story } from '../../core/dynasty/news';
@@ -43,7 +44,9 @@ export function StoryLink({ s }: { s: Story }) {
   return (
     <>
       <a href={page} onClick={(e) => { e.preventDefault(); setOpen(true); }}>{s.headline}</a>
-      {open && (
+      {/* In a portal: a window opened from a headline would otherwise sit inside the headline's <h2> and take its
+          type (user, 2026-11-28: the playoff field window in the lead story's big title font). */}
+      {open && createPortal(
         win === 'game' ? <GameWindow s={s} g={g!} onClose={close} />
           : win === 'potw' ? <PlayerGameWindow s={s} onClose={close} />
             : win === 'poll' ? <PollWindow s={s} onClose={close} />
@@ -52,7 +55,8 @@ export function StoryLink({ s }: { s: Story }) {
                   : win === 'race' ? <RaceWindow s={s} onClose={close} />
                     : win === 'field' ? <FieldWindow s={s} onClose={close} />
                       : win === 'rank' ? <RankWindow s={s} onClose={close} />
-                        : <TeamWindow s={s} onClose={close} />
+                        : <TeamWindow s={s} onClose={close} />,
+        document.body,
       )}
     </>
   );
