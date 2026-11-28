@@ -1076,6 +1076,10 @@
 .dy-watch-mine { background: var(--highlight); box-shadow: inset 4px 0 0 var(--bar-on); }
 .dy-watch-n { font-weight: 800; text-align: right; }
 .dy-watch-line { display: block; }
+.dy-watch-list li:has(.dy-watch-pts) { grid-template-columns: 1.5em 24px 1fr auto; }
+.dy-watch-pts { text-align: right; display: grid; }
+.dy-watch-win { box-shadow: inset 4px 0 0 var(--star); padding-left: var(--sp-2); }
+.dy-watch-win > span:nth-child(3) > a { font-weight: 800; }
 @media (min-width: 700px) { .dy-watch { grid-template-columns: repeat(2, 1fr); } }
 @media (min-width: 1200px) { .dy-watch { grid-template-columns: repeat(3, 1fr); } }
 /* The trophy room. */
@@ -1276,3 +1280,4 @@ a.cfp-row:focus-visible { outline: var(--focus-w) solid var(--focus); outline-of
 /* Season awards: the button to the ceremony. */
 .dy-heisman-replay { margin-top: var(--sp-2); }
 .hz .ui-button-quiet { color: var(--hz-text); border-color: var(--hz-bronze); background: transparent; }
+.dy-watch-win .ui-tag-accent { background: var(--win-tag); color: var(--on-win-tag); }
