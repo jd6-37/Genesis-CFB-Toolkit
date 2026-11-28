@@ -1222,3 +1222,57 @@ a.cfp-row:focus-visible { outline: var(--focus-w) solid var(--focus); outline-of
 @media (orientation: landscape) and (max-height: 699px) {
   .dy-lead .cfp-art { aspect-ratio: auto; height: 190px; }
 }
+
+/* ---- The Heisman ceremony (HeismanCeremony.tsx): bronze on black, the same in every theme. */
+.hz-back { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: var(--hz-scrim); padding: var(--sp-2); }
+.hz { position: relative; width: min(760px, 100%); max-height: 100%; overflow: auto; background: var(--hz-ground); color: var(--hz-text);
+  border: 2px solid var(--hz-bronze); box-shadow: 0 0 0 4px var(--hz-ink), 0 0 0 6px var(--hz-bronze-dark); padding: var(--sp-3); }
+.hz-head { display: flex; align-items: center; gap: var(--sp-3); border-bottom: 1px solid var(--hz-bronze-dark); padding-bottom: var(--sp-3); }
+.hz-head h2 { margin: 2px 0 0; font: 900 var(--fs-5)/1 var(--font-display); text-transform: uppercase; color: var(--hz-text); }
+.hz-kicker { margin: 0; font: 800 var(--fs-2)/1.2 var(--font-display); text-transform: uppercase; letter-spacing: .06em; color: var(--hz-gold); }
+.hz-replay { margin-left: auto; flex: none; width: 44px; height: 44px; border: 1px solid var(--hz-bronze); background: transparent; color: var(--hz-gold); font-size: var(--fs-5); cursor: pointer; }
+.hz-replay:focus-visible { outline: var(--focus-w) solid var(--focus); }
+.hz a { color: inherit; }
+.hz-finalists { list-style: none; margin: var(--sp-3) 0 0; padding: 0; display: grid; gap: var(--sp-2); }
+.hz-card { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: var(--sp-3); align-items: center; padding: var(--sp-2) var(--sp-3);
+  background: var(--hz-card); border-left: 5px solid var(--tc); animation: hz-in .5s both; animation-delay: calc(var(--i) * .45s); }
+.hz-card strong { display: block; font: 800 var(--fs-4)/1.1 var(--font-display); text-transform: uppercase; }
+.hz-meta { display: block; color: var(--hz-muted); font-size: var(--fs-2); }
+.hz-line { display: block; font-size: var(--fs-2); font-weight: 600; }
+.hz-step-1 .hz-card { opacity: .55; animation: none; }
+.hz-drum { text-align: center; font: 800 var(--fs-5)/1 var(--font-display); text-transform: uppercase; color: var(--hz-gold); margin: var(--sp-4) 0 0; animation: hz-pulse 1s infinite; }
+.hz-reveal { position: relative; margin-top: var(--sp-3); }
+.hz-win { display: grid; justify-items: center; gap: var(--sp-3); animation: hz-pop .7s both; }
+.hz-win-card { display: flex; flex-wrap: wrap; gap: var(--sp-3); align-items: center; padding: var(--sp-3); background: var(--hz-card); border-top: 5px solid var(--tc); width: 100%; }
+.hz-win-card > div { flex: 1 1 200px; min-width: 0; }
+.hz-win-card h3 { margin: 4px 0; font: 900 var(--fs-6)/1 var(--font-display); text-transform: uppercase; }
+.hz-confetti { position: absolute; inset: -40px -16px 0; width: calc(100% + 32px); height: calc(100% + 40px); pointer-events: none; z-index: 2; }
+.hz-scroll { overflow-x: auto; margin-top: var(--sp-3); }
+.hz-votes { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.hz-votes th, .hz-votes td { padding: var(--sp-1) var(--sp-2); text-align: right; border-bottom: 1px solid var(--hz-rule); }
+.hz-votes th { color: var(--hz-gold); font: 800 var(--fs-1)/1 var(--font-display); text-transform: uppercase; }
+.hz-votes .hz-left { text-align: left; }
+.hz-votes .hz-meta { font-size: var(--fs-1); }
+.hz-top td { background: var(--hz-top); }
+.hz-mine td { background: var(--highlight); }
+.hz-note { color: var(--hz-muted); font-size: var(--fs-1); }
+.hz-sub { font: 900 var(--fs-4)/1 var(--font-display); text-transform: uppercase; color: var(--hz-gold); margin: var(--sp-4) 0 var(--sp-2); }
+.hz-others { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2) var(--sp-4); }
+.hz-others li { display: flex; gap: var(--sp-2); align-items: center; }
+.hz-others strong { display: block; font-size: var(--fs-2); }
+.hz-foot { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-top: var(--sp-3); border-top: 1px solid var(--hz-bronze-dark); padding-top: var(--sp-3); }
+.hz-spacer { flex: 1; }
+@media (min-width: 640px) {
+  .hz { padding: var(--sp-4); }
+  .hz-head h2 { font-size: var(--fs-6); }
+  .hz-votes .hz-meta { display: inline; margin-left: var(--sp-1); }
+  .hz-others { grid-template-columns: 1fr 1fr; }
+  .hz-win-card h3 { font-size: var(--fs-7); }
+}
+@keyframes hz-in { from { opacity: 0; transform: translateY(16px); } }
+@keyframes hz-pop { from { opacity: 0; transform: scale(.85); } }
+@keyframes hz-pulse { 50% { opacity: .5; } }
+@media (prefers-reduced-motion: reduce) { .hz-card, .hz-win, .hz-drum { animation: none; } }
+/* Season awards: the button to the ceremony. */
+.dy-heisman-replay { margin-top: var(--sp-2); }
+.hz .ui-button-quiet { color: var(--hz-text); border-color: var(--hz-bronze); background: transparent; }

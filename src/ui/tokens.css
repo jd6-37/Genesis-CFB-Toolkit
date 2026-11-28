@@ -134,6 +134,22 @@
 }
 [data-brand='dynasty'][data-theme='dark'] { --cfp-gold: #e1b54e; }
 
+/* The Heisman ceremony's bronze on black (the trophy's own colors), the same in every theme. */
+:root {
+  --hz-scrim: rgba(8, 6, 4, 0.86);
+  --hz-ground: linear-gradient(180deg, #1c1610, #0d0a07);
+  --hz-ink: #0d0a07;
+  --hz-card: #241c14;
+  --hz-top: #3a2a14;
+  --hz-rule: #3b2e20;
+  --hz-text: #f6efe2;
+  --hz-muted: #cdbfa8;
+  --hz-gold: #e8a860;
+  --hz-bronze: #b8732f;
+  --hz-bronze-dark: #6b4220;
+}
+
+
 [data-brand='dynasty'] {
   /* On a team's color: a shade or a tint behind figures, a drop shadow under a logo. Recruiting stars. */
   --on-team-shade: rgba(0, 0, 0, 0.2);

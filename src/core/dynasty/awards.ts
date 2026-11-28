@@ -9,7 +9,7 @@
 import { INDEPENDENT, playerLines, seasonView, statValue, type PlayerLine, type SeasonView } from './derive';
 import type { DSeason, Dynasty } from './model';
 import { playerOvr, roleOfSlot } from './ovr';
-import { heismanWatch } from './outlook';
+import { heismanLine, heismanWatch } from './outlook';
 import { kickoffRanks } from './kickoffRanks';
 
 /** The spots on an All-American or All-Conference team, in order (11 on offense, 11 on defense, 2 kickers). */
@@ -88,7 +88,16 @@ export interface SeasonAwards {
   allAmerican: [Candidate[], Candidate[]];
   /** First team per conference (conference index → players), independents left out. */
   allConference: Record<number, Candidate[]>;
+  /** Set when the awards were handed out after the conference championships (freezeAwards): the last week counted,
+   * the simulated Heisman vote, and each award's final top five (the Award Watch shows them from then on). */
+  week?: number;
+  votes?: HeismanVote[];
+  watch?: Record<string, Candidate[]>;
+  coachWatch?: Record<string, CoachWatchEntry[]>;
 }
+
+export interface HeismanVote { player: number; team: number; first: number; second: number; third: number; points: number; line: string }
+export interface CoachWatchEntry { team: number; coach: number | null; score: number; line: string }
 
 const n = (x: number) => x.toLocaleString('en-US');
 const pl = (x: number, one: string, many = `${one}s`) => `${n(x)} ${x === 1 ? one : many}`;
@@ -213,10 +222,94 @@ function pickTeam(pool: Candidate[], skip: Set<number>): Candidate[] {
   return team;
 }
 
-/** A finished season's awards, or null while games are left. */
+/** A season's awards: the ones handed out after the conference championships (freezeAwards), else, for seasons
+ * imported before that existed, worked out once the season is over; null while they're not decided. */
 export function seasonAwards(d: Dynasty, season: DSeason): SeasonAwards | null {
+  if (season.awards) return season.awards;
   const v = seasonView(d, season);
   return v.save && v.done ? awardsOf(v, kickoffRanks(d, season)[0] ?? null) : null;
+}
+
+/**
+ * The week through which the awards are decided: the conference championships (user, 2026-11-28: "we should
+ * announce the awards right after the conference championship games are played"), as the real awards come before
+ * the bowls and the playoff. Without title games, the regular season's last week (1994: the bowls come right after;
+ * Finals: None: the season's end). Null while games of those weeks are left.
+ */
+export function awardsWeek(v: SeasonView): number | null {
+  const s = v.save?.season;
+  if (!s) return null;
+  const titleWeek = s.lastRegularWeek + 1;
+  const hasTitle = s.postseason && titleWeek < v.weeks && !(v.bowls && titleWeek >= v.weeks - 1);
+  const w = hasTitle ? titleWeek : s.lastRegularWeek;
+  return v.games.every((g) => g.week > w || g.vs !== null || g.visitor === null || g.home === null) ? w : null;
+}
+
+export const HEISMAN_VOTERS = 870;
+
+/** A number in [0, 1) from a seed (mulberry32). */
+function rng(seed: number) {
+  let a = seed >>> 0;
+  return () => { a = (a + 0x6d2b79f5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+
+/**
+ * The Heisman vote (user, 2026-11-28: "simulate votes"): each of HEISMAN_VOTERS voters ranks three, 3-2-1 points as the
+ * real vote. A voter's order is the award's (the candidates in order, each a step behind the one before) with his
+ * own taste (noise); about one in four puts a regional favorite from further down third. The award's winner always
+ * comes out first (his and the leader's counts are swapped otherwise).
+ */
+export function heismanVotes(cands: { player: number; team: number; line: string }[], seed: number): HeismanVote[] {
+  const r = rng(seed);
+  const out = cands.map((c) => ({ ...c, first: 0, second: 0, third: 0, points: 0 }));
+  for (let i = 0; i < HEISMAN_VOTERS; i++) {
+    const pick = out.map((c, k) => ({ c, s: Math.exp(-0.18 * k) * Math.exp(0.5 * (r() + r() + r() - 1.5)) })).sort((a, b) => b.s - a.s).slice(0, 3);
+    if (out.length > 4 && r() < 0.25) {
+      const fav = out[4 + Math.floor(r() * (out.length - 4))];
+      if (!pick.some((x) => x.c === fav)) pick[2] = { c: fav, s: 0 };
+    }
+    pick.forEach(({ c }, k) => { if (k === 0) c.first++; else if (k === 1) c.second++; else c.third++; c.points += 3 - k; });
+  }
+  const sorted = out.filter((c) => c.points > 0).sort((a, b) => b.points - a.points || b.first - a.first);
+  const w = sorted.findIndex((c) => c.player === cands[0]?.player);
+  if (w > 0) {
+    const a = sorted[0], b = sorted[w];
+    for (const k of ['first', 'second', 'third', 'points'] as const) [a[k], b[k]] = [b[k], a[k]];
+    sorted[0] = b; sorted[w] = a;
+  }
+  return sorted;
+}
+
+/** The awards as handed out after the conference championships: awardsOf plus the vote and the final watches. */
+export function finalAwards(d: Dynasty, season: DSeason, v: SeasonView = seasonView(d, season)): SeasonAwards {
+  const pre = kickoffRanks(d, season)[0] ?? null;
+  const aw = awardsOf(v, pre);
+  const all = candidates(v);
+  const lines = playerLines(v);
+  const lineOf = (p: number) => heismanLine(lines.filter((l) => l.player === p));
+  const order = aw.heisman.map((h) => h.player);
+  const rest = heismanWatch(v, 12).filter((h) => !order.includes(h.player));
+  const cands = [...aw.heisman, ...rest].slice(0, 10).map((h) => ({ player: h.player, team: h.team, line: lineOf(h.player) }));
+  const byP = new Map(all.map((c) => [c.player, c]));
+  const watch: Record<string, Candidate[]> = { heisman: aw.heisman.map((h) => byP.get(h.player)).filter((c): c is Candidate => !!c) };
+  for (const a of awardsIn(season.year)) watch[a.key] = awardWatch(v, a, all, 5);
+  const coach: Record<string, CoachWatchEntry[]> = {};
+  for (const a of COACH_AWARDS) coach[a.key] = coachWatch(v, a.key, pre, 5);
+  return { ...aw, week: awardsWeek(v) ?? undefined, votes: heismanVotes(cands, season.year * 31 + season.index), watch, coachWatch: coach };
+}
+
+/**
+ * Hands the season's awards out once the conference championships are in (called after each import): kept in the
+ * dynasty from then on, so playoff and bowl games don't change them. Returns the dynasty as it was when there's
+ * nothing to do.
+ */
+export function freezeAwards(d: Dynasty): { dynasty: Dynasty; froze: boolean } {
+  const season = d.seasons[d.seasons.length - 1];
+  if (!season || season.awards) return { dynasty: d, froze: false };
+  const v = seasonView(d, season);
+  if (awardsWeek(v) === null) return { dynasty: d, froze: false };
+  const awards = finalAwards(d, season, v);
+  return { dynasty: { ...d, seasons: [...d.seasons.slice(0, -1), { ...season, awards }] }, froze: true };
 }
 
 /** The awards from a season's stats so far (seasonAwards hands them out only once it's over). */

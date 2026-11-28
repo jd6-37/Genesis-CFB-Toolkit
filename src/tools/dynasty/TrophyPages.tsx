@@ -23,7 +23,7 @@ export function Trophy({ art, size = 2, label = '' }: { art: string; size?: numb
 
 // ---- Stats → Award watch
 
-/** Each award's top five so far; your players highlighted. Winners are named once the season is over. */
+/** Each award's top five so far; your players highlighted. Once the awards are handed out, the final top fives. */
 export function AwardWatch() {
   const { d, v } = useDyn();
   const all = useMemo(() => candidates(v), [v]);
@@ -31,14 +31,19 @@ export function AwardWatch() {
   const byP = new Map(all.map((c) => [c.player, c]));
   const heis = heismanWatch(v, 5).map((h) => byP.get(h.player)).filter((c): c is Candidate => !!c);
   const year = v.season.year;
+  // Once the awards are handed out (after the conference championships), their final top fives, so playoff and bowl
+  // games don't reshuffle a race that's over.
+  const fin = v.season.awards?.watch ? v.season.awards : null;
   const cards: { key: string; name: string; what: string; art: string; list: Candidate[] }[] = [
-    ...(HEISMAN.since <= year ? [{ ...HEISMAN, list: heis }] : []),
-    ...awardsIn(year).map((a) => ({ key: a.key, name: a.name, what: a.what, art: a.art, list: awardWatch(v, a, all, 5) })),
+    ...(HEISMAN.since <= year ? [{ ...HEISMAN, list: fin?.watch?.heisman ?? heis }] : []),
+    ...awardsIn(year).map((a) => ({ key: a.key, name: a.name, what: a.what, art: a.art, list: fin?.watch?.[a.key] ?? awardWatch(v, a, all, 5) })),
   ];
   const mine = (t: number) => d.userTeams.includes(t);
   return (
     <>
-      <p className="dy-small dy-dim">The players in the running for each award, from the stats so far and the players' OVR. The winners are named once the season is over.</p>
+      <p className="dy-small dy-dim">{fin
+        ? <>The awards were handed out after the conference championships: these are the final top fives. <a href={href(`awards/${year}`)}>The {year} awards</a></>
+        : "The players in the running for each award, from the stats so far and the players' OVR. The winners are named after the conference championships."}</p>
       <div className="dy-watch">
         {cards.map((c) => (
           <article key={c.key} className="dy-watch-card">
@@ -62,7 +67,7 @@ export function AwardWatch() {
           <article key={a.key} className="dy-watch-card">
             <header><Trophy art={a.art} size={2} /><div><h3>{a.name}</h3><p className="dy-small dy-dim">{a.what}: {a.how}</p></div></header>
             <ol className="dy-watch-list">
-              {coachWatch(v, a.key, pre, 5).map((x, i) => {
+              {(fin?.coachWatch?.[a.key] ?? coachWatch(v, a.key, pre, 5)).map((x, i) => {
                 const c = x.coach !== null ? d.coaches?.find((k) => k.id === x.coach) : undefined;
                 return (
                   <li key={x.team} className={mine(x.team) ? 'dy-watch-mine' : undefined}>
