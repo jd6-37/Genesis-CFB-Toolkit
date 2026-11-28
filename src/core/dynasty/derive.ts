@@ -171,6 +171,10 @@ export const playerName = (p: Pick<DPlayer, 'first' | 'last' | 'pos' | 'jersey'>
 export const playerLabel = (p: Pick<DPlayer, 'first' | 'last' | 'pos' | 'jersey'>) =>
   `${p.jersey >= 0 ? `#${p.jersey} ` : ''}${p.pos}${p.first || p.last ? ` ${p.first} ${p.last}`.trimEnd() : ''}`;
 
+/** A player as the award lists write him (user, 2026-11-28): "SS #2 Keith Williams" ("SS #2" for an unnamed 1994 player). */
+export const playerTag = (p: Pick<DPlayer, 'first' | 'last' | 'pos' | 'jersey'>) =>
+  `${p.pos}${p.jersey >= 0 ? ` #${p.jersey}` : ''}${p.first || p.last ? ` ${p.first} ${p.last}`.trimEnd() : ''}`;
+
 // ---- across seasons
 
 export interface ChampionEntry { year: number; team: number; record: TeamRecord }

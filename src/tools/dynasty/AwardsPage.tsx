@@ -4,7 +4,7 @@ import { PageHead, Select, SubHead, Table } from '../../ui';
 import { useMemo, useState } from 'react';
 import { AWARD_SPOTS, COACH_AWARDS, HEISMAN, POSITION_AWARDS, seasonAwards, type Candidate } from '../../core/dynasty/awards';
 import { Trophy } from './TrophyPages';
-import { playerName } from '../../core/dynasty/derive';
+import { playerTag } from '../../core/dynasty/derive';
 import { Empty, TeamLink, href, playerOf, useDyn } from './ui';
 
 function spotOf(c: Candidate) {
@@ -22,7 +22,7 @@ function TeamTable({ list }: { list: Candidate[] }) {
             return (
               <tr key={c.player}>
                 <td className="ui-left dy-dim">{AWARD_SPOTS.some((x) => x.roles.includes(c.role)) ? spotOf(c) : c.role}</td>
-                <td className="ui-left">{p ? <a href={href(`player/${p.id}`)}>{playerName(p)}</a> : 'Unknown player'}<div className="dy-small dy-dim">{c.line}</div></td>
+                <td className="ui-left">{p ? <a href={href(`player/${p.id}`)}>{playerTag(p)}</a> : 'Unknown player'}<div className="dy-small dy-dim">{c.line}</div></td>
                 <td className="ui-left"><TeamLink team={c.team} rank={false} size={16} /></td>
               </tr>
             );
@@ -56,10 +56,10 @@ export function Awards({ arg }: { arg?: string }) {
         <div className="dy-heisman">
           <Trophy art={HEISMAN.art} size={2} label="" />
           <p className="dy-heisman-title">Heisman Trophy</p>
-          <p className="dy-heisman-name"><a href={href(`player/${wp.id}`)}>{playerName(wp)}</a></p>
+          <p className="dy-heisman-name"><a href={href(`player/${wp.id}`)}>{playerTag(wp)}</a></p>
           <p className="dy-heisman-team"><TeamLink team={winner.team} rank={false} /><span className="dy-dim">{wp.pos}</span></p>
           {a.heisman.length > 1 && (
-            <p className="dy-small dy-dim">Finalists: {a.heisman.slice(1).map((h, i) => { const p = playerOf(d, h.player); return <span key={h.player}>{i ? ', ' : ''}{p ? <a href={href(`player/${p.id}`)}>{playerName(p)}</a> : ''} ({d.teams[h.team].school})</span>; })}</p>
+            <p className="dy-small dy-dim">Finalists: {a.heisman.slice(1).map((h, i) => { const p = playerOf(d, h.player); return <span key={h.player}>{i ? ', ' : ''}{p ? <a href={href(`player/${p.id}`)}>{playerTag(p)}</a> : ''} ({d.teams[h.team].school})</span>; })}</p>
           )}
         </div>
       )}
@@ -73,7 +73,7 @@ export function Awards({ arg }: { arg?: string }) {
               <Trophy art={na?.art ?? 'poy'} size={2} />
               <div>
                 <p className="dy-award-name">{x.label}<span className="dy-small dy-dim"> {na?.what}</span></p>
-                {x.winner ? <p>{p ? <a href={href(`player/${p.id}`)}>{playerName(p)}</a> : 'Unknown player'} <TeamLink team={x.winner.team} rank={false} size={16} /><span className="dy-small dy-dim dy-award-line">{x.winner.line}</span></p> : <p className="dy-dim">Not given</p>}
+                {x.winner ? <p>{p ? <a href={href(`player/${p.id}`)}>{playerTag(p)}</a> : 'Unknown player'} <TeamLink team={x.winner.team} rank={false} size={16} /><span className="dy-small dy-dim dy-award-line">{x.winner.line}</span></p> : <p className="dy-dim">Not given</p>}
               </div>
             </li>
           );
