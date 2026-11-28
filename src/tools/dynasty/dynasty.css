@@ -1148,15 +1148,20 @@
 .cfp-proj strong { color: var(--cfp-gold); text-transform: uppercase; font-family: var(--font-display); font-size: var(--fs-3); margin-right: var(--sp-1); }
 .cfp-out { color: var(--text-muted); }
 
+/* Only the bracket scrolls sideways: the page around it keeps the viewport's width. */
+.cfp { min-width: 0; max-width: 100%; }
+.cfp-scroll { min-width: 0; max-width: 100%; overflow-x: auto; }
 .cfp-grid { display: flex; flex-direction: column; gap: var(--sp-3); margin-top: var(--sp-4); }
 .cfp-pod { display: flex; flex-direction: column; gap: var(--sp-2); padding-left: var(--sp-3); border-left: 3px solid var(--cfp-gold); }
 .cfp-match { background: var(--surface-raised); border: 1px solid var(--rule); }
 .cfp-projected .cfp-match { border-style: dashed; }
 .cfp-match-label { padding: var(--sp-1) var(--sp-3); font: 700 var(--fs-1)/1.2 var(--font-display); text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); border-bottom: 1px solid var(--rule); }
-.cfp-row { display: grid; grid-template-columns: 30px 32px minmax(0, 1fr) auto; align-items: center; gap: var(--sp-2); min-height: 44px; padding: 0 var(--sp-3) 0 0;
+.cfp-row { display: grid; grid-template-columns: 30px auto minmax(0, 1fr) auto; align-items: center; gap: var(--sp-2); min-height: 44px; padding: 0 var(--sp-3) 0 0;
   color: var(--text); text-decoration: none; box-shadow: inset 4px 0 0 var(--tc, transparent); }
 .cfp-row + .cfp-row { border-top: 1px solid var(--rule); }
 .cfp-mine { background: var(--highlight); }
+/* Wide logos (Ohio State's, Texas A&M's) keep their height and never widen the card past its column. */
+.cfp-row .dy-mark { max-width: 56px; overflow: hidden; }
 .cfp-seed { text-align: right; font: 900 var(--fs-4)/1 var(--font-display); color: var(--cfp-gold); }
 .cfp-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cfp-pts { font: 700 var(--fs-2)/1 var(--font-num-narrow); color: var(--text-muted); font-variant-numeric: tabular-nums; }
@@ -1179,17 +1184,17 @@ a.cfp-row:focus-visible { outline: var(--focus-w) solid var(--focus); outline-of
 .cfp-champ strong { display: block; font: 900 var(--fs-5)/1.05 var(--font-display); text-transform: uppercase; }
 
 @media (min-width: 900px) {
-  .cfp-scroll { overflow-x: auto; padding-bottom: var(--sp-2); }
+  .cfp-scroll { padding-bottom: var(--sp-2); }
   .cfp-grid {
     --gap: 32px; display: grid; gap: 0 var(--gap); position: relative;
-    grid-template-columns: repeat(calc(var(--cols) - 1), minmax(190px, 1fr)) minmax(240px, 1.1fr);
+    grid-template-columns: repeat(3, minmax(190px, 1fr)) minmax(240px, 1.1fr); /* CFP 12; no calc() in repeat(): Safari */
     grid-template-rows: repeat(var(--rows), auto);
   }
   .cfp-size-2 .cfp-grid { grid-template-columns: minmax(280px, 420px); }
   .cfp-size-4 .cfp-grid { grid-template-columns: minmax(240px, 420px) minmax(280px, 440px); }
   /* 24 teams: five rounds on an Odin-wide screen. */
   .cfp-size-24 .cfp-grid { --gap: 24px; grid-template-columns: repeat(4, minmax(150px, 1fr)) minmax(200px, 1.1fr); }
-  .cfp-size-24 .cfp-row { grid-template-columns: 24px 30px minmax(0, 1fr) auto; gap: 6px; }
+  .cfp-size-24 .cfp-row { grid-template-columns: 24px auto minmax(0, 1fr) auto; gap: 6px; }
   .cfp-pod { display: contents; }
   .cfp-cell { grid-column: var(--col); grid-row: var(--row); display: flex; flex-direction: column; justify-content: center; padding: var(--sp-2) 0; position: relative; }
   .cfp-cell > .cfp-match, .cfp-cell > .cfp-final { position: relative; }

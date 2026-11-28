@@ -2,6 +2,7 @@
 // carry through dynasties, meaning I might play 10 seasons with Tulane, win a champ, remove them from my user
 // controlled teams, and then control another team for a few years"). Everything a team won in the seasons the user
 // controlled it (DSeason.userTeams), and the coach awards of the coaches the user managed (DSeason.userCoaches).
+import { bowlArt, bracketOf, CFP_TITLE_ART } from './bracket';
 import { bowlOf, bowlWeek, INDEPENDENT, seasonView, standings, weekName, type SeasonView } from './derive';
 import { userCoachesOf, userTeamsOf, type DSeason, type Dynasty } from './model';
 import { HEISMAN, POSITION_AWARDS, COACH_AWARDS, seasonAwards } from './awards';
@@ -48,7 +49,13 @@ export function trophyRoom(d: Dynasty): TrophyRoom {
     const school = (t: number) => d.teams[t].school;
     for (const t of users) {
       const rec = v.records[t];
-      if (v.done && v.champion === t) items.push({ kind: 'national', year, team: t, title: 'National champions', note: `${rec.w}-${rec.l}`, art: 'national' });
+      // The CFP's title game has its own trophy (user, 2026-11-28: "a CFP National Championship (change from National
+      // title)"); BCS 2 seasons and 1994's final poll keep the national title cup.
+      const br = v.bowls ? null : bracketOf(d, v);
+      const cfp = br !== null && br.size !== 2;
+      if (v.done && v.champion === t) {
+        items.push({ kind: 'national', year, team: t, title: cfp ? 'CFP National Championship' : br ? 'BCS National Championship' : 'National champions', note: `${rec.w}-${rec.l}`, art: cfp ? CFP_TITLE_ART : 'national' });
+      }
       const c = s.conf[t];
       if (confChampion(v, c) === t && (v.done || v.games.some((g) => g.week > (v.save?.season?.lastRegularWeek ?? 99) && g.vs !== null))) {
         items.push({ kind: 'conference', year, team: t, title: `${s.confNames[c]} champions`, note: `${rec.w}-${rec.l}`, art: 'conference' });
@@ -60,9 +67,14 @@ export function trophyRoom(d: Dynasty): TrophyRoom {
         // Bowls (1994) and playoff wins short of the title game (the title is its own trophy).
         const bowl = v.bowls ? bowlOf(v, g) : null;
         const lastWeek = Math.max(...v.games.map((x) => x.week));
-        if (bowl) items.push({ kind: 'postseason', year, team: t, title: bowl, note: `beat ${school(opp)} ${score}`, art: 'bowl' });
+        // Each bowl has its own trophy (1994's bowls, the CFP's quarterfinal and semifinal bowls); playoff games without a
+        // bowl (first and second rounds) keep the playoff win trophy (user, 2026-11-28).
+        const cfpBowl = br?.games.flat().find((x) => x.game === g.index && x.bowl)?.bowl ?? null;
+        if (bowl) items.push({ kind: 'postseason', year, team: t, title: bowl, note: `beat ${school(opp)} ${score}`, art: bowlArt(bowl) });
         else if (!v.bowls && g.week > (v.save?.season?.lastRegularWeek ?? 99) + 1 && g.week < lastWeek) {
-          items.push({ kind: 'postseason', year, team: t, title: `Playoff ${weekName(v, g.week).toLowerCase().replace(/s$/, '')} win`, note: `beat ${school(opp)} ${score}`, art: 'playoff' });
+          const round = weekName(v, g.week).replace(/s$/, '');
+          if (cfpBowl) items.push({ kind: 'postseason', year, team: t, title: cfpBowl, note: `CFP ${round}: beat ${school(opp)} ${score}`, art: bowlArt(cfpBowl) });
+          else items.push({ kind: 'postseason', year, team: t, title: `Playoff ${round.toLowerCase()} win`, note: `beat ${school(opp)} ${score}`, art: 'playoff' });
         }
         const tr = trophyOf(school(t), school(opp));
         if (tr && (tr.since === null || tr.since <= year)) items.push({ kind: 'rivalry', year, team: t, title: tr.trophy, note: `beat ${school(opp)} ${score}`, art: tr.art });

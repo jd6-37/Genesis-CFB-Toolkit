@@ -1,6 +1,7 @@
 // Trophies (user, 2026-11-27; mockups approved: "Looks good … Build it"): the award watches (Stats → Award watch),
 // the user's trophy room, a team's rivalry trophies (Team → Rivalries) and Manage → Trophy art, where the user's own
 // pictures replace the app's pixel art.
+import { BOWL_TROPHIES, bowlArt, CFP_TITLE_ART } from '../../core/dynasty/bracket';
 import { useMemo, useRef, useState } from 'react';
 import { Button, Modal, PageHead, SubHead, Table } from '../../ui';
 import { COACH_AWARDS, HEISMAN, POSITION_AWARDS, awardWatch, awardsIn, candidates, coachWatch, type Candidate } from '../../core/dynasty/awards';
@@ -250,7 +251,9 @@ const kb = (n: number) => (n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} M
 export function trophyArtList(): { art: string; label: string }[] {
   const out = new Map<string, string[]>();
   const add = (art: string, label: string) => out.set(art, [...(out.get(art) ?? []), label]);
-  add('national', 'National title'); add('conference', 'Conference title'); add('bowl', 'Bowl win'); add('playoff', 'Playoff win');
+  add(CFP_TITLE_ART, 'CFP National Championship'); add('national', 'National title (BCS, 1994)'); add('conference', 'Conference title');
+  for (const b of BOWL_TROPHIES) add(bowlArt(b), b);
+  add('playoff', 'Playoff win');
   add(HEISMAN.art, HEISMAN.name);
   for (const a of POSITION_AWARDS) add(a.art, a.name);
   for (const a of COACH_AWARDS) add(a.art, a.name);

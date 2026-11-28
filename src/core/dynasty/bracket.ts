@@ -153,3 +153,17 @@ export function cfpLabel(story: Pick<Story, 'kind' | 'game'>, b: Bracket | null)
   return null;
 }
 
+
+/** Each bowl's own trophy art (cli/trophy-art.py, `bowl-*`; user, 2026-11-28: "unique trophies for each one"). */
+const BOWL_ART: Record<string, string> = {
+  'Rose Bowl': 'bowl-rose', 'Sugar Bowl': 'bowl-sugar', 'Orange Bowl': 'bowl-orange', 'Cotton Bowl': 'bowl-cotton', 'Fiesta Bowl': 'bowl-fiesta',
+  'Peach Bowl': 'bowl-peach', 'Florida Citrus Bowl': 'bowl-citrus', 'Holiday Bowl': 'bowl-holiday', 'Gator Bowl': 'bowl-gator', 'Sun Bowl': 'bowl-sun',
+  'Hall of Fame Bowl': 'bowl-halloffame', 'Freedom Bowl': 'bowl-freedom', 'Alamo Bowl': 'bowl-alamo', 'Copper Bowl': 'bowl-copper',
+  'Aloha Bowl': 'bowl-aloha', 'Carquest Bowl': 'bowl-carquest', 'Liberty Bowl': 'bowl-liberty', 'Independence Bowl': 'bowl-independence',
+  'Las Vegas Bowl': 'bowl-lasvegas',
+};
+export const bowlArt = (name: string): string => BOWL_ART[name] ?? 'playoff';
+/** The CFP National Championship Trophy's art. */
+export const CFP_TITLE_ART = 'bowl-cfp';
+/** Every bowl with its own trophy, in the 1994 ROM's order then the CFP's (Manage → Trophy art). */
+export const BOWL_TROPHIES = Object.keys(BOWL_ART);
