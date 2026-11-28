@@ -28,6 +28,7 @@ import { SharePanel } from './SharePanel';
 import { Awards } from './AwardsPage';
 import { Records } from './RecordsPage';
 import { ScheduleEditor } from './SchedulePage';
+import { CfpBracket } from './CfpBracket';
 import { History, Home, Player, Rankings, Scores, Standings, Team, teamRoute, Teams } from './pages';
 import { Stats } from './StatsPage';
 import { Offseason, type OffseasonActions } from './OffseasonPage';
@@ -486,7 +487,7 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
     if (page === 'start') return <GetStarted actions={startActions} busy={!!busy} />;
     if (page === 'manage' || !ctx) return <Manage d={d} art={art} list={list} busy={busy} note={note} actions={actions} focus={focus} ctx={ctx} up={up} />;
     switch (page) {
-      case 'scores': return <Scores week={num} />;
+      case 'scores': return arg === 'bracket' ? <CfpBracket /> : <Scores week={num} />;
       case 'standings': return <Standings />;
       case 'rankings': return <Rankings />;
       case 'teams': return <Teams />;

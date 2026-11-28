@@ -120,6 +120,20 @@
 
 /* Dynasty, light: the booklet from the game box. White paper, black ink and bars; the only color on a page
    is a team's. Grays are Genesis palette values (channel steps of 36). */
+/* The College Football Playoff's black and gold (its 2026 brand: "Championship Gold"), the same in every theme:
+   the Dynasty app's CFP bracket and playoff headline art. */
+:root {
+  --cfp-ink: #0b0b0b;
+  --cfp-on-ink: #ffffff;
+  --cfp-panel: #161616;
+  --cfp-panel-rule: #333333;
+  --cfp-gold: #a8791c;
+  --cfp-gold-line: #c9952f;
+  --cfp-gold-hi: #f4dc8a;
+  --cfp-gold-grad: linear-gradient(115deg, #b98a2e 0%, #f7e08f 45%, #c9952f 70%, #8f6418 100%);
+}
+[data-brand='dynasty'][data-theme='dark'] { --cfp-gold: #e1b54e; }
+
 [data-brand='dynasty'] {
   /* On a team's color: a shade or a tint behind figures, a drop shadow under a logo. Recruiting stars. */
   --on-team-shade: rgba(0, 0, 0, 0.2);

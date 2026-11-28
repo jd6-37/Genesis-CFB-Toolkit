@@ -36,6 +36,7 @@ import { playerOvr, roleOfSlot } from '../../core/dynasty/ovr';
 import { UniformsBox } from './UniformsBox';
 import { POS_GROUPS } from './RostersPage';
 import { hasNil, money, payroll } from '../../core/dynasty/nil';
+import { CfpArt, CfpLink, useCfpLabel } from './CfpBracket';
 import { accentOn, Empty, Headshot, ImpactDot, Locked, StoryArt, TeamLink, TeamMark, href, heightText, hometownText, inkColor, mainColor, onColor, playerOf, rankText, recordText, teamCss, useDyn, Ranked } from './ui';
 
 // ---- front page
@@ -134,7 +135,7 @@ export function Home() {
         <div className="dy-front-main" ref={mainRef}>
           {lead && (
             <article className="dy-lead">
-              <StoryArt teams={lead.teams} big />
+              <HeadArt s={lead} big />
               <h2><StoryLink s={lead} /></h2>
               <p>{lead.dek}</p>
             </article>
@@ -142,7 +143,7 @@ export function Home() {
           <div className="dy-seconds">
             {second.map((s) => (
               <article key={s.id} className="dy-second">
-                <StoryArt teams={s.teams} />
+                <HeadArt s={s} />
                 <h3><StoryLink s={s} /></h3>
                 <p>{s.dek}</p>
               </article>
@@ -263,6 +264,12 @@ function YourTeams() {
   );
 }
 
+/** A story's art: the CFP's black and gold for playoff stories (user, 2026-11-28), the teams' colors otherwise. */
+function HeadArt({ s, big = false }: { s: Story; big?: boolean }) {
+  const cfp = useCfpLabel(s);
+  return cfp ? <CfpArt teams={s.teams} label={cfp} big={big} /> : <StoryArt teams={s.teams} big={big} />;
+}
+
 // ---- scores
 
 export function Scores({ week: asked }: { week?: number }) {
@@ -279,7 +286,7 @@ export function Scores({ week: asked }: { week?: number }) {
   const ranks = kick ?? v.rank;
   return (
     <section>
-      <PageHead title="Scores" />
+      <div className="cfp-scoreshead"><PageHead title="Scores" actions={<CfpLink />} /></div>
       {/* Weeks as tabs (L1 / R1 on a controller; user, 2026-11-22). */}
       <Tabs
         label="Weeks" value={String(week)} onChange={(x) => (window.location.hash = href(`scores/${x}`))}

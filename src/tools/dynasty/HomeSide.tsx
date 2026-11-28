@@ -194,6 +194,7 @@ function Playoff() {
           <ol className="dy-side-rank">{pic.field.slice(20).map((t, i) => row(t, i + 21))}</ol>
         </>
       )}
+      <p className="dy-small"><a href={href('scores/bracket')}>{pic.size === 2 ? 'BCS bracket' : 'CFP bracket'}</a></p>
       {!pic.final && pic.out.length > 0 && (
         <>
           <h3 className="dy-side-sub">First four out</h3>
