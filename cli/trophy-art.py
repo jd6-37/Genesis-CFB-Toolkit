@@ -432,6 +432,50 @@ POSE={
  "......###.........",
 ],
 }
+# The Heisman is the special one (user, 2026-11-28): its figure a size up (21x26, the stiff arm with an open hand),
+# on a tall black base with angled sides and a bronze plaque, over a wide stepped wood base. Approved step by step.
+HEISMAN_BIG=[
+ ".....................",
+ ".....................",
+ "...........###.......",
+ "...........###.......",
+ "...........###.......",
+ "............#........",
+ "...#......####.......",
+ "...#.....#####.......",
+ "...############......",
+ "....#####.######.....",
+ "..........###ooo#....",
+ "..........###ooo.....",
+ "..........####.......",
+ "..........####.......",
+ "..........######.....",
+ "..........#######....",
+ ".........###..###....",
+ ".........###..###....",
+ "........###...##.....",
+ "........##....##.....",
+ ".......###....##.....",
+ ".......##.....##.....",
+ "......###............",
+ ".....###.............",
+ "...####..............",
+ "....#................",
+]
+def figure(c,x0,y0,rows,m):
+    c.map(x0,y0,rows,m)
+    c.map(x0,y0,[r.replace('#','.').replace('o','#') for r in rows],m+'_d')
+    for y,r in enumerate(rows):
+        for x,ch in enumerate(r):
+            if ch=='#' and any(0<=y+dy<len(rows) and 0<=x+dx<len(r) and rows[y+dy][x+dx]=='o' for dx,dy in ((1,0),(-1,0),(0,1),(0,-1))):
+                c.px(x0+x,y0+y,'seam')
+def heisman_tr(c):
+    figure(c,5,-1,HEISMAN_BIG,'bronze')
+    c.rect(7,24,24,25,'bronze')
+    c.poly([(8,26),(24,26),(28,34),(4,34)],'black')
+    c.rect(11,28,20,31,'bronze'); c.rect(12,29,19,29,'bronze_d'); c.rect(12,30,17,30,'bronze_d')
+    c.rect(3,34,28,35,'wood'); c.rect(2,36,29,38,'wood')
+
 def statue(c,pose,m='bronze'):
     c.map(7,1,POSE[pose],m)
     c.map(7,1,[r.replace('#','.').replace('o','#') for r in POSE[pose]],m+'_d')
@@ -559,7 +603,7 @@ def clipboard(c):
 SPRITES={
  'national':lambda c:cup(c,'gold',True),'conference':lambda c:cup(c,'silver',False),'bowl':bowl_tr,
  # Every award statue is bronze, so none looks better than another (user, 2026-11-28).
- 'heisman':lambda c:statue(c,'heisman','bronze'),'maxwell':lambda c:statue(c,'maxwell','bronze'),'camp':lambda c:statue(c,'camp','bronze'),
+ 'heisman':heisman_tr,'maxwell':lambda c:statue(c,'maxwell','bronze'),'camp':lambda c:statue(c,'camp','bronze'),
  'qb':lambda c:statue(c,'qb','bronze'),'rb':lambda c:statue(c,'rb','bronze'),'wr':lambda c:statue(c,'wr','bronze'),'te':lambda c:statue(c,'te','bronze'),
  'ol':lambda c:statue(c,'ol','bronze'),'def':lambda c:statue(c,'def','bronze'),'def2':lambda c:statue(c,'def2','bronze'),'lb':lambda c:statue(c,'lb','bronze'),
  'db':lambda c:statue(c,'db','bronze'),'k':lambda c:statue(c,'k','bronze'),'p':lambda c:statue(c,'p','bronze'),
