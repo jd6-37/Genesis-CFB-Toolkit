@@ -558,10 +558,11 @@ def clipboard(c):
 
 SPRITES={
  'national':lambda c:cup(c,'gold',True),'conference':lambda c:cup(c,'silver',False),'bowl':bowl_tr,
- 'heisman':lambda c:statue(c,'heisman','bronze'),'maxwell':lambda c:statue(c,'maxwell','silver'),'camp':lambda c:statue(c,'camp','bronze'),
- 'qb':lambda c:statue(c,'qb','gold'),'rb':lambda c:statue(c,'rb','bronze'),'wr':lambda c:statue(c,'wr','silver'),'te':lambda c:statue(c,'te','bronze'),
- 'ol':lambda c:statue(c,'ol','gold'),'def':lambda c:statue(c,'def','silver'),'def2':lambda c:statue(c,'def2','gold'),'lb':lambda c:statue(c,'lb','bronze'),
- 'db':lambda c:statue(c,'db','silver'),'k':lambda c:statue(c,'k','gold'),'p':lambda c:statue(c,'p','silver'),
+ # Every award statue is bronze, so none looks better than another (user, 2026-11-28).
+ 'heisman':lambda c:statue(c,'heisman','bronze'),'maxwell':lambda c:statue(c,'maxwell','bronze'),'camp':lambda c:statue(c,'camp','bronze'),
+ 'qb':lambda c:statue(c,'qb','bronze'),'rb':lambda c:statue(c,'rb','bronze'),'wr':lambda c:statue(c,'wr','bronze'),'te':lambda c:statue(c,'te','bronze'),
+ 'ol':lambda c:statue(c,'ol','bronze'),'def':lambda c:statue(c,'def','bronze'),'def2':lambda c:statue(c,'def2','bronze'),'lb':lambda c:statue(c,'lb','bronze'),
+ 'db':lambda c:statue(c,'db','bronze'),'k':lambda c:statue(c,'k','bronze'),'p':lambda c:statue(c,'p','bronze'),
  'coach':whistle,'coach2':clipboard,'bell':bell,'jug':jug,'axe':axe,'bucket':bucket,'flag':flag,
  'playoff':playoff,'cup':rcup,'hat':hat,'egg':egg,'boot':boot,'oar':oar,'shillelagh':shillelagh,'saddle':saddle,'skillet':skillet,'can':can,'cannon':cannon,'keg':keg,'belt':belt,'wheel':wheel,
 }
