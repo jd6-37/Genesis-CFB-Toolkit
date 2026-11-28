@@ -1254,7 +1254,7 @@ export function History() {
                     <tr key={h.year}>
                       <td className="ui-left">{h.year}</td>
                       <td className={h.imported ? undefined : 'ui-text'}>{h.imported ? recordText(h.record) : 'No save yet'}</td>
-                      <td>{h.imported && h.rank <= 25 ? `No. ${h.rank}` : ''}</td>
+                      <td>{h.imported && h.rank <= 25 ? `#${h.rank}` : ''}</td>
                       <td className="ui-text">{h.champion ? 'National champions' : ''}</td>
                     </tr>
                   ))}
