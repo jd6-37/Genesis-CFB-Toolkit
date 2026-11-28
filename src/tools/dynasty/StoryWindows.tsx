@@ -45,7 +45,8 @@ export function StoryLink({ s }: { s: Story }) {
     <>
       <a href={page} onClick={(e) => { e.preventDefault(); setOpen(true); }}>{s.headline}</a>
       {/* In a portal: a window opened from a headline would otherwise sit inside the headline's <h2> and take its
-          type (user, 2026-11-28: the playoff field window in the lead story's big title font). */}
+          type (user, 2026-11-28: the playoff field window in the lead story's big title font). Into the app's own root,
+          not <body>, so it keeps the Dynasty theme (light / dark) instead of the toolkit's colors. */}
       {open && createPortal(
         win === 'game' ? <GameWindow s={s} g={g!} onClose={close} />
           : win === 'potw' ? <PlayerGameWindow s={s} onClose={close} />
@@ -56,7 +57,7 @@ export function StoryLink({ s }: { s: Story }) {
                     : win === 'field' ? <FieldWindow s={s} onClose={close} />
                       : win === 'rank' ? <RankWindow s={s} onClose={close} />
                         : <TeamWindow s={s} onClose={close} />,
-        document.body,
+        document.querySelector<HTMLElement>('.dy[data-brand="dynasty"]') ?? document.body,
       )}
     </>
   );
