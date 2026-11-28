@@ -138,7 +138,7 @@ function Boards() {
           <caption>{b.title}</caption>
           <tbody>
             {leaders(lines, b.cat, b.key, 10).map((l, i) => (
-              <tr key={`${l.team}-${l.slot}`}>
+              <tr key={`${l.team}-${l.slot}`} className={d.userTeams.includes(l.team) ? 'ui-row-mine' : undefined}>
                 <td className="dy-dim">{i + 1}</td>
                 <td className="ui-left"><PlayerLink l={l} /> <span className="dy-dim dy-small"><Ranked team={l.team} /></span></td>
                 <td className="dy-strong"><Num value={statValue(l, b.key)} /></td>
@@ -269,7 +269,7 @@ function AllPlayers({ cat, q: given }: { cat: StatCategory; q?: string }) {
           </thead>
           <tbody>
             {list.map((l, i) => (
-              <tr key={`${l.team}-${l.slot}`}>
+              <tr key={`${l.team}-${l.slot}`} className={d.userTeams.includes(l.team) ? 'ui-row-mine' : undefined}>
                 <td className="dy-dim">{page * PAGE + i + 1}</td>
                 <td className="ui-left dy-rname"><PlayerLink l={l} /></td>
                 <td className="ui-left">{label(l)}</td>
@@ -398,7 +398,7 @@ function TeamStats({ q: given }: { q?: string }) {
           return (
             <Table key={b.key} figures className="dy-board">
               <caption>{b.title}</caption>
-              <tbody>{top.map((r, i) => <tr key={r.team}><td className="dy-dim">{i + 1}</td><td className="ui-left"><TeamLink team={r.team} /></td><td className="dy-strong">{fmt(c.val(r.s), c.digits)}</td></tr>)}</tbody>
+              <tbody>{top.map((r, i) => <tr key={r.team} className={d.userTeams.includes(r.team) ? 'ui-row-mine' : undefined}><td className="dy-dim">{i + 1}</td><td className="ui-left"><TeamLink team={r.team} /></td><td className="dy-strong">{fmt(c.val(r.s), c.digits)}</td></tr>)}</tbody>
             </Table>
           );
         })}
