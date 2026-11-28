@@ -29,7 +29,7 @@ export function WalshStep({ commit, busy }: { commit: (d: Dynasty, done?: string
     return ua - ub || ra - rb || d.teams[a].school.localeCompare(d.teams[b].school);
   });
   const k = order.indexOf(team);
-  const label = (t: number) => `${(rank.get(t) ?? 99) <= 25 ? `No. ${rank.get(t)} ` : ''}${d.teams[t].school}${d.userTeams.includes(t) ? ' (yours)' : ''}`;
+  const label = (t: number) => `${(rank.get(t) ?? 99) <= 25 ? `#${rank.get(t)} ` : ''}${d.teams[t].school}${d.userTeams.includes(t) ? ' (yours)' : ''}`;
   const run = async (next: () => Dynasty, done: string) => {
     setError(null);
     try { await commit(next(), done); } catch (e) { setError((e as Error).message); }

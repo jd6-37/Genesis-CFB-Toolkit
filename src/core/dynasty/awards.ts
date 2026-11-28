@@ -299,11 +299,11 @@ export function coachWatch(v: SeasonView, key: 'bryant' | 'afca', pre: number[] 
     let score: number, line: string;
     if (key === 'bryant') {
       score = 3 * r.w - 3 * r.l + Math.max(0, 26 - rank) * 0.8 + 4 * post[team];
-      line = `${r.w}-${r.l}${rank <= 25 ? `, No. ${rank}` : ''}${post[team] ? `, ${post[team]} postseason ${post[team] === 1 ? 'win' : 'wins'}` : ''}`;
+      line = `${r.w}-${r.l}${rank <= 25 ? `, Ranked #${rank}` : ''}${post[team] ? `, ${post[team]} postseason ${post[team] === 1 ? 'win' : 'wins'}` : ''}`;
     } else {
       const climb = pre ? Math.max(-30, Math.min(60, (pre[team] || 70) - (v.rank[team] || 70))) : 0;
       score = 2 * r.w - 2 * r.l + climb / 2;
-      line = `${r.w}-${r.l}${!pre ? '' : pre[team] && pre[team] <= 25 ? `, ranked No. ${pre[team]} before the season` : ', unranked before the season'}${rank <= 25 ? `, No. ${rank} now` : ''}`;
+      line = `${r.w}-${r.l}${!pre ? '' : pre[team] && pre[team] <= 25 ? `, ranked #${pre[team]} before the season` : ', unranked before the season'}${rank <= 25 ? `, Ranked #${rank} now` : ''}`;
     }
     return { team, coach: v.season.coach?.[team] ?? null, score, line };
   });

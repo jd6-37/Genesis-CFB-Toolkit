@@ -104,7 +104,7 @@ export function goalResults(d: Dynasty, seasonIndex: number, team: number, v = s
     }
     if (g.kind === 'class') {
       const rank = classRankBefore(d, seasonIndex, team);
-      return { ...g, met: rank === null ? null : rank <= g.n!, result: rank === null ? 'No class signed in the dynasty yet' : `No. ${rank}` };
+      return { ...g, met: rank === null ? null : rank <= g.n!, result: rank === null ? 'No class signed in the dynasty yet' : `#${rank}` };
     }
     const post = editionOf(d).postseason === 'bowls';
     if (post) {
@@ -215,7 +215,7 @@ export function seasonXp(d: Dynasty, seasonIndex: number, team: number, v = seas
   const met = goalResults(d, seasonIndex, team, v).filter((g) => g.met).length;
   if (met) parts.push({ label: `${met} ${met === 1 ? 'goal' : 'goals'} met`, xp: 100 * met });
   const cls = classRankAfter(d, seasonIndex, team) ?? classRankBefore(d, seasonIndex, team);
-  if (cls !== null && cls <= 25) parts.push({ label: `No. ${cls} signing class`, xp: cls <= 10 ? 200 : 100 });
+  if (cls !== null && cls <= 25) parts.push({ label: `#${cls} signing class`, xp: cls <= 10 ? 200 : 100 });
   // Player milestones (stat thresholds): a player of his among the nation's leaders. Ranks, not fixed numbers, so
   // they work with any sim stats settings and in both editions (simulated 1994 seasons have no 3,000-yard passers).
   const lines = playerLines(v);

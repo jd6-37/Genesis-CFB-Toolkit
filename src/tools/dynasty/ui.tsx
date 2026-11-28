@@ -139,12 +139,12 @@ export function TeamLink({ team, mark = true, rank = true, full = false, size = 
 }
 
 /** A school's name with its Top 25 rank in front (user, 2026-11-27: "show the top 25 ranking before the team name …
- * basically everywhere"), for names inside a line of text, link or not: "No. 10 Ohio State" (TeamLink's small number
+ * basically everywhere"), for names inside a line of text, link or not: "#10 Ohio State" (user, 2026-11-28: "#11", not "No. 11"; TeamLink's small number
  * would read as part of a player's name or a jersey number next to it). */
 export function Ranked({ team }: { team: number }) {
   const { d, v } = useDyn();
   const r = rankText(v, team);
-  return <>{r ? `No. ${r} ` : ''}{d.teams[team].school}</>;
+  return <>{r ? `#${r} ` : ''}{d.teams[team].school}</>;
 }
 
 /** Story art: the first team's logo on its color, split with the second team's color for a game. */
