@@ -418,7 +418,7 @@ export function stories(d: Dynasty, v: SeasonView = seasonView(d, d.seasons[d.se
         if (!p) continue;
         const id = `${year}-${week}-ms-${p.id}-${field}-${mark}`;
         ms.push({ id, kind: 'milestone', week, stat: { cat: c as 'passing', key: field, label: what[0].toUpperCase() + what.slice(1) }, weight: 28 + marks.indexOf(mark) * 4 + (d.userTeams.includes(team) ? 10 : 0), teams: [team], player: p.id,
-          headline: pick(id, [`${playerName(p)} passes ${mark.toLocaleString('en-US')} ${what}`, `${mark.toLocaleString('en-US')} ${what} and counting for ${name(team)}'s ${playerName(p)}`, `${name(team)}'s ${playerName(p)} reaches ${mark.toLocaleString('en-US')} ${what}`]),
+          headline: pick(id, [`${playerName(p)} tops ${mark.toLocaleString('en-US')} ${what}`, `${mark.toLocaleString('en-US')} ${what} and counting for ${name(team)}'s ${playerName(p)}`, `${name(team)}'s ${playerName(p)} reaches ${mark.toLocaleString('en-US')} ${what}`]),
           dek: `${playerLabel(p)} has ${b.toLocaleString('en-US')} ${what} after ${wk}.` });
       }
     }
