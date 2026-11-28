@@ -2,7 +2,7 @@
 
 import type { Dynasty } from './model';
 import type { SaveGame } from './save';
-import { INDEPENDENT, playerLines, standings, type PlayerLine, type SeasonView } from './derive';
+import { INDEPENDENT, playerLines, standings, statValue, type PlayerLine, type SeasonView } from './derive';
 
 /** The season's postseason format (save flags, season block +3): teams in the field, or 0 for none. */
 export function playoffSize(v: SeasonView): number {
@@ -112,4 +112,13 @@ export function bigGames(v: SeasonView, week: number, n = 8): SaveGame[] {
     }
   }
   return scored.sort((x, y) => x.tier - y.tier || x.key - y.key).slice(0, n).map((x) => x.g);
+}
+
+/** A Heisman candidate's biggest line: "2,497 passing yards, 41 TD". */
+export function heismanLine(lines: PlayerLine[]): string {
+  const yds = (l: PlayerLine) => statValue(l, 'yds');
+  const best = [...lines].sort((a, b) => yds(b) - yds(a))[0];
+  if (!best) return '';
+  const word = best.cat === 'passing' ? 'passing' : best.cat === 'rushing' ? 'rushing' : 'receiving';
+  return `${yds(best).toLocaleString('en-US')} ${word} yards, ${statValue(best, 'td')} TD`;
 }

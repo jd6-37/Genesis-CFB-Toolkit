@@ -6,7 +6,7 @@ import { hasNil, money } from '../../core/dynasty/nil';
 import { SubHead, Table } from '../../ui';
 import { useMemo } from 'react';
 import { bowlOf, bowlWeek, INDEPENDENT, leaders, playerLines, playerName, standings, statValue, weekName, type PlayerLine, type StatCategory } from '../../core/dynasty/derive';
-import { bigGames, heismanWatch, playoffPicture } from '../../core/dynasty/outlook';
+import { bigGames, heismanLine, heismanWatch, playoffPicture } from '../../core/dynasty/outlook';
 import { preseasonHeisman } from '../../core/dynasty/heismanPre';
 import { classRankings, STAR_POINTS } from '../../core/dynasty/offseason';
 import { TeamLink, href, playerOf, recordText, useDyn, Ranked } from './ui';
@@ -216,15 +216,6 @@ function Playoff() {
   );
 }
 
-/** "1,234 passing yards, 12 TD": the player's biggest line. */
-function keyLine(lines: PlayerLine[]): string {
-  const yds = (l: PlayerLine) => statValue(l, 'yds');
-  const best = [...lines].sort((a, b) => yds(b) - yds(a))[0];
-  if (!best) return '';
-  const word = best.cat === 'passing' ? 'passing' : best.cat === 'rushing' ? 'rushing' : 'receiving';
-  return `${yds(best).toLocaleString('en-US')} ${word} yards, ${statValue(best, 'td')} TD`;
-}
-
 function Heisman() {
   const { d, v } = useDyn();
   const list = useMemo(() => heismanWatch(v), [v]);
@@ -240,7 +231,7 @@ function Heisman() {
             <span className="dy-side-n">{i + 1}</span>
             <span>
               <PlayerLink id={e.player} />
-              <span className="dy-side-meta">{v.season.bw?.[e.team]?.[e.lines[0].slot]?.label ?? playerOf(d, e.player)?.pos}, <Ranked team={e.team} />: {keyLine(e.lines)}</span>
+              <span className="dy-side-meta">{v.season.bw?.[e.team]?.[e.lines[0].slot]?.label ?? playerOf(d, e.player)?.pos}, <Ranked team={e.team} />: {heismanLine(e.lines)}</span>
             </span>
           </li>
         ))}

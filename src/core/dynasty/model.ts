@@ -8,6 +8,7 @@ import { parseCsv, type Sheet } from '../rosterSheet';
 import { readWideSeason, wideSeasonProblems } from '../seasonWide';
 import type { ConfWeeks, DSchedule } from './schedule';
 import type { DSnapshot } from './snapshot';
+import type { SeasonAwards } from './awards';
 import { parseBw95 } from '../bw95';
 import { teamsOf } from '../wide';
 import type { Attr, Group } from '../rosterLayouts';
@@ -187,6 +188,10 @@ export interface DSeason {
   walsh?: { variants?: Record<number, number>; edited?: Record<number, import('../walsh').Report> };
   /** The user's own impact players per team (impact.ts, H-028): three player ids; other teams get the game's pick. */
   impact?: Record<number, number[]>;
+  /** The season's awards, handed out after the conference championships (awards.ts, freezeAwards). */
+  awards?: SeasonAwards;
+  /** The Heisman ceremony has been shown for this season (it opens by itself once). */
+  heismanSeen?: boolean;
 }
 
 export type OffseasonEvent =

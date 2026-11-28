@@ -1,5 +1,7 @@
 // The Dynasty section (/dynasty): a news site for the user's dynasty, kept in the browser, with its
 // own pages. Spec: docs/dynasty.md.
+import { freezeAwards, HEISMAN } from '../../core/dynasty/awards';
+import { HeismanCeremony } from './HeismanCeremony';
 import { downloadRom } from '../shared/downloadRom';
 import { zipName } from '../../core/zip';
 import { setRatingScale } from '../../core/dynasty/ratings';
@@ -312,7 +314,9 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
         throw e;
       }
       // The file itself too, for the last 10 imports (keptSaves.ts; user, 2026-11-27).
-      await commit(await keepFile(r.dynasty, at, bytes, f.name).catch(() => r.dynasty));
+      // The awards are handed out once the conference championships are in (awards.ts, freezeAwards; user, 2026-11-28).
+      const fz = freezeAwards(r.dynasty).dynasty;
+      await commit(await keepFile(fz, at, bytes, f.name).catch(() => fz));
       const nv = seasonView(r.dynasty, r.season);
       const added = r.newUserTeams.map((t) => r.dynasty.teams[t].school);
       setNote({
@@ -482,6 +486,8 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
   romRef.current = getRom;
 
   const { page, arg } = route;
+  const lastSeason = d?.seasons[d.seasons.length - 1];
+  const ceremony = lastSeason?.awards?.votes?.length && !lastSeason.heismanSeen && HEISMAN.since <= lastSeason.year && page !== 'start' && page !== 'manage' ? lastSeason : null;
   const num = arg !== undefined && /^\d+$/.test(arg) ? Number(arg) : undefined;
   const body = (() => {
     if (page === 'start') return <GetStarted actions={startActions} busy={!!busy} />;
@@ -554,7 +560,14 @@ export default function DynastyApp({ toolkitHref }: { toolkitHref: string }) {
       )}
       <main className={`dy-main${navPage === 'home' ? ' dy-main-home' : ''}`}>
         {note && page !== 'manage' && <Note kind={note.kind}>{note.text}</Note>}
-        <Ctx.Provider value={ctx}>{body}</Ctx.Provider>
+        <Ctx.Provider value={ctx}>
+          {body}
+          {/* The Heisman ceremony opens by itself once, after the import that hands the awards out. */}
+          {ceremony && d && (
+            <HeismanCeremony season={ceremony} awards={ceremony.awards!}
+              onClose={() => void commit({ ...d, seasons: d.seasons.map((x) => (x === ceremony ? { ...x, heismanSeen: true } : x)) })} />
+          )}
+        </Ctx.Provider>
         {up.modal}
         {d && askRom && (
           <Modal

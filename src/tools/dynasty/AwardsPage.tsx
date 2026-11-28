@@ -1,6 +1,7 @@
 // Season awards (awards.ts; user, 2026-11-12): the Heisman, position awards, the All-American teams and each
 // conference's first team, for any finished season. Mobile first: one column of tables on phones.
-import { PageHead, Select, SubHead, Table } from '../../ui';
+import { Button, PageHead, Select, SubHead, Table } from '../../ui';
+import { HeismanCeremony } from './HeismanCeremony';
 import { useMemo, useState } from 'react';
 import { AWARD_SPOTS, COACH_AWARDS, HEISMAN, POSITION_AWARDS, seasonAwards, type Candidate } from '../../core/dynasty/awards';
 import { Trophy } from './TrophyPages';
@@ -40,7 +41,8 @@ export function Awards({ arg }: { arg?: string }) {
   const pick = all.find((x) => x.s.year === asked) ?? all[all.length - 1];
   const confs = pick ? Object.keys(pick.a!.allConference).map(Number) : [];
   const [conf, setConf] = useState<number | null>(null);
-  if (!pick) return <Empty><p>Awards are handed out once a season is over: import the save after the national championship game.</p></Empty>;
+  const [show, setShow] = useState(false);
+  if (!pick) return <Empty><p>The awards are handed out after the conference championships: import the save with those games played.</p></Empty>;
   const a = pick.a!;
   const c = conf !== null && confs.includes(conf) ? conf : (confs.find((x) => d.userTeams.some((u) => pick.s.conf[u] === x)) ?? confs[0]);
   const winner = a.heisman[0];
@@ -51,13 +53,15 @@ export function Awards({ arg }: { arg?: string }) {
         title={`${a.year} awards`}
         actions={all.length > 1 ? <Select label="Season" hideLabel value={a.year} options={all.slice().reverse().map((x) => ({ value: x.s.year, label: `${x.s.year}` }))} onChange={(x) => { location.hash = href(`awards/${x}`); }} /> : undefined}
       />
-      <p className="dy-dim dy-small">Worked out from the season's stats and the players' OVR: the leaders by stats are considered, then the better players win out (offensive linemen, who have no stats, by OVR and team wins).</p>
+      <p className="dy-dim dy-small">Handed out after the conference championships, from the season's stats and the players' OVR: the leaders by stats are considered, then the better players win out (offensive linemen, who have no stats, by OVR and team wins).</p>
       {wp && winner && (
         <div className="dy-heisman">
           <Trophy art={HEISMAN.art} size={2} label="" />
           <p className="dy-heisman-title">Heisman Trophy</p>
           <p className="dy-heisman-name"><a href={href(`player/${wp.id}`)}>{playerTag(wp)}</a></p>
           <p className="dy-heisman-team"><TeamLink team={winner.team} rank={false} /><span className="dy-dim">{wp.pos}</span></p>
+          {a.votes?.length ? <div className="dy-heisman-replay"><Button onClick={() => setShow(true)}>Watch the Heisman ceremony</Button></div> : null}
+          {show && <HeismanCeremony season={pick.s} awards={a} onClose={() => setShow(false)} />}
           {a.heisman.length > 1 && (
             <p className="dy-small dy-dim">Finalists: {a.heisman.slice(1).map((h, i) => { const p = playerOf(d, h.player); return <span key={h.player}>{i ? ', ' : ''}{p ? <a href={href(`player/${p.id}`)}>{playerTag(p)}</a> : ''} ({d.teams[h.team].school})</span>; })}</p>
           )}
