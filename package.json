@@ -19,6 +19,7 @@
     "test:nil": "tsx cli/niltest.ts",
     "test:swap": "tsx cli/swaptest.ts",
     "test:walsh": "tsx cli/walshtest.ts",
+    "test:bracket": "tsx cli/brackettest.ts",
     "test:dynasty": "tsx cli/dynastytest.ts",
     "heisman:pre": "tsx cli/heismanpre.ts",
     "test:setup": "tsx cli/setuptest.ts",

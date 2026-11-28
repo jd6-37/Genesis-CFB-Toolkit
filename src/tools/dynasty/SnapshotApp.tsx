@@ -1,6 +1,7 @@
 // A shared dynasty snapshot (/dynasty/s/<id>; user, 2026-11-17): the dynasty's pages as they were when it was
 // shared, read-only. The active team heads it (its logo in the masthead, its news first) and everything else can
 // be browsed; Offseason and Manage aren't here, and editors are disabled with a line that says why (ui.tsx Locked).
+import { CfpBracket } from './CfpBracket';
 import { TrophyRoomPage } from './TrophyPages';
 import { setRatingScale } from '../../core/dynasty/ratings';
 import { useEffect, useMemo, useState } from 'react';
@@ -102,7 +103,7 @@ export default function SnapshotApp({ id, toolkitHref }: { id: string; toolkitHr
   const body = (() => {
     if (!ctx) return null;
     switch (page) {
-      case 'scores': return <Scores week={num} />;
+      case 'scores': return arg === 'bracket' ? <CfpBracket /> : <Scores week={num} />;
       case 'standings': return <Standings />;
       case 'rankings': return <Rankings />;
       case 'teams': return <Teams />;

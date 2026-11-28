@@ -163,8 +163,11 @@ export function readDynastySave(file: Uint8Array): DynastySave {
       }
     }
     const flags = sb[3];
+    // The field's size from the flags (the ROM's CFPSET: bit 4 BCS 2, bit 3 CFP 4, bit 2 CFP 24, else CFP 12); the
+    // bytes after a smaller field are zeros, which would read as team 0.
+    const fieldSize = flags & 0x10 ? 2 : flags & 0x08 ? 4 : flags & 0x04 ? 24 : 12;
     const seeds: number[] = [];
-    for (let i = 0; i < 24 && sb[0x34 + i] < TEAMS && sb[0x34 + i] !== 0xff; i++) seeds.push(sb[0x34 + i]);
+    for (let i = 0; i < fieldSize && sb[0x34 + i] < TEAMS && sb[0x34 + i] !== 0xff; i++) seeds.push(sb[0x34 + i]);
     season = {
       weeks,
       lastRegularWeek,
