@@ -19,6 +19,8 @@ export interface DSnapshot {
   label: string;
   /** ISO time. */
   sharedAt: string;
+  /** ISO time it was last extended (Manage → Share; its link works SNAPSHOT_DAYS from this, else from sharedAt). */
+  renewedAt?: string;
 }
 
 export interface Snapshot {
@@ -27,6 +29,8 @@ export interface Snapshot {
   label: string;
   sharedAt: string;
   art: TeamArt[] | null;
+  /** When its link stops working, from the server (counts an extension); not in the file. */
+  expires?: string;
 }
 
 // ---- pictures: a palette and one byte per pixel (the art has a few colors), base64

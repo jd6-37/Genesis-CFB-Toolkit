@@ -24,6 +24,17 @@ export function momentOf(d: Dynasty): string {
   });
 }
 
+/** Extends a snapshot to SNAPSHOT_DAYS from now; the new end, ISO. */
+async function extendSnapshot(key: string): Promise<string> {
+  const r = await fetch(API, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ key }) });
+  const b = (await r.json().catch(() => ({}))) as { expires?: string; error?: string };
+  if (!r.ok || !b.expires) throw new Error(b.error ?? "The snapshot couldn't be extended. Try again in a moment.");
+  return b.expires;
+}
+
+/** When a snapshot's link stops working. */
+const endOf = (s: DSnapshot) => s.renewedAt ?? s.sharedAt;
+
 async function removeSnapshot(key: string): Promise<void> {
   const r = await fetch(API, { method: 'DELETE', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ key }) });
   if (!r.ok) throw new Error("The snapshot couldn't be deleted. Try again in a moment.");
@@ -43,7 +54,7 @@ export function SharePanel({ d, art, focus, commit, ctx }: {
   const [full, setFull] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   // Expired snapshots (SNAPSHOT_DAYS) leave the list and the count; the server deletes their files.
-  const list = (d.snapshots ?? []).filter((x) => !snapshotExpired(x.sharedAt));
+  const list = (d.snapshots ?? []).filter((x) => !snapshotExpired(endOf(x)));
   const team = firstTeam(d, focus);
   // A dynasty with no team of the user's yet (user, 2026-11-20: Manage was blank): a snapshot follows one, so it waits.
   const school = team === undefined ? undefined : d.teams[team]?.school;
@@ -95,6 +106,13 @@ export function SharePanel({ d, art, focus, commit, ctx }: {
     await removeSnapshot(s.key);
     if (shared?.id === s.id) setShared(null);
     await commit({ ...d, snapshots: list.filter((x) => x.id !== s.id) });
+  });
+
+  // Extend expiration (user, 2026-11-28): SNAPSHOT_DAYS from now, same link.
+  const extend = (s: DSnapshot) => work('Extending the snapshot…', async () => {
+    const until = await extendSnapshot(s.key);
+    const renewedAt = new Date(new Date(until).getTime() - SNAPSHOT_DAYS * 86_400_000).toISOString();
+    await commit({ ...d, snapshots: (d.snapshots ?? []).map((x) => (x.id === s.id ? { ...x, renewedAt } : x)) });
   });
 
   const copy = async (id: string) => {
@@ -155,7 +173,8 @@ export function SharePanel({ d, art, focus, commit, ctx }: {
           <ul className="dy-share-list">
             {list.map((s) => (
               <li key={s.id}>
-                <span><strong>{d.teams[s.team]?.school ?? 'Team'}, {s.label}</strong><br /><span className="dy-small dy-dim">Shared {when(s.sharedAt)}. Works until {when(snapshotExpires(s.sharedAt).toISOString())}.</span></span>
+                <span><strong>{d.teams[s.team]?.school ?? 'Team'}, {s.label}</strong><br /><span><span className="dy-small dy-dim">Shared {when(s.sharedAt)}. Works until {when(snapshotExpires(endOf(s)).toISOString())}.</span>{' '}
+                  <span className="dy-small"><Button variant="link" disabled={!!busy} onClick={() => void extend(s)}>Extend expiration</Button></span></span></span>
                 <span className="dy-row">
                   <Button variant="quiet" onClick={() => void copy(s.id)}>{copied === s.id ? 'Copied' : 'Copy link'}</Button>
                   <a className="ui-button ui-button-quiet" href={link(s.id)} target="_blank" rel="noopener">Open</a>
@@ -165,7 +184,7 @@ export function SharePanel({ d, art, focus, commit, ctx }: {
             ))}
           </ul>
           <p className="dy-small dy-dim">
-            A snapshot is deleted {SNAPSHOT_DAYS} days after you share it. Deleting one sooner breaks its link within the hour. Only this
+            A snapshot is deleted {SNAPSHOT_DAYS} days after you share it, or after you last extend it (Extend expiration: {SNAPSHOT_DAYS} days from that day, same link). Deleting one sooner breaks its link within the hour. Only this
             dynasty can delete its snapshots, so keep your dynasty file backed up: it carries them to another browser too.
           </p>
         </>

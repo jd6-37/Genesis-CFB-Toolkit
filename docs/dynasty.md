@@ -462,6 +462,9 @@ User, 2026-11-19: "add something to the /dynasty#start page that teases what a l
 - Get started (`GetStarted.tsx` `SamplePeek`): on the first step, the picture `public/media/dynasty-sample.jpg` (the sample's Home page), a line and **Browse a sample dynasty**. Beside the steps from 1100 px, under them on a phone.
 - To replace the sample: share a new snapshot, save its file from the Blob store (the browser may save it already unzipped as `.json`; gzip it), put it at `public/data/sample-dynasty.snap`, update the picture and the bar's team in `SamplePeek`.
 
+## Extend a snapshot's expiration (2026-11-28)
+User: an "Extend expiration" link next to "Works until…" that extends the link to 90 days from now. `PATCH /api/snapshot` body `{ key }`: expiry runs from the file's upload time in the Blob store, so the function copies the file to a temporary name and back over itself (`copy`, `allowOverwrite`), which resets the upload time, deletes the temporary copy and answers `{ expires }`; same link, same content; only the key extends it, and not after it expired (410). The dynasty keeps `DSnapshot.renewedAt` (the list, the count and "Works until" count from it). The snapshot page takes its end date from the server's `expires` (the file still says when it was first shared). Not testable here against the store: check on the Vercel preview (share a snapshot, extend it, the date moves to 90 days from today, the link still opens).
+
 ## Starting year
 
 User, 2026-11-17: "let the user define a starting year when creating a new dynasty. Default to 2026 for the 2026 rom and 1994 for the 94 rom. The idea here is that if i abandon the mod and someone wants to make a 2027 roster next year, they can use that roster/rom and start their dynasty with year 2027".
